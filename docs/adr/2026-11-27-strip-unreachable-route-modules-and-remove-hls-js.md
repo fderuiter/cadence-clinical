@@ -56,17 +56,17 @@ Under [ADR-2819](2026-11-20-focus-active-ecrf-view-on-backed-kernel-forms-outsid
 
 - **Positive Impact:**
   - Non-demo production builds of `apps/web` ship zero chunks or modules for `hls.js`, `vendor-media`, `zod`, `sortablejs`, `vuedraggable`, and `vue-i18n`.
-  - Non-demo production builds of `apps/subject-portal` replace the six unbacked demo views with inert `DemoWorkspaceProdStub` components and tree-shake the five demo tab icons while keeping `WalletView.vue`, `UnavailableView.vue`, and the `Wallet` tab icon intact.
+  - Non-demo production builds of `apps/subject-portal` replace the six unbacked demo views with hidden, inert `DemoWorkspaceProdStub` `role="region"` landmark shells (retaining `#sync-queue-status-text` on `#view-tasks` for mounted DOM accessibility and sync status announcements while stripping demo templates and dependencies) and tree-shake the five demo tab icons while keeping `WalletView.vue`, `UnavailableView.vue`, and the `Wallet` tab icon intact.
   - Both demo and production HTML entrypoints emit `worker-src 'self'` with zero CSP violations during regulated PDF and native `<video>` previews.
 - **Negative Impact & Mitigations:**
-  - Promoting a screen from `DEMO_AVAILABLE_SCREENS` to `AVAILABLE_SCREENS` requires removing its view filename from `WEB_NON_DEMO_STUBBED_VIEWS` or `SUBJECT_PORTAL_NON_DEMO_STUBBED_VIEWS` in `scripts/vite-strip-demo-fixtures.mjs`; automated parity assertions in `apps/web/tests/vite_strip_demo_fixtures.spec.ts` fail immediately if availability sets, router redirects, and stub lists diverge.
+  - Promoting a screen from `DEMO_AVAILABLE_SCREENS` to `AVAILABLE_SCREENS` requires removing its view filename from `WEB_NON_DEMO_STUBBED_VIEWS` or `SUBJECT_PORTAL_NON_DEMO_VIEW_LANDMARKS` in `scripts/vite-strip-demo-fixtures.mjs`; automated parity assertions in `apps/web/tests/vite_strip_demo_fixtures.spec.ts` fail immediately if availability sets, router redirects, and stub lists diverge.
 
 ## 6. Implementation & Verification
 
 - **Affected Files:**
   - `apps/web/package.json`, `pnpm-lock.yaml`, `apps/web/vite.config.js`, `apps/web/index.html`, `apps/web/public/silent-check-sso.html`, `apps/web/README.md`
   - `apps/web/src/components/fileshare/MediaPreviewModal.vue`, `apps/web/src/router/index.js`
-  - `apps/subject-portal/src/router/routes.js`, `apps/subject-portal/src/components/TabBar.vue`
+  - `apps/subject-portal/src/router/routes.js`, `apps/subject-portal/src/components/TabBar.vue`, `apps/subject-portal/tests/prod_bundle_stripping.test.js`
   - `scripts/vite-strip-demo-fixtures.mjs`
   - `apps/web/tests/cold_boot_bundle.spec.ts`, `apps/web/tests/vite_strip_demo_fixtures.spec.ts`, `apps/web/tests/vite_csp_profiles.test.js`, `apps/web/tests/media_preview_hls.test.js`, `apps/web/tests/e2e/web-accessibility.spec.ts`
 - **Verification:**
