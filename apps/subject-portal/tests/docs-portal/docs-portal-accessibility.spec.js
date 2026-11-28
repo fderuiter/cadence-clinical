@@ -92,6 +92,28 @@ function stripTags(html) {
   return decodeHtmlEntities(html.replace(/<[^>]+>/g, ""));
 }
 
+function countTableBodyRows(html) {
+  return Array.from(
+    html.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
+    (m) => m[1]
+  ).reduce(
+    (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
+    0
+  );
+}
+
+function resolvePortalDistHtmlPath(href) {
+  const clean = href
+    .replace(/^\.\//, "")
+    .replace(/^\/cadence-clinical\//, "")
+    .split("#")[0]
+    .split("?")[0];
+  if (clean === "" || clean.endsWith("/")) {
+    return `${clean}index.html`;
+  }
+  return clean;
+}
+
 async function runPortalAxeAudit(page, theme) {
   await page.evaluate((mode) => {
     let styleEl = document.getElementById("cadence-axe-disable-transitions");
@@ -193,11 +215,55 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
       docIndexHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
       (m) => m[1]
     );
-    const dataRowCount = tbodyBlocks.reduce(
-      (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
-      0
+    expect(tbodyBlocks).toHaveLength(2);
+    expect(countTableBodyRows(docIndexHtml)).toBeGreaterThanOrEqual(28);
+
+    const [categoryTbody, adrTbody] = tbodyBlocks;
+    const categoryShardHrefs = Array.from(
+      categoryTbody.matchAll(/href="([^"]+)"/gi),
+      (m) => m[1]
     );
-    expect(dataRowCount).toBeGreaterThanOrEqual(715);
+    const adrShardHrefs = Array.from(
+      adrTbody.matchAll(/href="([^"]+)"/gi),
+      (m) => m[1]
+    );
+    expect(categoryShardHrefs.length).toBeGreaterThanOrEqual(17);
+    expect(adrShardHrefs.length).toBeGreaterThanOrEqual(11);
+
+    let categoryRowCount = 0;
+    for (const href of categoryShardHrefs) {
+      const shardRelPath = resolvePortalDistHtmlPath(href);
+      const shardFullPath = path.join(docsDistDir, shardRelPath);
+      expect(
+        fs.existsSync(shardFullPath),
+        `Expected category shard HTML ${shardRelPath} to exist`
+      ).toBe(true);
+      categoryRowCount += countTableBodyRows(
+        fs.readFileSync(shardFullPath, "utf8")
+      );
+    }
+    expect(categoryRowCount).toBeGreaterThanOrEqual(140);
+
+    let adrEntryCount = 0;
+    for (const href of adrShardHrefs) {
+      const shardRelPath = resolvePortalDistHtmlPath(href);
+      const shardFullPath = path.join(docsDistDir, shardRelPath);
+      expect(
+        fs.existsSync(shardFullPath),
+        `Expected ADR shard HTML ${shardRelPath} to exist`
+      ).toBe(true);
+      if (shardRelPath === "adr/TEMPLATE.html") {
+        continue;
+      }
+      const shardHtml = fs.readFileSync(shardFullPath, "utf8");
+      const mainHtml =
+        shardHtml.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1] ?? shardHtml;
+      adrEntryCount += (
+        mainHtml.match(/<li>\s*<a\s+href="[^"]*20\d{2}-\d{2}-\d{2}-/gi) || []
+      ).length;
+    }
+
+    expect(categoryRowCount + adrEntryCount).toBeGreaterThanOrEqual(715);
   });
 
   test("navbar items and portal layout render without clipping, overlap, or horizontal scroll across 375px–1920px viewports", async ({
