@@ -61,7 +61,7 @@ signatures and audit digests shared by every Cadence service.
   [ADR-2667](../../docs/adr/2026-11-23-fail-closed-site-scope-for-pharmacist-and-subject-roles.md); `SiteAccessEvaluator.SITE_SCOPED_ROLES` covers site investigators, CRCs, CRAs/monitors, ER physicians, pharmacists, and subjects).
 - **Blinding:** `BlindedFieldAttribute`, `FieldMasker`.
 - **Signatures:** `CanonicalSigner` (canonical JSON + HMAC-SHA256), `AsymmetricSigner` (RSA/X.509, used by `Cadence.Deid` for redaction manifests and de-identification certificates), and `BiometricLivenessTokenService` + `BiometricLivenessOptions` (`AddCadenceBiometricLiveness()`, requiring `CADENCE_BIOMETRIC_LIVENESS_KEY` as base64 of 32 bytes at startup, bounding biometric liveness tokens to a 15-minute lifetime with 5-second clock skew on `IClock`, [ADR-2660](../../docs/adr/2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md)).
-- **Audit:** `AuditDigestEngine`, `AuditDigestCalculator`, `IAuditLogWriter`.
+- **Audit:** `AuditDigestEngine`, `AuditDigestCalculator`, `AuditSecretKey`, `IAuditLogWriter` (`AddCadenceSecurity()` binds `CadenceSecurityOptions` with `ValidateOnStart()`, requiring a trimmed `AUDIT_LOG_SECRET_KEY` of at least 16 characters at startup and constructing `AuditDigestEngine` from `IOptions<CadenceSecurityOptions>`).
 - **Time (K-TIME-3):** the project bans `DateTime.Now/UtcNow`. `ReplayCache` and `AuditDigestEngine` take an
   `IClock` (default `SystemClock.Instance`; `AddCadenceSecurity` passes the registered one), and
   `AuditLogRecord.Timestamp` is `required` (#4784).

@@ -1,15 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Core.Domain;
 using Cadence.Kernel;
+using Cadence.Kernel.Api;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Authorization;
@@ -18,6 +22,7 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Host.Onboarding;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
@@ -26,12 +31,21 @@ using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
+using Cadence.Security.Audit;
+using Cadence.Security.Authentication;
+using Cadence.Testing.Hosting;
+using Cadence.Testing.Security;
 using Cadence.Testing.Time;
+using Cadence.UnitTests.TestSupport;
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 using Xunit;
 
@@ -337,6 +351,205 @@ public sealed class CommercialAndOnboardingUnitTests
             .Should().BeFalse();
         SubscriptionQuoteToken.TryVerify(token[..^2] + "ff", secret, tenantId, CommercialTier.Select, signedScoping, T0, out _)
             .Should().BeFalse();
+
+        SubscriptionQuoteToken.MinSecretLength.Should().Be(16);
+        new CommercialQuoteOptions("secret-not-in-tostring").ToString().Should().NotContain("secret-not-in-tostring");
+    }
+
+    [Theory(DisplayName = "KernelHost_RejectsBlankOrShortCommercialQuoteSigningSecret_AtStartupWithoutFallingBackToGatewaySecret")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("short-secret-15")]
+    [InlineData("   short   ")]
+    public void KernelHostRejectsBlankOrShortCommercialQuoteSigningSecretAtStartup(string invalidQuoteSecret)
+    {
+        using var misconfiguredHost = new StartupValidationFactory<Cadence.Kernel.Host.Program>(builder => builder
+            .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
+            .UseTestPostgresConnectionString()
+            .UseSetting("CommercialQuote:SigningSecret", invalidQuoteSecret));
+
+        Action validateAll = () =>
+        {
+            foreach (var startupValidator in misconfiguredHost.Services.GetServices<IStartupValidator>())
+            {
+                startupValidator.Validate();
+            }
+        };
+        validateAll.Should().Throw<OptionsValidationException>()
+            .Which.Message.Should().Contain("CommercialQuote:SigningSecret");
+
+        var ex = misconfiguredHost.ValidateStartup().Should().BeOfType<OptionsValidationException>().Which;
+        ex.Message.Should().Contain("CommercialQuote:SigningSecret");
+        if (!string.IsNullOrWhiteSpace(invalidQuoteSecret))
+        {
+            ex.Message.Should().NotContain(invalidQuoteSecret.Trim());
+        }
+    }
+
+    [Fact(DisplayName = "KernelHost_RejectsMissingFallbackOrInvalidAuditKey_ThroughStartupValidators")]
+    public void KernelHostRejectsMissingFallbackOrInvalidAuditKeyThroughStartupValidators()
+    {
+        using (var blankSecurityFallback = new StartupValidationFactory<Cadence.Kernel.Host.Program>(builder => builder
+            .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
+            .UseTestPostgresConnectionString()
+            .UseSetting("Security:GatewaySecret", string.Empty)))
+        {
+            blankSecurityFallback.ValidateStartup().Should().BeOfType<OptionsValidationException>()
+                .Which.Message.Should().Contain("CommercialQuote:SigningSecret");
+        }
+
+        using (var missingGatewayFallback = new StartupValidationFactory<Cadence.Kernel.Host.Program>(builder => builder
+            .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
+            .UseTestPostgresConnectionString()
+            .UseSetting("GATEWAY_SECRET", string.Empty)))
+        {
+            var ex = missingGatewayFallback.ValidateStartup().Should().BeOfType<OptionsValidationException>().Which;
+            ex.Message.Should().Contain("GATEWAY_SECRET").And.Contain("CommercialQuote:SigningSecret");
+        }
+
+        using var missingAuditKey = new StartupValidationFactory<Cadence.Kernel.Host.Program>(builder => builder
+            .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
+            .UseTestPostgresConnectionString()
+            .UseSetting(AuditSecretKey.EnvironmentVariable, string.Empty));
+        missingAuditKey.ValidateStartup().Should().BeOfType<OptionsValidationException>()
+            .Which.Message.Should().Contain(AuditSecretKey.EnvironmentVariable);
+    }
+
+    [Fact(DisplayName = "KernelHost_WithNullCommercialQuoteSigningSecret_FallsBackToGatewaySecret_ServesHealthz_AndActivatesAndUpdatesEntitlements")]
+    public async Task KernelHostWithNullCommercialQuoteSigningSecretFallsBackToGatewaySecretServesHealthzAndActivatesSubscription()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tenantId = TenantId.New();
+        var subscriptionId = SubscriptionId.New(T0);
+        var subscription = new Subscription(
+            subscriptionId,
+            tenantId,
+            CommercialTier.Individual,
+            SubscriptionStatus.Trialing,
+            startedAt: T0,
+            trialEndsAt: T0.AddDays(30),
+            createdBy: "svc:trial-onboarding",
+            reasonForChange: "Initial trial workspace");
+        var store = new InMemorySubscriptionUnitOfWork(subscription);
+
+        await using var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
+        {
+            builder
+                .UseTestGatewaySecret()
+                .UseTestBiometricLivenessKey()
+                .UseTestPostgresConnectionString();
+
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveBackgroundHostedServices();
+                services.RemoveAll<IClock>();
+                services.AddSingleton<IClock>(new FakeClock(T0));
+                services.RemoveAll<ITenantDirectory>();
+                services.AddSingleton<ITenantDirectory>(new FixedTenantDirectory(tenantId));
+                services.RemoveAll<ITenantEntitlementReader>();
+                services.AddSingleton<ITenantEntitlementReader>(store);
+                services.RemoveAll<IKernelUnitOfWorkFactory>();
+                services.AddSingleton<IKernelUnitOfWorkFactory>(store);
+                services.RemoveAll<IAuthorityStore>();
+                services.AddSingleton<IAuthorityStore>(new EmptyAuthorityStore());
+                services.RemoveAll<IAuthorizer>();
+                services.AddSingleton<IAuthorizer>(new PermitAllAuthorizer());
+            });
+        });
+
+        using var anonymousClient = factory.CreateClient();
+        var healthResponse = await anonymousClient.GetAsync("/healthz", ct);
+        healthResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var scoping = new SubscriptionScoping(
+            StudyPhase: "Phase II",
+            StudyDurationMonths: 18,
+            Countries: ["DE", "US"],
+            SiteCount: 10,
+            ParticipantCount: 180,
+            ActiveStudyCount: 2,
+            BillingConfirmation: "pending");
+        string quoteToken = SubscriptionQuoteToken.Issue(
+            signingSecret: TestSecurityContext.GatewaySecret,
+            tenantId: tenantId,
+            tier: CommercialTier.Select,
+            scoping: scoping,
+            quoteReference: "QUOTE-STARTUP-200",
+            issuedAt: T0,
+            expiresAt: T0.AddHours(2));
+
+        var callerIdentity = TestSecurityContext.Identity("sponsor.admin", "Sponsor Admin");
+        using var signedClient = factory.CreateSignedClient(callerIdentity);
+        using var activateRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/entitlements/activate")
+        {
+            Content = JsonContent.Create(
+                new KernelActivateSubscriptionRequest(
+                    Tier: "Select",
+                    StudyPhase: scoping.StudyPhase,
+                    StudyDurationMonths: scoping.StudyDurationMonths,
+                    Countries: scoping.Countries,
+                    SiteCount: scoping.SiteCount,
+                    ParticipantCount: scoping.ParticipantCount,
+                    ActiveStudyCount: scoping.ActiveStudyCount,
+                    BillingConfirmation: quoteToken),
+                options: new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower }),
+        };
+        activateRequest.Headers.Add("Idempotency-Key", "activate-startup-validated-01");
+        activateRequest.Headers.Add(GatewayHeaders.ChangeReason, "Activate workspace subscription with signed quote");
+
+        var activateResponse = await signedClient.SendAsync(activateRequest, ct);
+        string activateBody = await activateResponse.Content.ReadAsStringAsync(ct);
+        activateResponse.StatusCode.Should().Be(HttpStatusCode.OK, activateBody);
+        using (var doc = JsonDocument.Parse(activateBody))
+        {
+            doc.RootElement.GetProperty("status").GetString().Should().Be("Active");
+            doc.RootElement.GetProperty("tier").GetString().Should().Be("Select");
+        }
+
+        // Verify GrantProductEntitlementHandler and RevokeProductEntitlementHandler also resolve the validated CommercialQuoteOptions
+        using var scope = factory.Services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<ServiceActorScope>().Actor = Actor.Person("sponsor.admin");
+        var sender = scope.ServiceProvider.GetRequiredService<IKernelCommandSender>();
+
+        var granted = await sender.SendAsync(
+            new GrantProductEntitlement(
+                tenantId,
+                ProductEntitlementId.New(T0),
+                subscriptionId,
+                ProductFamily.Vigil,
+                "grant-vigil-01",
+                "Grant Vigil add-on under verified quote",
+                QuoteToken: quoteToken),
+            cancellationToken: ct);
+        granted.IsSuccess.Should().BeTrue(granted.Error?.Message);
+
+        var revoked = await sender.SendAsync(
+            new RevokeProductEntitlement(
+                tenantId,
+                subscriptionId,
+                ProductFamily.Vigil,
+                "revoke-vigil-01",
+                "Revoke Vigil add-on under verified quote",
+                QuoteToken: quoteToken),
+            cancellationToken: ct);
+        revoked.IsSuccess.Should().BeTrue(revoked.Error?.Message);
+
+        var forgedRevoke = await sender.SendAsync(
+            new RevokeProductEntitlement(
+                tenantId,
+                subscriptionId,
+                ProductFamily.Orbit,
+                "revoke-forged-01",
+                "Attempt unverified revoke",
+                QuoteToken: "PO-UNSIGNED"),
+            cancellationToken: ct);
+        forgedRevoke.IsSuccess.Should().BeFalse();
+        forgedRevoke.Error!.Code.Should().Be(CommercialErrors.QuoteInvalid.Code);
+        forgedRevoke.Error.Message.Should().NotContain(TestSecurityContext.GatewaySecret);
     }
 
     [Fact(DisplayName = "HttpKeycloakOnboardingClient_WritesTenantClaimExplicitSiteAndStudyScopesWithoutProfileMutationOrWildcard_AndFailsClosedWhenUnconfigured")]
@@ -820,6 +1033,105 @@ public sealed class CommercialAndOnboardingUnitTests
     {
         public ValueTask<AuthorizationDecision> AuthorizeAsync(Actor actor, ICommand command, CancellationToken cancellationToken) =>
             ValueTask.FromResult(AuthorizationDecision.Permit());
+    }
+
+    private sealed class InMemorySubscriptionUnitOfWork(Subscription subscription)
+        : ITenantEntitlementReader, IKernelUnitOfWorkFactory, IKernelCommandTransaction, IKernelUnitOfWork
+    {
+        public IKernelUnitOfWork Work => this;
+
+        public Task<TenantEntitlementSnapshot> GetEntitlementsAsync(
+            TenantId tenantId,
+            DateTimeOffset asOf,
+            CancellationToken cancellationToken,
+            DateTimeOffset? knownAt = null) =>
+            Task.FromResult(new TenantEntitlementSnapshot(
+                subscription.TenantId,
+                subscription.Id,
+                subscription.Tier,
+                subscription.EffectiveStatusAt(asOf),
+                subscription.StartedAt,
+                subscription.TrialEndsAt,
+                subscription.IsExpiredAt(asOf),
+                subscription.GetEnabledProductFamilies(),
+                subscription.GetScoping()));
+
+        public IKernelCommandTransaction Begin(CommandExecution execution) => this;
+
+        public Task<IdempotentOutcome?> FindPriorOutcomeAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IdempotentOutcome?>(null);
+
+        public void RecordPermit(AuthorizationDecision permit)
+        {
+        }
+
+        public void RecordProposalExecution(NodeRef proposal)
+        {
+        }
+
+        public Task<CommitOutcome> CommitAsync(string resultJson, CancellationToken cancellationToken) =>
+            Task.FromResult(CommitOutcome.Committed);
+
+        public Task RecordDenialAsync(AuthorizationDecision denial, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public Task RecordRefusalAsync(KernelError refusal, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+        public Task<TAggregate?> FindAsync<TAggregate>(object id, CancellationToken cancellationToken)
+            where TAggregate : AggregateRootBase =>
+            Task.FromResult(typeof(TAggregate) == typeof(Subscription) && Equals(id, subscription.Id)
+                ? (TAggregate)(object)subscription
+                : null);
+
+        public Task<bool> ExistsAsync<TAggregate>(object id, CancellationToken cancellationToken)
+            where TAggregate : AggregateRootBase =>
+            Task.FromResult(typeof(TAggregate) == typeof(Subscription) && Equals(id, subscription.Id));
+
+        public Task<TAggregate?> ReadAsync<TAggregate>(object id, CancellationToken cancellationToken)
+            where TAggregate : AggregateRootBase =>
+            FindAsync<TAggregate>(id, cancellationToken);
+
+        public Task<IReadOnlyList<TAggregate>> ReadAllAsync<TAggregate>(
+            Expression<Func<TAggregate, bool>> filter,
+            CancellationToken cancellationToken)
+            where TAggregate : AggregateRootBase =>
+            Task.FromResult<IReadOnlyList<TAggregate>>([]);
+
+        public Task LockAsync<TAggregate>(object id, CancellationToken cancellationToken)
+            where TAggregate : AggregateRootBase =>
+            Task.CompletedTask;
+
+        public Task LockCollectionAsync(CollectionInstanceId instance, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public Task ShareScopesAsync(IReadOnlyList<NodeRef> scopes, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public Task LockScopeAsync(NodeRef scope, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public void Add(AggregateRootBase aggregate)
+        {
+        }
+
+        public void Raise(object domainEvent, DateTimeOffset? occurredValid = null)
+        {
+        }
+
+        public void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null, NodeRef? target = null)
+        {
+        }
+
+        public void IncludePart(NodeRef part, bool newVersion)
+        {
+        }
+
+        public void LinkPart(NodeRef from, NodeRef to, LineageEdgeKind kind)
+        {
+        }
     }
 
     private sealed class StubEntitlementReader(TenantEntitlementSnapshot snapshot) : ITenantEntitlementReader

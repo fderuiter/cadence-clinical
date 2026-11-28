@@ -11,6 +11,7 @@ using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Kernel.Application.Tenancy;
 
@@ -152,9 +153,11 @@ internal sealed class SwitchTrialTierHandler : ICommandHandler<SwitchTrialTier, 
 }
 
 /// <summary>Handles <see cref="ActivateSubscription"/>.</summary>
-internal sealed class ActivateSubscriptionHandler(CommercialQuoteOptions? quoteOptions = null)
+internal sealed class ActivateSubscriptionHandler(IOptions<CommercialQuoteOptions>? quoteOptions = null)
     : ICommandHandler<ActivateSubscription, SubscriptionId>
 {
+    private readonly CommercialQuoteOptions? _quoteOptions = quoteOptions?.Value;
+
     public async Task<CommandResult<SubscriptionId>> HandleAsync(
         ActivateSubscription command,
         ICommandContext context,
@@ -175,7 +178,7 @@ internal sealed class ActivateSubscriptionHandler(CommercialQuoteOptions? quoteO
         if (context.Actor != CommercialOperators.BillingOperator
             && !SubscriptionQuoteToken.TryVerify(
                 normalizedScoping.BillingConfirmation,
-                quoteOptions?.SigningSecret,
+                _quoteOptions?.SigningSecret,
                 command.TenantId,
                 command.Tier,
                 normalizedScoping,
@@ -203,9 +206,11 @@ internal sealed class ActivateSubscriptionHandler(CommercialQuoteOptions? quoteO
 }
 
 /// <summary>Handles <see cref="GrantProductEntitlement"/>.</summary>
-internal sealed class GrantProductEntitlementHandler(CommercialQuoteOptions? quoteOptions = null)
+internal sealed class GrantProductEntitlementHandler(IOptions<CommercialQuoteOptions>? quoteOptions = null)
     : ICommandHandler<GrantProductEntitlement, ProductEntitlementId>
 {
+    private readonly CommercialQuoteOptions? _quoteOptions = quoteOptions?.Value;
+
     public async Task<CommandResult<ProductEntitlementId>> HandleAsync(
         GrantProductEntitlement command,
         ICommandContext context,
@@ -231,7 +236,7 @@ internal sealed class GrantProductEntitlementHandler(CommercialQuoteOptions? quo
         if (context.Actor != CommercialOperators.BillingOperator
             && !SubscriptionQuoteToken.TryVerify(
                 command.QuoteToken,
-                quoteOptions?.SigningSecret,
+                _quoteOptions?.SigningSecret,
                 command.TenantId,
                 subscription.Tier,
                 subscription.GetScoping(),
@@ -264,9 +269,11 @@ internal sealed class GrantProductEntitlementHandler(CommercialQuoteOptions? quo
 }
 
 /// <summary>Handles <see cref="RevokeProductEntitlement"/>.</summary>
-internal sealed class RevokeProductEntitlementHandler(CommercialQuoteOptions? quoteOptions = null)
+internal sealed class RevokeProductEntitlementHandler(IOptions<CommercialQuoteOptions>? quoteOptions = null)
     : ICommandHandler<RevokeProductEntitlement, SubscriptionId>
 {
+    private readonly CommercialQuoteOptions? _quoteOptions = quoteOptions?.Value;
+
     public async Task<CommandResult<SubscriptionId>> HandleAsync(
         RevokeProductEntitlement command,
         ICommandContext context,
@@ -287,7 +294,7 @@ internal sealed class RevokeProductEntitlementHandler(CommercialQuoteOptions? qu
         if (context.Actor != CommercialOperators.BillingOperator
             && !SubscriptionQuoteToken.TryVerify(
                 command.QuoteToken,
-                quoteOptions?.SigningSecret,
+                _quoteOptions?.SigningSecret,
                 command.TenantId,
                 subscription.Tier,
                 subscription.GetScoping(),
@@ -358,9 +365,17 @@ internal static class CommercialServiceCollectionExtensions
         services.AddTransient<ICommandHandler<ProvisionSubscription, SubscriptionId>, ProvisionSubscriptionHandler>();
         services.AddTransient<ICommandHandler<ExpireSubscription, SubscriptionId>, ExpireSubscriptionHandler>();
         services.AddTransient<ICommandHandler<SwitchTrialTier, SubscriptionId>, SwitchTrialTierHandler>();
-        services.AddTransient<ICommandHandler<ActivateSubscription, SubscriptionId>, ActivateSubscriptionHandler>();
-        services.AddTransient<ICommandHandler<GrantProductEntitlement, ProductEntitlementId>, GrantProductEntitlementHandler>();
-        services.AddTransient<ICommandHandler<RevokeProductEntitlement, SubscriptionId>, RevokeProductEntitlementHandler>();
+        services.AddTransient<ICommandHandler<ActivateSubscription, SubscriptionId>>(sp =>
+            new ActivateSubscriptionHandler(ResolveQuoteOptions(sp)));
+        services.AddTransient<ICommandHandler<GrantProductEntitlement, ProductEntitlementId>>(sp =>
+            new GrantProductEntitlementHandler(ResolveQuoteOptions(sp)));
+        services.AddTransient<ICommandHandler<RevokeProductEntitlement, SubscriptionId>>(sp =>
+            new RevokeProductEntitlementHandler(ResolveQuoteOptions(sp)));
         return services;
     }
+
+    private static IOptions<CommercialQuoteOptions>? ResolveQuoteOptions(IServiceProvider sp) =>
+        sp.GetService<CommercialQuoteOptions>() is { } direct
+            ? Options.Create(direct)
+            : sp.GetService<IOptions<CommercialQuoteOptions>>();
 }

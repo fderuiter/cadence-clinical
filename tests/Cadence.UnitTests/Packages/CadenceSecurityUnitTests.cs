@@ -18,12 +18,19 @@ using Cadence.Security.Blinding;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 using Cadence.Testing;
+using Cadence.Testing.Hosting;
+using Cadence.Testing.Security;
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 using Xunit;
@@ -1375,5 +1382,141 @@ public class CadenceSecurityUnitTests
         ClinicalScopeGuard.RequireVerifiedTenant(claimsOnlyContext, ClinicalScopeGuard.ForbiddenCode).Should().BeNull();
         ClinicalScopeGuard.RequireStudyAndSite(claimsOnlyContext, "STUDY-01", "SITE-101", ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
             .Should().BeNull();
+    }
+
+    [Fact]
+    public async Task AddCadenceSecurity_MinimalHostWithMissingAuditLogSecretKey_ThrowsOptionsValidationExceptionDuringStartAsync()
+    {
+        var secBuilder = WebApplication.CreateBuilder();
+        secBuilder.WebHost.UseTestServer();
+        secBuilder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            [CadenceSecurityServiceCollectionExtensions.GatewaySecretConfigurationKey] = TestSecurityContext.GatewaySecret,
+            [AuditSecretKey.EnvironmentVariable] = null,
+        });
+        secBuilder.Services.AddCadenceSecurity();
+        await using var secApp = secBuilder.Build();
+        secApp.MapGet("/healthz", () => TypedResults.Ok()).AllowAnonymous();
+
+        Func<Task> start = () => secApp.StartAsync(TestContext.Current.CancellationToken);
+
+        var ex = (await start.Should().ThrowAsync<OptionsValidationException>()).Which;
+        ex.Message.Should().Contain(AuditSecretKey.EnvironmentVariable);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("short-audit-key")]
+    [InlineData("   short-key   ")]
+    public async Task AddCadenceSecurity_WithBlankOrShortAuditLogSecretKey_RejectsStartupWithoutExposingSecret(string invalidSecret)
+    {
+        var secBuilder = WebApplication.CreateBuilder();
+        secBuilder.WebHost.UseTestServer();
+        secBuilder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            [CadenceSecurityServiceCollectionExtensions.GatewaySecretConfigurationKey] = TestSecurityContext.GatewaySecret,
+            [AuditSecretKey.EnvironmentVariable] = invalidSecret,
+        });
+        secBuilder.Services.AddCadenceSecurity();
+        await using var secApp = secBuilder.Build();
+
+        Func<Task> start = () => secApp.StartAsync(TestContext.Current.CancellationToken);
+
+        var ex = (await start.Should().ThrowAsync<OptionsValidationException>()).Which;
+        ex.Message.Should().Contain(AuditSecretKey.EnvironmentVariable);
+        if (!string.IsNullOrWhiteSpace(invalidSecret))
+        {
+            ex.Message.Should().NotContain(invalidSecret.Trim());
+        }
+    }
+
+    [Fact]
+    public async Task AddCadenceSecurity_ExplicitBlankOrShortCallbackKey_DoesNotFallBackToConfigurationAndFailsStartup()
+    {
+        var secBuilder = WebApplication.CreateBuilder();
+        secBuilder.WebHost.UseTestServer();
+        secBuilder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            [CadenceSecurityServiceCollectionExtensions.GatewaySecretConfigurationKey] = TestSecurityContext.GatewaySecret,
+            [AuditSecretKey.EnvironmentVariable] = TestSecurityContext.AuditLogSecretKey,
+        });
+        secBuilder.Services.AddCadenceSecurity(opts => opts.AuditLogSecretKey = "too-short");
+        await using var secApp = secBuilder.Build();
+
+        Func<Task> start = () => secApp.StartAsync(TestContext.Current.CancellationToken);
+
+        var ex = (await start.Should().ThrowAsync<OptionsValidationException>()).Which;
+        ex.Message.Should().Contain(AuditSecretKey.EnvironmentVariable)
+            .And.NotContain("too-short");
+    }
+
+    [Fact]
+    public void AddCadenceSecurity_BindsConfigurationSecret_AndConstructsAuditDigestEngineFromValidatedOptions()
+    {
+        const string configuredKey = "  configured-audit-hmac-secret-16+  "; // pragma: allowlist secret
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [CadenceSecurityServiceCollectionExtensions.GatewaySecretConfigurationKey] = TestSecret,
+                [AuditSecretKey.EnvironmentVariable] = configuredKey,
+            })
+            .Build();
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IConfiguration>(configuration);
+        services.AddLogging();
+        services.AddCadenceSecurity();
+
+        using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptions<CadenceSecurityOptions>>().Value;
+        options.AuditLogSecretKey.Should().Be(configuredKey);
+
+        var engine = provider.GetRequiredService<AuditDigestEngine>();
+        var record = engine.LogEvent(new AuditLogPayload
+        {
+            ServiceName = "designer",
+            ActionType = "CREATE",
+            EntityName = "ProtocolDraft",
+            EntityId = "PD-1",
+            UserId = "designer-01",
+            TenantId = "tenant-01",
+            ReasonForChange = "Initial protocol draft",
+        });
+
+        string expected = AuditDigestCalculator.ComputeAuditDigest(
+            record.EventId,
+            record.ServiceName,
+            record.ActionType,
+            record.EntityName,
+            record.EntityId,
+            record.UserId,
+            record.TenantId,
+            record.ReasonForChange,
+            record.Timestamp.ToString("o"),
+            record.PreviousDigest,
+            configuredKey.Trim());
+        record.Sha256Digest.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("short-secret-15")]
+    public void DesignerHostStartup_WithoutValidAuditLogSecretKey_FailsFast(string invalidKey)
+    {
+        using var unconfigured = new StartupValidationFactory<Cadence.Apps.Designer.Program>(builder => builder
+            .UseTestGatewaySecret()
+            .UseSetting(AuditSecretKey.EnvironmentVariable, invalidKey));
+
+        var ex = unconfigured.ValidateStartup().Should().BeOfType<OptionsValidationException>().Which;
+        ex.Message.Should().Contain(AuditSecretKey.EnvironmentVariable);
+        if (!string.IsNullOrWhiteSpace(invalidKey))
+        {
+            ex.Message.Should().NotContain(invalidKey);
+        }
+
+        using var configured = new StartupValidationFactory<Cadence.Apps.Designer.Program>(builder => builder
+            .UseTestGatewaySecret());
+        configured.ValidateStartup().Should().BeNull();
     }
 }

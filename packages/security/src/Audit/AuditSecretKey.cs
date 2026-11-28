@@ -15,6 +15,11 @@ public static class AuditSecretKey
     /// <summary>Environment variable / configuration key holding the audit HMAC key.</summary>
     public const string EnvironmentVariable = "AUDIT_LOG_SECRET_KEY";
 
+    /// <summary>Minimum trimmed character length enforced on <see cref="EnvironmentVariable"/> at host startup.</summary>
+    public const int MinimumSecretLength = 16;
+
+    internal static string? ReadEnvironmentVariable() => Environment.GetEnvironmentVariable(EnvironmentVariable);
+
     /// <summary>
     /// Returns <paramref name="explicitKey"/> when it is non-blank, otherwise the trimmed value of
     /// <see cref="EnvironmentVariable"/>.

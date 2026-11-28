@@ -57,9 +57,14 @@ public sealed class AppHostModelTests
         {
             var variables = await EnvironmentNamesAsync(project);
             variables.Should().Contain("GATEWAY_SECRET", name);
+            if (name != "gateway")
+            {
+                variables.Should().Contain("AUDIT_LOG_SECRET_KEY", name);
+            }
+
             if (!WithoutDatabase.Contains(name))
             {
-                variables.Should().Contain(["AUDIT_LOG_SECRET_KEY", "ConnectionStrings__cadence", "Database__MigrateOnStartup"], name);
+                variables.Should().Contain(["ConnectionStrings__cadence", "Database__MigrateOnStartup"], name);
             }
         }
 

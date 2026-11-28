@@ -39,6 +39,7 @@ using Cadence.Standards;
 using Cadence.Telemetry;
 
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -70,10 +71,16 @@ string[] platformOperators =
     KernelAuthorityOptions.TrialOnboardingOperator.Id,
     KernelAuthorityOptions.CommercialBillingOperator.Id,
 ];
-string? quoteSigningSecret = builder.Configuration["CommercialQuote:SigningSecret"]
-    ?? builder.Configuration["Security:GatewaySecret"]
-    ?? builder.Configuration["GATEWAY_SECRET"];
-builder.Services.AddSingleton(new CommercialQuoteOptions(quoteSigningSecret));
+builder.Services.AddOptions<CommercialQuoteOptions>()
+    .Configure<IConfiguration>((quoteOptions, configuration) =>
+        quoteOptions.SigningSecret ??= configuration["CommercialQuote:SigningSecret"]
+            ?? configuration["Security:GatewaySecret"]
+            ?? configuration["GATEWAY_SECRET"])
+    .Validate(
+        quoteOptions => !string.IsNullOrWhiteSpace(quoteOptions.SigningSecret)
+            && quoteOptions.SigningSecret.Trim().Length >= SubscriptionQuoteToken.MinSecretLength,
+        $"CommercialQuote:SigningSecret must be set to a secret of at least {SubscriptionQuoteToken.MinSecretLength} characters (or unset when Security:GatewaySecret or GATEWAY_SECRET supplies one).")
+    .ValidateOnStart();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.Services.AddHttpContextAccessor();
 builder.Services

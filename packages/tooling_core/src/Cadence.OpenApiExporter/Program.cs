@@ -235,6 +235,7 @@ public static class Program
             .UseEnvironment("Development")
             .UseContentRoot(contentRoot)
             .UseSetting("GATEWAY_SECRET", Convert.ToHexString(RandomNumberGenerator.GetBytes(32)))
+            .UseSetting("AUDIT_LOG_SECRET_KEY", Convert.ToHexString(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("OIDC_AUTHORITY", "http://localhost/realms/openapi-export")
             .UseSetting("POSTGRES_CONNECTION_STRING", "Host=localhost;Database=cadence_openapi_export")
             .UseSetting("DemographicsEncryption:KeyBase64", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
