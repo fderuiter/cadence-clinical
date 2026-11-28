@@ -1,8 +1,10 @@
 using System;
 
 using Cadence.Apps.Payments.Application;
+using Cadence.Security.Authentication;
 
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Apps.Payments.Endpoints;
 
@@ -23,6 +25,12 @@ public static class PaymentEndpoints
         routes.MapInvoiceEndpoints();
         return routes;
     }
+
+    public static string ResolveConfiguredGatewaySecret(IOptions<GatewayAuthenticationOptions> gatewayAuthentication) =>
+        PaymentHmacTokenHelper.ResolveConfiguredGatewaySecret(gatewayAuthentication);
+
+    public static string IssueReceiptOcrToken(PaymentHmacTokenHelper.ReceiptOcrTokenPayload payload, string? gatewaySecret) =>
+        PaymentHmacTokenHelper.IssueReceiptOcrToken(payload, gatewaySecret);
 
     public static string IssueDiarySyncVerificationToken(
         string callerUserId,

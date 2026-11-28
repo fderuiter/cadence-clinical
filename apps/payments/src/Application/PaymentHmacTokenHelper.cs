@@ -44,24 +44,21 @@ public static class PaymentHmacTokenHelper
         long IssuedAtUnix,
         long ExpiresAtUnix);
 
-    public static string? ResolveConfiguredGatewaySecret(IOptionsMonitor<GatewayAuthenticationOptions>? gatewayAuthentication)
+    public static string ResolveConfiguredGatewaySecret(IOptions<GatewayAuthenticationOptions> gatewayAuthentication)
     {
-        string? fromOptions = gatewayAuthentication?.Get(GatewayAuthenticationHandler.SchemeName).GatewaySecret;
-        if (!string.IsNullOrWhiteSpace(fromOptions))
-        {
-            return fromOptions;
-        }
-
-        string? fromEnv = Environment.GetEnvironmentVariable(
-            CadenceSecurityServiceCollectionExtensions.GatewaySecretConfigurationKey);
-        return !string.IsNullOrWhiteSpace(fromEnv) ? fromEnv : null;
+        ArgumentNullException.ThrowIfNull(gatewayAuthentication);
+        return gatewayAuthentication.Value.GatewaySecret is { Length: >= GatewayAuthenticationOptions.MinimumSecretLength } secret
+            ? secret
+            : throw new InvalidOperationException(
+                $"{CadenceSecurityServiceCollectionExtensions.GatewaySecretConfigurationKey} must be set to a secret of at least {GatewayAuthenticationOptions.MinimumSecretLength} characters; payment tokens cannot be signed.");
     }
 
     public static string IssueReceiptOcrToken(ReceiptOcrTokenPayload payload, string? gatewaySecret)
     {
-        if (string.IsNullOrWhiteSpace(gatewaySecret))
+        if (gatewaySecret is not { Length: >= GatewayAuthenticationOptions.MinimumSecretLength })
         {
-            throw new InvalidOperationException("GATEWAY_SECRET is not configured; receipt OCR tokens cannot be signed.");
+            throw new InvalidOperationException(
+                $"{CadenceSecurityServiceCollectionExtensions.GatewaySecretConfigurationKey} must be set to a secret of at least {GatewayAuthenticationOptions.MinimumSecretLength} characters; receipt OCR tokens cannot be signed.");
         }
 
         return SignHmacTokenPayload(payload, DeriveOcrTokenSigningKey(gatewaySecret));
@@ -78,9 +75,10 @@ public static class PaymentHmacTokenHelper
         TimeSpan? lifetime = null,
         string? tokenId = null)
     {
-        if (string.IsNullOrWhiteSpace(gatewaySecret))
+        if (gatewaySecret is not { Length: >= GatewayAuthenticationOptions.MinimumSecretLength })
         {
-            throw new InvalidOperationException("GATEWAY_SECRET is not configured; diary sync verification tokens cannot be signed.");
+            throw new InvalidOperationException(
+                $"{CadenceSecurityServiceCollectionExtensions.GatewaySecretConfigurationKey} must be set to a secret of at least {GatewayAuthenticationOptions.MinimumSecretLength} characters; diary sync verification tokens cannot be signed.");
         }
 
         string resolvedTokenId = string.IsNullOrWhiteSpace(tokenId)
@@ -108,7 +106,7 @@ public static class PaymentHmacTokenHelper
         out ReceiptOcrTokenPayload? payload)
     {
         payload = null;
-        if (string.IsNullOrWhiteSpace(gatewaySecret)
+        if (gatewaySecret is not { Length: >= GatewayAuthenticationOptions.MinimumSecretLength }
             || !TryDecodeAndVerifyHmacTokenPayload(token, DeriveOcrTokenSigningKey(gatewaySecret), out ReceiptOcrTokenPayload? parsed)
             || parsed is null)
         {
@@ -137,7 +135,7 @@ public static class PaymentHmacTokenHelper
         out DiarySyncVerificationTokenPayload? payload)
     {
         payload = null;
-        if (string.IsNullOrWhiteSpace(gatewaySecret)
+        if (gatewaySecret is not { Length: >= GatewayAuthenticationOptions.MinimumSecretLength }
             || !TryDecodeAndVerifyHmacTokenPayload(token, DeriveDiarySyncTokenSigningKey(gatewaySecret), out DiarySyncVerificationTokenPayload? parsed)
             || parsed is null)
         {

@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Security.DependencyInjection;
 
@@ -34,6 +35,9 @@ public static class CadenceSecurityServiceCollectionExtensions
     /// <summary>The configuration key (and environment variable) holding the shared gateway secret.</summary>
     public const string GatewaySecretConfigurationKey = "GATEWAY_SECRET"; // pragma: allowlist secret
 
+    private static readonly string GatewaySecretValidationMessage =
+        $"{GatewaySecretConfigurationKey} must be set to a secret of at least {GatewayAuthenticationOptions.MinimumSecretLength} characters.";
+
     /// <summary>
     /// Registers Cadence security engine services, authentication middleware, authorization policies, and audit components.
     /// @req:PRD-SYS-053
@@ -49,13 +53,19 @@ public static class CadenceSecurityServiceCollectionExtensions
         services.AddAuthentication(GatewayAuthenticationHandler.SchemeName)
             .AddScheme<GatewayAuthenticationOptions, GatewayAuthenticationHandler>(GatewayAuthenticationHandler.SchemeName, null);
 
-        services.AddOptions<GatewayAuthenticationOptions>(GatewayAuthenticationHandler.SchemeName)
-            .Configure<IServiceProvider>((authOptions, sp) =>
-                authOptions.GatewaySecret ??= options.GatewaySecret ?? sp.GetService<IConfiguration>()?[GatewaySecretConfigurationKey])
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IPostConfigureOptions<GatewayAuthenticationOptions>, GatewayAuthenticationOptionsPostConfigure>());
+
+        services.AddOptions<GatewayAuthenticationOptions>()
             .Validate(
-                authOptions => authOptions.GatewaySecret is { Length: >= GatewayAuthenticationOptions.MinimumSecretLength },
-                $"{GatewaySecretConfigurationKey} must be set to a secret of at least {GatewayAuthenticationOptions.MinimumSecretLength} characters.")
+                static authOptions => authOptions.GatewaySecret is { Length: >= GatewayAuthenticationOptions.MinimumSecretLength },
+                GatewaySecretValidationMessage)
             .ValidateOnStart();
+
+        services.AddOptions<GatewayAuthenticationOptions>(GatewayAuthenticationHandler.SchemeName)
+            .Validate(
+                static authOptions => authOptions.GatewaySecret is { Length: >= GatewayAuthenticationOptions.MinimumSecretLength },
+                GatewaySecretValidationMessage);
 
         services.AddTransient<AuditorWriteGuardMiddleware>();
         services.AddTransient<ExpiredSubscriptionWriteGuardMiddleware>();
@@ -247,5 +257,75 @@ public static class CadenceSecurityServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(builder);
         return builder.WithMetadata(AllowExpiredTenantWriteMetadata.Instance);
+    }
+
+    private sealed class GatewayAuthenticationOptionsPostConfigure(
+        IServiceProvider serviceProvider,
+        CadenceSecurityOptions securityOptions) : IPostConfigureOptions<GatewayAuthenticationOptions>
+    {
+        public void PostConfigure(string? name, GatewayAuthenticationOptions options)
+        {
+            if (options.GatewaySecret is not null)
+            {
+                return;
+            }
+
+            if (serviceProvider.GetService<IOptions<GatewayAuthenticationOptions>>() is OptionsWrapper<GatewayAuthenticationOptions> explicitWrapper
+                && explicitWrapper.Value.GatewaySecret is not null)
+            {
+                options.GatewaySecret = explicitWrapper.Value.GatewaySecret;
+                return;
+            }
+
+            if (serviceProvider.GetService<IOptionsMonitor<GatewayAuthenticationOptions>>() is { } customMonitor
+                && customMonitor is not OptionsMonitor<GatewayAuthenticationOptions>)
+            {
+                string? monitorSecret = customMonitor.Get(GatewayAuthenticationHandler.SchemeName).GatewaySecret
+                    ?? customMonitor.CurrentValue.GatewaySecret;
+                if (monitorSecret is not null)
+                {
+                    options.GatewaySecret = monitorSecret;
+                    return;
+                }
+            }
+
+            string counterpartName = string.Equals(name, GatewayAuthenticationHandler.SchemeName, StringComparison.Ordinal)
+                ? Options.DefaultName
+                : GatewayAuthenticationHandler.SchemeName;
+            if (TryResolveExplicitlyConfiguredSecret(counterpartName) is { } counterpartSecret)
+            {
+                options.GatewaySecret = counterpartSecret;
+                return;
+            }
+
+            options.GatewaySecret = securityOptions.GatewaySecret
+                ?? serviceProvider.GetService<IConfiguration>()?[GatewaySecretConfigurationKey];
+        }
+
+        private string? TryResolveExplicitlyConfiguredSecret(string targetName)
+        {
+            var probe = new GatewayAuthenticationOptions();
+            foreach (var setup in serviceProvider.GetServices<IConfigureOptions<GatewayAuthenticationOptions>>())
+            {
+                if (setup is IConfigureNamedOptions<GatewayAuthenticationOptions> namedSetup)
+                {
+                    namedSetup.Configure(targetName, probe);
+                }
+                else if (string.Equals(targetName, Options.DefaultName, StringComparison.Ordinal))
+                {
+                    setup.Configure(probe);
+                }
+            }
+
+            foreach (var post in serviceProvider.GetServices<IPostConfigureOptions<GatewayAuthenticationOptions>>())
+            {
+                if (!ReferenceEquals(post, this))
+                {
+                    post.PostConfigure(targetName, probe);
+                }
+            }
+
+            return probe.GatewaySecret;
+        }
     }
 }

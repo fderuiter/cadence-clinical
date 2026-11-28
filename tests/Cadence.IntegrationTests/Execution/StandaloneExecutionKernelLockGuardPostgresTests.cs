@@ -378,8 +378,7 @@ public sealed class StandaloneExecutionKernelLockGuardPostgresTests(
                 services.RemoveAll<IEtmfCompletenessWebhookPublisher>();
                 services.AddScoped<IEtmfCompletenessWebhookPublisher>(sp => new HttpEtmfCompletenessWebhookPublisher(
                     countingExecutionClient,
-                    sp.GetRequiredService<IOptionsMonitor<GatewayAuthenticationOptions>>(),
-                    sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>(),
+                    sp.GetRequiredService<IOptions<GatewayAuthenticationOptions>>(),
                     sp.GetRequiredService<IClock>(),
                     sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<HttpEtmfCompletenessWebhookPublisher>>(),
                     sp.GetService<IHttpContextAccessor>()));

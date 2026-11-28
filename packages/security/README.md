@@ -22,7 +22,7 @@ signatures and audit digests shared by every Cadence service.
 ## Public APIs / Exports
 
 - **Authentication:** `GatewayAuthenticationHandler` (the `CadenceGateway` scheme: verifies the
-  gateway's HMAC-signed identity headers, fail-closed), `GatewayIdentity`, `GatewayHeaders`,
+  gateway's HMAC-signed identity headers, fail-closed) and `GatewayAuthenticationOptions` (bound from `GATEWAY_SECRET` for both default `IOptions<GatewayAuthenticationOptions>` and named `CadenceGateway` options with `MinimumSecretLength = 32` and `ValidateOnStart()`), `GatewayIdentity`, `GatewayHeaders`,
   `CadenceClaimTypes`, `HmacSigner`, `SigTokenVerifier` (`VerifyAndConsumeAsync`, including atomic dual-signer
   verification before consuming either `jti` via `ISigTokenUseStore.TryRecordFirstUseBatchAsync`, acceptance window
   `iat - 5s <= now < exp + 5s`, [ADR-2666](../../docs/adr/2026-11-24-atomic-dual-signer-step-up-verification-and-startup-validated-cgt-barcode-key.md)) with `ISigTokenUseStore` for single use: `ReplayCache` is the process-local default,

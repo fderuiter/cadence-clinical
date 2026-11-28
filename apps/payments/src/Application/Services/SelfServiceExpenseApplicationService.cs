@@ -24,7 +24,7 @@ public sealed class SelfServiceExpenseApplicationService(
     IWalletRowLockRepository walletLocks,
     IClock clock,
     ExpenseApplicationService expenseService,
-    IOptionsMonitor<GatewayAuthenticationOptions>? gatewayAuthentication = null)
+    IOptions<GatewayAuthenticationOptions> gatewayAuthentication)
 {
     public Task<IResult> ExtractSelfReceiptOcrAsync(OcrExtractRequestDto request, HttpContext httpContext) =>
         expenseService.ExtractReceiptOcrAsync(request, httpContext);

@@ -7,3 +7,5 @@ Active Architectural Decision Records for **2. API Gateway, Security & Identity*
 - Entries below use `# ADR-SECURITY-YYYYMMDD-<slug>: <title>` and are sorted alphabetically by filename.
 
 ## Decisions
+
+- [ADR-SECURITY-20261128-bind-default-gatewayauthenticationoptions-with-startup-validation: Bind Default GatewayAuthenticationOptions With Startup Validation](2026-11-28-bind-default-gatewayauthenticationoptions-with-startup-validation.md) (2026-11-28)
