@@ -24,6 +24,7 @@ using Yarp.ReverseProxy.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
+builder.AddGatewayDevelopmentOpenApi();
 
 // Callers authenticate with a Keycloak-issued bearer token. OIDC_AUTHORITY (the issuer browsers see) is
 // required and the host refuses to start without it. OIDC_METADATA_ADDRESS optionally points discovery at
@@ -163,6 +164,7 @@ api.MapGet("/status", () => TypedResults.Ok(new { mode = "Active", gateway = "Ca
     .WithSummary("Returns gateway dispatch status.")
     .AllowAnonymous();
 
+app.MapGatewayDevelopmentOpenApi(GetServiceUrl);
 app.MapSignatureTokenEndpoints();
 app.MapReverseProxy();
 

@@ -329,6 +329,83 @@ public sealed class OpenApiDriftTests : IDisposable
         ExporterBuildFreshness.CanSkipBuild(repoDir, exporterProject).Should().BeTrue();
     }
 
+    [Fact]
+    public void AggregateOpenApiSpecs_PublishesRootGatewayOriginsWithoutApiV1Suffix()
+    {
+        string ctmsJson = """
+            {
+              "openapi": "3.1.1",
+              "paths": { "/api/v1/ctms/status": { "get": { "operationId": "CtmsStatus" } } }
+            }
+            """;
+        var specs = new Dictionary<string, System.Text.Json.Nodes.JsonObject>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ctms"] = (System.Text.Json.Nodes.JsonObject)System.Text.Json.Nodes.JsonNode.Parse(ctmsJson)!,
+        };
+
+        var aggregated = OpenApiSyncService.AggregateOpenApiSpecs(_exported, _root, specs);
+        var serverUrls = aggregated["servers"]!.AsArray()
+            .Select(node => node!["url"]!.GetValue<string>())
+            .ToList();
+
+        serverUrls.Should().Equal("https://api.ccrsoft.com", "http://localhost:8000");
+        serverUrls.Should().NotContain(url => url.EndsWith("/api/v1", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void CommittedOpenApiSpecs_ContainNoLocalhostDefaultServersOrApiV1ServerDuplication()
+    {
+        string repoRoot = PreCommitOpenApiService.FindRepoRoot();
+        string openApiDir = Path.Combine(repoRoot, "docs", "openapi");
+        var specFiles = Directory.GetFiles(openApiDir, "*_openapi.json", SearchOption.TopDirectoryOnly)
+            .OrderBy(Path.GetFileName, StringComparer.Ordinal)
+            .ToList();
+
+        var perServiceSpecs = specFiles
+            .Where(f => !string.Equals(Path.GetFileName(f), "cdisc_openapi.json", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        perServiceSpecs.Should().HaveCount(19);
+
+        foreach (string specFile in perServiceSpecs)
+        {
+            var doc = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(specFile))!.AsObject();
+            var urls = doc["servers"]!.AsArray().Select(s => s!["url"]!.GetValue<string>()).ToList();
+            urls.Should().NotBeEmpty($"'{Path.GetFileName(specFile)}' must declare servers");
+            urls.Should().NotContain("http://localhost/", $"'{Path.GetFileName(specFile)}' must not emit http://localhost/");
+            urls.Should().Equal("/");
+        }
+
+        var unified = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(openApiDir, "cdisc_openapi.json")))!.AsObject();
+        var unifiedUrls = unified["servers"]!.AsArray().Select(s => s!["url"]!.GetValue<string>()).ToList();
+        unifiedUrls.Should().Equal("https://api.ccrsoft.com", "http://localhost:8000");
+        unifiedUrls.Should().NotContain(u => u.Contains("/api/v1", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void FrontProxyConfigurations_KeepDefaultPlainHttpAndProvideOptInTlsRedirectWithProxyHealth()
+    {
+        string repoRoot = PreCommitOpenApiService.FindRepoRoot();
+        string defaultConf = File.ReadAllText(Path.Combine(repoRoot, "docker", "nginx", "conf.d", "default.conf"));
+        defaultConf.Should().Contain("listen 8000;")
+            .And.Contain("location /_proxy_health")
+            .And.NotContain("ssl_certificate");
+
+        string tlsConfPath = Path.Combine(repoRoot, "docker", "nginx", "tls", "default.conf");
+        File.Exists(tlsConfPath).Should().BeTrue();
+        string tlsConf = File.ReadAllText(tlsConfPath);
+        tlsConf.Should().Contain("listen 80;")
+            .And.Contain("listen 443 ssl;")
+            .And.Contain("location = /_proxy_health")
+            .And.Contain("return 308 https://$host$request_uri;")
+            .And.Contain("proxy_set_header X-Forwarded-Proto https;")
+            .And.Contain("proxy_set_header X-Forwarded-Host ")
+            .And.Contain("proxy_pass http://cadence_gateway;");
+
+        string tlsComposePath = Path.Combine(repoRoot, "docker", "docker-compose.tls.yml");
+        File.Exists(tlsComposePath).Should().BeTrue();
+        File.ReadAllText(tlsComposePath).Should().Contain("./nginx/tls/default.conf:/etc/nginx/conf.d/default.conf:ro");
+    }
+
     private static string WriteTimestampedFile(string rootDir, string relativePath, string content, DateTime lastWriteUtc)
     {
         string fullPath = Path.Combine(rootDir, relativePath.Replace('/', Path.DirectorySeparatorChar));

@@ -26,7 +26,7 @@ caller's identity to backend services as HMAC-signed headers.
 
 See ADR-2256 (`docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md`).
 
-Only `/healthz` and `/api/v1/status` are anonymous on the gateway itself.
+Only `/healthz` and `/api/v1/status` are anonymous on the gateway itself (plus `/openapi/*.json` and `/scalar/*` in `Development`).
 
 ## Electronic signatures (step-up)
 
@@ -52,22 +52,26 @@ The claim set and checks are specified in `docs/SDLC/Signature_Token_Cryptograph
 
 ## Configuration
 
-| Setting                                 | Required                          | Purpose                                                                                                                          |
-| --------------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `GATEWAY_SECRET`                        | yes (gateway and every service)   | Shared HMAC key, at least 32 characters. No default; startup fails without it.                                                   |
-| `OIDC_AUTHORITY`                        | yes                               | Token issuer, e.g. `https://idp.example.com/realms/cadence`.                                                                     |
-| `OIDC_AUDIENCE`                         | yes outside Development           | Expected `aud` claim (`cadence-api`); startup fails without it outside Development, and it is validated whenever set.            |
-| `OIDC_METADATA_ADDRESS`                 | no                                | Internal discovery URL when it differs from the public issuer.                                                                   |
-| `OIDC_REQUIRE_HTTPS_METADATA`           | no (default `true`)               | Set `false` only for local Keycloak over HTTP.                                                                                   |
-| `OIDC_SIGNATURE_CLIENT_ID`              | no (default `cadence-esignature`) | Keycloak client with only direct access grants enabled, used to re-check signer passwords.                                       |
-| `OIDC_SIGNATURE_CLIENT_SECRET`          | no                                | That client's secret, when it is confidential.                                                                                   |
-| `OIDC_TOKEN_ENDPOINT`                   | no                                | Token endpoint override; defaults to `<realm>/protocol/openid-connect/token` beside `OIDC_METADATA_ADDRESS` or `OIDC_AUTHORITY`. |
-| `<SERVICE>_SERVICE_URL`                 | outside Development               | Backend base URLs, e.g. `EXECUTION_SERVICE_URL`; absolute http(s) URLs.                                                          |
-| `GATEWAY_PROXY_TIMEOUT_SECONDS`         | no (default `30`)                 | Idle time after which a proxied request fails with 504.                                                                          |
-| `GATEWAY_HEALTH_CHECK_INTERVAL_SECONDS` | no (default `10`)                 | How often each service's `/healthz/ready` is probed.                                                                             |
-| `GATEWAY_HEALTH_CHECK_TIMEOUT_SECONDS`  | no (default `5`)                  | Time limit for one probe.                                                                                                        |
-| `GATEWAY_RATE_LIMIT_PER_MINUTE`         | no (default `600`)                | Requests per caller per minute before 429.                                                                                       |
-| `CADENCE_TRUSTED_PROXIES`               | behind a proxy                    | Proxies whose `X-Forwarded-For`/`-Proto` are honoured (IPs or CIDR ranges).                                                      |
+| Setting                                 | Required                          | Purpose                                                                                                                           |
+| --------------------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `GATEWAY_SECRET`                        | yes (gateway and every service)   | Shared HMAC key, at least 32 characters. No default; startup fails without it.                                                    |
+| `OIDC_AUTHORITY`                        | yes                               | Token issuer, e.g. `https://idp.example.com/realms/cadence`.                                                                      |
+| `OIDC_AUDIENCE`                         | yes outside Development           | Expected `aud` claim (`cadence-api`); startup fails without it outside Development, and it is validated whenever set.             |
+| `OIDC_METADATA_ADDRESS`                 | no                                | Internal discovery URL when it differs from the public issuer.                                                                    |
+| `OIDC_REQUIRE_HTTPS_METADATA`           | no (default `true`)               | Set `false` only for local Keycloak over HTTP.                                                                                    |
+| `OIDC_SIGNATURE_CLIENT_ID`              | no (default `cadence-esignature`) | Keycloak client with only direct access grants enabled, used to re-check signer passwords.                                        |
+| `OIDC_SIGNATURE_CLIENT_SECRET`          | no                                | That client's secret, when it is confidential.                                                                                    |
+| `OIDC_TOKEN_ENDPOINT`                   | no                                | Token endpoint override; defaults to `<realm>/protocol/openid-connect/token` beside `OIDC_METADATA_ADDRESS` or `OIDC_AUTHORITY`.  |
+| `<SERVICE>_SERVICE_URL`                 | outside Development               | Backend base URLs, e.g. `EXECUTION_SERVICE_URL`; absolute http(s) URLs.                                                           |
+| `GATEWAY_PROXY_TIMEOUT_SECONDS`         | no (default `30`)                 | Idle time after which a proxied request fails with 504.                                                                           |
+| `GATEWAY_HEALTH_CHECK_INTERVAL_SECONDS` | no (default `10`)                 | How often each service's `/healthz/ready` is probed.                                                                              |
+| `GATEWAY_HEALTH_CHECK_TIMEOUT_SECONDS`  | no (default `5`)                  | Time limit for one probe.                                                                                                         |
+| `GATEWAY_RATE_LIMIT_PER_MINUTE`         | no (default `600`)                | Requests per caller per minute before 429.                                                                                        |
+| `CADENCE_TRUSTED_PROXIES`               | behind a proxy                    | Proxies whose `X-Forwarded-For`/`-Proto`/`-Host`/`-Prefix` are honoured (IPs or CIDR ranges).                                     |
+| `CADENCE_ALLOWED_HOSTS`                 | no                                | Comma-separated hostnames or `*.domain` wildcards accepted in `X-Forwarded-Host`.                                                 |
+| `CADENCE_OPENAPI_PUBLIC_ORIGIN`         | no                                | Fallback public origin or `/` for OpenAPI `servers` when offline.                                                                 |
+| `CADENCE_HTTPS_REDIRECT_ENABLED`        | no (default `false`)              | Redirects plain HTTP requests (`307`) to HTTPS outside Development while exempting `/healthz`, `/healthz/live`, `/healthz/ready`. |
+| `CADENCE_HTTPS_PORT`                    | no (default `443`)                | External HTTPS port used in redirect `Location` URLs when `CADENCE_HTTPS_REDIRECT_ENABLED=true`.                                  |
 
 ## Routes
 
@@ -129,6 +133,10 @@ gateway answers **429** with `Retry-After` and forwards nothing. Health probes a
 The client address comes from `X-Forwarded-For`, which the gateway honours only from the proxies in
 `CADENCE_TRUSTED_PROXIES` (see [packages/telemetry](../../packages/telemetry/README.md)). Behind a front proxy, set it
 to the proxy's address; otherwise every caller behind the proxy shares one limit.
+
+## Development OpenAPI & Scalar documentation
+
+In `Development`, `src/GatewayOpenApiEndpoints.cs` serves the unified gateway contract (`/openapi/cdisc.json`), every per-contract specification (`/openapi/{contract}.json`), the gateway host document (`/openapi/v1.json`), and interactive Scalar API documentation (`/scalar`, `/scalar/cdisc`, `/scalar/{contract}`) without altering YARP `/api/v1/*` proxy routing. Each OpenAPI response rewrites `servers` from the active request scheme, host, and forwarded path base. For TLS edge termination with HTTP-to-HTTPS redirects that preserve `/_proxy_health`, layer `docker/docker-compose.tls.yml` (`docker/nginx/tls/default.conf`) on top of `docker/docker-compose.yml`.
 
 ## Tests
 

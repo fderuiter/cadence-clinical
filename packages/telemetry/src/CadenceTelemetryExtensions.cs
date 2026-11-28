@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -8,10 +9,14 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.OpenApi;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi;
 
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
@@ -144,12 +149,14 @@ public static partial class CadenceTelemetryExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(documentName);
 
+        services.AddHttpContextAccessor();
         services.AddOpenApi(documentName, options =>
         {
             options.ShouldInclude = includeUngrouped
                 ? description => description.GroupName is null
                     || string.Equals(description.GroupName, documentName, StringComparison.Ordinal)
                 : description => string.Equals(description.GroupName, documentName, StringComparison.Ordinal);
+            AddCadenceOpenApiServerTransformer(options);
         });
 
         return services;
@@ -164,14 +171,32 @@ public static partial class CadenceTelemetryExtensions
         builder.AddCadenceLogging();
         builder.AddCadenceTelemetry();
 
-        // Don't advertise the server software, honour X-Forwarded-* only from the configured proxies, and
-        // tell browsers to stay on HTTPS (sent only on HTTPS responses outside Development).
+        // Don't advertise the server software, honour X-Forwarded-* only from the configured proxies, validate
+        // forwarded host allowlists and HTTPS redirect settings eagerly, and tell browsers to stay on HTTPS.
         builder.WebHost.ConfigureKestrel(kestrel => kestrel.AddServerHeader = false);
         string? trustedProxies = builder.Configuration[CadenceHttpHardening.TrustedProxiesKey];
-        CadenceHttpHardening.ConfigureForwardedHeaders(new ForwardedHeadersOptions(), trustedProxies); // fail at startup on a bad entry
+        string? allowedHosts = builder.Configuration[CadenceHttpHardening.AllowedHostsKey];
+        string? configuredOpenApiOrigin = builder.Configuration[CadenceHttpHardening.OpenApiPublicOriginKey];
+        bool httpsRedirectEnabled = CadenceHttpHardening.ParseHttpsRedirectEnabled(
+            builder.Configuration[CadenceHttpHardening.HttpsRedirectEnabledKey]);
+        int? httpsPort = CadenceHttpHardening.ParseHttpsPort(
+            builder.Configuration[CadenceHttpHardening.HttpsPortKey]);
+
+        CadenceHttpHardening.ConfigureForwardedHeaders(new ForwardedHeadersOptions(), trustedProxies, allowedHosts); // fail at startup on a bad entry
+        _ = CadenceHttpHardening.NormalizeOpenApiPublicOrigin(configuredOpenApiOrigin);
         builder.Services.Configure<ForwardedHeadersOptions>(options =>
-            CadenceHttpHardening.ConfigureForwardedHeaders(options, trustedProxies));
+            CadenceHttpHardening.ConfigureForwardedHeaders(options, trustedProxies, allowedHosts));
         builder.Services.AddHsts(options => options.MaxAge = CadenceHttpHardening.HstsMaxAge);
+        if (httpsRedirectEnabled)
+        {
+            builder.Services.AddHttpsRedirection(options =>
+            {
+                options.RedirectStatusCode = StatusCodes.Status307TemporaryRedirect;
+                options.HttpsPort = httpsPort ?? 443;
+            });
+        }
+
+        builder.Services.AddHttpContextAccessor();
         builder.Services.AddHealthChecks();
         if (configureProblemDetails != null)
         {
@@ -181,13 +206,27 @@ public static partial class CadenceTelemetryExtensions
         {
             builder.Services.AddProblemDetails();
         }
-        builder.Services.AddOpenApi();
+        builder.Services.AddOpenApi(options => AddCadenceOpenApiServerTransformer(options));
         if (string.Equals(builder.Environment.ApplicationName, KernelHostApplicationName, StringComparison.Ordinal))
         {
             builder.Services.AddCadenceOpenApiDocument(KernelOpenApiDocument, includeUngrouped: true);
         }
 
         return builder;
+    }
+
+    private static void AddCadenceOpenApiServerTransformer(OpenApiOptions options)
+    {
+        options.AddDocumentTransformer((document, context, _) =>
+        {
+            HttpContext? httpContext = context.ApplicationServices.GetService<IHttpContextAccessor>()?.HttpContext;
+            IConfiguration? configuration = context.ApplicationServices.GetService<IConfiguration>();
+            string serverUrl = CadenceHttpHardening.ResolveOpenApiServerUrl(
+                httpContext,
+                configuration?[CadenceHttpHardening.OpenApiPublicOriginKey]);
+            document.Servers = [new OpenApiServer { Url = serverUrl }];
+            return Task.CompletedTask;
+        });
     }
 
     public static IApplicationBuilder UseCadenceTraceparent(this IApplicationBuilder app)
@@ -235,6 +274,12 @@ public static partial class CadenceTelemetryExtensions
         if (!app.Environment.IsDevelopment())
         {
             app.UseHsts();
+            if (CadenceHttpHardening.ParseHttpsRedirectEnabled(app.Configuration[CadenceHttpHardening.HttpsRedirectEnabledKey]))
+            {
+                app.UseWhen(
+                    context => !CadenceHttpHardening.IsHealthProbePath(context.Request.Path),
+                    branch => branch.UseHttpsRedirection());
+            }
         }
 
         app.UseExceptionHandler();
