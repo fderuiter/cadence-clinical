@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Payments.Application.Services;
@@ -16,6 +17,8 @@ namespace Cadence.Apps.Payments.Endpoints;
 /// </summary>
 public static class InvoiceEndpoints
 {
+    public const string InvoiceApproveSemanticAction = "payments.invoice.approve";
+
     public static IEndpointRouteBuilder MapInvoiceEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/v1/payments")
@@ -34,18 +37,26 @@ public static class InvoiceEndpoints
         group.MapPost("/invoices/compile", CompileBillingCycle)
             .WithName("CompileBillingCycle")
             .RequirePermission("payments_invoice:compile").RequireCallerStudyScope()
-            .WithSummary("Automates single-site billing cycle compilation into a self-billing invoice.");
+            .WithSummary("Automates single-site billing cycle compilation into a self-billing invoice.")
+            .RequireElectronicSignatureWhen(
+                RequiresSignatureForCompile,
+                ResolveInvoiceApproveSemanticAction,
+                http => http.Request.Path.Value ?? string.Empty);
 
         group.MapPost("/invoices/batch-compile", BatchCompileBillingCycles)
             .WithName("BatchCompileBillingCycles")
             .RequirePermission("payments_invoice:compile").RequireCallerStudyScope()
-            .WithSummary("Executes study-wide batch milestone invoice compilation across all active trial sites.");
+            .WithSummary("Executes study-wide batch milestone invoice compilation across all active trial sites.")
+            .RequireElectronicSignatureWhen(
+                RequiresSignatureForBatchCompile,
+                ResolveInvoiceApproveSemanticAction,
+                http => http.Request.Path.Value ?? string.Empty);
 
         group.MapPost("/invoices/{id}/approve", ApproveInvoice)
             .WithName("ApproveInvoice")
             .RequirePermission("payments_invoice:approve").RequireCallerStudyScope()
             .WithSummary("Approve draft self-billing invoice for ERP export and settlement.")
-            .RequireElectronicSignature("payments.invoice.approve", http => http.Request.Path.Value ?? string.Empty);
+            .RequireElectronicSignature(InvoiceApproveSemanticAction, http => http.Request.Path.Value ?? string.Empty);
 
         group.MapPost("/invoices/{id}/remittance-advice/sign", SignRemittanceAdvice)
             .WithName("SignRemittanceAdvice")
@@ -132,4 +143,15 @@ public static class InvoiceEndpoints
         HttpContext httpContext,
         string? erp_system = "SAP") =>
         service.ExportInvoiceToErpAsync(id, httpContext, erp_system);
+
+    private static bool RequiresSignatureForCompile(EndpointFilterInvocationContext context) =>
+        context.Arguments.OfType<BillingCycleCompilationRequest>().FirstOrDefault()?.AutoApprove is true;
+
+    private static bool RequiresSignatureForBatchCompile(EndpointFilterInvocationContext context) =>
+        context.Arguments.OfType<BatchBillingCycleCompilationRequest>().FirstOrDefault()?.AutoApprove is true;
+
+    private static string ResolveInvoiceApproveSemanticAction(HttpContext _)
+    {
+        return InvoiceApproveSemanticAction;
+    }
 }

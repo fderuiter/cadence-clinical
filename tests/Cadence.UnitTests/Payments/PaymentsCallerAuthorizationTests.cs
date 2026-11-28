@@ -4,17 +4,20 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
@@ -146,6 +149,300 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
         var audit = await db.PaymentAuditLogs.AsNoTracking().SingleAsync(a => a.Action == "INVOICE_APPROVED", Ct);
         audit.UserId.Should().Be("finance-1");
         audit.UserRoles.Should().Be("finance_officer", "the gateway signs the canonical role for the realm's \"Grants Manager\"");
+    }
+
+    [Fact]
+    public async Task InvoiceCompile_AutoApproveFalse_SucceedsWithoutSigToken_AndCreatesDraftInvoice()
+    {
+        await SeedAsync();
+        using var client = Client("finance-1", "Grants Manager");
+
+        using var response = await client.PostAsJsonAsync(
+            "/api/v1/payments/invoices/compile",
+            new { study_id = "S-1", site_id = "SITE-1", billing_cycle = "2026-11", auto_approve = false },
+            Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        await using var db = OpenDb();
+        var compiled = await db.SelfBillingInvoices.AsNoTracking().SingleAsync(i => i.Id != InvoiceId, Ct);
+        compiled.Status.Should().Be("DRAFT");
+        compiled.ApprovedBy.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task InvoiceCompileAndBatchCompile_AutoApproveTrue_EnforceSingleUseApproveSigToken_AndRejectWrongPathOrOutOfScope()
+    {
+        await SeedAsync();
+        const string compilePath = "/api/v1/payments/invoices/compile";
+        const string batchCompilePath = "/api/v1/payments/invoices/batch-compile";
+        string approvePath = $"/api/v1/payments/invoices/{InvoiceId}/approve";
+        string before = await SnapshotAsync();
+
+        // 1. Missing X-Sig-Token on auto_approve: true -> 401 REAUTHENTICATION_REQUIRED with zero DB writes
+        using (var noSigClient = Client("finance-1", "Grants Manager"))
+        {
+            using var singleMissing = await noSigClient.PostAsJsonAsync(
+                compilePath,
+                new { study_id = "S-1", site_id = "SITE-1", billing_cycle = "2026-11", auto_approve = true },
+                Ct);
+            singleMissing.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await singleMissing.Content.ReadAsStringAsync(Ct)).Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+
+            using var batchMissing = await noSigClient.PostAsJsonAsync(
+                batchCompilePath,
+                new { study_id = "S-1", site_ids = new[] { "SITE-1" }, billing_cycle = "2026-11", auto_approve = true },
+                Ct);
+            batchMissing.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await batchMissing.Content.ReadAsStringAsync(Ct)).Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+        }
+
+        (await SnapshotAsync()).Should().Be(before, "missing X-Sig-Token on auto_approve compilation must write nothing");
+
+        // 2. Token bound to /invoices/{id}/approve instead of /invoices/compile or /invoices/batch-compile -> 401
+        using (var wrongActionSingle = _factory.CreateSignedClient(TestSecurityContext.Identity("finance-1", "Grants Manager") with
+        {
+            SigToken = TestSecurityContext.CreateSigToken("finance-1", approvePath, "payments.invoice.approve", ["finance_officer"]),
+        }))
+        {
+            using var resp = await wrongActionSingle.PostAsJsonAsync(
+                compilePath,
+                new { study_id = "S-1", site_id = "SITE-1", billing_cycle = "2026-11", auto_approve = true },
+                Ct);
+            resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await resp.Content.ReadAsStringAsync(Ct)).Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+        }
+
+        using (var wrongActionBatch = _factory.CreateSignedClient(TestSecurityContext.Identity("finance-1", "Grants Manager") with
+        {
+            SigToken = TestSecurityContext.CreateSigToken("finance-1", approvePath, "payments.invoice.approve", ["finance_officer"]),
+        }))
+        {
+            using var resp = await wrongActionBatch.PostAsJsonAsync(
+                batchCompilePath,
+                new { study_id = "S-1", site_ids = new[] { "SITE-1" }, billing_cycle = "2026-11", auto_approve = true },
+                Ct);
+            resp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await resp.Content.ReadAsStringAsync(Ct)).Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+        }
+
+        (await SnapshotAsync()).Should().Be(before, "wrong-action X-Sig-Token must be refused before any DB write");
+
+        // 3. Out-of-scope finance_officer with valid X-Sig-Token -> 403 Forbidden before writing invoices or marking payables INVOICED
+        using (var outOfScopeClient = _factory.CreateSignedClient(TestSecurityContext.Identity("finance-scoped", "Grants Manager") with
+        {
+            StudyIds = ["S-OTHER"],
+            SiteIds = ["SITE-OTHER"],
+            SigToken = TestSecurityContext.CreateSigToken("finance-scoped", compilePath, "payments.invoice.approve", ["finance_officer"]),
+        }))
+        {
+            using var resp = await outOfScopeClient.PostAsJsonAsync(
+                compilePath,
+                new { study_id = "S-1", site_id = "SITE-1", billing_cycle = "2026-11", auto_approve = true },
+                Ct);
+            resp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        (await SnapshotAsync()).Should().Be(before, "out-of-scope finance_officer must write no SelfBillingInvoice or Payable changes");
+
+        // 4. Valid first-use X-Sig-Token on /invoices/compile -> 201 APPROVED + audit signature metadata; replay -> 401
+        using (var validSingleClient = _factory.CreateSignedClient(TestSecurityContext.Identity("finance-1", "Grants Manager") with
+        {
+            SigToken = TestSecurityContext.CreateSigToken("finance-1", compilePath, "payments.invoice.approve", ["finance_officer"]),
+        }))
+        {
+            using var first = await validSingleClient.PostAsJsonAsync(
+                compilePath,
+                new { study_id = "S-1", site_id = "SITE-1", billing_cycle = "2026-11", auto_approve = true },
+                Ct);
+            first.StatusCode.Should().Be(HttpStatusCode.Created);
+
+            using var replay = await validSingleClient.PostAsJsonAsync(
+                compilePath,
+                new { study_id = "S-1", site_id = "SITE-1", billing_cycle = "2026-11", auto_approve = true },
+                Ct);
+            replay.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await replay.Content.ReadAsStringAsync(Ct)).Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+        }
+
+        await using (var db = OpenDb())
+        {
+            var singleCompiled = await db.SelfBillingInvoices.AsNoTracking().SingleAsync(i => i.Id != InvoiceId, Ct);
+            singleCompiled.Status.Should().Be("APPROVED");
+            singleCompiled.ApprovedBy.Should().Be("finance-1");
+
+            var singleAudit = await db.PaymentAuditLogs.AsNoTracking()
+                .SingleAsync(a => a.Action == "INVOICE_COMPILED" && a.EntityId == singleCompiled.Id, Ct);
+            using var singleDoc = JsonDocument.Parse(singleAudit.Details!);
+            singleDoc.RootElement.GetProperty("signature_subject").GetString().Should().Be("finance-1");
+            singleDoc.RootElement.GetProperty("signature_token_id").GetString().Should().NotBeNullOrWhiteSpace();
+            singleDoc.RootElement.GetProperty("signature_semantic_action").GetString().Should().Be("payments.invoice.approve");
+
+            DateTimeOffset now = SystemClock.Instance.UtcNow;
+            db.Payables.Add(new Payable
+            {
+                Id = "PAY-2",
+                StudyId = "S-1",
+                SiteId = "SITE-2",
+                ContractId = "C-2",
+                SubjectId = "SUBJ-2",
+                VisitCode = "V1",
+                TriggerType = "VISIT_COMPLETED",
+                TriggerEventId = "EVT-2",
+                BaseAmount = 200m,
+                GrossAmount = 200m,
+                NetAmount = 200m,
+                Currency = "USD",
+                Status = "TRIGGERED",
+                CreatedAt = now,
+                CreatedBy = "edc-1",
+                UpdatedAt = now,
+            });
+            await db.SaveChangesAsync(Ct);
+        }
+
+        // 5. Valid first-use X-Sig-Token on /invoices/batch-compile -> 201 APPROVED + audit signature metadata; replay -> 401
+        using (var validBatchClient = _factory.CreateSignedClient(TestSecurityContext.Identity("finance-1", "Grants Manager") with
+        {
+            SigToken = TestSecurityContext.CreateSigToken("finance-1", batchCompilePath, "payments.invoice.approve", ["finance_officer"]),
+        }))
+        {
+            using var firstBatch = await validBatchClient.PostAsJsonAsync(
+                batchCompilePath,
+                new { study_id = "S-1", site_ids = new[] { "SITE-2" }, billing_cycle = "2026-11", auto_approve = true },
+                Ct);
+            firstBatch.StatusCode.Should().Be(HttpStatusCode.Created);
+
+            using var replayBatch = await validBatchClient.PostAsJsonAsync(
+                batchCompilePath,
+                new { study_id = "S-1", site_ids = new[] { "SITE-2" }, billing_cycle = "2026-11", auto_approve = true },
+                Ct);
+            replayBatch.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await replayBatch.Content.ReadAsStringAsync(Ct)).Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+        }
+
+        await using var afterBatchDb = OpenDb();
+        var site2Invoice = await afterBatchDb.SelfBillingInvoices.AsNoTracking().SingleAsync(i => i.SiteId == "SITE-2", Ct);
+        site2Invoice.Status.Should().Be("APPROVED");
+        site2Invoice.ApprovedBy.Should().Be("finance-1");
+
+        var batchSiteAudit = await afterBatchDb.PaymentAuditLogs.AsNoTracking()
+            .SingleAsync(a => a.Action == "BATCH_SITE_INVOICE_COMPILED" && a.EntityId == site2Invoice.Id, Ct);
+        using var batchDoc = JsonDocument.Parse(batchSiteAudit.Details!);
+        batchDoc.RootElement.GetProperty("signature_subject").GetString().Should().Be("finance-1");
+        batchDoc.RootElement.GetProperty("signature_token_id").GetString().Should().NotBeNullOrWhiteSpace();
+        batchDoc.RootElement.GetProperty("signature_semantic_action").GetString().Should().Be("payments.invoice.approve");
+    }
+
+    [Fact]
+    public async Task Kestrel_InvoiceCompileAndBatchCompile_EnforceElectronicSignatureOnlyWhenAutoApproveIsTrue()
+    {
+        await using var kestrelConn = new SqliteConnection("DataSource=:memory:");
+        await kestrelConn.OpenAsync(Ct);
+        await using var kestrelFactory = new KestrelPaymentsFactory(kestrelConn);
+        kestrelFactory.EnsureStarted();
+
+        DateTimeOffset now = SystemClock.Instance.UtcNow;
+        await using (var seedScope = kestrelFactory.Services.CreateAsyncScope())
+        {
+            var db = seedScope.ServiceProvider.GetRequiredService<PaymentsDbContext>();
+            await db.Database.EnsureCreatedAsync(Ct);
+            foreach (string siteId in new[] { "SITE-01", "SITE-02", "SITE-03" })
+            {
+                db.Payables.Add(new Payable
+                {
+                    Id = $"PAY-{siteId}",
+                    StudyId = "STUDY-PAY-01",
+                    SiteId = siteId,
+                    ContractId = $"C-{siteId}",
+                    SubjectId = $"SUBJ-{siteId}",
+                    VisitCode = "V1",
+                    TriggerType = "VISIT_COMPLETED",
+                    TriggerEventId = $"EVT-{siteId}",
+                    BaseAmount = 250m,
+                    GrossAmount = 250m,
+                    NetAmount = 250m,
+                    Currency = "USD",
+                    Status = "VERIFIED",
+                    CreatedAt = now,
+                    CreatedBy = "edc-kestrel",
+                    UpdatedAt = now,
+                });
+            }
+
+            await db.SaveChangesAsync(Ct);
+        }
+
+        var financeIdentity = new GatewayIdentity(
+            UserId: "finance-kestrel",
+            Roles: ["finance_officer"],
+            SiteIds: ["SITE-01", "SITE-02", "SITE-03"],
+            TenantId: TestSecurityContext.TenantCode,
+            StudyIds: ["STUDY-PAY-01"],
+            ProductFamilies: TestSecurityContext.AllProductFamilies);
+
+        using (var client = kestrelFactory.CreateKestrelSignedClient(financeIdentity))
+        {
+            client.BaseAddress!.Scheme.Should().Be("http");
+            client.BaseAddress.Port.Should().BeGreaterThan(0);
+
+            using var draftResp = await client.PostAsJsonAsync(
+                "/api/v1/payments/invoices/compile",
+                new { study_id = "STUDY-PAY-01", site_id = "SITE-03", billing_cycle = "2026-11", auto_approve = false },
+                Ct);
+            draftResp.StatusCode.Should().Be(HttpStatusCode.Created);
+            using var draftJson = JsonDocument.Parse(await draftResp.Content.ReadAsStringAsync(Ct));
+            draftJson.RootElement.GetProperty("status").GetString().Should().Be("DRAFT");
+
+            using var singleAutoResp = await client.PostAsJsonAsync(
+                "/api/v1/payments/invoices/compile",
+                new { study_id = "STUDY-PAY-01", site_id = "SITE-01", billing_cycle = "2026-11", auto_approve = true },
+                Ct);
+            singleAutoResp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await singleAutoResp.Content.ReadAsStringAsync(Ct)).Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+
+            using var batchAutoResp = await client.PostAsJsonAsync(
+                "/api/v1/payments/invoices/batch-compile",
+                new { study_id = "STUDY-PAY-01", site_ids = new[] { "SITE-02" }, billing_cycle = "2026-11", auto_approve = true },
+                Ct);
+            batchAutoResp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await batchAutoResp.Content.ReadAsStringAsync(Ct)).Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+        }
+
+        await using var verifyScope = kestrelFactory.Services.CreateAsyncScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<PaymentsDbContext>();
+        (await verifyDb.SelfBillingInvoices.AsNoTracking()
+            .Where(i => i.SiteId == "SITE-01" || i.SiteId == "SITE-02")
+            .CountAsync(Ct)).Should().Be(0);
+        (await verifyDb.SelfBillingInvoices.AsNoTracking()
+            .SingleAsync(i => i.SiteId == "SITE-03", Ct)).Status.Should().Be("DRAFT");
+
+        using (var signedApproveClient = kestrelFactory.CreateKestrelSignedClient(financeIdentity with
+        {
+            SigToken = TestSecurityContext.CreateSigToken(
+                "finance-kestrel",
+                "/api/v1/payments/invoices/compile",
+                "payments.invoice.approve",
+                ["finance_officer"]),
+        }))
+        {
+            using var approvedResp = await signedApproveClient.PostAsJsonAsync(
+                "/api/v1/payments/invoices/compile",
+                new { study_id = "STUDY-PAY-01", site_id = "SITE-01", billing_cycle = "2026-11", auto_approve = true },
+                Ct);
+            approvedResp.StatusCode.Should().Be(HttpStatusCode.Created);
+
+            using var replayResp = await signedApproveClient.PostAsJsonAsync(
+                "/api/v1/payments/invoices/compile",
+                new { study_id = "STUDY-PAY-01", site_id = "SITE-01", billing_cycle = "2026-11", auto_approve = true },
+                Ct);
+            replayResp.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            (await replayResp.Content.ReadAsStringAsync(Ct)).Should().Contain(SigTokenVerifier.ReauthenticationRequired);
+        }
+
+        await using var finalScope = kestrelFactory.Services.CreateAsyncScope();
+        var finalDb = finalScope.ServiceProvider.GetRequiredService<PaymentsDbContext>();
+        var approvedSite1 = await finalDb.SelfBillingInvoices.AsNoTracking().SingleAsync(i => i.SiteId == "SITE-01", Ct);
+        approvedSite1.Status.Should().Be("APPROVED");
     }
 
     [Fact]
@@ -629,4 +926,52 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
     }
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    private sealed class KestrelPaymentsFactory : WebApplicationFactory<Cadence.Apps.Payments.Program>
+    {
+        private readonly SqliteConnection _connection;
+        private bool _started;
+
+        public KestrelPaymentsFactory(SqliteConnection connection)
+        {
+            _connection = connection;
+            UseKestrel(0);
+        }
+
+        public void EnsureStarted()
+        {
+            if (_started)
+            {
+                return;
+            }
+
+            StartServer();
+            _started = true;
+        }
+
+        public HttpClient CreateKestrelSignedClient(GatewayIdentity identity)
+        {
+            EnsureStarted();
+            var handler = new TestSecurityContext.GatewaySigningHandler(identity)
+            {
+                InnerHandler = new SocketsHttpHandler(),
+            };
+            return new HttpClient(handler, disposeHandler: true)
+            {
+                BaseAddress = ClientOptions.BaseAddress,
+            };
+        }
+
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys();
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<DbContextOptions<PaymentsDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<PaymentsDbContext>>();
+                TestSupport.TestEfServiceProviders.RemoveBackgroundHostedServices(services);
+                services.AddDbContext<PaymentsDbContext>(options => options.UseSqlite(_connection));
+            });
+        }
+    }
 }
