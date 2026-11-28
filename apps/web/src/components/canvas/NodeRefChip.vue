@@ -6,7 +6,7 @@
     :to="toLocation"
     class="noderef-chip node-ref-chip"
     :title="tooltipText"
-    @click="onSelectClick"
+    @click.capture="onSelectClick"
   >
     <span class="noderef-chip-label">{{ displayText }}</span>
   </component>
@@ -15,7 +15,7 @@
     type="button"
     class="noderef-chip node-ref-chip noderef-chip-button"
     :title="tooltipText"
-    @click="emit('select', summary.ref)"
+    @click="onButtonClick"
   >
     <span class="noderef-chip-label">{{ displayText }}</span>
   </button>
@@ -25,7 +25,9 @@
 import { computed, getCurrentInstance, nextTick, watch } from "vue";
 import { getActivePinia } from "pinia";
 import type { RouteLocationRaw } from "vue-router";
+import { getTopActiveModalContainer, hasActiveModalFocusTrap } from "ui";
 import { ensureNodesResolved, getNodeDisplay } from "../../canvas/nodeResolver";
+import { openEntityPeekDrawer } from "../../composables/useEntityPeekDrawer";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 
 const props = withDefaults(
@@ -113,6 +115,24 @@ const toLocation = computed<RouteLocationRaw | null>(() => {
 
 const linkTag = computed(() => routerLinkComponent ?? "a");
 
+function isActivatedInsideModalTrap(event?: MouseEvent): boolean {
+  if (!hasActiveModalFocusTrap()) return false;
+  const topModal = getTopActiveModalContainer();
+  const targetEl =
+    event?.currentTarget instanceof Element ? event.currentTarget : null;
+  return !topModal || !targetEl || topModal.contains(targetEl);
+}
+
+function onButtonClick() {
+  emit("select", summary.value.ref);
+  if (summary.value.ref) {
+    openEntityPeekDrawer({
+      nodeRef: summary.value.ref,
+      label: displayText.value,
+    });
+  }
+}
+
 function onSelectClick(event?: MouseEvent) {
   emit("select", summary.value.ref);
   if (
@@ -124,6 +144,15 @@ function onSelectClick(event?: MouseEvent) {
       event.shiftKey ||
       event.altKey)
   ) {
+    return;
+  }
+  if (summary.value.ref && isActivatedInsideModalTrap(event)) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    openEntityPeekDrawer({
+      nodeRef: summary.value.ref,
+      label: displayText.value,
+    });
     return;
   }
   if (currentRoute.value?.name === "study" && summary.value.ref) {

@@ -6,6 +6,7 @@ using System.Linq;
 
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
+using Cadence.ToolingCore.Primitives;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -42,7 +43,7 @@ public static class SyncGxPService
         TextWriter? output = null)
     {
         TextWriter writer = output ?? Console.Out;
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         string command = snapshot ? "pnpm cadence gxp snapshot" : "pnpm cadence gxp sync";
         writer.WriteLine("Cadence Clinical — Native GxP Compliance Sync");
         writer.WriteLine(new string('=', 60));
@@ -325,18 +326,5 @@ public static class SyncGxPService
         using var proc = Process.Start(psi);
         proc?.WaitForExit();
         return proc?.ExitCode ?? 1;
-    }
-
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
     }
 }

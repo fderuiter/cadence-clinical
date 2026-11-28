@@ -13,6 +13,13 @@ export interface CanvasTopbarUpdateOptions {
   inAppShell?: boolean;
 }
 
+export interface EnsureStickyChromeClearOptions {
+  programmatic?: boolean;
+  ignorePointerActivity?: boolean;
+}
+
+const PROGRAMMATIC_FOCUS_SYMBOL = Symbol.for("cadence.programmaticFocusState");
+
 let shellMounted = false;
 let shellHeaderHeightPx = 0;
 let canvasMounted = false;
@@ -203,8 +210,73 @@ function isInsideStickyOrModalOverlay(el: Element): boolean {
   return false;
 }
 
+function isRecentProgrammaticFocusTarget(target: Element): boolean {
+  const progState = (
+    globalThis as Record<symbol, { target?: unknown; at?: number } | undefined>
+  )[PROGRAMMATIC_FOCUS_SYMBOL];
+  if (!progState || progState.target !== target) {
+    return false;
+  }
+  return typeof progState.at === "number" && Date.now() - progState.at < 300;
+}
+
+export function alignElementBelowStickyChrome(
+  targetOrSelector: Element | string | null | undefined
+): boolean {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return false;
+  }
+  const resolved =
+    typeof targetOrSelector === "string"
+      ? document.querySelector(targetOrSelector)
+      : targetOrSelector;
+  if (!isElementLike(resolved)) {
+    return false;
+  }
+  const vh = window.innerHeight || document.documentElement?.clientHeight || 0;
+  if (vh <= 0) {
+    return false;
+  }
+  const rect = resolved.getBoundingClientRect();
+  if (rect.width <= 0 && rect.height <= 0) {
+    return false;
+  }
+  const minClearTop = getActiveStickyChromeHeightPx() + FOCUS_RING_CLEARANCE_PX;
+  const scrollY =
+    window.scrollY ??
+    window.pageYOffset ??
+    document.documentElement?.scrollTop ??
+    0;
+
+  if (rect.top < minClearTop && scrollY > 0) {
+    const delta = Math.floor(rect.top - minClearTop);
+    if (delta < 0 && typeof window.scrollBy === "function") {
+      window.scrollBy(0, delta);
+      return true;
+    }
+    return false;
+  }
+
+  const maxComfortableTop = Math.max(
+    minClearTop + 48,
+    vh - Math.min(200, Math.floor(vh * 0.35))
+  );
+  if (
+    rect.top > maxComfortableTop ||
+    (rect.bottom > vh && rect.top > minClearTop)
+  ) {
+    const delta = Math.floor(rect.top - minClearTop);
+    if (delta > 0 && typeof window.scrollBy === "function") {
+      window.scrollBy(0, delta);
+      return true;
+    }
+  }
+  return false;
+}
+
 export function ensureFocusedElementClearsStickyChrome(
-  eventOrTarget: Event | EventTarget | Element | null | undefined
+  eventOrTarget: Event | EventTarget | Element | null | undefined,
+  options: EnsureStickyChromeClearOptions = {}
 ): void {
   if (typeof window === "undefined" || typeof document === "undefined") {
     return;
@@ -221,7 +293,11 @@ export function ensureFocusedElementClearsStickyChrome(
   if (rawTarget === document.body || rawTarget === document.documentElement) {
     return;
   }
-  if (Date.now() - lastPointerInteractionAt < 150) {
+  const bypassPointerGuard =
+    Boolean(options.programmatic) ||
+    Boolean(options.ignorePointerActivity) ||
+    isRecentProgrammaticFocusTarget(rawTarget);
+  if (!bypassPointerGuard && Date.now() - lastPointerInteractionAt < 150) {
     return;
   }
   if (isInsideStickyOrModalOverlay(rawTarget)) {
