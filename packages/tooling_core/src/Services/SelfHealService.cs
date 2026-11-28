@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
+using Cadence.ToolingCore.Primitives;
+
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
@@ -122,7 +124,7 @@ public static class SelfHealService
         return ok ? 0 : 1;
     }
 
-    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    public static string FindRepoRoot() => WorkspacePrimitives.FindRepoRoot();
 
     private static bool FormatCSharp(string repoRoot, IReadOnlyList<string> changedFiles, bool full)
     {

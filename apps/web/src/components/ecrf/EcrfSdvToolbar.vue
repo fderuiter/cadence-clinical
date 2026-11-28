@@ -70,50 +70,61 @@
     </dd>
   </dl>
 
-  <div
-    v-if="locked"
-    class="ecrf-form-locks"
-    data-testid="ecrf-form-locks"
-    role="status"
-  >
-    <strong>Locked.</strong> Values cannot be changed while a lock is in force.
-    <span data-testid="ecrf-lock-scope-note">
-      <template v-if="assertionsLocked">
-        Source verifications, verification withdrawals, and query changes are
-        also blocked while a Locked assertion is in force.
-      </template>
-      <template v-else>
-        Source verification and queries remain available while Frozen.
-      </template>
-    </span>
-    <ul>
-      <li v-for="held in form.locks" :key="held.lock_id">
-        {{ held.kind }} on
-        <NodeRefChip
-          v-if="normalizeLookupNodeRef(String(held.scope))"
-          :node-ref="normalizeLookupNodeRef(String(held.scope))!"
-        />
-        <template v-else>{{ held.scope }}</template>
-        by
-        <NodeRefChip
-          v-if="normalizeLookupNodeRef(String(held.locked_by))"
-          :node-ref="normalizeLookupNodeRef(String(held.locked_by))!"
-        />
-        <template v-else>{{ held.locked_by }}</template>
-        at {{ held.locked_at }}: {{ held.reason }}
-      </li>
-    </ul>
-  </div>
-
   <ScopeLockControls
     :study-ref="`study:${form.study_id}`"
     :scope-ref="`collection_instance:${form.form_id}`"
     scope-label="form"
     :direct-locks="directFormLocks"
     :covering-locks="ancestorFormLocks"
+    :force-visible="locked"
     id-prefix="ecrf-lock"
     @changed="emit('lock-changed')"
-  />
+  >
+    <template v-if="locked" #banner-summary>
+      <span
+        class="ecrf-form-locks-inline"
+        data-testid="ecrf-form-locks"
+        role="status"
+      >
+        <strong>{{ assertionsLocked ? "Locked." : "Frozen." }}</strong>
+        {{ compactFormLocksSummary }}
+        <span data-testid="ecrf-lock-scope-note">
+          <template v-if="assertionsLocked">
+            Source verifications, verification withdrawals, and query changes
+            are also blocked while a Locked assertion is in force.
+          </template>
+          <template v-else>
+            Source verification and queries remain available while Frozen.
+          </template>
+        </span>
+      </span>
+    </template>
+
+    <template v-if="locked" #held-locks>
+      <div class="ecrf-form-locks">
+        <p class="ecrf-form-hint">
+          Values cannot be changed while a lock is in force.
+        </p>
+        <ul>
+          <li v-for="held in form.locks" :key="held.lock_id">
+            {{ held.kind }} on
+            <NodeRefChip
+              v-if="normalizeLookupNodeRef(String(held.scope))"
+              :node-ref="normalizeLookupNodeRef(String(held.scope))!"
+            />
+            <template v-else>{{ held.scope }}</template>
+            by
+            <NodeRefChip
+              v-if="normalizeLookupNodeRef(String(held.locked_by))"
+              :node-ref="normalizeLookupNodeRef(String(held.locked_by))!"
+            />
+            <template v-else>{{ held.locked_by }}</template>
+            at {{ held.locked_at }}: {{ held.reason }}
+          </li>
+        </ul>
+      </div>
+    </template>
+  </ScopeLockControls>
 
   <div
     v-if="canVerifySource && sdv.unverifiedItems.length > 0"
@@ -267,6 +278,15 @@ const ancestorFormLocks = computed<CoveringScopeLockItem[]>(() =>
   )
 );
 
+const compactFormLocksSummary = computed(() =>
+  props.form.locks
+    .map(
+      (held) =>
+        `${held.kind} on ${held.scope} by ${held.locked_by}: ${held.reason}`
+    )
+    .join("; ")
+);
+
 const nonMissingReadinessBlockers = computed(() =>
   (props.form.readiness_blockers ?? []).filter(
     (blocker) => !/required items? without a value/i.test(blocker)
@@ -292,8 +312,17 @@ const visitTimingBadgeText = computed(() => {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
   gap: 4px 12px;
+  margin: 0;
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
+}
+@media (min-width: 40rem) {
+  .ecrf-form-summary {
+    grid-template-columns:
+      max-content minmax(0, 1fr)
+      max-content minmax(0, 1fr);
+    gap: 4px 14px;
+  }
 }
 .ecrf-form-summary dt {
   font-weight: 600;
@@ -325,6 +354,7 @@ const visitTimingBadgeText = computed(() => {
   font-family: var(--semantic-font-mono);
 }
 .ecrf-form-locks,
+.ecrf-form-locks-inline,
 .ecrf-bulk-sdv {
   font-variant-numeric: tabular-nums;
 }
@@ -351,13 +381,16 @@ const visitTimingBadgeText = computed(() => {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin: 8px 0;
+  margin: 0;
+}
+.ecrf-form-row + .ecrf-form-row {
+  margin-top: 8px;
 }
 .ecrf-bulk-sdv {
   background-color: var(--semantic-color-surface-muted);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 8px 12px;
+  padding: 6px 10px;
   font-size: 0.85rem;
 }
 .ecrf-bulk-sdv-results {

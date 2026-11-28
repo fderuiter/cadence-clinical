@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
+using Cadence.ToolingCore.Primitives;
 using Cadence.ToolingCore.Services;
 
 using Spectre.Console;
@@ -130,5 +131,5 @@ public static class QualityGateOrchestrator
         return 0;
     }
 
-    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    public static string FindRepoRoot() => WorkspacePrimitives.FindRepoRoot();
 }

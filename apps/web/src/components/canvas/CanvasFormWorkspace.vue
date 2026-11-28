@@ -14,15 +14,36 @@
           {{ participant.site_id ? `Site ${participant.site_id}` : "No site" }}
         </span>
       </div>
-      <router-link
-        v-if="isDemoBuild() && handoffLocation"
-        id="workspace-handoff-standalone"
-        data-testid="workspace-ecrf-handoff"
-        class="btn btn-secondary workspace-handoff-btn"
-        :to="handoffLocation"
-      >
-        Open standalone form view
-      </router-link>
+      <div class="workspace-header-actions">
+        <button
+          v-if="hasPreselectedSpec && enrollmentId && !recordLoading"
+          id="btn-switch-visit-or-form"
+          ref="switcherTriggerRef"
+          data-testid="workspace-switch-visit-or-form"
+          type="button"
+          class="btn btn-secondary workspace-switcher-btn"
+          aria-haspopup="dialog"
+          :aria-expanded="switcherOpen ? 'true' : 'false'"
+          @click="openSwitcher"
+        >
+          <CalendarRange
+            class="workspace-switcher-icon"
+            :size="16"
+            :stroke-width="1.75"
+            aria-hidden="true"
+          />
+          <span>Switch visit or form</span>
+        </button>
+        <router-link
+          v-if="isDemoBuild() && handoffLocation"
+          id="workspace-handoff-standalone"
+          data-testid="workspace-ecrf-handoff"
+          class="btn btn-secondary workspace-handoff-btn"
+          :to="handoffLocation"
+        >
+          Open standalone form view
+        </router-link>
+      </div>
     </header>
 
     <template v-if="!formId && recordLoading">
@@ -53,7 +74,7 @@
 
     <template v-else>
       <ParticipantFormsPanel
-        v-if="!formId && enrollmentId"
+        v-if="!formId && enrollmentId && !hasPreselectedSpec"
         :study-code="studyCode"
         :site-code="participant?.site_id"
         :subject-code="participant?.subject_id || 'participant'"
@@ -65,7 +86,36 @@
         @forms-loaded="onFormsLoaded"
       />
 
+      <ClinicalDrawer
+        v-if="hasPreselectedSpec && enrollmentId"
+        id="workspace-visit-switcher-drawer"
+        v-model="switcherOpen"
+        :teleport="false"
+        mobile-bottom-sheet
+        size="xl"
+        title="Switch visit or form"
+        :subtitle="participant?.subject_id || undefined"
+        close-label="Close visit and form switcher"
+        :restore-focus="resolveSwitcherRestoreFocus"
+      >
+        <ParticipantFormsPanel
+          v-if="switcherOpen"
+          :study-code="studyCode"
+          :site-code="participant?.site_id"
+          :subject-code="participant?.subject_id || 'participant'"
+          :enrollment-id="enrollmentId"
+          :schedule="effectiveSchedule"
+          :form-location="formLocation"
+          :new-form-location="null"
+          :new-form-cell-location="resolvedNewFormCellLocation"
+          @forms-loaded="onFormsLoaded"
+          @select-form="onDrawerSelectForm"
+          @select-new-cell="onDrawerSelectNewCell"
+        />
+      </ClinicalDrawer>
+
       <EcrfFormPanel
+        ref="ecrfFormPanelRef"
         :form-id="formId"
         :collection-spec-id="collectionSpecId"
         :planned-activity-id="plannedActivityId"
@@ -88,9 +138,15 @@
 </template>
 
 <script setup lang="ts">
+import { CalendarRange } from "lucide-vue-next";
+import { ClinicalDrawer } from "ui";
 import { computed, onUnmounted, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
-import type { EcrfForm, EcrfFormSummary } from "../../api/ecrfFormsApi";
+import {
+  ecrfFormsApi,
+  type EcrfForm,
+  type EcrfFormSummary,
+} from "../../api/ecrfFormsApi";
 import type { SubjectSummary } from "../../api/executionApi";
 import { formatNodeRef, tryNodeRef } from "../../canvas/nodeRef";
 import { useScopedNavigation } from "../../composables/useScopedNavigation";
@@ -140,10 +196,80 @@ const emit = defineEmits<{
 const canvas = useStudyCanvasStore();
 const { scopedStudyLocation } = useScopedNavigation(() => props.studyCode);
 const loadedEnrollmentForms = ref<EcrfFormSummary[]>([]);
+const switcherOpen = ref(false);
+const switcherTriggerRef = ref<HTMLButtonElement | null>(null);
+const suppressSwitcherRestore = ref(false);
+const ecrfFormPanelRef = ref<InstanceType<typeof EcrfFormPanel> | null>(null);
+let enrollmentFormsSeq = 0;
+
+const hasPreselectedSpec = computed(
+  () => !props.formId && Boolean(props.collectionSpecId)
+);
+
+function openSwitcher() {
+  suppressSwitcherRestore.value = false;
+  switcherOpen.value = true;
+}
+
+function resolveSwitcherRestoreFocus() {
+  if (suppressSwitcherRestore.value) return null;
+  return switcherTriggerRef.value;
+}
 
 function onFormsLoaded(forms: EcrfFormSummary[]) {
   loadedEnrollmentForms.value = forms;
 }
+
+function onDrawerSelectForm() {
+  suppressSwitcherRestore.value = true;
+  switcherOpen.value = false;
+}
+
+function onDrawerSelectNewCell() {
+  suppressSwitcherRestore.value = true;
+  switcherOpen.value = false;
+  void ecrfFormPanelRef.value?.focusNewFormOpener?.();
+}
+
+watch(
+  () =>
+    [props.formId, props.collectionSpecId, props.plannedActivityId] as const,
+  () => {
+    if (switcherOpen.value) {
+      switcherOpen.value = false;
+    }
+  }
+);
+
+watch(
+  () => [props.enrollmentId, props.formId, hasPreselectedSpec.value] as const,
+  ([enrollmentId, formId, preselected]) => {
+    const seq = ++enrollmentFormsSeq;
+    if (!enrollmentId) {
+      loadedEnrollmentForms.value = [];
+      return;
+    }
+    if (
+      !formId &&
+      preselected &&
+      typeof ecrfFormsApi?.listForEnrollment === "function"
+    ) {
+      void ecrfFormsApi
+        .listForEnrollment(enrollmentId)
+        .then((result) => {
+          if (seq === enrollmentFormsSeq) {
+            loadedEnrollmentForms.value = result ?? [];
+          }
+        })
+        .catch(() => {
+          if (seq === enrollmentFormsSeq) {
+            loadedEnrollmentForms.value = [];
+          }
+        });
+    }
+  },
+  { immediate: true }
+);
 
 onUnmounted(() => {
   emit("dirty-change", false);
@@ -269,9 +395,32 @@ const enrollmentContext = computed<CanvasFormEnrollmentContext | null>(() => {
   gap: 12px;
 }
 
+.workspace-header-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspace-switcher-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 6px 12px;
+  font-size: 0.84rem;
+}
+
+.workspace-switcher-icon {
+  flex: 0 0 auto;
+}
+
 .workspace-handoff-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-size: 0.82rem;
-  padding: 4px 10px;
+  padding: 6px 12px;
   text-decoration: none;
 }
 

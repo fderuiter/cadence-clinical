@@ -12,7 +12,7 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Component & Composable Catalog
 
-All 27 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 28 Vue components and interaction helpers are exported directly from the root `ui` package:
 
 | Export                                  | Description                                                                                                                                                                                                          | ARIA Landmark / Role                        |
 | :-------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------ |
@@ -20,6 +20,7 @@ All 27 Vue components and interaction helpers are exported directly from the roo
 | `ClinicalBreadcrumbs`                   | Accessible `<nav aria-label="Breadcrumb">` trail marking the active item with `aria-current="page"` and `48px` mobile touch targets                                                                                  | `navigation`, `list`, `link`                |
 | `ClinicalExplanation`                   | Structured ADR-2482 rule explanation card rendering claims, met/unmet conditions, steps, and `NextAction` `NodeRef` links                                                                                            | `region`, `aria-live="polite"`              |
 | `ClinicalGatedAction`                   | Visible capability-gated action wrapper with accessible inline or expandable why-blocked explanations                                                                                                                | `button`, `aria-describedby`                |
+| `ClinicalGovernanceBanner`              | Compact single-row lock and readiness status strip with `tabular-nums` gate counts and `ClinicalDrawer` slide-over / `90dvh` mobile bottom-sheet sheets for blockers, lock actions, and casebook exports             | `region`, `dialog`, `aria-modal="true"`     |
 | `EntityLink`                            | `NodeRef`-compatible keyboard-operable button or link trigger and K-EXP-2 masked badge with `.sr-only` context and peek/open focus restoration                                                                       | `button` / `link`                           |
 | `ClinicalIcon`                          | Zero-emoji `1.75px` stroke-only vector icon primitive (`aria-hidden="true"`) paired with visible labels                                                                                                              | Decorative SVG (`aria-hidden="true"`)       |
 | [`ClinicalDataTable`](./data-table.md)  | Accessible, keyboard-sortable, client/external/none paginated clinical dataset table with `<= 480px` slot-projected `ClinicalRecordCard` mobile mode, mobile sort bar, sticky left/right columns, `16px` `1.75px`-stroke Lucide sort icons, and tabular numerals | `table`, `region`, `columnheader`, `status` |

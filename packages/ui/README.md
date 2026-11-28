@@ -11,7 +11,7 @@ Shared frontend package (JavaScript, TypeScript types and Vue 3 components) used
 - `mockGateway.js`, exported only as `ui/testing`: the gateway simulator and MSW service-worker coordination helpers for static demo builds and tests (`validateGatewayRequest`, `isGatewayApiCall`, `isPathSignatureGated`, `normalizeMswBasePath`, `resolveMswServiceWorkerOptions`, `waitForMswController`, `ensureServiceWorkerController`, `createMswWorkerStarter`, `evaluateDemoBoundaryRequest`). It imports neither `msw` nor `msw/browser`, is not part of the root export, and holds no secret: it verifies an `X-Gateway-Signature` only against a secret the caller passes as `options.secret`, and rejects one it cannot check. Real authentication happens in [apps/gateway](../../apps/gateway/README.md).
 - `econsent.js`: consent normalisation and comprehension-check helpers.
 - `accessibility-matcher.js`, exported only as `ui/vitest` (typed via `accessibility-matcher.d.ts`): `toBeAccessible` Vitest matcher built on `axe-core` ([ADR-2537](../../docs/adr/2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md)). It is excluded from the root `ui` runtime bundle so `axe-core` never ships in production or demo builds.
-- `src/components/`: 27 shared Vue components re-exported from the root `ui` entry:
+- `src/components/`: 28 shared Vue components re-exported from the root `ui` entry:
   - `ClinicalBreadcrumbs`
   - `ClinicalContextBar`
   - `ClinicalDataTable` (client/external/none pagination, controlled sort with `16px` `1.75px`-stroke `lucide-vue-next` icons and `44px`/`48px` targets, `sticky: "left" | "right"` columns, `stickyHeader`, `density`, automatic `<= 480px` slot-projected `ClinicalRecordCard` mode with mobile sort selector bar, focusable or masked rows, and header/cell/pagination slots per [ADR-2656](../../docs/adr/2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md), [ADR-2673](../../docs/adr/2026-11-24-centralize-css-states-and-migrate-live-clinical-hubs.md), and [ADR-FRONTEND-20261128](../../docs/adr/frontend/2026-11-28-slot-projected-clinicalrecordcard-mobile-mode-and-shared-use2dgrid.md))
@@ -21,6 +21,7 @@ Shared frontend package (JavaScript, TypeScript types and Vue 3 components) used
   - `ClinicalFieldLayout` (`touch` and `compact` densities, required markers, hints, and status alerts)
   - `ClinicalFormField` (auto-propagating `data-tabular-nums="true"` for numeric/date CDASH fields)
   - `ClinicalGatedAction`
+  - `ClinicalGovernanceBanner` (compact single-row lock and readiness status strip paired with a `ClinicalDrawer` slide-over and `mobileBottomSheet` disclosure for blockers, lock actions, and casebook exports)
   - `ClinicalIcon` (curated `16px`/`20px`, `1.75px` stroke `lucide-vue-next` vector icon primitive splitting eager `shellIcons` from lazy `routeIcons`, paired with `CLINICAL_SHELL_ICON_NAMES`, `CLINICAL_ROUTE_ICON_NAMES`, `CLINICAL_ICON_NAMES`, `isClinicalIconName`, and `renderClinicalIconSvg` per [ADR-2679](../../docs/adr/2026-11-25-centralize-lucide-icons-and-cli-emoji-gate.md))
   - `ClinicalIconButton`
   - `ClinicalInput` (`48px` touch or `compact` `36px` staff `<input>`, `<select>`, and `<textarea>` controls with `16px` coarse/mobile font sizing plus `type`, `inputmode`, and `tabularNums` / `data-tabular-nums` alignment)
