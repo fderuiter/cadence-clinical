@@ -1461,15 +1461,27 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
 
     private async Task RelayOutboxAsync(CancellationToken ct)
     {
-        fixture.Clock.Set(SystemClock.Instance.UtcNow);
-        for (var attempt = 0; attempt < 4; attempt++)
+        var savedClock = fixture.Clock.UtcNow;
+        try
         {
-            var batch = await fixture.OutboxRelay.RelayBatchAsync(500, ct);
-            batch.Failed.Should().Be(0);
-            if (batch.Dispatched == 0 && !batch.MoreDue)
+            if (SystemClock.Instance.UtcNow > savedClock)
             {
-                break;
+                fixture.Clock.Set(SystemClock.Instance.UtcNow);
             }
+
+            for (var attempt = 0; attempt < 4; attempt++)
+            {
+                var batch = await fixture.OutboxRelay.RelayBatchAsync(500, ct);
+                batch.Failed.Should().Be(0);
+                if (batch.Dispatched == 0 && !batch.MoreDue)
+                {
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            fixture.Clock.Set(savedClock);
         }
     }
 
