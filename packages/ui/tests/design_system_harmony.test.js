@@ -23,6 +23,7 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ClinicalIcon",
   "ClinicalIconButton",
   "ClinicalInput",
+  "ClinicalLiveRegion",
   "ClinicalLookupInput",
   "ClinicalModal",
   "ClinicalPopover",
@@ -236,7 +237,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(27);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(28);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
@@ -252,6 +253,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         ...EXPECTED_FLOATING_HELPERS,
         ...EXPECTED_THEME_FUNCTIONS,
         "createSrOnlyActionButton",
+        "useStatusAnnouncer",
       ]) {
         expect(
           rootUi[helperName],
@@ -279,6 +281,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         ...EXPECTED_THEME_FUNCTIONS,
         ...EXPECTED_THEME_CONSTANTS,
         "createSrOnlyActionButton",
+        "useStatusAnnouncer",
       ]) {
         expect(dts).toMatch(
           new RegExp(`export (?:declare )?(?:function|const) ${helperName}\\b`)

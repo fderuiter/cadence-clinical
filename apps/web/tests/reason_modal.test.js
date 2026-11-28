@@ -139,8 +139,8 @@ describe("ReasonModal.vue", () => {
     expect(wrapper.emitted("confirm")).toBeFalsy();
     const errorMsg = wrapper.find("#val-reason-error");
     expect(errorMsg.exists()).toBe(true);
-    expect(errorMsg.attributes("role")).toBe("status");
-    expect(errorMsg.attributes("aria-live")).toBe("polite");
+    expect(errorMsg.attributes("role")).toBe("alert");
+    expect(errorMsg.attributes("aria-live")).toBeUndefined();
     expect(errorMsg.text()).toContain(
       "Custom explanation is required when selecting 'Other'."
     );

@@ -5117,4 +5117,214 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
       )
     ).toBe(false);
   });
+
+  test("announces filter updates politely via pre-mounted ClinicalLiveRegion without stealing focus and exposes live=assertive on error alerts (WCAG 2.2 SC 4.1.3 / ARIA22 / ARIA19)", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    // 1. Documents Hub (/documents): pre-mounted #documents-hub-status-strip, MutationObserver, focus retention, sibling Reset button, and persistent table summary
+    await gotoHashRoute(page, "/documents");
+    const docsStatus = page.locator("#documents-hub-status-strip");
+    await expect(docsStatus).toHaveAttribute("role", "status");
+    await expect(docsStatus).toHaveAttribute("aria-live", "polite");
+    await expect(
+      page.locator('.clinical-table-live-summary[role="status"]')
+    ).toHaveCount(1);
+
+    await page.evaluate(() => {
+      const target = document.getElementById("documents-hub-status-strip")!;
+      const records: string[] = [];
+      (
+        window as unknown as { __docsLiveMutations: string[] }
+      ).__docsLiveMutations = records;
+      const obs = new MutationObserver(() => {
+        records.push(target.textContent?.trim() || "");
+      });
+      obs.observe(target, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    });
+
+    const docsSearch = page.locator("#documents-hub-search");
+    await docsSearch.focus();
+    await docsSearch.fill("Protocol");
+    await expect(docsStatus).toContainText("matching 'Protocol'");
+    await expect(docsSearch).toBeFocused();
+
+    const docsMutations = await page.evaluate(
+      () =>
+        (window as unknown as { __docsLiveMutations: string[] })
+          .__docsLiveMutations
+    );
+    expect(docsMutations.some((t) => t.includes("matching 'Protocol'"))).toBe(
+      true
+    );
+
+    // Sibling scope pills and Reset All Filters button sit outside the atomic status node
+    const studyTreeNode = page
+      .locator(".hub-sidebar")
+      .getByText("CADENCE-101")
+      .first();
+    if (await studyTreeNode.isVisible().catch(() => false)) {
+      await studyTreeNode.click();
+    }
+    await docsSearch.focus();
+    const resetOutsideAtomic = await page.evaluate(() => {
+      const statusEl = document.getElementById("documents-hub-status-strip")!;
+      const resetBtn = document.querySelector(".btn-reset-all");
+      const pillsEl = document.querySelector(".active-filter-pills");
+      return (
+        Boolean(resetBtn) &&
+        !statusEl.contains(resetBtn) &&
+        (!pillsEl || !statusEl.contains(pillsEl))
+      );
+    });
+    expect(resetOutsideAtomic).toBe(true);
+    await expectNoWcagViolations(page, "/documents filtered by Protocol");
+    if (process.env.CAPTURE_LIVE_REGION_SCREENSHOTS === "1") {
+      await page.screenshot({
+        path: "/tmp/documents-hub-filtered-status-strip.png",
+      });
+    }
+
+    // 2. Knowledge Hub (/knowledge): focus stays on #knowledge-search-input while #knowledge-filter-status updates politely
+    await gotoHashRoute(page, "/knowledge");
+    const kbStatus = page.locator("#knowledge-filter-status");
+    await expect(kbStatus).toHaveAttribute("role", "status");
+    await expect(kbStatus).toHaveAttribute("aria-live", "polite");
+
+    const kbSearch = page.locator("#knowledge-search-input");
+    await kbSearch.focus();
+    await kbSearch.fill("SOP");
+    await expect(kbStatus).toContainText("SOP");
+    await expect(kbSearch).toBeFocused();
+    await expectNoWcagViolations(page, "/knowledge filtered by SOP");
+
+    // 3. Tickets Hub (/tickets): focus stays on #tickets-search-input while #tickets-live-status updates politely
+    await gotoHashRoute(page, "/tickets");
+    const ticketsStatus = page.locator("#tickets-live-status");
+    await expect(ticketsStatus).toHaveAttribute("role", "status");
+    const ticketsSearch = page.locator("#tickets-search-input");
+    await ticketsSearch.focus();
+    await ticketsSearch.fill("Protocol");
+    await expect(ticketsStatus).toContainText("Protocol");
+    await expect(ticketsSearch).toBeFocused();
+    await expectNoWcagViolations(page, "/tickets filtered by Protocol");
+
+    // 4. Clinical Canvas Queries (/studies/CADENCE-101?stage=data&section=queries) & GxP Outcome Alert CDP AXTree
+    await gotoHashRoute(
+      page,
+      "/studies/CADENCE-101?stage=data&section=queries"
+    );
+    const queriesStatus = page.locator("#study-queries-filter-status");
+    await expect(queriesStatus).toBeVisible();
+    await expect(queriesStatus).toHaveAttribute("role", "status");
+    await expect(queriesStatus).toHaveAttribute("aria-live", "polite");
+
+    const prioritySelect = page.locator("#study-queries-priority");
+    await page.evaluate(() => {
+      const target = document.getElementById("study-queries-filter-status")!;
+      const records: string[] = [];
+      (
+        window as unknown as { __queriesLiveMutations: string[] }
+      ).__queriesLiveMutations = records;
+      const obs = new MutationObserver(() => {
+        records.push(target.textContent?.trim() || "");
+      });
+      obs.observe(target, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    });
+    await prioritySelect.focus();
+    await prioritySelect.selectOption("high");
+    await expect(prioritySelect).toBeFocused();
+    await expect(queriesStatus).toHaveText(
+      /queries|query|No queries match these filters/i
+    );
+    const queryMutations = await page.evaluate(
+      () =>
+        (window as unknown as { __queriesLiveMutations: string[] })
+          .__queriesLiveMutations
+    );
+    expect(queryMutations.length).toBeGreaterThan(0);
+
+    // 5. GxP ExportsSection (/studies/CADENCE-101?stage=data&section=exports): success is polite status; failure switches #study-exports-outcome to assertive alert in Chromium AXTree
+    await gotoHashRoute(
+      page,
+      "/studies/CADENCE-101?stage=data&section=exports"
+    );
+    const asOfInput = page.locator("#study-export-as-of");
+    await expect(asOfInput).toBeVisible();
+    await page.locator("#btn-stream-study-export").click();
+
+    const exportOutcome = page.locator("#study-exports-outcome");
+    await expect(exportOutcome).toBeVisible();
+    await expect(exportOutcome).toHaveAttribute("role", "status");
+    await expect(exportOutcome).toHaveAttribute("aria-live", "polite");
+
+    await page.evaluate(() => {
+      const origFetch = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url =
+          typeof input === "string"
+            ? input
+            : input instanceof URL
+              ? input.href
+              : input.url;
+        if (
+          url.includes("/api/v1/kernel/studies/") &&
+          url.includes("/exports")
+        ) {
+          return new Response(
+            JSON.stringify({ detail: "Invalid export cut timestamp" }),
+            {
+              status: 422,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        }
+        return origFetch(input, init);
+      };
+    });
+
+    await asOfInput.fill("invalid-timestamp");
+    await page.locator("#btn-stream-study-export").click();
+
+    await expect(exportOutcome).toBeVisible();
+    await expect(exportOutcome).toHaveAttribute("role", "alert");
+    expect(await exportOutcome.getAttribute("aria-live")).toBeNull();
+    if (process.env.CAPTURE_LIVE_REGION_SCREENSHOTS === "1") {
+      await page.screenshot({
+        path: "/tmp/study-exports-assertive-alert.png",
+      });
+    }
+
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Accessibility.enable");
+
+    const axCheck = await page.evaluate(() => {
+      const alerts = Array.from(document.querySelectorAll('[role="alert"]'));
+      return {
+        alertCount: alerts.length,
+        anyPoliteOverride: alerts.some(
+          (el) => el.getAttribute("aria-live") === "polite"
+        ),
+      };
+    });
+    expect(axCheck.alertCount).toBeGreaterThan(0);
+    expect(axCheck.anyPoliteOverride).toBe(false);
+
+    const { nodes } = await cdp.send("Accessibility.getFullAXTree");
+    const alertAxNodes = nodes.filter((n) => n.role?.value === "alert");
+    expect(alertAxNodes.length).toBeGreaterThan(0);
+    for (const alertNode of alertAxNodes) {
+      const liveProp = alertNode.properties?.find((p) => p.name === "live");
+      expect(liveProp?.value?.value).toBe("assertive");
+    }
+  });
 });

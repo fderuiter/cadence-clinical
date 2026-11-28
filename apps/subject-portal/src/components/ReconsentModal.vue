@@ -23,23 +23,15 @@
             below and sign to continue with your study surveys.
           </p>
 
-          <div
-            v-if="consent.reconsentModalError"
+          <ClinicalLiveRegion
             id="reconsent-modal-error-banner"
-            style="
-              padding: 8px 12px;
-              border-radius: 4px;
-              background-color: var(--semantic-color-error-bg);
-              color: var(--semantic-color-error);
-              margin-bottom: 12px;
-              font-size: 13px;
-              font-weight: 600;
-            "
-            role="status"
-            aria-live="polite"
-          >
-            {{ consent.reconsentModalError }}
-          </div>
+            variant="banner"
+            politeness="assertive"
+            tone="error"
+            :active="Boolean(consent.reconsentModalError)"
+            style="margin-bottom: 12px; font-size: 13px; font-weight: 600"
+            :message="consent.reconsentModalError || ''"
+          />
 
           <div
             id="reconsent-change-summary"
@@ -318,6 +310,7 @@
 <script setup>
 import { computed, ref } from "vue";
 import {
+  ClinicalLiveRegion,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
   requiresCustomSignatureReason,
   useFocusTrap,

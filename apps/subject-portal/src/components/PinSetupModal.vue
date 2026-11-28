@@ -19,14 +19,15 @@
             Choose a numeric security PIN to keep your saved survey answers
             private on this device, even when you are offline.
           </p>
-          <div
-            v-if="sessionStore.pinSetup.error"
-            class="error-state pin-error-msg"
-            role="status"
-            aria-live="polite"
-          >
-            {{ sessionStore.pinSetup.error }}
-          </div>
+          <ClinicalLiveRegion
+            id="pin-setup-error"
+            variant="inline"
+            politeness="assertive"
+            tone="error"
+            :active="Boolean(sessionStore.pinSetup.error)"
+            live-class="error-state pin-error-msg"
+            :message="sessionStore.pinSetup.error || ''"
+          />
           <div class="form-group mb-12">
             <label for="setup-pin">Choose Numeric PIN</label>
             <input
@@ -94,7 +95,7 @@
 
 <script setup>
 import { ref } from "vue";
-import { SignOutConfirmModal } from "ui";
+import { ClinicalLiveRegion, SignOutConfirmModal } from "ui";
 
 import { handlePINSetupSubmit, usePinModalGuard } from "../features/pin.js";
 import { useSessionStore } from "../stores/session.js";

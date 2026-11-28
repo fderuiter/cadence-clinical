@@ -11,6 +11,7 @@ import ClinicalGovernanceBanner from "./components/clinical/ClinicalGovernanceBa
 import ClinicalIcon from "./components/clinical/ClinicalIcon.vue";
 import ClinicalIconButton from "./components/clinical/ClinicalIconButton.vue";
 import ClinicalInput from "./components/clinical/ClinicalInput.vue";
+import ClinicalLiveRegion from "./components/clinical/ClinicalLiveRegion.vue";
 import ClinicalLookupInput from "./components/clinical/ClinicalLookupInput.vue";
 import ClinicalModal from "./components/clinical/ClinicalModal.vue";
 import ClinicalPopover from "./components/clinical/ClinicalPopover.vue";
@@ -56,6 +57,7 @@ import {
   resetDraftSourcesForTests,
   useSignOutGuard,
 } from "./composables/useSignOutGuard.js";
+import { useStatusAnnouncer } from "./composables/useStatusAnnouncer.js";
 import {
   PREFERS_DARK_MEDIA_QUERY,
   THEME_CHANGE_EVENT,
@@ -87,6 +89,7 @@ export {
   ClinicalIcon,
   ClinicalIconButton,
   ClinicalInput,
+  ClinicalLiveRegion,
   ClinicalLookupInput,
   ClinicalModal,
   ClinicalPopover,
@@ -133,6 +136,7 @@ export {
   useInlineFocusHandoff,
   useRetryFocusHandoff,
   useSignOutGuard,
+  useStatusAnnouncer,
   useTheme,
   useViewportMaxHeight,
   writeStoredThemePreference,

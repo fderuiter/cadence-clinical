@@ -69,6 +69,17 @@
       </div>
     </div>
 
+    <ClinicalLiveRegion
+      id="protocol-digitization-status"
+      persistent-id
+      variant="strip"
+      :tone="correctionError ? 'error' : 'neutral'"
+      :politeness="correctionError ? 'assertive' : 'polite'"
+      :polite-message="digitizationPoliteStatus"
+      :assertive-message="digitizationAssertiveError"
+      style="margin-bottom: 16px"
+    />
+
     <!-- STEP 1: DOCUMENT INGESTION & TA WIZARD -->
     <div v-if="currentStep === 1" class="wizard-pane">
       <div class="ingestion-mode-tabs">
@@ -679,7 +690,7 @@
 </template>
 
 <script setup>
-import { ClinicalIcon } from "ui";
+import { ClinicalIcon, ClinicalLiveRegion, useStatusAnnouncer } from "ui";
 import { computed, ref } from "vue";
 import { apiClient } from "../api/apiClient";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
@@ -743,6 +754,19 @@ const signatureReason = ref(
 const _signaturePassword = ref("");
 const isSubmittingCorrection = ref(false);
 const correctionError = ref("");
+
+const {
+  politeMessage: digitizationPoliteStatus,
+  assertiveMessage: digitizationAssertiveError,
+} = useStatusAnnouncer({
+  debounceMs: 100,
+  initialPolite: "Step 1 of 4: Document Ingestion ready",
+  statusSource: () =>
+    selectedFile.value && currentStep.value === 1
+      ? `Selected protocol file ${selectedFile.value.name}`
+      : `Protocol digitization step ${currentStep.value} of 4 (${extractionProgress.value}% extracted)`,
+  errorSource: () => correctionError.value,
+});
 
 const extractionStages = [
   {

@@ -211,33 +211,40 @@
     </ul>
   </div>
 
-  <div
-    v-if="sdv.sdvOutcome"
-    data-testid="ecrf-sdv-outcome"
-    :class="[
-      'ecrf-form-outcome',
-      sdv.sdvOutcome.kind === 'done'
-        ? 'ecrf-form-outcome--saved'
-        : 'ecrf-form-outcome--failed',
-    ]"
-    aria-live="polite"
-    :role="sdv.sdvOutcome.kind === 'done' ? 'status' : 'alert'"
+  <ClinicalLiveRegion
+    test-id="ecrf-sdv-outcome"
+    variant="inline"
+    :active="Boolean(sdv.sdvOutcome)"
+    :politeness="sdv.sdvOutcome?.kind === 'done' ? 'polite' : 'assertive'"
+    :tone="sdv.sdvOutcome?.kind === 'done' ? 'success' : 'error'"
+    :class="
+      sdv.sdvOutcome
+        ? [
+            'ecrf-form-outcome',
+            sdv.sdvOutcome.kind === 'done'
+              ? 'ecrf-form-outcome--saved'
+              : 'ecrf-form-outcome--failed',
+          ]
+        : undefined
+    "
+    :message="sdv.sdvOutcome?.message || ''"
   >
-    {{ sdv.sdvOutcome.message }}
-    <button
-      v-if="sdv.sdvOutcome.kind === 'stale'"
-      id="ecrf-sdv-reload"
-      class="btn btn-secondary"
-      type="button"
-      @click="emit('reload-stale')"
-    >
-      Reload form
-    </button>
-  </div>
+    <template v-if="sdv.sdvOutcome?.kind === 'stale'" #actions>
+      <button
+        id="ecrf-sdv-reload"
+        class="btn btn-secondary"
+        type="button"
+        @click="emit('reload-stale')"
+      >
+        Reload form
+      </button>
+    </template>
+  </ClinicalLiveRegion>
 </template>
 
 <script setup lang="ts">
 import { computed, type UnwrapNestedRefs } from "vue";
+import { ClinicalLiveRegion } from "ui";
 import { toSignedFormDayOffset, type EcrfForm } from "../../api/ecrfFormsApi";
 import {
   toCoveringScopeLocks,

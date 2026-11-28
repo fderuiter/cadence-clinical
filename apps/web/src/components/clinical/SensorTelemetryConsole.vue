@@ -56,6 +56,13 @@
       </div>
     </header>
 
+    <ClinicalLiveRegion
+      id="sensor-telemetry-live-status"
+      variant="sr-only"
+      :politeness="fetchError ? 'assertive' : 'polite'"
+      :message="fetchError ? sensorAssertiveMessage : sensorPoliteMessage"
+    />
+
     <!-- Top KPI Metrics Banner -->
     <section class="metrics-grid" aria-label="Sensor Telemetry Summary Metrics">
       <div class="metric-card">
@@ -801,7 +808,12 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalModal, ClinicalIcon } from "ui";
+import {
+  ClinicalIcon,
+  ClinicalLiveRegion,
+  ClinicalModal,
+  useStatusAnnouncer,
+} from "ui";
 import { computed, onMounted, ref } from "vue";
 import { interopService } from "../../api/interop";
 import { useToastStore } from "../../stores/toasts";
@@ -897,6 +909,17 @@ const selectedAlert = ref<SafetyAlertEntity | null>(null);
 const ackNotes = ref("");
 
 const fetchError = ref<string | null>(null);
+const {
+  politeMessage: sensorPoliteMessage,
+  assertiveMessage: sensorAssertiveMessage,
+} = useStatusAnnouncer({
+  statusSource: computed(() =>
+    isLoading.value
+      ? "Refreshing biometric sensor telemetry..."
+      : `Sensor telemetry (${activeTab.value}): ${dailySummaries.value.length} daily summaries, ${safetyAlerts.value.length} threshold alerts, ${devices.value.length} registered devices.`
+  ),
+  errorSource: fetchError,
+});
 const domainErrors = ref<{
   devices: string | null;
   summaries: string | null;

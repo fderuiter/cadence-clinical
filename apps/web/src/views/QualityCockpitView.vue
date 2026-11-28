@@ -161,6 +161,14 @@
       </div>
     </div>
 
+    <ClinicalLiveRegion
+      id="quality-cockpit-status"
+      persistent-id
+      variant="strip"
+      :polite-message="qualityPoliteStatus"
+      style="margin-bottom: 14px"
+    />
+
     <!-- Navigation Tabs -->
     <div class="quality-tabs-bar">
       <button
@@ -1224,7 +1232,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { ClinicalModal, ClinicalIcon } from "ui";
+import {
+  ClinicalModal,
+  ClinicalIcon,
+  ClinicalLiveRegion,
+  useStatusAnnouncer,
+} from "ui";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { useToastStore } from "../stores/toasts";
@@ -1324,6 +1337,13 @@ const filteredDeviations = computed(() => {
   return deviations.value.filter(
     (d) => d.severity === deviationSeverityFilter.value
   );
+});
+
+const { politeMessage: qualityPoliteStatus } = useStatusAnnouncer({
+  debounceMs: 100,
+  initialPolite: `Active study ${selectedStudyId.value}: ${deviations.value.length} deviations, ${capas.value.length} CAPAs`,
+  statusSource: () =>
+    `Study ${selectedStudyId.value} (${activeTab.value}): ${filteredDeviations.value.length} deviations, ${activeCapasCount.value} active CAPAs`,
 });
 
 function getCapasInStage(stageKey) {

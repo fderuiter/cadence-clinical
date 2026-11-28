@@ -18,8 +18,23 @@
       </p>
     </div>
 
+    <ClinicalLiveRegion
+      id="compliance-live-announcer"
+      persistent-id
+      variant="sr-only"
+      :polite-message="compliancePoliteStatus"
+      :assertive-message="complianceAssertiveAlert"
+    />
+
     <!-- Compliance Loading Placeholder -->
-    <div id="compliance-loading" class="loading-state" style="display: none">
+    <div
+      id="compliance-loading"
+      class="loading-state"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      style="display: none"
+    >
       Loading compliance data...
     </div>
 
@@ -35,15 +50,33 @@
         margin-bottom: 16px;
       "
     >
-      <p style="color: var(--danger); font-weight: bold; font-size: 16px">
-        Failed to load compliance data.
-      </p>
-      <p id="compliance-error-msg" style="font-size: 14px; margin-bottom: 12px">
-        Unknown error
-      </p>
-      <button id="btn-retry-compliance" type="button" class="btn btn-primary">
-        Retry
-      </button>
+      <ClinicalLiveRegion
+        id="compliance-failure-alert"
+        persistent-id
+        variant="inline"
+        politeness="assertive"
+        tone="error"
+        :active="true"
+        container-class="portal-failure-region"
+      >
+        <span class="portal-failure-copy">
+          <span class="compliance-failure-title">
+            Failed to load compliance data.
+          </span>
+          <span id="compliance-error-msg" class="compliance-failure-msg">
+            Unknown error
+          </span>
+        </span>
+        <template #actions>
+          <button
+            id="btn-retry-compliance"
+            type="button"
+            class="btn btn-primary portal-retry-btn"
+          >
+            Retry
+          </button>
+        </template>
+      </ClinicalLiveRegion>
     </div>
 
     <div class="grid-layout">
@@ -94,6 +127,7 @@
           wrapper-class="table-responsive"
           table-class="compliance-history-table"
           tbody-id="compliance-history-tbody"
+          :loading="complianceStore.complianceLoading"
           :columns="historyColumns"
           :data="complianceStore.complianceHistory"
           :row-key="(row, idx) => row.id ?? `compliance-row-${idx}`"
@@ -135,7 +169,7 @@
 
 <script setup>
 import { computed } from "vue";
-import { ClinicalDataTable } from "ui";
+import { ClinicalDataTable, ClinicalLiveRegion, useStatusAnnouncer } from "ui";
 import { openCompliancePeek } from "../features/peek.js";
 import { isScreenAvailable } from "../router/availability.js";
 import { useComplianceStore } from "../stores/compliance.js";
@@ -146,6 +180,35 @@ import { isDemoModeActive } from "../utils/demoMode.js";
 const ui = useUiStore();
 const session = useSessionStore();
 const complianceStore = useComplianceStore();
+
+const complianceStatusSummary = computed(() => {
+  if (complianceStore.complianceLoading) {
+    return "Loading compliance data...";
+  }
+  if (complianceStore.complianceError) {
+    return "";
+  }
+  const count = Array.isArray(complianceStore.complianceHistory)
+    ? complianceStore.complianceHistory.length
+    : 0;
+  return count === 0
+    ? "No survey history found."
+    : `Loaded ${count} survey history ${count === 1 ? "record" : "records"}.`;
+});
+
+const complianceErrorSummary = computed(() => {
+  if (!complianceStore.complianceError) return "";
+  return `Failed to load compliance data. ${complianceStore.complianceError}`;
+});
+
+const {
+  politeMessage: compliancePoliteStatus,
+  assertiveMessage: complianceAssertiveAlert,
+} = useStatusAnnouncer({
+  debounceMs: 80,
+  statusSource: () => complianceStatusSummary.value,
+  errorSource: () => complianceErrorSummary.value,
+});
 
 const historyColumns = [
   { key: "instName", label: "Questionnaire" },
@@ -195,5 +258,40 @@ const hasComplianceTab = computed(() => {
 
 .history-card {
   min-width: 0;
+}
+
+.portal-failure-region {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.portal-failure-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.compliance-failure-title {
+  color: var(--danger);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.compliance-failure-msg {
+  font-size: 14px;
+}
+
+.portal-retry-btn {
+  min-height: 48px;
+  min-width: 120px;
+}
+
+.portal-failure-region :deep(.clinical-live-region__actions) {
+  margin-left: 0;
+  justify-content: center;
 }
 </style>

@@ -128,18 +128,18 @@
         />
       </div>
 
-      <p
-        v-if="outcome"
+      <ClinicalLiveRegion
         id="study-locks-outcome"
-        :class="[
+        variant="inline"
+        :active="Boolean(outcome)"
+        :politeness="outcome?.kind === 'ok' ? 'polite' : 'assertive'"
+        :tone="outcome?.kind === 'ok' ? 'success' : 'error'"
+        :live-class="[
           'status-line',
-          outcome.kind === 'ok' ? 'ok-banner' : 'error-banner',
+          outcome?.kind === 'ok' ? 'ok-banner' : 'error-banner',
         ]"
-        :role="outcome.kind === 'ok' ? 'status' : 'alert'"
-        aria-live="polite"
-      >
-        {{ outcome.message }}
-      </p>
+        :message="outcome?.message || ''"
+      />
 
       <p v-if="locksLoading" class="status-line" role="status">
         Loading locks for {{ studyCode }}…
@@ -331,7 +331,7 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalDataTable, ClinicalInput } from "ui";
+import { ClinicalDataTable, ClinicalInput, ClinicalLiveRegion } from "ui";
 import { normalizeLookupNodeRef } from "../../canvas/nodeResolver";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import LocksApplyForm from "./LocksApplyForm.vue";

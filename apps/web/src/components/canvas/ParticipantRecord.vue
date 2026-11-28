@@ -15,19 +15,32 @@
       </span>
     </header>
 
-    <p v-if="record.error" id="record-error" class="status-line" role="status">
-      {{ participant.subject_id }}'s data couldn't be loaded.
-      <button
-        id="btn-retry-record"
-        type="button"
-        class="btn btn-secondary"
-        @click="emit('retry')"
-      >
-        Try again
-      </button>
-    </p>
+    <ClinicalLiveRegion
+      id="record-error"
+      variant="inline"
+      politeness="assertive"
+      tone="error"
+      :active="Boolean(record.error)"
+      live-class="status-line"
+      :message="
+        record.error
+          ? `${participant.subject_id}'s data couldn't be loaded.`
+          : ''
+      "
+    >
+      <template #actions>
+        <button
+          id="btn-retry-record"
+          type="button"
+          class="btn btn-secondary"
+          @click="emit('retry')"
+        >
+          Try again
+        </button>
+      </template>
+    </ClinicalLiveRegion>
 
-    <template v-else>
+    <template v-if="!record.error">
       <p v-if="record.loading" class="status-line" role="status">
         Loading {{ participant.subject_id }}'s data...
       </p>
@@ -159,39 +172,44 @@
               >
                 {{ casebookBusy ? "Exporting casebook…" : "Export casebook" }}
               </button>
-              <div
-                v-if="casebookOutcome"
-                data-testid="participant-casebook-outcome"
-                :class="[
+              <ClinicalLiveRegion
+                test-id="participant-casebook-outcome"
+                variant="inline"
+                :active="Boolean(casebookOutcome)"
+                :politeness="
+                  casebookOutcome?.kind === 'ok' ? 'polite' : 'assertive'
+                "
+                :tone="casebookOutcome?.kind === 'ok' ? 'success' : 'error'"
+                :live-class="[
                   'casebook-outcome',
-                  casebookOutcome.kind === 'ok'
+                  casebookOutcome?.kind === 'ok'
                     ? 'casebook-outcome--ok'
                     : 'casebook-outcome--error',
                 ]"
-                :role="casebookOutcome.kind === 'ok' ? 'status' : 'alert'"
-                aria-live="polite"
               >
-                <span>{{ casebookOutcome.message }}</span>
-                <span
-                  v-if="casebookOutcome.generatedAt"
-                  class="casebook-generated-at"
-                  data-testid="participant-casebook-generated-at"
-                >
-                  Generated at {{ casebookOutcome.generatedAt }}
-                </span>
-                <details
-                  v-if="casebookOutcome.sha256"
-                  class="casebook-digest-disclosure"
-                >
-                  <summary>Verification digest</summary>
-                  <code
-                    class="casebook-digest-code"
-                    data-testid="participant-casebook-sha256"
+                <template v-if="casebookOutcome">
+                  <span>{{ casebookOutcome.message }}</span>
+                  <span
+                    v-if="casebookOutcome.generatedAt"
+                    class="casebook-generated-at"
+                    data-testid="participant-casebook-generated-at"
                   >
-                    SHA-256: {{ casebookOutcome.sha256 }}
-                  </code>
-                </details>
-              </div>
+                    Generated at {{ casebookOutcome.generatedAt }}
+                  </span>
+                  <details
+                    v-if="casebookOutcome.sha256"
+                    class="casebook-digest-disclosure"
+                  >
+                    <summary>Verification digest</summary>
+                    <code
+                      class="casebook-digest-code"
+                      data-testid="participant-casebook-sha256"
+                    >
+                      SHA-256: {{ casebookOutcome.sha256 }}
+                    </code>
+                  </details>
+                </template>
+              </ClinicalLiveRegion>
             </div>
           </template>
         </ScopeLockControls>
@@ -226,6 +244,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { ClinicalLiveRegion } from "ui";
 import type { RouteLocationRaw } from "vue-router";
 import type { EcrfFormSummary } from "../../api/ecrfFormsApi";
 import type { SubjectSummary } from "../../api/executionApi";

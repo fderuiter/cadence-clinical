@@ -3005,4 +3005,135 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       ).toEqual([]);
     }
   });
+
+  test("announces Inbox and Compliance loading politely and exposes live=assertive with sibling >=48px retry controls on failures and PIN errors (WCAG 2.2 SC 4.1.3)", async ({
+    page,
+  }) => {
+    await page.route("**/api/v1/**/notifications", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "Notification service unavailable" }),
+      });
+    });
+    await page.route("**/api/v1/**/compliance", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "Compliance service unavailable" }),
+      });
+    });
+
+    await page.goto(DEMO_PORTAL_URL);
+
+    // Verify PIN setup error uses role="alert" without aria-live="polite"
+    const pinSetupModal = page.locator("#portal-pin-setup-modal");
+    if (
+      await pinSetupModal
+        .waitFor({ state: "visible", timeout: 4000 })
+        .then(() => true)
+        .catch(() => false)
+    ) {
+      await page.fill("#setup-pin", "246810");
+      await page.fill("#confirm-setup-pin", "111111");
+      await page.click("#btn-pin-setup-confirm");
+      const pinErr = page.locator("#portal-pin-setup-modal .pin-error-msg");
+      await expect(pinErr).toHaveAttribute("role", "alert");
+      expect(await pinErr.getAttribute("aria-live")).toBeNull();
+    }
+
+    await completeInitialPinSetupIfOpen(page);
+
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Accessibility.enable");
+
+    // Navigate to Inbox and verify pre-mounted announcer + visible assertive failure alert with sibling retry button >= 48px
+    await page.click("#tab-btn-inbox button");
+    await expect(page.locator("#view-inbox")).toBeVisible();
+    await expect(page.locator("#inbox-loading")).toHaveAttribute(
+      "role",
+      "status"
+    );
+    await expect(page.locator("#inbox-loading")).toHaveAttribute(
+      "aria-live",
+      "polite"
+    );
+    await expect(
+      page.locator('#view-inbox [role="status"][aria-live="polite"]').first()
+    ).toBeAttached();
+    await expect(page.locator("#inbox-failure")).toBeVisible();
+
+    const inboxFailureAlert = page.locator("#inbox-failure-alert");
+    await expect(inboxFailureAlert).toBeVisible();
+    await expect(inboxFailureAlert).toHaveAttribute("role", "alert");
+    expect(await inboxFailureAlert.getAttribute("aria-live")).toBeNull();
+    const inboxRetryBox = await page.locator("#btn-retry-inbox").boundingBox();
+    expect(inboxRetryBox?.height ?? 0).toBeGreaterThanOrEqual(48);
+
+    const inboxAudit = await new AxeBuilder({ page })
+      .include("#view-inbox")
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(inboxAudit.violations).toEqual([]);
+    if (process.env.CAPTURE_LIVE_REGION_SCREENSHOTS === "1") {
+      await page.screenshot({
+        path: "/tmp/subject-portal-inbox-failure-alert.png",
+      });
+    }
+
+    // Navigate to Compliance and verify visible assertive failure alert + >= 48px retry button
+    await page.click("#tab-btn-compliance button");
+    await expect(page.locator("#view-compliance")).toBeVisible();
+    await expect(page.locator("#compliance-loading")).toHaveAttribute(
+      "role",
+      "status"
+    );
+    await expect(page.locator("#compliance-loading")).toHaveAttribute(
+      "aria-live",
+      "polite"
+    );
+    await expect(page.locator("#compliance-failure")).toBeVisible();
+
+    const compFailureAlert = page.locator("#compliance-failure-alert");
+    await expect(compFailureAlert).toBeVisible();
+    await expect(compFailureAlert).toHaveAttribute("role", "alert");
+    expect(await compFailureAlert.getAttribute("aria-live")).toBeNull();
+    const compRetryBox = await page
+      .locator("#btn-retry-compliance")
+      .boundingBox();
+    expect(compRetryBox?.height ?? 0).toBeGreaterThanOrEqual(48);
+
+    const compAudit = await new AxeBuilder({ page })
+      .include("#view-compliance")
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(compAudit.violations).toEqual([]);
+
+    const retryOutsideAtomic = await page.evaluate(() => {
+      const alertEl = document.getElementById("inbox-failure-alert");
+      const retryBtn = document.getElementById("btn-retry-inbox");
+      const compAlertEl = document.getElementById("compliance-failure-alert");
+      const compRetryBtn = document.getElementById("btn-retry-compliance");
+      return {
+        inboxOutside: Boolean(
+          alertEl && retryBtn && !alertEl.contains(retryBtn)
+        ),
+        compOutside: Boolean(
+          compAlertEl && compRetryBtn && !compAlertEl.contains(compRetryBtn)
+        ),
+      };
+    });
+    expect(retryOutsideAtomic.inboxOutside).toBe(true);
+    expect(retryOutsideAtomic.compOutside).toBe(true);
+
+    const { nodes } = await cdp.send("Accessibility.getFullAXTree");
+    const alertNodes = nodes.filter((n) => n.role?.value === "alert");
+    expect(alertNodes.length).toBeGreaterThan(0);
+    for (const node of alertNodes) {
+      const liveProp = node.properties?.find((p) => p.name === "live");
+      expect(liveProp?.value?.value).toBe("assertive");
+    }
+  });
 });

@@ -130,7 +130,7 @@ describe("ConsentAuthoringView.vue Component and RBAC Router Tests", () => {
       expect(reorderedInputs[1].element.value).toBe("clause-risk");
     });
 
-    it("renders publish-validation failures as accessible status live banners", async () => {
+    it("renders publish-validation failures as accessible assertive alert banners", async () => {
       const wrapper = mount(ConsentAuthoringView);
       await wrapper.find("#btn-create-template").trigger("click");
 
@@ -142,8 +142,8 @@ describe("ConsentAuthoringView.vue Component and RBAC Router Tests", () => {
 
       const errBanner = wrapper.find("#editor-validation-error");
       expect(errBanner.exists()).toBe(true);
-      expect(errBanner.attributes("role")).toBe("status");
-      expect(errBanner.attributes("aria-live")).toBe("polite");
+      expect(errBanner.attributes("role")).toBe("alert");
+      expect(errBanner.attributes("aria-live")).toBeUndefined();
       expect(errBanner.text()).toContain("Study ID is strictly required");
     });
 

@@ -40,16 +40,20 @@
             workspace)
           </span>
         </label>
-        <div
-          class="pref-status-badge"
+        <ClinicalLiveRegion
+          id="overview-landing-pref-status"
+          persistent-id
+          variant="inline"
+          :polite-message="landingPrefPolite"
+          live-class="pref-status-badge"
           :class="{ 'is-bypassed': onboardingStore.bypassOverview }"
-        >
-          {{
-            onboardingStore.bypassOverview
-              ? "Direct workspace navigation active"
-              : "Orientation Hub set as default landing"
-          }}
-        </div>
+        />
+        <ClinicalLiveRegion
+          id="overview-checklist-live"
+          persistent-id
+          variant="sr-only"
+          :polite-message="checklistPolite"
+        />
       </div>
     </header>
 
@@ -301,7 +305,7 @@
 </template>
 
 <script setup>
-import { ClinicalIcon } from "ui";
+import { ClinicalIcon, ClinicalLiveRegion, useStatusAnnouncer } from "ui";
 import { computed, onMounted } from "vue";
 import { getActivePinia } from "pinia";
 import { useRoute, useRouter } from "vue-router";
@@ -844,6 +848,29 @@ const progressPercent = computed(() => {
   return Math.round(
     (completedCount.value / currentChecklist.value.length) * 100
   );
+});
+
+const landingPrefSummary = computed(() =>
+  onboardingStore.bypassOverview
+    ? "Direct workspace navigation active"
+    : "Orientation Hub set as default landing"
+);
+
+const checklistSummary = computed(
+  () =>
+    `${personaConfig.value.roleName}: ${completedCount.value} of ${currentChecklist.value.length} tasks complete (${progressPercent.value}%)`
+);
+
+const { politeMessage: landingPrefPolite } = useStatusAnnouncer({
+  debounceMs: 60,
+  initialPolite: landingPrefSummary.value,
+  statusSource: () => landingPrefSummary.value,
+});
+
+const { politeMessage: checklistPolite } = useStatusAnnouncer({
+  debounceMs: 80,
+  initialPolite: checklistSummary.value,
+  statusSource: () => checklistSummary.value,
 });
 
 const ALL_LAUNCHERS = [

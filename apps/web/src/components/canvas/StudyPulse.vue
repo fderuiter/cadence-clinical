@@ -9,29 +9,48 @@
       Participants
     </h2>
 
-    <p v-if="canvas.pulseError" class="pulse-status" role="status">
-      The participant counts couldn't be loaded.
-      <button
-        id="btn-retry-pulse"
-        type="button"
-        class="btn btn-secondary"
-        @click="canvas.loadPulse()"
-      >
-        Try again
-      </button>
-    </p>
-    <p v-else-if="!canvas.pulse" class="pulse-status" role="status">
-      Counting participants...
-    </p>
-    <p
-      v-else-if="canvas.pulse.total === 0"
-      id="pulse-empty"
-      class="pulse-status"
-      role="status"
+    <ClinicalLiveRegion
+      :id="
+        canvas.pulseError
+          ? 'pulse-error'
+          : canvas.pulse && canvas.pulse.total === 0
+            ? 'pulse-empty'
+            : ''
+      "
+      variant="inline"
+      :politeness="canvas.pulseError ? 'assertive' : 'polite'"
+      :tone="canvas.pulseError ? 'error' : 'neutral'"
+      :active="
+        Boolean(canvas.pulseError || !canvas.pulse || canvas.pulse.total === 0)
+      "
+      live-class="pulse-status"
+      :polite-message="
+        canvas.pulseError
+          ? ''
+          : !canvas.pulse
+            ? 'Counting participants...'
+            : canvas.pulse.total === 0
+              ? `No participants in ${canvas.studyCode} yet.`
+              : ''
+      "
+      :assertive-message="
+        canvas.pulseError ? 'The participant counts couldn\'t be loaded.' : ''
+      "
     >
-      No participants in {{ canvas.studyCode }} yet.
-    </p>
-    <template v-else>
+      <template v-if="canvas.pulseError" #actions>
+        <button
+          id="btn-retry-pulse"
+          type="button"
+          class="btn btn-secondary"
+          @click="canvas.loadPulse()"
+        >
+          Try again
+        </button>
+      </template>
+    </ClinicalLiveRegion>
+    <template
+      v-if="!canvas.pulseError && canvas.pulse && canvas.pulse.total > 0"
+    >
       <button
         id="pulse-total"
         type="button"
@@ -65,6 +84,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { ClinicalLiveRegion } from "ui";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 
 /**

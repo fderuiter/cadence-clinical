@@ -159,32 +159,35 @@
         </button>
       </div>
 
-      <p
-        v-if="outcome"
+      <ClinicalLiveRegion
         id="study-exports-outcome"
-        :class="[
+        variant="inline"
+        :active="Boolean(outcome)"
+        :politeness="outcome?.kind === 'ok' ? 'polite' : 'assertive'"
+        :tone="outcome?.kind === 'ok' ? 'success' : 'error'"
+        :live-class="[
           'status-line',
-          outcome.kind === 'ok' ? 'ok-banner' : 'error-banner',
+          outcome?.kind === 'ok' ? 'ok-banner' : 'error-banner',
         ]"
-        :role="outcome.kind === 'ok' ? 'status' : 'alert'"
-        aria-live="polite"
       >
-        {{ outcome.message }}
-        <code
-          v-if="outcome.sha256"
-          class="digest-code"
-          data-testid="study-exports-sha256"
-        >
-          SHA-256: {{ outcome.sha256 }}
-        </code>
-        <span
-          v-if="outcome.generatedAt"
-          class="generated-at-meta"
-          data-testid="study-exports-generated-at"
-        >
-          Generated at {{ outcome.generatedAt }}
-        </span>
-      </p>
+        <template v-if="outcome">
+          {{ outcome.message }}
+          <code
+            v-if="outcome.sha256"
+            class="digest-code"
+            data-testid="study-exports-sha256"
+          >
+            SHA-256: {{ outcome.sha256 }}
+          </code>
+          <span
+            v-if="outcome.generatedAt"
+            class="generated-at-meta"
+            data-testid="study-exports-generated-at"
+          >
+            Generated at {{ outcome.generatedAt }}
+          </span>
+        </template>
+      </ClinicalLiveRegion>
       <p
         v-if="outcome?.hidden?.moreExist"
         data-testid="study-exports-hidden-notice"
@@ -207,6 +210,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { ClinicalLiveRegion } from "ui";
 import {
   kernelApi,
   triggerBrowserDownload,

@@ -68,6 +68,13 @@
       </div>
     </header>
 
+    <ClinicalLiveRegion
+      id="lakehouse-console-live-status"
+      variant="sr-only"
+      politeness="polite"
+      :message="lakehousePoliteMessage"
+    />
+
     <!-- Multi-Stream Metrics Cards Grid -->
     <section class="metrics-grid" aria-label="Ingestion Stream Metrics">
       <div
@@ -664,7 +671,13 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalIconButton, ClinicalModal, ClinicalIcon } from "ui";
+import {
+  ClinicalIcon,
+  ClinicalIconButton,
+  ClinicalLiveRegion,
+  ClinicalModal,
+  useStatusAnnouncer,
+} from "ui";
 import { computed, onMounted, ref } from "vue";
 import {
   demoNowIso,
@@ -859,6 +872,14 @@ const filteredRecords = computed(() => {
       return false;
     return true;
   });
+});
+
+const { politeMessage: lakehousePoliteMessage } = useStatusAnnouncer({
+  statusSource: computed(() =>
+    isLoading.value
+      ? "Refreshing clinical lakehouse streams..."
+      : `Lakehouse (${activeTab.value}): ${filteredRecords.value.length} of ${poolRecords.value.length} pooled records and ${snapshots.value.length} snapshots.`
+  ),
 });
 
 function getStreamCount(streamType: string): number {

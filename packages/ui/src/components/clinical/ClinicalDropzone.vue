@@ -87,6 +87,26 @@ const dropzoneRef = ref(null);
 const fileInputRef = ref(null);
 const browseButtonRef = ref(null);
 const isDragging = ref(false);
+const selectionAnnouncement = ref("");
+
+const formatFilesAnnouncement = (files) => {
+  if (!files || files.length === 0) return "";
+  if (files.length === 1) {
+    return `Selected file: ${files[0]?.name || "1 file"}`;
+  }
+  return `Selected ${files.length} files`;
+};
+
+watch(
+  () => props.hasSelection,
+  (nextSelected, prevSelected) => {
+    if (nextSelected && !prevSelected && !selectionAnnouncement.value) {
+      selectionAnnouncement.value = "File selected.";
+    } else if (!nextSelected && prevSelected) {
+      selectionAnnouncement.value = "Selected file removed.";
+    }
+  }
+);
 
 const resolvedInputId = computed(
   () => props.inputId || `clinical-dropzone-input-${fallbackUid}`
@@ -106,6 +126,7 @@ const resetInput = () => {
 const emitFiles = (fileList) => {
   const files = fileList ? Array.from(fileList) : [];
   if (files.length === 0) return;
+  selectionAnnouncement.value = formatFilesAnnouncement(files);
   emit("files-selected", files);
   emit("file-selected", files[0]);
 };
@@ -121,6 +142,7 @@ const onInputChange = (event) => {
   }
   emit("change", event);
   if (files.length > 0) {
+    selectionAnnouncement.value = formatFilesAnnouncement(files);
     emit("files-selected", files);
     emit("file-selected", files[0]);
   }
@@ -178,6 +200,7 @@ onBeforeUnmount(() => {
 const onRemove = () => {
   if (props.disabled) return;
   resetInput();
+  selectionAnnouncement.value = "Selected file removed.";
   emit("remove");
   void handoffFocus(
     [
@@ -250,12 +273,14 @@ defineExpose({
       </p>
 
       <div
-        v-if="hasSelection && $slots.selected"
         class="clinical-dropzone-selected"
+        :class="{ 'sr-only': !(hasSelection && $slots.selected) }"
         role="status"
         aria-live="polite"
+        aria-atomic="true"
       >
-        <slot name="selected" />
+        <slot v-if="hasSelection && $slots.selected" name="selected" />
+        <span v-else>{{ selectionAnnouncement }}</span>
       </div>
 
       <div class="clinical-dropzone-actions">

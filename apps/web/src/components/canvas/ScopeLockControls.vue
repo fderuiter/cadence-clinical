@@ -176,20 +176,21 @@
         </div>
       </template>
 
-      <template v-if="outcome" #outcome>
-        <p
-          :data-testid="`${prefix}-outcome`"
-          :class="[
+      <template #outcome>
+        <ClinicalLiveRegion
+          :test-id="`${prefix}-outcome`"
+          variant="inline"
+          :active="Boolean(outcome)"
+          :politeness="outcome?.kind === 'ok' ? 'polite' : 'assertive'"
+          :tone="outcome?.kind === 'ok' ? 'success' : 'error'"
+          :live-class="[
             'scope-lock-outcome',
-            outcome.kind === 'ok'
+            outcome?.kind === 'ok'
               ? 'scope-lock-outcome--ok'
               : 'scope-lock-outcome--error',
           ]"
-          :role="outcome.kind === 'ok' ? 'status' : 'alert'"
-          aria-live="polite"
-        >
-          {{ outcome.message }}
-        </p>
+          :message="outcome?.message || ''"
+        />
       </template>
     </ClinicalGovernanceBanner>
 
@@ -204,7 +205,7 @@
 
 <script setup lang="ts">
 import { computed, ref, useSlots, watch } from "vue";
-import { ClinicalGovernanceBanner } from "ui";
+import { ClinicalGovernanceBanner, ClinicalLiveRegion } from "ui";
 import { type KernelLock, type KernelLockKind } from "../../api/kernelApi";
 import type {
   CoveringScopeLockItem,

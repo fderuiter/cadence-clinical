@@ -234,25 +234,16 @@
         </div>
 
         <!-- Accessible inline error banner -->
-        <div
-          v-if="validationError"
+        <ClinicalLiveRegion
           id="editor-validation-error"
-          class="validation-error-msg"
-          style="
-            background-color: var(--semantic-color-error-bg-soft);
-            border: 1px solid var(--semantic-color-error-bg);
-            color: var(--semantic-color-error);
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 16px;
-            font-size: 0.85rem;
-            font-weight: 600;
-          "
-          role="status"
-          aria-live="polite"
-        >
-          {{ validationError }}
-        </div>
+          variant="banner"
+          politeness="assertive"
+          tone="error"
+          :active="Boolean(validationError)"
+          live-class="validation-error-msg"
+          style="margin-bottom: 16px; font-weight: 600"
+          :message="validationError"
+        />
 
         <div
           style="
@@ -767,7 +758,7 @@
 <script setup>
 import ReconsentChannelPicker from "../components/econsent/ReconsentChannelPicker.vue";
 import { ref, computed, onMounted, reactive } from "vue";
-import { ClinicalIconButton, ClinicalIcon } from "ui";
+import { ClinicalIconButton, ClinicalIcon, ClinicalLiveRegion } from "ui";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { econsentService } from "../api/econsent";

@@ -97,6 +97,13 @@
       </div>
     </header>
 
+    <ClinicalLiveRegion
+      id="device-investigation-live-status"
+      variant="sr-only"
+      politeness="polite"
+      :message="deviceConsolePoliteMessage"
+    />
+
     <!-- Navigation Tabs -->
     <nav
       class="nav-tabs"
@@ -1347,7 +1354,12 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { useFocusTrap, ClinicalIcon } from "ui";
+import {
+  ClinicalIcon,
+  ClinicalLiveRegion,
+  useFocusTrap,
+  useStatusAnnouncer,
+} from "ui";
 import { demoRandomInt } from "../../utils/demoMode.js";
 
 // State
@@ -1504,6 +1516,13 @@ const mirXmlPreview = ref(`<?xml version="1.0" encoding="UTF-8"?>
 const filteredDevices = computed(() => {
   if (inventoryFilter.value === "ALL") return devices.value;
   return devices.value.filter((d) => d.status === inventoryFilter.value);
+});
+
+const { politeMessage: deviceConsolePoliteMessage } = useStatusAnnouncer({
+  statusSource: computed(
+    () =>
+      `Device investigation (${studyId.value}, ${activeTab.value}): ${filteredDevices.value.length} of ${devices.value.length} UDI units (${inventoryFilter.value}).`
+  ),
 });
 
 // Methods

@@ -1,5 +1,11 @@
 <template>
-  <div class="empty-state-container" role="region" aria-label="Empty State">
+  <div
+    class="empty-state-container"
+    :role="live ? 'status' : 'region'"
+    :aria-live="live ? 'polite' : undefined"
+    :aria-atomic="live ? 'true' : undefined"
+    :aria-label="live ? undefined : ariaLabel"
+  >
     <div class="empty-state-icon" aria-hidden="true">
       <slot name="icon">
         <ClinicalIcon v-if="isClinicalIconName(icon)" :name="icon" :size="20" />
@@ -53,6 +59,14 @@ defineProps({
   actionText: {
     type: String,
     default: "",
+  },
+  live: {
+    type: Boolean,
+    default: false,
+  },
+  ariaLabel: {
+    type: String,
+    default: "Empty State",
   },
 });
 

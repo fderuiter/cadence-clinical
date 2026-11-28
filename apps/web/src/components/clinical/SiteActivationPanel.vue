@@ -236,76 +236,84 @@
       </div>
     </div>
 
-    <p v-if="!checked" id="site-compliance-status" class="status" role="status">
-      Enter a study and site to see whether eTMF reports the site's activation
-      documents complete.
-    </p>
-    <p
-      v-else-if="loading"
+    <ClinicalLiveRegion
       id="site-compliance-status"
-      class="status"
-      role="status"
+      variant="inline"
+      :politeness="
+        checked && !loading && !scopeGuidance && loadError
+          ? 'assertive'
+          : 'polite'
+      "
+      :tone="
+        checked && !loading && !scopeGuidance && loadError ? 'error' : 'neutral'
+      "
+      :active="
+        Boolean(!checked || loading || scopeGuidance || loadError || compliance)
+      "
+      :live-class="[
+        'status',
+        {
+          'status-scope-guidance': checked && !loading && scopeGuidance,
+          'status-error': checked && !loading && !scopeGuidance && loadError,
+        },
+      ]"
     >
-      Checking eTMF status...
-    </p>
-    <div
-      v-else-if="scopeGuidance"
-      id="site-compliance-status"
-      class="status status-scope-guidance"
-      role="status"
-    >
-      <p id="site-scope-guidance" class="scope-guidance-text">
+      <template v-if="!checked">
+        Enter a study and site to see whether eTMF reports the site's activation
+        documents complete.
+      </template>
+      <template v-else-if="loading">Checking eTMF status...</template>
+      <p
+        v-else-if="scopeGuidance"
+        id="site-scope-guidance"
+        class="scope-guidance-text"
+      >
         {{ scopeGuidance }}
       </p>
-    </div>
-    <p
-      v-else-if="loadError"
-      id="site-compliance-status"
-      class="status status-error"
-      role="status"
-    >
-      The eTMF status couldn't be loaded, so activation is unavailable.
-    </p>
-    <div v-else-if="compliance" id="site-compliance-status" role="status">
-      <div
-        v-if="compliance.is_activated"
-        id="site-activated-summary"
-        class="activated-banner"
-        tabindex="-1"
-      >
-        <span class="activated-badge">Activated</span>
-        <span>
-          Site {{ compliance.site_id }} is active for enrollment in
-          {{ compliance.study_id }}
-          <template v-if="compliance.activated_by">
-            · activated by {{ compliance.activated_by }}
-          </template>
-          <template v-if="compliance.activated_at">
-            on {{ formatTimestamp(compliance.activated_at) }}
-          </template>
-          .
-        </span>
-      </div>
-
-      <p v-if="compliance.is_complete" class="status status-complete">
-        Complete: eTMF reports every activation document for site
-        {{ compliance.site_id }} in {{ compliance.study_id }} approved.
-      </p>
-      <template v-else-if="compliance.missing_documents.length">
-        <p class="status status-incomplete">
-          Incomplete: eTMF reports these activation documents missing.
-        </p>
-        <ul id="site-missing-documents">
-          <li v-for="doc in compliance.missing_documents" :key="doc">
-            {{ doc }}
-          </li>
-        </ul>
+      <template v-else-if="loadError">
+        The eTMF status couldn't be loaded, so activation is unavailable.
       </template>
-      <p v-else class="status status-incomplete">
-        Not confirmed: eTMF has not reported this site's activation documents
-        complete.
-      </p>
-    </div>
+      <div v-else-if="compliance">
+        <div
+          v-if="compliance.is_activated"
+          id="site-activated-summary"
+          class="activated-banner"
+          tabindex="-1"
+        >
+          <span class="activated-badge">Activated</span>
+          <span>
+            Site {{ compliance.site_id }} is active for enrollment in
+            {{ compliance.study_id }}
+            <template v-if="compliance.activated_by">
+              · activated by {{ compliance.activated_by }}
+            </template>
+            <template v-if="compliance.activated_at">
+              on {{ formatTimestamp(compliance.activated_at) }}
+            </template>
+            .
+          </span>
+        </div>
+
+        <p v-if="compliance.is_complete" class="status status-complete">
+          Complete: eTMF reports every activation document for site
+          {{ compliance.site_id }} in {{ compliance.study_id }} approved.
+        </p>
+        <template v-else-if="compliance.missing_documents.length">
+          <p class="status status-incomplete">
+            Incomplete: eTMF reports these activation documents missing.
+          </p>
+          <ul id="site-missing-documents">
+            <li v-for="doc in compliance.missing_documents" :key="doc">
+              {{ doc }}
+            </li>
+          </ul>
+        </template>
+        <p v-else class="status status-incomplete">
+          Not confirmed: eTMF has not reported this site's activation documents
+          complete.
+        </p>
+      </div>
+    </ClinicalLiveRegion>
 
     <div v-if="compliance && !compliance.is_activated" class="activate">
       <template v-if="isActivationAllowed">
@@ -552,7 +560,12 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
 import * as VueRouter from "vue-router";
-import { ClinicalFieldLayout, ClinicalInput, handoffFocus } from "ui";
+import {
+  ClinicalFieldLayout,
+  ClinicalInput,
+  ClinicalLiveRegion,
+  handoffFocus,
+} from "ui";
 import { ctmsApi } from "../../api/ctmsApi";
 import { executionApi } from "../../api/executionApi";
 import { describeKernelError, kernelApi } from "../../api/kernelApi";

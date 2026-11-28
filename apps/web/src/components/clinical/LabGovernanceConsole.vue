@@ -58,6 +58,13 @@
       </div>
     </header>
 
+    <ClinicalLiveRegion
+      id="lab-governance-live-status"
+      variant="sr-only"
+      politeness="polite"
+      :message="labGovernancePoliteMessage"
+    />
+
     <!-- Navigation Tabs -->
     <nav class="nav-tabs" role="tablist" aria-label="Lab Console Views">
       <button
@@ -1655,7 +1662,13 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { ClinicalIconButton, useFocusTrap, ClinicalIcon } from "ui";
+import {
+  ClinicalIcon,
+  ClinicalIconButton,
+  ClinicalLiveRegion,
+  useFocusTrap,
+  useStatusAnnouncer,
+} from "ui";
 import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
 import { useErrorPresenter } from "../../composables/useErrorPresenter";
 import { useToastStore } from "../../stores/toasts.js";
@@ -2346,6 +2359,15 @@ const filteredRanges = computed(() => {
 
     return matchesSearch && matchesSource && matchesSex;
   });
+});
+
+const { politeMessage: labGovernancePoliteMessage } = useStatusAnnouncer({
+  statusSource: computed(() => {
+    const searchNote = rangeSearch.value.trim()
+      ? ` matching '${rangeSearch.value.trim()}'`
+      : "";
+    return `Lab governance (${activeTab.value}): ${filteredRanges.value.length} of ${ranges.value.length} reference ranges${searchNote}.`;
+  }),
 });
 
 // Data Fetching Methods
