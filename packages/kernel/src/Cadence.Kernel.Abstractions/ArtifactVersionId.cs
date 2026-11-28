@@ -11,8 +11,8 @@ namespace Cadence.Kernel;
 /// Strongly-typed UUIDv7 identifier for one immutable version of an Artifact (spec §8.3). Evidence references and
 /// attestations name a version, never the artifact alone.
 /// </summary>
-[TypeConverter(typeof(ArtifactVersionIdTypeConverter))]
-[JsonConverter(typeof(ArtifactVersionIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<ArtifactVersionId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<ArtifactVersionId>))]
 public readonly record struct ArtifactVersionId(Guid Value) : IEntityId<ArtifactVersionId>
 {
     public static ArtifactVersionId New() => new(Guid.CreateVersion7());
@@ -35,62 +35,28 @@ public readonly record struct ArtifactVersionId(Guid Value) : IEntityId<Artifact
 
     public int CompareTo(ArtifactVersionId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        ArtifactVersionId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(ArtifactVersionId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(ArtifactVersionId left, ArtifactVersionId right) => left.CompareTo(right) < 0;
     public static bool operator <=(ArtifactVersionId left, ArtifactVersionId right) => left.CompareTo(right) <= 0;
     public static bool operator >(ArtifactVersionId left, ArtifactVersionId right) => left.CompareTo(right) > 0;
     public static bool operator >=(ArtifactVersionId left, ArtifactVersionId right) => left.CompareTo(right) >= 0;
 
-    public static ArtifactVersionId Parse(string s) => Parse(s, null);
+    public static ArtifactVersionId Parse(string s) => EntityIdOperations.Parse<ArtifactVersionId>(s);
 
-    public static ArtifactVersionId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new ArtifactVersionId(Guid.Parse(s, provider));
-    }
+    public static ArtifactVersionId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<ArtifactVersionId>(s, provider);
 
-    public static ArtifactVersionId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static ArtifactVersionId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<ArtifactVersionId>(s);
 
-    public static ArtifactVersionId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static ArtifactVersionId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<ArtifactVersionId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out ArtifactVersionId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out ArtifactVersionId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out ArtifactVersionId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out ArtifactVersionId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out ArtifactVersionId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new ArtifactVersionId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out ArtifactVersionId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out ArtifactVersionId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new ArtifactVersionId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out ArtifactVersionId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class ArtifactVersionIdTypeConverter : EntityIdTypeConverter<ArtifactVersionId>;
-
-public sealed class ArtifactVersionIdJsonConverter : EntityIdJsonConverter<ArtifactVersionId>;

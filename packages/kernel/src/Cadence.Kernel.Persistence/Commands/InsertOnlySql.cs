@@ -1,5 +1,7 @@
 using System;
 
+using Cadence.Kernel.Sql;
+
 using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Cadence.Kernel.Persistence.Commands;
@@ -12,10 +14,10 @@ namespace Cadence.Kernel.Persistence.Commands;
 internal static class InsertOnlySql
 {
     /// <summary>Name of the shared trigger function, created once in the kernel schema.</summary>
-    public const string FunctionName = "enforce_insert_only";
+    public const string FunctionName = PostgresInsertOnlySql.FunctionName;
 
     /// <summary>SQLSTATE raised when an insert-only table is changed.</summary>
-    public const string ViolationSqlState = "KA001";
+    public const string ViolationSqlState = PostgresInsertOnlySql.ViolationSqlState;
 
     /// <summary>
     /// Every kernel table that is insert-only today. Migrations name their own tables explicitly, so adding one here
@@ -57,19 +59,17 @@ internal static class InsertOnlySql
         "biostat_export_audit_logs",
     ];
 
-    public static string CreateFunction(string schema) => Cadence.Kernel.Modules.ModuleInsertOnlySql.CreateFunction(schema);
+    public static string CreateFunction(string schema) => PostgresInsertOnlySql.CreateFunctionSql(schema);
 
-    public static string DropFunction(string schema) => Cadence.Kernel.Modules.ModuleInsertOnlySql.DropFunction(schema);
+    public static string DropFunction(string schema) => PostgresInsertOnlySql.DropFunctionSql(schema);
 
-    public static string CreateGuards(string schema, string table) => Cadence.Kernel.Modules.ModuleInsertOnlySql.CreateGuards(schema, table);
+    public static string CreateGuards(string schema, string table) => PostgresInsertOnlySql.CreateGuardsSql(schema, table);
 
-    public static string DropGuards(string schema, string table) => Cadence.Kernel.Modules.ModuleInsertOnlySql.DropGuards(schema, table);
+    public static string DropGuards(string schema, string table) => PostgresInsertOnlySql.DropGuardsSql(schema, table);
 
-    public static string RowTriggerName(string table) => Cadence.Kernel.Modules.ModuleInsertOnlySql.RowTriggerName(table);
+    public static string RowTriggerName(string table) => PostgresInsertOnlySql.RowTriggerName(table);
 
-    public static string TruncateTriggerName(string table) => Cadence.Kernel.Modules.ModuleInsertOnlySql.TruncateTriggerName(table);
-
-
+    public static string TruncateTriggerName(string table) => PostgresInsertOnlySql.TruncateTriggerName(table);
 }
 
 /// <summary>Migration helpers for <see cref="InsertOnlySql"/>.</summary>

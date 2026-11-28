@@ -19,38 +19,9 @@ public sealed class FormSdvAlert : AggregateRoot<Guid>
     {
     }
 
-    private FormSdvAlert(
-        Guid id,
-        TenantId tenantId,
-        StudyId studyId,
-        StudySiteId? studySiteId,
-        EnrollmentId enrollmentId,
-        CollectionInstanceId? formId,
-        string? itemId,
-        ObservationId observationId,
-        int supersededRevision,
-        int newRevision,
-        string verifiedBy,
-        DateTimeOffset verifiedAt,
-        string modifiedBy,
-        DateTimeOffset modifiedAt,
-        string modifiedReason)
+    private FormSdvAlert(Guid id)
         : base(id)
     {
-        TenantId = tenantId;
-        StudyId = studyId;
-        StudySiteId = studySiteId;
-        EnrollmentId = enrollmentId;
-        FormId = formId;
-        ItemId = itemId;
-        ObservationId = observationId;
-        SupersededRevision = supersededRevision;
-        NewRevision = newRevision;
-        VerifiedBy = verifiedBy;
-        VerifiedAt = KernelTimestamps.ToStoredPrecision(verifiedAt);
-        ModifiedBy = modifiedBy;
-        ModifiedAt = KernelTimestamps.ToStoredPrecision(modifiedAt);
-        ModifiedReason = modifiedReason;
     }
 
     /// <summary>The tenant.</summary>
@@ -142,21 +113,22 @@ public sealed class FormSdvAlert : AggregateRoot<Guid>
             throw new ArgumentException("VerifiedBy and ModifiedBy are required.");
         }
 
-        return new FormSdvAlert(
-            id,
-            tenantId,
-            studyId,
-            studySiteId is { IsEmpty: false } site ? site : null,
-            enrollmentId,
-            formId is { IsEmpty: false } form ? form : null,
-            string.IsNullOrWhiteSpace(itemId) ? null : itemId.Trim(),
-            observationId,
-            supersededRevision,
-            newRevision,
-            verifiedBy.Trim(),
-            verifiedAt,
-            modifiedBy.Trim(),
-            modifiedAt,
-            string.IsNullOrWhiteSpace(modifiedReason) ? "Verified observation modified" : modifiedReason.Trim());
+        return new FormSdvAlert(id)
+        {
+            TenantId = tenantId,
+            StudyId = studyId,
+            StudySiteId = studySiteId is { IsEmpty: false } site ? site : null,
+            EnrollmentId = enrollmentId,
+            FormId = formId is { IsEmpty: false } form ? form : null,
+            ItemId = string.IsNullOrWhiteSpace(itemId) ? null : itemId.Trim(),
+            ObservationId = observationId,
+            SupersededRevision = supersededRevision,
+            NewRevision = newRevision,
+            VerifiedBy = verifiedBy.Trim(),
+            VerifiedAt = KernelTimestamps.ToStoredPrecision(verifiedAt),
+            ModifiedBy = modifiedBy.Trim(),
+            ModifiedAt = KernelTimestamps.ToStoredPrecision(modifiedAt),
+            ModifiedReason = string.IsNullOrWhiteSpace(modifiedReason) ? "Verified observation modified" : modifiedReason.Trim(),
+        };
     }
 }

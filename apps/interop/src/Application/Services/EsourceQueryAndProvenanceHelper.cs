@@ -123,43 +123,15 @@ internal static class EsourceQueryAndProvenanceHelper
                 || a.Details.EndsWith(candidateMarker, StringComparison.Ordinal))
             .ToList();
 
-        object candVal = ParseJsonOrRaw(item.CandidateValueJson);
-        object? ecrfVal = ParseJsonOrRaw(item.CurrentEcrfValueJson);
-        object rawFhir = ParseJsonOrRaw(item.RawFhirResourceJson);
-        object? eSig = ParseJsonOrRaw(item.ElectronicSignatureJson);
-
+        var dto = ToDto(item);
         return Results.Ok(new EhrProvenanceResponse(
-            CandidateId: item.Id,
-            StudyId: item.StudyId,
-            SiteId: item.SiteId,
-            SubjectId: item.SubjectId,
-            SubjectPseudonym: item.SubjectPseudonym,
-            EhrSystemId: item.EhrSystemId,
-            FhirResourceType: item.FhirResourceType,
-            FhirResourceId: item.FhirResourceId,
-            SourceTimestamp: item.SourceTimestamp,
-            TargetDomain: item.TargetDomain,
-            TargetVariable: item.TargetVariable,
-            CdashTestcd: item.CdashTestcd,
-            CdashTest: item.CdashTest,
-            CandidateValue: candVal,
-            CandidateUnit: item.CandidateUnit,
-            CurrentEcrfValue: ecrfVal,
-            CurrentEcrfUpdatedAt: item.CurrentEcrfUpdatedAt,
-            DiscrepancyType: item.DiscrepancyType,
-            ConfidenceScore: item.ConfidenceScore,
-            MappingProvenance: item.MappingProvenance,
-            RawFhirResource: rawFhir,
-            Status: item.Status,
-            ResolutionAction: item.ResolutionAction,
-            ResolutionReason: item.ResolutionReason,
-            ResolvedBy: item.ResolvedBy,
-            ResolvedAt: item.ResolvedAt,
-            ElectronicSignature: eSig,
-            ClinicalQueryId: item.ClinicalQueryId,
-            CreatedAt: item.CreatedAt,
-            VersionIndex: item.VersionIndex,
-            AuditTrail: auditLogs));
+            dto.Id, dto.StudyId, dto.SiteId, dto.SubjectId, item.SubjectPseudonym,
+            dto.EhrSystemId, dto.FhirResourceType, dto.FhirResourceId, dto.SourceTimestamp,
+            dto.TargetDomain, dto.TargetVariable, dto.CdashTestcd, dto.CdashTest,
+            dto.CandidateValue, dto.CandidateUnit, dto.CurrentEcrfValue, dto.CurrentEcrfUpdatedAt,
+            dto.DiscrepancyType, dto.ConfidenceScore, dto.MappingProvenance, dto.RawFhirResource,
+            dto.Status, dto.ResolutionAction, dto.ResolutionReason, dto.ResolvedBy, dto.ResolvedAt,
+            dto.ElectronicSignature, dto.ClinicalQueryId, dto.CreatedAt, dto.VersionIndex, auditLogs));
     }
 
     internal static EhrCandidateItemDto ToDto(EhrReconciliationCandidateRecord item)

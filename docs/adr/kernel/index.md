@@ -7,3 +7,5 @@ Active Architectural Decision Records for **0. Clinical Kernel (K001–K037)**.
 - Entries below use `# ADR-KERNEL-YYYYMMDD-<slug>: <title>` and are sorted alphabetically by filename.
 
 ## Decisions
+
+- [ADR-KERNEL-20261128-centralize-entityid-operations-bcl-postgresql-guards-and-c-intra-file-clone-enforcement: Centralize EntityId Operations, BCL PostgreSQL Guards, and C# Intra-File Clone Enforcement](2026-11-28-centralize-entityid-operations-bcl-postgresql-guards-and-c-intra-file-clone-enforcement.md) (2026-11-28)

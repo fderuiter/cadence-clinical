@@ -11,8 +11,8 @@ namespace Cadence.Kernel;
 /// Strongly-typed UUIDv7 identifier for a Grant: an actor's authority to exercise a capability, or a role's
 /// capabilities, within a scope for a period (spec §9.3). A delegation is a grant issued under another grant.
 /// </summary>
-[TypeConverter(typeof(GrantIdTypeConverter))]
-[JsonConverter(typeof(GrantIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<GrantId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<GrantId>))]
 public readonly record struct GrantId(Guid Value) : IEntityId<GrantId>
 {
     public static GrantId New() => new(Guid.CreateVersion7());
@@ -35,62 +35,28 @@ public readonly record struct GrantId(Guid Value) : IEntityId<GrantId>
 
     public int CompareTo(GrantId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        GrantId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(GrantId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(GrantId left, GrantId right) => left.CompareTo(right) < 0;
     public static bool operator <=(GrantId left, GrantId right) => left.CompareTo(right) <= 0;
     public static bool operator >(GrantId left, GrantId right) => left.CompareTo(right) > 0;
     public static bool operator >=(GrantId left, GrantId right) => left.CompareTo(right) >= 0;
 
-    public static GrantId Parse(string s) => Parse(s, null);
+    public static GrantId Parse(string s) => EntityIdOperations.Parse<GrantId>(s);
 
-    public static GrantId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new GrantId(Guid.Parse(s, provider));
-    }
+    public static GrantId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<GrantId>(s, provider);
 
-    public static GrantId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static GrantId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<GrantId>(s);
 
-    public static GrantId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static GrantId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<GrantId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out GrantId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out GrantId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out GrantId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out GrantId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out GrantId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new GrantId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out GrantId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out GrantId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new GrantId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out GrantId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class GrantIdTypeConverter : EntityIdTypeConverter<GrantId>;
-
-public sealed class GrantIdJsonConverter : EntityIdJsonConverter<GrantId>;

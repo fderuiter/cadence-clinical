@@ -1797,6 +1797,37 @@ internal sealed class KernelCollectionInstanceRecords(
         return string.Equals(hash, signedHash, StringComparison.Ordinal) ? signed : null;
     }
 
+    internal static bool IsObservationOrRevisionBlinded(
+        IBlindedTreatmentClassifier blinding,
+        string? collectionSpecId,
+        string? collectionTitle,
+        string itemId,
+        CollectionItem? specItem,
+        Observation obs,
+        BlindedConceptMetadata? conceptMeta,
+        IReadOnlyList<ProtocolDesign> designs) =>
+        blinding.IsBlindedCollectionItem(
+                collectionSpecId,
+                collectionTitle,
+                specItem,
+                obs.Value,
+                conceptMeta,
+                designs)
+            || blinding.IsBlindedObservation(
+                obs.ConceptId,
+                obs.Value,
+                conceptMeta,
+                collectionSpecId,
+                itemId,
+                designs)
+            || obs.Revisions.Any(r => blinding.IsBlindedObservation(
+                obs.ConceptId,
+                r.Value,
+                conceptMeta,
+                collectionSpecId,
+                itemId,
+                designs));
+
     internal static (IReadOnlySet<string> BlindedItems, IReadOnlySet<ObservationId> BlindedObservations) ClassifyBlindedMembers(
         IBlindedTreatmentClassifier blinding,
         CollectionInstance instance,
@@ -1829,27 +1860,15 @@ internal sealed class KernelCollectionInstanceRecords(
 
             specById.TryGetValue(member.ItemId, out var specItem);
             var conceptMeta = ResolveConcept(obs.ConceptId);
-            var currentOrHistoricalBlinded = blinding.IsBlindedCollectionItem(
-                    instance.CollectionSpecId,
-                    collectionTitle,
-                    specItem,
-                    obs.Value,
-                    conceptMeta,
-                    designs)
-                || blinding.IsBlindedObservation(
-                    obs.ConceptId,
-                    obs.Value,
-                    conceptMeta,
-                    instance.CollectionSpecId,
-                    member.ItemId,
-                    designs)
-                || obs.Revisions.Any(r => blinding.IsBlindedObservation(
-                    obs.ConceptId,
-                    r.Value,
-                    conceptMeta,
-                    instance.CollectionSpecId,
-                    member.ItemId,
-                    designs));
+            var currentOrHistoricalBlinded = IsObservationOrRevisionBlinded(
+                blinding,
+                instance.CollectionSpecId,
+                collectionTitle,
+                member.ItemId,
+                specItem,
+                obs,
+                conceptMeta,
+                designs);
             if (specBlinded || blindedItems.Contains(member.ItemId) || currentOrHistoricalBlinded)
             {
                 blindedItems.Add(member.ItemId);
@@ -2422,27 +2441,15 @@ internal sealed class BatchFormBlindingLookup(
                 // Evaluate per-observation/per-revision masked values directly so masked values never taint
                 // structural memo entries shared with unmasked sibling observations (K-AUTH-4).
                 var conceptMeta = ResolveConcept(obs.ConceptId);
-                memberBlinded = blinding.IsBlindedCollectionItem(
-                        instance.CollectionSpecId,
-                        collectionTitle,
-                        specItem,
-                        obs.Value,
-                        conceptMeta,
-                        designs)
-                    || blinding.IsBlindedObservation(
-                        obs.ConceptId,
-                        obs.Value,
-                        conceptMeta,
-                        instance.CollectionSpecId,
-                        member.ItemId,
-                        designs)
-                    || obs.Revisions.Any(r => blinding.IsBlindedObservation(
-                        obs.ConceptId,
-                        r.Value,
-                        conceptMeta,
-                        instance.CollectionSpecId,
-                        member.ItemId,
-                        designs));
+                memberBlinded = KernelCollectionInstanceRecords.IsObservationOrRevisionBlinded(
+                    blinding,
+                    instance.CollectionSpecId,
+                    collectionTitle,
+                    member.ItemId,
+                    specItem,
+                    obs,
+                    conceptMeta,
+                    designs);
             }
             else
             {

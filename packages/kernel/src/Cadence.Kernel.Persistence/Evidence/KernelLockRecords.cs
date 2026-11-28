@@ -186,28 +186,7 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
         var trimmedStudy = studyCodeOrId.Trim();
         await using var db = contexts.Create(tenant);
 
-        Study? foundStudy;
-        if (NodeRef.TryParse(trimmedStudy, out var studyNode) && studyNode.Kind == NodeKinds.Study)
-        {
-            var parsedStudyId = StudyId.FromGuid(studyNode.Id);
-            foundStudy = await db.Studies.AsNoTracking()
-                .SingleOrDefaultAsync(s => s.Id == parsedStudyId, cancellationToken)
-                .ConfigureAwait(false);
-        }
-        else if (Guid.TryParse(trimmedStudy, out var rawStudyGuid))
-        {
-            var parsedStudyId = StudyId.FromGuid(rawStudyGuid);
-            foundStudy = await db.Studies.AsNoTracking()
-                .FirstOrDefaultAsync(s => s.Id == parsedStudyId || s.StudyCode == trimmedStudy, cancellationToken)
-                .ConfigureAwait(false);
-        }
-        else
-        {
-            foundStudy = await db.Studies.AsNoTracking()
-                .SingleOrDefaultAsync(s => s.StudyCode == trimmedStudy, cancellationToken)
-                .ConfigureAwait(false);
-        }
-
+        var foundStudy = await FindStudyByCodeOrIdAsync(db, trimmedStudy, cancellationToken).ConfigureAwait(false);
         if (foundStudy is null)
         {
             return new ScopeWriteLockCheck(StudyExists: false, Locked: false, LockKind: null, ScopeKind: null);
@@ -307,62 +286,13 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
             coveringScopes.Add(NodeRef.For(eid));
         }
 
-        var targetGuids = coveringScopes.Select(s => s.Id).ToList();
-        var candidateLocks = await db.Assertions.AsNoTracking()
-            .Where(a => a.StudyId == study
-                && (a.Kind == AssertionKind.Frozen || a.Kind == AssertionKind.Locked)
-                && a.RetractsId == null
-                && targetGuids.Contains(a.TargetId))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-        candidateLocks = [.. candidateLocks.Where(a => coveringScopes.Any(s => s.Kind == a.TargetKind && s.Id == a.TargetId))];
-        if (candidateLocks.Count == 0)
-        {
-            return new ScopeWriteLockCheck(
-                StudyExists: true,
-                Locked: false,
-                LockKind: null,
-                ScopeKind: null,
-                StudyId: study,
-                StudySiteId: resolvedStudySiteId,
-                EnrollmentId: resolvedEnrollmentId,
-                CoveringLocks: [],
-                EnrollmentStudySiteId: enrollmentStudySiteId);
-        }
-
-        var candidateIds = candidateLocks.Select(l => l.Id).ToList();
-        var retracted = await db.Assertions.AsNoTracking()
-            .Where(r => r.RetractsId != null && candidateIds.Contains(r.RetractsId.Value))
-            .Select(r => r.RetractsId!.Value)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-        var retractedSet = retracted.ToHashSet();
-        var activeCandidates = candidateLocks
-            .Where(l => !retractedSet.Contains(l.Id))
-            .OrderByDescending(l => l.Kind == AssertionKind.Locked)
-            .ThenBy(l => LockScopes.OrderOf(l.TargetKind))
-            .Select(l => new ScopeWriteLockCandidate((LockKind)l.Kind, new NodeRef(l.TargetKind, l.TargetId)))
-            .ToList();
+        var activeCandidates = await FindActiveCoveringLocksAsync(db, study, coveringScopes, cancellationToken).ConfigureAwait(false);
         var active = activeCandidates.FirstOrDefault();
-        if (active is null)
-        {
-            return new ScopeWriteLockCheck(
-                StudyExists: true,
-                Locked: false,
-                LockKind: null,
-                ScopeKind: null,
-                StudyId: study,
-                StudySiteId: resolvedStudySiteId,
-                EnrollmentId: resolvedEnrollmentId,
-                CoveringLocks: [],
-                EnrollmentStudySiteId: enrollmentStudySiteId);
-        }
-
         return new ScopeWriteLockCheck(
             StudyExists: true,
-            Locked: true,
-            LockKind: active.Kind,
-            ScopeKind: active.Scope.Kind,
+            Locked: active is not null,
+            LockKind: active?.Kind,
+            ScopeKind: active?.Scope.Kind,
             StudyId: study,
             StudySiteId: resolvedStudySiteId,
             EnrollmentId: resolvedEnrollmentId,
@@ -385,28 +315,7 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
         var trimmedStudy = studyCodeOrId.Trim();
         await using var db = contexts.Create(tenant);
 
-        Study? foundStudy;
-        if (NodeRef.TryParse(trimmedStudy, out var studyNode) && studyNode.Kind == NodeKinds.Study)
-        {
-            var parsedStudyId = StudyId.FromGuid(studyNode.Id);
-            foundStudy = await db.Studies.AsNoTracking()
-                .SingleOrDefaultAsync(s => s.Id == parsedStudyId, cancellationToken)
-                .ConfigureAwait(false);
-        }
-        else if (Guid.TryParse(trimmedStudy, out var rawStudyGuid))
-        {
-            var parsedStudyId = StudyId.FromGuid(rawStudyGuid);
-            foundStudy = await db.Studies.AsNoTracking()
-                .FirstOrDefaultAsync(s => s.Id == parsedStudyId || s.StudyCode == trimmedStudy, cancellationToken)
-                .ConfigureAwait(false);
-        }
-        else
-        {
-            foundStudy = await db.Studies.AsNoTracking()
-                .SingleOrDefaultAsync(s => s.StudyCode == trimmedStudy, cancellationToken)
-                .ConfigureAwait(false);
-        }
-
+        var foundStudy = await FindStudyByCodeOrIdAsync(db, trimmedStudy, cancellationToken).ConfigureAwait(false);
         if (foundStudy is null)
         {
             return new BatchScopeWriteLockCheck(StudyExists: false, Locked: false, LockKind: null, ScopeKind: null);
@@ -515,6 +424,50 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
             }
         }
 
+        var activeCandidates = await FindActiveCoveringLocksAsync(db, study, coveringScopes, cancellationToken).ConfigureAwait(false);
+        var active = activeCandidates.FirstOrDefault();
+        return new BatchScopeWriteLockCheck(
+            StudyExists: true,
+            Locked: active is not null,
+            LockKind: active?.Kind,
+            ScopeKind: active?.Scope.Kind,
+            StudyId: study,
+            ResolvedStudySites: resolvedStudySites,
+            CoveringLocks: activeCandidates);
+    }
+
+    private static async Task<Study?> FindStudyByCodeOrIdAsync(
+        KernelDbContext db,
+        string trimmedStudy,
+        CancellationToken cancellationToken)
+    {
+        if (NodeRef.TryParse(trimmedStudy, out var studyNode) && studyNode.Kind == NodeKinds.Study)
+        {
+            var parsedStudyId = StudyId.FromGuid(studyNode.Id);
+            return await db.Studies.AsNoTracking()
+                .SingleOrDefaultAsync(s => s.Id == parsedStudyId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        if (Guid.TryParse(trimmedStudy, out var rawStudyGuid))
+        {
+            var parsedStudyId = StudyId.FromGuid(rawStudyGuid);
+            return await db.Studies.AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Id == parsedStudyId || s.StudyCode == trimmedStudy, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return await db.Studies.AsNoTracking()
+            .SingleOrDefaultAsync(s => s.StudyCode == trimmedStudy, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static async Task<List<ScopeWriteLockCandidate>> FindActiveCoveringLocksAsync(
+        KernelDbContext db,
+        StudyId study,
+        IReadOnlyList<NodeRef> coveringScopes,
+        CancellationToken cancellationToken)
+    {
         var targetGuids = coveringScopes.Select(s => s.Id).ToList();
         var candidateLocks = await db.Assertions.AsNoTracking()
             .Where(a => a.StudyId == study
@@ -526,14 +479,7 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
         candidateLocks = [.. candidateLocks.Where(a => coveringScopes.Any(s => s.Kind == a.TargetKind && s.Id == a.TargetId))];
         if (candidateLocks.Count == 0)
         {
-            return new BatchScopeWriteLockCheck(
-                StudyExists: true,
-                Locked: false,
-                LockKind: null,
-                ScopeKind: null,
-                StudyId: study,
-                ResolvedStudySites: resolvedStudySites,
-                CoveringLocks: []);
+            return [];
         }
 
         var candidateIds = candidateLocks.Select(l => l.Id).ToList();
@@ -543,33 +489,12 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         var retractedSet = retracted.ToHashSet();
-        var activeCandidates = candidateLocks
+        return candidateLocks
             .Where(l => !retractedSet.Contains(l.Id))
             .OrderByDescending(l => l.Kind == AssertionKind.Locked)
             .ThenBy(l => LockScopes.OrderOf(l.TargetKind))
             .Select(l => new ScopeWriteLockCandidate((LockKind)l.Kind, new NodeRef(l.TargetKind, l.TargetId)))
             .ToList();
-        var active = activeCandidates.FirstOrDefault();
-        if (active is null)
-        {
-            return new BatchScopeWriteLockCheck(
-                StudyExists: true,
-                Locked: false,
-                LockKind: null,
-                ScopeKind: null,
-                StudyId: study,
-                ResolvedStudySites: resolvedStudySites,
-                CoveringLocks: []);
-        }
-
-        return new BatchScopeWriteLockCheck(
-            StudyExists: true,
-            Locked: true,
-            LockKind: active.Kind,
-            ScopeKind: active.Scope.Kind,
-            StudyId: study,
-            ResolvedStudySites: resolvedStudySites,
-            CoveringLocks: activeCandidates);
     }
 
     private static async Task<bool> ScopeExistsInStudyAsync(

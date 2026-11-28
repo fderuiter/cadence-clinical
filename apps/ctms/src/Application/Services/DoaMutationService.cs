@@ -185,109 +185,35 @@ public sealed class DoaMutationService(
         CancellationToken ct,
         string? studyId = null)
     {
-        if (request is null || string.IsNullOrWhiteSpace(request.RecordId))
+        var (delegation, reason, authError) = await LoadAndAuthorizeDelegationMutationAsync(
+            request?.RecordId,
+            request?.Study,
+            studyId,
+            request?.ReasonForChange,
+            httpContext,
+            ct);
+        if (authError is not null)
         {
-            return TypedResults.Problem(
-                title: "Record ID required",
-                detail: "Delegation record ID is required.",
-                statusCode: StatusCodes.Status400BadRequest);
+            return authError;
         }
 
-        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
-        {
-            return missingScope;
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.Study)
-            && !string.IsNullOrWhiteSpace(studyId)
-            && !string.Equals(request.Study.Trim(), studyId.Trim(), StringComparison.Ordinal))
-        {
-            return TypedResults.Problem(
-                title: "Conflicting study ID",
-                detail: "Study ID in request body conflicts with study_id query parameter.",
-                statusCode: StatusCodes.Status400BadRequest);
-        }
-
-        string? requestedStudyId = !string.IsNullOrWhiteSpace(request.Study) ? request.Study.Trim() : studyId?.Trim();
-        if (!string.IsNullOrWhiteSpace(requestedStudyId)
-            && CtmsScopeGuard.RequireStudy(httpContext, requestedStudyId) is { } requestedStudyDenied)
-        {
-            return requestedStudyDenied;
-        }
-
-        string trimmedRecordId = request.RecordId.Trim();
-        var delegation = await db.CtmsDelegations.FirstOrDefaultAsync(d => d.Id == trimmedRecordId, ct);
-        if (delegation is null)
-        {
-            return TypedResults.Problem(
-                title: "Delegation record not found",
-                detail: $"Delegation record '{request.RecordId}' does not exist.",
-                statusCode: StatusCodes.Status404NotFound);
-        }
-
-        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, delegation.StudyId, delegation.SiteId) is { } scopeDenied)
-        {
-            return scopeDenied;
-        }
-
-        if (!string.IsNullOrWhiteSpace(requestedStudyId)
-            && !string.Equals(delegation.StudyId, requestedStudyId, StringComparison.Ordinal))
-        {
-            return TypedResults.Problem(
-                title: "Delegation record not found",
-                detail: $"Delegation record '{request.RecordId}' does not exist in study '{requestedStudyId}'.",
-                statusCode: StatusCodes.Status404NotFound);
-        }
-
-        if (!MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
-        {
-            return problem!;
-        }
-
-        if (!delegation.IsActive)
+        if (!delegation!.IsActive)
         {
             return TypedResults.Problem(
                 title: "Already revoked",
-                detail: $"Delegation record '{request.RecordId}' is already inactive or revoked.",
+                detail: $"Delegation record '{request!.RecordId}' is already inactive or revoked.",
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        StandaloneConcurrencyTokenInterceptor.EnforceExpectedVersion(
-            db,
+        return await CommitDelegationTransitionAsync(
             delegation,
-            request.ExpectedVersionIndex,
-            httpContext);
-
-        var now = clock.UtcNow;
-        var (user, role) = CallerScope.ResolveActor(httpContext, "investigator");
-        long baselineVersion = db.Entry(delegation).Property(x => x.VersionIndex).OriginalValue;
-
-        delegation.IsActive = false;
-        delegation.EndDate = now.ToString("yyyy-MM-dd");
-        delegation.ReasonForChange = reason;
-        delegation.VersionIndex = baselineVersion + 1;
-
-        await AppendDelegationPeriodTransitionAsync(delegation, user, reason, now, isRevocation: true, ct);
-
-        var auditEntry = new CtmsAuditLog
-        {
-            Timestamp = now,
-            UserId = user,
-            UserRole = role,
-            Action = "DOA_REVOKE",
-            Details = $"Revoked delegation assignment {delegation.Id} for staff {delegation.StaffUserId} at site {delegation.SiteId} in study {delegation.StudyId}.",
-            StudyId = delegation.StudyId,
-            SiteId = delegation.SiteId,
-            ReasonForChange = reason,
-            CreatedAt = now.UtcDateTime,
-            CreatedBy = user,
-            VersionIndex = 1,
-        };
-        db.CtmsAuditLogs.Add(auditEntry);
-
-        await unitOfWork.CommitAsync(ct);
-
-        return TypedResults.Ok(ToResponseDto(delegation));
+            request!.ExpectedVersionIndex,
+            reason,
+            isRevocation: true,
+            auditAction: "DOA_REVOKE",
+            auditDetails: $"Revoked delegation assignment {delegation.Id} for staff {delegation.StaffUserId} at site {delegation.SiteId} in study {delegation.StudyId}.",
+            httpContext,
+            ct);
     }
 
     public async Task<IResult> SignOffDelegationAsync(
@@ -296,70 +222,23 @@ public sealed class DoaMutationService(
         CancellationToken ct,
         string? studyId = null)
     {
-        if (request is null || string.IsNullOrWhiteSpace(request.RecordId))
+        var (delegation, reason, authError) = await LoadAndAuthorizeDelegationMutationAsync(
+            request?.RecordId,
+            request?.Study,
+            studyId,
+            request?.ReasonForChange,
+            httpContext,
+            ct);
+        if (authError is not null)
         {
-            return TypedResults.Problem(
-                title: "Record ID required",
-                detail: "Delegation record ID is required.",
-                statusCode: StatusCodes.Status400BadRequest);
+            return authError;
         }
 
-        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
-        {
-            return missingScope;
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.Study)
-            && !string.IsNullOrWhiteSpace(studyId)
-            && !string.Equals(request.Study.Trim(), studyId.Trim(), StringComparison.Ordinal))
-        {
-            return TypedResults.Problem(
-                title: "Conflicting study ID",
-                detail: "Study ID in request body conflicts with study_id query parameter.",
-                statusCode: StatusCodes.Status400BadRequest);
-        }
-
-        string? requestedStudyId = !string.IsNullOrWhiteSpace(request.Study) ? request.Study.Trim() : studyId?.Trim();
-        if (!string.IsNullOrWhiteSpace(requestedStudyId)
-            && CtmsScopeGuard.RequireStudy(httpContext, requestedStudyId) is { } requestedStudyDenied)
-        {
-            return requestedStudyDenied;
-        }
-
-        string trimmedRecordId = request.RecordId.Trim();
-        var delegation = await db.CtmsDelegations.FirstOrDefaultAsync(d => d.Id == trimmedRecordId, ct);
-        if (delegation is null)
-        {
-            return TypedResults.Problem(
-                title: "Delegation record not found",
-                detail: $"Delegation record '{request.RecordId}' does not exist.",
-                statusCode: StatusCodes.Status404NotFound);
-        }
-
-        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, delegation.StudyId, delegation.SiteId) is { } scopeDenied)
-        {
-            return scopeDenied;
-        }
-
-        if (!string.IsNullOrWhiteSpace(requestedStudyId)
-            && !string.Equals(delegation.StudyId, requestedStudyId, StringComparison.Ordinal))
-        {
-            return TypedResults.Problem(
-                title: "Delegation record not found",
-                detail: $"Delegation record '{request.RecordId}' does not exist in study '{requestedStudyId}'.",
-                statusCode: StatusCodes.Status404NotFound);
-        }
-
-        if (!MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
-        {
-            return problem!;
-        }
-
-        if (!delegation.IsActive)
+        if (!delegation!.IsActive)
         {
             return TypedResults.Problem(
                 title: "Cannot sign off revoked record",
-                detail: $"Delegation record '{request.RecordId}' is revoked or inactive.",
+                detail: $"Delegation record '{request!.RecordId}' is revoked or inactive.",
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
@@ -367,33 +246,133 @@ public sealed class DoaMutationService(
         {
             return TypedResults.Problem(
                 title: "Already signed off",
-                detail: $"Delegation record '{request.RecordId}' has already been signed off.",
+                detail: $"Delegation record '{request!.RecordId}' has already been signed off.",
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
+        return await CommitDelegationTransitionAsync(
+            delegation,
+            request!.ExpectedVersionIndex,
+            reason,
+            isRevocation: false,
+            auditAction: "DOA_PI_SIGN_OFF",
+            auditDetails: $"Principal Investigator sign-off endorsed for delegation {delegation.Id} (staff {delegation.StaffUserId}) at site {delegation.SiteId} in study {delegation.StudyId}.",
+            httpContext,
+            ct);
+    }
+
+    private async Task<(CtmsDelegation? Delegation, string Reason, IResult? Error)> LoadAndAuthorizeDelegationMutationAsync(
+        string? rawRecordId,
+        string? bodyStudyId,
+        string? queryStudyId,
+        string? rawReasonForChange,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(rawRecordId))
+        {
+            return (null, string.Empty, TypedResults.Problem(
+                title: "Record ID required",
+                detail: "Delegation record ID is required.",
+                statusCode: StatusCodes.Status400BadRequest));
+        }
+
+        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
+        {
+            return (null, string.Empty, missingScope);
+        }
+
+        if (!string.IsNullOrWhiteSpace(bodyStudyId)
+            && !string.IsNullOrWhiteSpace(queryStudyId)
+            && !string.Equals(bodyStudyId.Trim(), queryStudyId.Trim(), StringComparison.Ordinal))
+        {
+            return (null, string.Empty, TypedResults.Problem(
+                title: "Conflicting study ID",
+                detail: "Study ID in request body conflicts with study_id query parameter.",
+                statusCode: StatusCodes.Status400BadRequest));
+        }
+
+        string? requestedStudyId = !string.IsNullOrWhiteSpace(bodyStudyId) ? bodyStudyId.Trim() : queryStudyId?.Trim();
+        if (!string.IsNullOrWhiteSpace(requestedStudyId)
+            && CtmsScopeGuard.RequireStudy(httpContext, requestedStudyId) is { } requestedStudyDenied)
+        {
+            return (null, string.Empty, requestedStudyDenied);
+        }
+
+        string trimmedRecordId = rawRecordId.Trim();
+        var delegation = await db.CtmsDelegations.FirstOrDefaultAsync(d => d.Id == trimmedRecordId, ct);
+        if (delegation is null)
+        {
+            return (null, string.Empty, TypedResults.Problem(
+                title: "Delegation record not found",
+                detail: $"Delegation record '{rawRecordId}' does not exist.",
+                statusCode: StatusCodes.Status404NotFound));
+        }
+
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, delegation.StudyId, delegation.SiteId) is { } scopeDenied)
+        {
+            return (null, string.Empty, scopeDenied);
+        }
+
+        if (!string.IsNullOrWhiteSpace(requestedStudyId)
+            && !string.Equals(delegation.StudyId, requestedStudyId, StringComparison.Ordinal))
+        {
+            return (null, string.Empty, TypedResults.Problem(
+                title: "Delegation record not found",
+                detail: $"Delegation record '{rawRecordId}' does not exist in study '{requestedStudyId}'.",
+                statusCode: StatusCodes.Status404NotFound));
+        }
+
+        if (!MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, rawReasonForChange, out string reason, out var problem))
+        {
+            return (null, string.Empty, problem!);
+        }
+
+        return (delegation, reason, null);
+    }
+
+    private async Task<IResult> CommitDelegationTransitionAsync(
+        CtmsDelegation delegation,
+        long? expectedVersionIndex,
+        string reason,
+        bool isRevocation,
+        string auditAction,
+        string auditDetails,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
         StandaloneConcurrencyTokenInterceptor.EnforceExpectedVersion(
             db,
             delegation,
-            request.ExpectedVersionIndex,
+            expectedVersionIndex,
             httpContext);
 
         var (user, role) = CallerScope.ResolveActor(httpContext, "investigator");
         var now = clock.UtcNow;
         long baselineVersion = db.Entry(delegation).Property(x => x.VersionIndex).OriginalValue;
 
-        delegation.SignedOff = true;
+        if (isRevocation)
+        {
+            delegation.IsActive = false;
+            delegation.EndDate = now.ToString("yyyy-MM-dd");
+        }
+        else
+        {
+            delegation.SignedOff = true;
+        }
+
         delegation.ReasonForChange = reason;
         delegation.VersionIndex = baselineVersion + 1;
 
-        await AppendDelegationPeriodTransitionAsync(delegation, user, reason, now, isRevocation: false, ct);
+        await AppendDelegationPeriodTransitionAsync(delegation, user, reason, now, isRevocation, ct);
 
         var auditEntry = new CtmsAuditLog
         {
             Timestamp = now,
             UserId = user,
             UserRole = role,
-            Action = "DOA_PI_SIGN_OFF",
-            Details = $"Principal Investigator sign-off endorsed for delegation {delegation.Id} (staff {delegation.StaffUserId}) at site {delegation.SiteId} in study {delegation.StudyId}.",
+            Action = auditAction,
+            Details = auditDetails,
             StudyId = delegation.StudyId,
             SiteId = delegation.SiteId,
             ReasonForChange = reason,

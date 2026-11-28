@@ -483,7 +483,7 @@ public static class DuplicationDetectorService
 
     private static readonly HashSet<string> IntraFileDuplicationExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts", ".vue",
+        ".cs", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts", ".vue",
     };
 
     private static bool IsIntraFileDuplicationEnforced(string relativePath) =>

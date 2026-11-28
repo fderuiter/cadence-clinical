@@ -10,8 +10,8 @@ namespace Cadence.Kernel;
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for a TenantMembership (a person's presence in one tenant, K-ID-4).
 /// </summary>
-[TypeConverter(typeof(TenantMembershipIdTypeConverter))]
-[JsonConverter(typeof(TenantMembershipIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<TenantMembershipId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<TenantMembershipId>))]
 public readonly record struct TenantMembershipId(Guid Value) : IEntityId<TenantMembershipId>
 {
     public static TenantMembershipId New() => new(Guid.CreateVersion7());
@@ -34,62 +34,28 @@ public readonly record struct TenantMembershipId(Guid Value) : IEntityId<TenantM
 
     public int CompareTo(TenantMembershipId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        TenantMembershipId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(TenantMembershipId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(TenantMembershipId left, TenantMembershipId right) => left.CompareTo(right) < 0;
     public static bool operator <=(TenantMembershipId left, TenantMembershipId right) => left.CompareTo(right) <= 0;
     public static bool operator >(TenantMembershipId left, TenantMembershipId right) => left.CompareTo(right) > 0;
     public static bool operator >=(TenantMembershipId left, TenantMembershipId right) => left.CompareTo(right) >= 0;
 
-    public static TenantMembershipId Parse(string s) => Parse(s, null);
+    public static TenantMembershipId Parse(string s) => EntityIdOperations.Parse<TenantMembershipId>(s);
 
-    public static TenantMembershipId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new TenantMembershipId(Guid.Parse(s, provider));
-    }
+    public static TenantMembershipId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<TenantMembershipId>(s, provider);
 
-    public static TenantMembershipId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static TenantMembershipId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<TenantMembershipId>(s);
 
-    public static TenantMembershipId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static TenantMembershipId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<TenantMembershipId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out TenantMembershipId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out TenantMembershipId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out TenantMembershipId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out TenantMembershipId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out TenantMembershipId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new TenantMembershipId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out TenantMembershipId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out TenantMembershipId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new TenantMembershipId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out TenantMembershipId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class TenantMembershipIdTypeConverter : EntityIdTypeConverter<TenantMembershipId>;
-
-public sealed class TenantMembershipIdJsonConverter : EntityIdJsonConverter<TenantMembershipId>;

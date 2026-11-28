@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 
+using Cadence.Kernel.Sql;
+
 using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Cadence.Database.Temporal;
@@ -12,51 +14,20 @@ namespace Cadence.Database.Temporal;
 /// </summary>
 public static class StandaloneInsertOnlySql
 {
-    public const string FunctionName = "enforce_insert_only";
-    public const string ViolationSqlState = "KA001";
+    public const string FunctionName = PostgresInsertOnlySql.FunctionName;
+    public const string ViolationSqlState = PostgresInsertOnlySql.ViolationSqlState;
 
-    public static string CreateInsertOnlyFunctionSql(string schema)
-    {
-        string s = StandaloneTemporalSql.Quote(schema);
-        return $$"""
-            CREATE OR REPLACE FUNCTION {{s}}.{{FunctionName}}() RETURNS trigger
-            LANGUAGE plpgsql AS $fn$
-            BEGIN
-                RAISE EXCEPTION 'K-AUDIT: %.% is insert-only; % is not allowed',
-                    TG_TABLE_SCHEMA, TG_TABLE_NAME, TG_OP USING ERRCODE = '{{ViolationSqlState}}';
-            END;
-            $fn$;
-            """;
-    }
+    public static string CreateInsertOnlyFunctionSql(string schema) =>
+        PostgresInsertOnlySql.CreateFunctionSql(schema, allowMixedCaseIdentifiers: true);
 
     public static string DropInsertOnlyFunctionSql(string schema) =>
-        $"DROP FUNCTION IF EXISTS {StandaloneTemporalSql.Quote(schema)}.{FunctionName}();";
+        PostgresInsertOnlySql.DropFunctionSql(schema, allowMixedCaseIdentifiers: true);
 
-    public static string CreateInsertOnlyGuardsSql(string schema, string table)
-    {
-        string s = StandaloneTemporalSql.Quote(schema);
-        string qualified = $"{s}.{StandaloneTemporalSql.Quote(table)}";
-        string rowTrigger = StandaloneTemporalSql.Quote(RowTriggerName(table));
-        string truncateTrigger = StandaloneTemporalSql.Quote(TruncateTriggerName(table));
+    public static string CreateInsertOnlyGuardsSql(string schema, string table) =>
+        PostgresInsertOnlySql.CreateGuardsSql(schema, table, allowMixedCaseIdentifiers: true, dropIfExists: true);
 
-        return $"""
-            DROP TRIGGER IF EXISTS {rowTrigger} ON {qualified};
-            CREATE TRIGGER {rowTrigger} BEFORE UPDATE OR DELETE ON {qualified}
-                FOR EACH ROW EXECUTE FUNCTION {s}.{FunctionName}();
-            DROP TRIGGER IF EXISTS {truncateTrigger} ON {qualified};
-            CREATE TRIGGER {truncateTrigger} BEFORE TRUNCATE ON {qualified}
-                FOR EACH STATEMENT EXECUTE FUNCTION {s}.{FunctionName}();
-            """;
-    }
-
-    public static string DropInsertOnlyGuardsSql(string schema, string table)
-    {
-        string qualified = $"{StandaloneTemporalSql.Quote(schema)}.{StandaloneTemporalSql.Quote(table)}";
-        return $"""
-            DROP TRIGGER IF EXISTS {StandaloneTemporalSql.Quote(TruncateTriggerName(table))} ON {qualified};
-            DROP TRIGGER IF EXISTS {StandaloneTemporalSql.Quote(RowTriggerName(table))} ON {qualified};
-            """;
-    }
+    public static string DropInsertOnlyGuardsSql(string schema, string table) =>
+        PostgresInsertOnlySql.DropGuardsSql(schema, table, allowMixedCaseIdentifiers: true);
 
     public static void EnableStandaloneInsertOnlyGuards(
         this MigrationBuilder migrationBuilder,
@@ -87,9 +58,7 @@ public static class StandaloneInsertOnlySql
         }
     }
 
-    public static string RowTriggerName(string table) =>
-        StandaloneTemporalSql.Truncate($"trg_{table}_insert_only");
+    public static string RowTriggerName(string table) => PostgresInsertOnlySql.RowTriggerName(table);
 
-    public static string TruncateTriggerName(string table) =>
-        StandaloneTemporalSql.Truncate($"trg_{table}_no_truncate");
+    public static string TruncateTriggerName(string table) => PostgresInsertOnlySql.TruncateTriggerName(table);
 }

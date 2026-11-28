@@ -103,31 +103,16 @@ public static class MigrationToolingService
         string? outputDir = null,
         string? repoRoot = null,
         Func<string, string, IReadOnlyList<string>, int>? processRunner = null,
-        Func<string, string?>? getEnvironmentVariable = null)
-    {
-        if (!PersistenceModuleCatalog.TryResolveTargets(moduleOrAll, allowAll: true, out var targets, out string error))
-        {
-            Console.Error.WriteLine($"[ERROR] {error}");
-            return 1;
-        }
-
-        repoRoot ??= FindRepoRoot();
-        string resolvedOutputDir = ResolveOutputDirectory(repoRoot, outputDir);
-
-        Directory.CreateDirectory(resolvedOutputDir);
-
-        foreach (var target in targets)
-        {
-            string projectPath = target.GetProjectPath(repoRoot);
-            if (!File.Exists(projectPath))
-            {
-                Console.Error.WriteLine($"[ERROR] Project not found at {projectPath}.");
-                return 1;
-            }
-
-            string outFile = Path.Combine(resolvedOutputDir, $"{target.Module}.sql");
-            var args = new List<string>
-            {
+        Func<string, string?>? getEnvironmentVariable = null) =>
+        RunPerTargetEfOutputCommand(
+            moduleOrAll,
+            outputDir,
+            repoRoot,
+            processRunner,
+            getEnvironmentVariable,
+            resolveOutputFile: static (dir, target) => Path.Combine(dir, $"{target.Module}.sql"),
+            buildArgs: static (projectPath, outFile, target) =>
+            [
                 "ef",
                 "migrations",
                 "script",
@@ -138,21 +123,10 @@ public static class MigrationToolingService
                 outFile,
                 "--context",
                 target.DbContextName,
-            };
-            AppendDesignTimeConnectionIfUnset(args, getEnvironmentVariable);
-
-            Console.WriteLine($"Generating idempotent SQL migration script for '{target.Module}' ({target.DbContextName})...");
-            int exitCode = InvokeProcess(repoRoot, "dotnet", args, processRunner);
-            if (exitCode != 0)
-            {
-                return exitCode;
-            }
-
-            Console.WriteLine($"✔ SQL script written to {outFile}");
-        }
-
-        return 0;
-    }
+            ],
+            formatStartMessage: static target =>
+                $"Generating idempotent SQL migration script for '{target.Module}' ({target.DbContextName})...",
+            formatSuccessMessage: static outFile => $"✔ SQL script written to {outFile}");
 
     /// <summary>
     /// Lists migrations for one module via <c>dotnet ef migrations list</c>, or across all 18 modules.
@@ -334,7 +308,41 @@ public static class MigrationToolingService
         string? outputDir = null,
         string? repoRoot = null,
         Func<string, string, IReadOnlyList<string>, int>? processRunner = null,
-        Func<string, string?>? getEnvironmentVariable = null)
+        Func<string, string?>? getEnvironmentVariable = null) =>
+        RunPerTargetEfOutputCommand(
+            moduleOrAll,
+            outputDir,
+            repoRoot,
+            processRunner,
+            getEnvironmentVariable,
+            resolveOutputFile: static (dir, target) => Path.Combine(dir, $"{target.Module}_migration_bundle"),
+            buildArgs: static (projectPath, outFile, target) =>
+            [
+                "ef",
+                "migrations",
+                "bundle",
+                "--project",
+                projectPath,
+                "--context",
+                target.DbContextName,
+                "--output",
+                outFile,
+                "--force",
+            ],
+            formatStartMessage: static target =>
+                $"Generating migration bundle for '{target.Module}' ({target.DbContextName})...",
+            formatSuccessMessage: static outFile => $"✔ Migration bundle written to {outFile}");
+
+    private static int RunPerTargetEfOutputCommand(
+        string? moduleOrAll,
+        string? outputDir,
+        string? repoRoot,
+        Func<string, string, IReadOnlyList<string>, int>? processRunner,
+        Func<string, string?>? getEnvironmentVariable,
+        Func<string, PersistenceModule, string> resolveOutputFile,
+        Func<string, string, PersistenceModule, List<string>> buildArgs,
+        Func<PersistenceModule, string> formatStartMessage,
+        Func<string, string> formatSuccessMessage)
     {
         if (!PersistenceModuleCatalog.TryResolveTargets(moduleOrAll, allowAll: true, out var targets, out string error))
         {
@@ -355,30 +363,18 @@ public static class MigrationToolingService
                 return 1;
             }
 
-            string outFile = Path.Combine(resolvedOutputDir, $"{target.Module}_migration_bundle");
-            var args = new List<string>
-            {
-                "ef",
-                "migrations",
-                "bundle",
-                "--project",
-                projectPath,
-                "--context",
-                target.DbContextName,
-                "--output",
-                outFile,
-                "--force",
-            };
+            string outFile = resolveOutputFile(resolvedOutputDir, target);
+            var args = buildArgs(projectPath, outFile, target);
             AppendDesignTimeConnectionIfUnset(args, getEnvironmentVariable);
 
-            Console.WriteLine($"Generating migration bundle for '{target.Module}' ({target.DbContextName})...");
+            Console.WriteLine(formatStartMessage(target));
             int exitCode = InvokeProcess(repoRoot, "dotnet", args, processRunner);
             if (exitCode != 0)
             {
                 return exitCode;
             }
 
-            Console.WriteLine($"✔ Migration bundle written to {outFile}");
+            Console.WriteLine(formatSuccessMessage(outFile));
         }
 
         return 0;

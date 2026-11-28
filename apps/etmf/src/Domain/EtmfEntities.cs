@@ -265,33 +265,7 @@ public sealed class TmfDocument : AggregateRoot<string>
                 $"Invalid document state transition from '{upperCurrent}' to '{upperTarget}'. Allowed transitions from '{upperCurrent}': {allowedStr}.");
         }
 
-        int nextSeq = sequenceNumber > 0 ? sequenceNumber : (TransitionSequence + 1);
-        if (nextSeq <= TransitionSequence)
-        {
-            nextSeq = TransitionSequence + 1;
-        }
-
-        var oldStatus = upperCurrent;
-        Status = upperTarget;
-        ApprovalStatus = MapApprovalStatus(upperTarget);
-        ReasonForChange = reasonForChange;
-        TransitionSequence = nextSeq;
-
-        var transition = new TmfDocumentQcTransition
-        {
-            Id = Guid.NewGuid().ToString(),
-            DocumentId = Id,
-            TransitionSequence = nextSeq,
-            FromStatus = oldStatus,
-            ToStatus = Status,
-            ActorId = actorId,
-            ActorRole = actorRole,
-            ReasonForChange = reasonForChange,
-            Timestamp = timestamp
-        };
-
-        _transitions.Add(transition);
-        return transition;
+        return ApplyStateTransition(upperCurrent, upperTarget, actorId, actorRole, reasonForChange, timestamp, sequenceNumber);
     }
 
     public TmfDocumentQcTransition StageForQc(
@@ -380,15 +354,26 @@ public sealed class TmfDocument : AggregateRoot<string>
                 $"Invalid reactivation target '{upperTarget}' from state '{upperCurrent}'.");
         }
 
+        return ApplyStateTransition(upperCurrent, upperTarget, actorId, actorRole, reasonForChange, timestamp, sequenceNumber);
+    }
+
+    private TmfDocumentQcTransition ApplyStateTransition(
+        string fromStatus,
+        string targetStatus,
+        string actorId,
+        string actorRole,
+        string reasonForChange,
+        DateTimeOffset timestamp,
+        int sequenceNumber)
+    {
         int nextSeq = sequenceNumber > 0 ? sequenceNumber : (TransitionSequence + 1);
         if (nextSeq <= TransitionSequence)
         {
             nextSeq = TransitionSequence + 1;
         }
 
-        var oldStatus = upperCurrent;
-        Status = upperTarget;
-        ApprovalStatus = MapApprovalStatus(upperTarget);
+        Status = targetStatus;
+        ApprovalStatus = MapApprovalStatus(targetStatus);
         ReasonForChange = reasonForChange;
         TransitionSequence = nextSeq;
 
@@ -397,7 +382,7 @@ public sealed class TmfDocument : AggregateRoot<string>
             Id = Guid.NewGuid().ToString(),
             DocumentId = Id,
             TransitionSequence = nextSeq,
-            FromStatus = oldStatus,
+            FromStatus = fromStatus,
             ToStatus = Status,
             ActorId = actorId,
             ActorRole = actorRole,
@@ -438,185 +423,93 @@ public sealed class TmfDocument : AggregateRoot<string>
     };
 
     public static TmfDocument CreateDraft(
-        string id,
-        string studyId,
-        string filename,
-        string createdBy,
-        DateTime createdAt,
-        string reasonForChange,
-        string? siteId = null,
-        int zone = 1,
-        string section = "01.01",
-        string artifactCode = "01.01.01",
-        string artifactType = "Clinical Trial Protocol",
-        string content = "",
-        string mimeType = "application/pdf",
-        string taxonomyVersion = "v3.2.0-complete",
-        string? metadataJson = null,
-        long versionIndex = 1,
-        string? objectKey = null,
-        string? contentChecksum = null)
+        string id, string studyId, string filename, string createdBy, DateTime createdAt, string reasonForChange,
+        string? siteId = null, int zone = 1, string section = "01.01", string artifactCode = "01.01.01",
+        string artifactType = "Clinical Trial Protocol", string content = "", string mimeType = "application/pdf",
+        string taxonomyVersion = "v3.2.0-complete", string? metadataJson = null, long versionIndex = 1,
+        string? objectKey = null, string? contentChecksum = null)
     {
-        EnsureValidPathSegment(filename, nameof(filename));
-        EnsureValidPathSegment(section, nameof(section));
-
-        return new TmfDocument(id)
-        {
-            StudyId = studyId,
-            SiteId = siteId,
-            Zone = zone,
-            Section = section,
-            ArtifactCode = artifactCode,
-            ArtifactType = artifactType,
-            Filename = filename,
-            Content = content,
-            MimeType = mimeType,
-            TaxonomyVersion = taxonomyVersion,
-            MetadataJson = metadataJson,
-            ObjectKey = objectKey,
-            ContentChecksum = contentChecksum,
-            CreatedAt = createdAt,
-            CreatedBy = createdBy,
-            ReasonForChange = reasonForChange,
-            VersionIndex = versionIndex
-        };
+        var doc = CreateCore(
+            id, studyId, filename, createdBy, createdAt, reasonForChange, siteId, zone, section,
+            artifactCode, artifactType, content, mimeType, taxonomyVersion, versionIndex);
+        doc.MetadataJson = metadataJson;
+        doc.ObjectKey = objectKey;
+        doc.ContentChecksum = contentChecksum;
+        return doc;
     }
 
     public static TmfDocument CreateForTechnicalQc(
-        string id,
-        string studyId,
-        string filename,
-        string createdBy,
-        string actorRole,
-        DateTimeOffset timestamp,
-        string reasonForChange,
-        string? siteId = null,
-        int zone = 1,
-        string section = "01.01",
-        string artifactCode = "01.01.01",
-        string artifactType = "Clinical Trial Protocol",
-        string content = "",
-        string mimeType = "application/pdf",
-        string taxonomyVersion = "v3.2.0-complete",
-        string? metadataJson = null,
-        long versionIndex = 1,
-        string? objectKey = null,
-        string? contentChecksum = null)
+        string id, string studyId, string filename, string createdBy, string actorRole, DateTimeOffset timestamp,
+        string reasonForChange, string? siteId = null, int zone = 1, string section = "01.01",
+        string artifactCode = "01.01.01", string artifactType = "Clinical Trial Protocol", string content = "",
+        string mimeType = "application/pdf", string taxonomyVersion = "v3.2.0-complete", string? metadataJson = null,
+        long versionIndex = 1, string? objectKey = null, string? contentChecksum = null)
     {
-        EnsureValidPathSegment(filename, nameof(filename));
-        EnsureValidPathSegment(section, nameof(section));
-
-        var doc = new TmfDocument(id)
-        {
-            StudyId = studyId,
-            SiteId = siteId,
-            Zone = zone,
-            Section = section,
-            ArtifactCode = artifactCode,
-            ArtifactType = artifactType,
-            Filename = filename,
-            Content = content,
-            MimeType = mimeType,
-            TaxonomyVersion = taxonomyVersion,
-            MetadataJson = metadataJson,
-            ObjectKey = objectKey,
-            ContentChecksum = contentChecksum,
-            CreatedAt = timestamp.UtcDateTime,
-            CreatedBy = createdBy,
-            ReasonForChange = reasonForChange,
-            VersionIndex = versionIndex,
-            Status = TmfDocumentLifecycleState.TechnicalQc,
-            ApprovalStatus = TmfDocumentLifecycleState.TechnicalQc,
-            TransitionSequence = 1
-        };
-
-        var transition = new TmfDocumentQcTransition
-        {
-            Id = Guid.NewGuid().ToString(),
-            DocumentId = id,
-            TransitionSequence = 1,
-            FromStatus = TmfDocumentLifecycleState.Draft,
-            ToStatus = TmfDocumentLifecycleState.TechnicalQc,
-            ActorId = createdBy,
-            ActorRole = actorRole,
-            ReasonForChange = reasonForChange,
-            Timestamp = timestamp
-        };
-        doc._transitions.Add(transition);
-
+        var doc = CreateCore(
+            id, studyId, filename, createdBy, timestamp.UtcDateTime, reasonForChange, siteId, zone, section,
+            artifactCode, artifactType, content, mimeType, taxonomyVersion, versionIndex);
+        doc.MetadataJson = metadataJson;
+        doc.ObjectKey = objectKey;
+        doc.ContentChecksum = contentChecksum;
+        doc.ApplyStateTransition(
+            TmfDocumentLifecycleState.Draft,
+            TmfDocumentLifecycleState.TechnicalQc,
+            createdBy,
+            actorRole,
+            reasonForChange,
+            timestamp,
+            sequenceNumber: 1);
         return doc;
     }
 
     public static TmfDocument CreateApproved(
-        string id,
-        string studyId,
-        string filename,
-        string createdBy,
-        DateTime createdAt,
-        string reasonForChange,
-        string? siteId = null,
-        int zone = 1,
-        string section = "01.01",
-        string artifactCode = "01.01.01",
-        string artifactType = "Clinical Trial Protocol",
-        string content = "",
-        string mimeType = "application/pdf",
-        string taxonomyVersion = "v3.2.0-complete",
-        string? metadataJson = null,
-        int? protocolVersionIndex = null,
+        string id, string studyId, string filename, string createdBy, DateTime createdAt, string reasonForChange,
+        string? siteId = null, int zone = 1, string section = "01.01", string artifactCode = "01.01.01",
+        string artifactType = "Clinical Trial Protocol", string content = "", string mimeType = "application/pdf",
+        string taxonomyVersion = "v3.2.0-complete", string? metadataJson = null, int? protocolVersionIndex = null,
         long versionIndex = 1)
     {
-        EnsureValidPathSegment(filename, nameof(filename));
-        EnsureValidPathSegment(section, nameof(section));
-
-        return new TmfDocument(id)
-        {
-            StudyId = studyId,
-            SiteId = siteId,
-            Zone = zone,
-            Section = section,
-            ArtifactCode = artifactCode,
-            ArtifactType = artifactType,
-            Filename = filename,
-            Content = content,
-            MimeType = mimeType,
-            TaxonomyVersion = taxonomyVersion,
-            MetadataJson = metadataJson,
-            ProtocolVersionIndex = protocolVersionIndex,
-            CreatedAt = createdAt,
-            CreatedBy = createdBy,
-            ReasonForChange = reasonForChange,
-            VersionIndex = versionIndex,
-            Status = TmfDocumentLifecycleState.Approved,
-            ApprovalStatus = TmfDocumentLifecycleState.Approved,
-            TransitionSequence = 1
-        };
+        var doc = CreateCore(
+            id, studyId, filename, createdBy, createdAt, reasonForChange, siteId, zone, section,
+            artifactCode, artifactType, content, mimeType, taxonomyVersion, versionIndex);
+        doc.MetadataJson = metadataJson;
+        doc.ProtocolVersionIndex = protocolVersionIndex;
+        doc.Status = TmfDocumentLifecycleState.Approved;
+        doc.ApprovalStatus = TmfDocumentLifecycleState.Approved;
+        doc.TransitionSequence = 1;
+        return doc;
     }
 
     public static TmfDocument CreateFiled(
-        string id,
-        string studyId,
-        string filename,
-        string createdBy,
-        DateTime createdAt,
-        string reasonForChange,
-        string? siteId = null,
-        int zone = 1,
-        string section = "01.01",
-        string artifactCode = "01.01.01",
-        string artifactType = "Clinical Trial Protocol",
-        string content = "",
-        string mimeType = "application/pdf",
-        string taxonomyVersion = "v3.2.0-complete",
-        string? objectKey = null,
-        string? idempotencyKey = null,
-        string? correlationKey = null,
-        string? sourceSystem = null,
-        string? syncStatus = null,
-        DateTimeOffset? signingTimestamp = null,
-        string? protocolVersionTag = null,
-        int? protocolVersionIndex = null,
+        string id, string studyId, string filename, string createdBy, DateTime createdAt, string reasonForChange,
+        string? siteId = null, int zone = 1, string section = "01.01", string artifactCode = "01.01.01",
+        string artifactType = "Clinical Trial Protocol", string content = "", string mimeType = "application/pdf",
+        string taxonomyVersion = "v3.2.0-complete", string? objectKey = null, string? idempotencyKey = null,
+        string? correlationKey = null, string? sourceSystem = null, string? syncStatus = null,
+        DateTimeOffset? signingTimestamp = null, string? protocolVersionTag = null, int? protocolVersionIndex = null,
         long versionIndex = 1)
+    {
+        var doc = CreateCore(
+            id, studyId, filename, createdBy, createdAt, reasonForChange, siteId, zone, section,
+            artifactCode, artifactType, content, mimeType, taxonomyVersion, versionIndex);
+        doc.ObjectKey = objectKey;
+        doc.IdempotencyKey = idempotencyKey;
+        doc.CorrelationKey = correlationKey;
+        doc.SourceSystem = sourceSystem;
+        doc.SyncStatus = syncStatus;
+        doc.SigningTimestamp = signingTimestamp;
+        doc.ProtocolVersionTag = protocolVersionTag;
+        doc.ProtocolVersionIndex = protocolVersionIndex;
+        doc.Status = TmfDocumentLifecycleState.Filed;
+        doc.ApprovalStatus = TmfDocumentLifecycleState.Approved;
+        doc.TransitionSequence = 1;
+        return doc;
+    }
+
+    private static TmfDocument CreateCore(
+        string id, string studyId, string filename, string createdBy, DateTime createdAt, string reasonForChange,
+        string? siteId, int zone, string section, string artifactCode, string artifactType, string content,
+        string mimeType, string taxonomyVersion, long versionIndex)
     {
         EnsureValidPathSegment(filename, nameof(filename));
         EnsureValidPathSegment(section, nameof(section));
@@ -633,21 +526,10 @@ public sealed class TmfDocument : AggregateRoot<string>
             Content = content,
             MimeType = mimeType,
             TaxonomyVersion = taxonomyVersion,
-            ObjectKey = objectKey,
-            IdempotencyKey = idempotencyKey,
-            CorrelationKey = correlationKey,
-            SourceSystem = sourceSystem,
-            SyncStatus = syncStatus,
-            SigningTimestamp = signingTimestamp,
-            ProtocolVersionTag = protocolVersionTag,
-            ProtocolVersionIndex = protocolVersionIndex,
             CreatedAt = createdAt,
             CreatedBy = createdBy,
             ReasonForChange = reasonForChange,
-            VersionIndex = versionIndex,
-            Status = TmfDocumentLifecycleState.Filed,
-            ApprovalStatus = TmfDocumentLifecycleState.Approved,
-            TransitionSequence = 1
+            VersionIndex = versionIndex
         };
     }
 }

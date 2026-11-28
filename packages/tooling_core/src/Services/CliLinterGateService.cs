@@ -48,223 +48,102 @@ public static class CliLinterGateService
         string[]? targetFiles = null,
         bool preCommit = false,
         GitIndexReader? indexReader = null,
-        Func<string, string?>? getEnvironmentVariable = null)
-    {
-        repoRoot ??= FindRepoRoot();
-        if (targetFiles is { Length: 0 })
-        {
-            return 0;
-        }
-
-        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
-        using (ownedReader)
-        {
-            if (preCommit || targetFiles is not null)
+        Func<string, string?>? getEnvironmentVariable = null) =>
+        RunLinterGate(
+            repoRoot,
+            targetFiles,
+            preCommit,
+            indexReader,
+            toolName: "actionlint",
+            toolVersion: ActionlintVersion,
+            resolveTool: r => ResolveActionlint(r, getEnvironmentVariable),
+            isPrimaryTarget: IsWorkflowYaml,
+            isConfigOrSupport: IsCompositeActionOrConfig,
+            discoverAllOnDisk: DiscoverWorkflowFiles,
+            planIndexExecution: static (idx, checkAll, matched) =>
             {
-                var rawFiles = preCommit && targetFiles is null
-                    ? PreCommitOpenApiService.GetStagedFiles(repoRoot)
-                    : (IReadOnlyList<string>)targetFiles!;
-
-                if (rawFiles.Count == 0)
-                {
-                    return 0;
-                }
-
-                var tool = ResolveActionlint(repoRoot, getEnvironmentVariable);
-                if (tool is null)
-                {
-                    PrintMissingToolError("actionlint", ActionlintVersion);
-                    return 1;
-                }
-
-                var matchedWorkflows = new List<string>();
-                bool checkAllWorkflows = false;
-
-                foreach (string raw in rawFiles)
-                {
-                    string? rel = GitIndexReader.TryNormalizeRelativePath(repoRoot, raw);
-                    if (string.IsNullOrEmpty(rel) || !ExistsInSnapshot(repoRoot, rel, reader))
-                    {
-                        continue;
-                    }
-
-                    if (IsWorkflowYaml(rel))
-                    {
-                        matchedWorkflows.Add(rel);
-                    }
-                    else if (IsCompositeActionOrConfig(rel))
-                    {
-                        checkAllWorkflows = true;
-                    }
-                }
-
-                if (matchedWorkflows.Count == 0 && !checkAllWorkflows)
-                {
-                    return 0;
-                }
-
-                if (reader is { HasAuthoritativeIndex: true })
-                {
-                    var githubIndexPaths = reader.Paths
-                        .Where(p => IsWorkflowYaml(p) || IsCompositeActionOrConfig(p))
-                        .Order(StringComparer.Ordinal)
-                        .ToList();
-
-                    var workflowsToValidate = checkAllWorkflows
-                        ? githubIndexPaths.Where(IsWorkflowYaml).ToList()
-                        : matchedWorkflows.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
-
-                    if (workflowsToValidate.Count == 0)
-                    {
-                        return 0;
-                    }
-
-                    using var workspace = reader.Materialize(githubIndexPaths, createGitMarker: true);
-                    return ExecuteActionlintBatches(workspace.RootPath, tool.FileName, workflowsToValidate);
-                }
-
-                var diskWorkflows = checkAllWorkflows
-                    ? DiscoverWorkflowFiles(repoRoot)
-                    : matchedWorkflows.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
-
-                if (diskWorkflows.Count == 0)
-                {
-                    return 0;
-                }
-
-                return ExecuteActionlintBatches(repoRoot, tool.FileName, diskWorkflows);
-            }
-
-            var fullScanTool = ResolveActionlint(repoRoot, getEnvironmentVariable);
-            if (fullScanTool is null)
-            {
-                PrintMissingToolError("actionlint", ActionlintVersion);
-                return 1;
-            }
-
-            var allWorkflows = DiscoverWorkflowFiles(repoRoot);
-            if (allWorkflows.Count == 0)
-            {
-                return 0;
-            }
-
-            return ExecuteActionlintBatches(repoRoot, fullScanTool.FileName, allWorkflows);
-        }
-    }
+                var githubIndexPaths = idx.Paths
+                    .Where(p => IsWorkflowYaml(p) || IsCompositeActionOrConfig(p))
+                    .Order(StringComparer.Ordinal)
+                    .ToList();
+                var workflowsToValidate = checkAll
+                    ? githubIndexPaths.Where(IsWorkflowYaml).ToList()
+                    : matched;
+                return (workflowsToValidate, githubIndexPaths, CreateGitMarker: true);
+            },
+            executeBatches: ExecuteActionlintBatches);
 
     public static int RunHadolint(
         string? repoRoot = null,
         string[]? targetFiles = null,
         bool preCommit = false,
         GitIndexReader? indexReader = null,
-        Func<string, string?>? getEnvironmentVariable = null)
-    {
-        repoRoot ??= FindRepoRoot();
-        if (targetFiles is { Length: 0 })
-        {
-            return 0;
-        }
-
-        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
-        using (ownedReader)
-        {
-            if (preCommit || targetFiles is not null)
+        Func<string, string?>? getEnvironmentVariable = null) =>
+        RunLinterGate(
+            repoRoot,
+            targetFiles,
+            preCommit,
+            indexReader,
+            toolName: "hadolint",
+            toolVersion: HadolintVersion,
+            resolveTool: r => ResolveHadolint(r, getEnvironmentVariable),
+            isPrimaryTarget: IsDockerfilePath,
+            isConfigOrSupport: IsHadolintConfig,
+            discoverAllOnDisk: DiscoverDockerfiles,
+            planIndexExecution: static (idx, checkAll, matched) =>
             {
-                var rawFiles = preCommit && targetFiles is null
-                    ? PreCommitOpenApiService.GetStagedFiles(repoRoot)
-                    : (IReadOnlyList<string>)targetFiles!;
-
-                if (rawFiles.Count == 0)
-                {
-                    return 0;
-                }
-
-                var tool = ResolveHadolint(repoRoot, getEnvironmentVariable);
-                if (tool is null)
-                {
-                    PrintMissingToolError("hadolint", HadolintVersion);
-                    return 1;
-                }
-
-                var matchedDockerfiles = new List<string>();
-                bool configChanged = false;
-
-                foreach (string raw in rawFiles)
-                {
-                    string? rel = GitIndexReader.TryNormalizeRelativePath(repoRoot, raw);
-                    if (string.IsNullOrEmpty(rel) || !ExistsInSnapshot(repoRoot, rel, reader))
-                    {
-                        continue;
-                    }
-
-                    if (IsDockerfilePath(rel))
-                    {
-                        matchedDockerfiles.Add(rel);
-                    }
-                    else if (IsHadolintConfig(rel))
-                    {
-                        configChanged = true;
-                    }
-                }
-
-                if (matchedDockerfiles.Count == 0 && !configChanged)
-                {
-                    return 0;
-                }
-
-                if (reader is { HasAuthoritativeIndex: true })
-                {
-                    var dockerfilesToValidate = configChanged
-                        ? reader.Paths.Where(IsDockerfilePath).Order(StringComparer.Ordinal).ToList()
-                        : matchedDockerfiles.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
-
-                    if (dockerfilesToValidate.Count == 0)
-                    {
-                        return 0;
-                    }
-
-                    var materializePaths = new List<string>(dockerfilesToValidate);
-                    materializePaths.AddRange(reader.Paths.Where(IsHadolintConfig));
-
-                    using var workspace = reader.Materialize(materializePaths);
-                    return ExecuteHadolintBatches(workspace.RootPath, tool.FileName, dockerfilesToValidate);
-                }
-
-                var diskDockerfiles = configChanged
-                    ? DiscoverDockerfiles(repoRoot)
-                    : matchedDockerfiles.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
-
-                if (diskDockerfiles.Count == 0)
-                {
-                    return 0;
-                }
-
-                return ExecuteHadolintBatches(repoRoot, tool.FileName, diskDockerfiles);
-            }
-
-            var fullScanTool = ResolveHadolint(repoRoot, getEnvironmentVariable);
-            if (fullScanTool is null)
-            {
-                PrintMissingToolError("hadolint", HadolintVersion);
-                return 1;
-            }
-
-            var allDockerfiles = DiscoverDockerfiles(repoRoot);
-            if (allDockerfiles.Count == 0)
-            {
-                return 0;
-            }
-
-            return ExecuteHadolintBatches(repoRoot, fullScanTool.FileName, allDockerfiles);
-        }
-    }
+                var dockerfilesToValidate = checkAll
+                    ? idx.Paths.Where(IsDockerfilePath).Order(StringComparer.Ordinal).ToList()
+                    : matched;
+                var materializePaths = new List<string>(dockerfilesToValidate);
+                materializePaths.AddRange(idx.Paths.Where(IsHadolintConfig));
+                return (dockerfilesToValidate, materializePaths, CreateGitMarker: false);
+            },
+            executeBatches: ExecuteHadolintBatches);
 
     public static int RunShellcheck(
         string? repoRoot = null,
         string[]? targetFiles = null,
         bool preCommit = false,
         GitIndexReader? indexReader = null,
-        Func<string, string?>? getEnvironmentVariable = null)
+        Func<string, string?>? getEnvironmentVariable = null) =>
+        RunLinterGate(
+            repoRoot,
+            targetFiles,
+            preCommit,
+            indexReader,
+            toolName: "shellcheck",
+            toolVersion: ShellcheckVersion,
+            resolveTool: r => ResolveShellcheck(r, getEnvironmentVariable),
+            isPrimaryTarget: IsShellScriptPath,
+            isConfigOrSupport: IsShellcheckConfig,
+            discoverAllOnDisk: DiscoverShellScripts,
+            planIndexExecution: static (idx, checkAll, matched) =>
+            {
+                var shellIndexPaths = idx.Paths
+                    .Where(p => IsShellScriptPath(p) || IsShellcheckConfig(p))
+                    .Order(StringComparer.Ordinal)
+                    .ToList();
+                var scriptsToValidate = checkAll
+                    ? shellIndexPaths.Where(IsShellScriptPath).ToList()
+                    : matched;
+                return (scriptsToValidate, shellIndexPaths, CreateGitMarker: false);
+            },
+            executeBatches: ExecuteShellcheckBatches);
+
+    private static int RunLinterGate(
+        string? repoRoot,
+        string[]? targetFiles,
+        bool preCommit,
+        GitIndexReader? indexReader,
+        string toolName,
+        string toolVersion,
+        Func<string, ResolvedLinterTool?> resolveTool,
+        Func<string, bool> isPrimaryTarget,
+        Func<string, bool> isConfigOrSupport,
+        Func<string, List<string>> discoverAllOnDisk,
+        Func<GitIndexReader, bool, List<string>, (List<string> TargetsToValidate, List<string> PathsToMaterialize, bool CreateGitMarker)> planIndexExecution,
+        Func<string, string, List<string>, int> executeBatches)
     {
         repoRoot ??= FindRepoRoot();
         if (targetFiles is { Length: 0 })
@@ -286,15 +165,15 @@ public static class CliLinterGateService
                     return 0;
                 }
 
-                var tool = ResolveShellcheck(repoRoot, getEnvironmentVariable);
+                var tool = resolveTool(repoRoot);
                 if (tool is null)
                 {
-                    PrintMissingToolError("shellcheck", ShellcheckVersion);
+                    PrintMissingToolError(toolName, toolVersion);
                     return 1;
                 }
 
-                var matchedScripts = new List<string>();
-                bool configChanged = false;
+                var matchedTargets = new List<string>();
+                bool checkAll = false;
 
                 foreach (string raw in rawFiles)
                 {
@@ -304,67 +183,59 @@ public static class CliLinterGateService
                         continue;
                     }
 
-                    if (IsShellScriptPath(rel))
+                    if (isPrimaryTarget(rel))
                     {
-                        matchedScripts.Add(rel);
+                        matchedTargets.Add(rel);
                     }
-                    else if (IsShellcheckConfig(rel))
+                    else if (isConfigOrSupport(rel))
                     {
-                        configChanged = true;
+                        checkAll = true;
                     }
                 }
 
-                if (matchedScripts.Count == 0 && !configChanged)
+                if (matchedTargets.Count == 0 && !checkAll)
                 {
                     return 0;
                 }
 
+                var distinctMatched = matchedTargets.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+
                 if (reader is { HasAuthoritativeIndex: true })
                 {
-                    var shellIndexPaths = reader.Paths
-                        .Where(p => IsShellScriptPath(p) || IsShellcheckConfig(p))
-                        .Order(StringComparer.Ordinal)
-                        .ToList();
-
-                    var scriptsToValidate = configChanged
-                        ? shellIndexPaths.Where(IsShellScriptPath).ToList()
-                        : matchedScripts.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
-
-                    if (scriptsToValidate.Count == 0)
+                    var (targetsToValidate, pathsToMaterialize, createGitMarker) =
+                        planIndexExecution(reader, checkAll, distinctMatched);
+                    if (targetsToValidate.Count == 0)
                     {
                         return 0;
                     }
 
-                    using var workspace = reader.Materialize(shellIndexPaths);
-                    return ExecuteShellcheckBatches(workspace.RootPath, tool.FileName, scriptsToValidate);
+                    using var workspace = reader.Materialize(pathsToMaterialize, createGitMarker);
+                    return executeBatches(workspace.RootPath, tool.FileName, targetsToValidate);
                 }
 
-                var diskScripts = configChanged
-                    ? DiscoverShellScripts(repoRoot)
-                    : matchedScripts.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
-
-                if (diskScripts.Count == 0)
+                var diskTargets = checkAll ? discoverAllOnDisk(repoRoot) : distinctMatched;
+                if (diskTargets.Count == 0)
                 {
                     return 0;
                 }
 
-                return ExecuteShellcheckBatches(repoRoot, tool.FileName, diskScripts);
+                return executeBatches(repoRoot, tool.FileName, diskTargets);
             }
 
-            var fullScanTool = ResolveShellcheck(repoRoot, getEnvironmentVariable);
+            var fullScanTool = resolveTool(repoRoot);
             if (fullScanTool is null)
             {
-                PrintMissingToolError("shellcheck", ShellcheckVersion);
+                PrintMissingToolError(toolName, toolVersion);
                 return 1;
             }
 
-            var allScripts = DiscoverShellScripts(repoRoot);
-            if (allScripts.Count == 0)
+            var allTargets = discoverAllOnDisk(repoRoot);
+            if (allTargets.Count == 0)
             {
                 return 0;
             }
 
-            return ExecuteShellcheckBatches(repoRoot, fullScanTool.FileName, allScripts);
+            return executeBatches(repoRoot, fullScanTool.FileName, allTargets);
         }
     }
 

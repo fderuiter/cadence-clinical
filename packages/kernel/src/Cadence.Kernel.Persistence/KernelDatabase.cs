@@ -1,11 +1,11 @@
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.Persistence.IdentityVault;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Sql;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -40,21 +40,19 @@ public static class KernelDatabase
     /// the schema and must not have <c>BYPASSRLS</c>; the schema test checks both.
     /// </summary>
     /// <param name="role">An existing lower-case role name, for example <c>cadence_app</c>.</param>
-    public static string GrantAppRoleSql(string role)
-    {
-        var r = SqlIdentifier.Quote(role);
-        var s = SqlIdentifier.Quote(KernelDbContext.Schema);
-        var insertOnly = string.Join(", ", InsertOnlySql.Tables.Select(t => $"{s}.{SqlIdentifier.Quote(t)}"));
-        return $"""
-            GRANT USAGE ON SCHEMA {s} TO {r};
-            GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA {s} TO {r};
-            REVOKE UPDATE ON {insertOnly} FROM {r};
-            REVOKE ALL ON {s}."{MigrationsHistoryTable}" FROM {r};
-            GRANT EXECUTE ON FUNCTION {s}.{TenantIsolationSql.DirectoryFunction}() TO {r};
-            GRANT EXECUTE ON FUNCTION {s}.{TenantIsolationSql.CodeDirectoryFunction}(text) TO {r};
-            {IdentityVaultSql.GrantSql(r)}
-            """;
-    }
+    public static string GrantAppRoleSql(string role) =>
+        PostgresTenantRlsSql.GrantStrictSchemaRoleSql(
+            KernelDbContext.Schema,
+            role,
+            MigrationsHistoryTable,
+            insertOnlyTables: InsertOnlySql.Tables,
+            executableFunctionSignatures:
+            [
+                $"{TenantIsolationSql.DirectoryFunction}()",
+                $"{TenantIsolationSql.CodeDirectoryFunction}(text)",
+            ],
+            trailingSql: IdentityVaultSql.GrantSql(SqlIdentifier.Quote(role)),
+            invalidRoleLabel: "lower-case snake_case identifier");
 
     internal const string MigrationsHistoryTable = "__ef_migrations_history";
 

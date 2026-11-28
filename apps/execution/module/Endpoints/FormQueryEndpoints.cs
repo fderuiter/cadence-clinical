@@ -668,35 +668,9 @@ internal static class FormQueryEndpoints
             }
         }
 
-        IReadOnlyDictionary<ObservationId, int>? preloadedRevisions = null;
-        if (filter.ValueChanged is { } wantedChanged)
-        {
-            preloadedRevisions = await forms.FindObservationRevisionsAsync(
-                tenant,
-                candidateStates.Select(s => s.ObservationId).Distinct().ToList(),
-                candidateStates.Select(s => s.FormId).Distinct().ToList(),
-                cancellationToken).ConfigureAwait(false);
-            candidateStates = [.. candidateStates.Where(s => IsValueChanged(s, preloadedRevisions) == wantedChanged)];
-            if (candidateStates.Count == 0)
-            {
-                return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>([]);
-            }
-        }
-
-        if (parsedFilters.Assignee is not null)
-        {
-            candidateStates = await ExcludeBlindedCandidatesAsync(
-                candidateStates, tenant, forms, access, cancellationToken).ConfigureAwait(false);
-            if (candidateStates.Count == 0)
-            {
-                return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>([]);
-            }
-        }
-
-        var finalPage = candidateStates.Skip(offset).Take(limit).ToList();
-        var responses = await ShapeQueriesAsync(
-            finalPage, knownHeaders, preloadedRevisions, tenant, forms, access, navigator, cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>(responses);
+        return await ApplyPostFiltersAndShapePageAsync(
+            candidateStates, knownHeaders, filter, parsedFilters, offset, limit, tenant, forms, access, navigator, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private static async Task<Results<Ok<IReadOnlyList<FormQueryResponse>>, ProblemHttpResult>> ListByStudyAsync(
@@ -768,6 +742,24 @@ internal static class FormQueryEndpoints
             return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>([]);
         }
 
+        return await ApplyPostFiltersAndShapePageAsync(
+            candidateStates, visibleEnrollments, filter, parsedFilters, offset, limit, tenant, forms, access, navigator, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static async Task<Ok<IReadOnlyList<FormQueryResponse>>> ApplyPostFiltersAndShapePageAsync(
+        List<FormQueryState> candidateStates,
+        Dictionary<EnrollmentId, EnrollmentHeader>? knownHeaders,
+        FormQueryListFilter filter,
+        ParsedQueryFilters parsedFilters,
+        int offset,
+        int limit,
+        TenantId tenant,
+        ICollectionInstanceRecords forms,
+        IKernelReadAccess access,
+        IKernelNavigator navigator,
+        CancellationToken cancellationToken)
+    {
         IReadOnlyDictionary<ObservationId, int>? preloadedRevisions = null;
         if (filter.ValueChanged is { } wantedChanged)
         {
@@ -795,7 +787,7 @@ internal static class FormQueryEndpoints
 
         var pagedStates = candidateStates.Skip(offset).Take(limit).ToList();
         var shaped = await ShapeQueriesAsync(
-            pagedStates, visibleEnrollments, preloadedRevisions, tenant, forms, access, navigator, cancellationToken).ConfigureAwait(false);
+            pagedStates, knownHeaders, preloadedRevisions, tenant, forms, access, navigator, cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>(shaped);
     }
 

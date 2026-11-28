@@ -15,8 +15,8 @@ namespace Cadence.Kernel.Validation;
 /// tenant, study and stage always give the same identifier, and every run that detects the problem names the same
 /// finding.
 /// </summary>
-[TypeConverter(typeof(ValidationFindingIdTypeConverter))]
-[JsonConverter(typeof(ValidationFindingIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<ValidationFindingId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<ValidationFindingId>))]
 public readonly record struct ValidationFindingId(Guid Value) : IEntityId<ValidationFindingId>
 {
     /// <summary>A random identifier. Findings use <see cref="For"/>; this exists for the identifier contract.</summary>
@@ -61,62 +61,28 @@ public readonly record struct ValidationFindingId(Guid Value) : IEntityId<Valida
 
     public int CompareTo(ValidationFindingId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        ValidationFindingId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(ValidationFindingId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(ValidationFindingId left, ValidationFindingId right) => left.CompareTo(right) < 0;
     public static bool operator <=(ValidationFindingId left, ValidationFindingId right) => left.CompareTo(right) <= 0;
     public static bool operator >(ValidationFindingId left, ValidationFindingId right) => left.CompareTo(right) > 0;
     public static bool operator >=(ValidationFindingId left, ValidationFindingId right) => left.CompareTo(right) >= 0;
 
-    public static ValidationFindingId Parse(string s) => Parse(s, null);
+    public static ValidationFindingId Parse(string s) => EntityIdOperations.Parse<ValidationFindingId>(s);
 
-    public static ValidationFindingId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new ValidationFindingId(Guid.Parse(s, provider));
-    }
+    public static ValidationFindingId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<ValidationFindingId>(s, provider);
 
-    public static ValidationFindingId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static ValidationFindingId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<ValidationFindingId>(s);
 
-    public static ValidationFindingId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static ValidationFindingId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<ValidationFindingId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out ValidationFindingId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out ValidationFindingId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out ValidationFindingId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out ValidationFindingId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out ValidationFindingId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new ValidationFindingId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out ValidationFindingId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out ValidationFindingId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new ValidationFindingId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out ValidationFindingId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class ValidationFindingIdTypeConverter : EntityIdTypeConverter<ValidationFindingId>;
-
-public sealed class ValidationFindingIdJsonConverter : EntityIdJsonConverter<ValidationFindingId>;

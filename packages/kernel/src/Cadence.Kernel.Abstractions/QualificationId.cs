@@ -11,8 +11,8 @@ namespace Cadence.Kernel;
 /// Strongly-typed UUIDv7 identifier for a Qualification: evidence about an actor, such as completed training, a
 /// credential or a certificate, with its validity period and evidence artifact (spec §9.3, K-AUTH-5).
 /// </summary>
-[TypeConverter(typeof(QualificationIdTypeConverter))]
-[JsonConverter(typeof(QualificationIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<QualificationId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<QualificationId>))]
 public readonly record struct QualificationId(Guid Value) : IEntityId<QualificationId>
 {
     public static QualificationId New() => new(Guid.CreateVersion7());
@@ -35,62 +35,28 @@ public readonly record struct QualificationId(Guid Value) : IEntityId<Qualificat
 
     public int CompareTo(QualificationId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        QualificationId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(QualificationId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(QualificationId left, QualificationId right) => left.CompareTo(right) < 0;
     public static bool operator <=(QualificationId left, QualificationId right) => left.CompareTo(right) <= 0;
     public static bool operator >(QualificationId left, QualificationId right) => left.CompareTo(right) > 0;
     public static bool operator >=(QualificationId left, QualificationId right) => left.CompareTo(right) >= 0;
 
-    public static QualificationId Parse(string s) => Parse(s, null);
+    public static QualificationId Parse(string s) => EntityIdOperations.Parse<QualificationId>(s);
 
-    public static QualificationId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new QualificationId(Guid.Parse(s, provider));
-    }
+    public static QualificationId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<QualificationId>(s, provider);
 
-    public static QualificationId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static QualificationId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<QualificationId>(s);
 
-    public static QualificationId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static QualificationId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<QualificationId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out QualificationId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out QualificationId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out QualificationId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out QualificationId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out QualificationId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new QualificationId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out QualificationId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out QualificationId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new QualificationId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out QualificationId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class QualificationIdTypeConverter : EntityIdTypeConverter<QualificationId>;
-
-public sealed class QualificationIdJsonConverter : EntityIdJsonConverter<QualificationId>;

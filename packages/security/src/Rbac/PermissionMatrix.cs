@@ -62,30 +62,11 @@ public static partial class PermissionMatrix
             ["protocol_version"] = ["sign", "transition_approved"],
             ["regulatory_form"] = ["create", "read", "sign"],
             ["training_log"] = ["create", "read", "sign"],
-            ["ctms_study"] = ["create", "read"],
-            ["ctms_audit_logs"] = ["read"],
-            ["ctms_monitoring_visit"] = ["create", "update", "read", "sign_off", "sync"],
-            ["ctms_monitoring_letter"] = ["read", "read_type"],
-            ["ctms_recruitment"] = ["create", "read"],
-            ["ctms_site_milestone"] = ["create", "update", "read"],
-            ["ctms_cra_allocation"] = ["create", "update", "read"],
-            ["ctms_cra_workload"] = ["read"],
-            ["ctms_financial"] = ["create", "read", "update", "write"],
-            ["ctms_financial_budget"] = ["create", "read"],
-            ["ctms_financial_milestone"] = ["create", "read", "trigger"],
-            ["ctms_financial_payable"] = ["read"],
-            ["etmf_document"] = ["tag", "create", "read", "read_raw", "redact", "sign", "transition_technical_qc", "transition_clinical_qc", "transition_approved", "transition_archived", "transition_rejected", "transition_draft", "transition_signed", "manage_expiration"],
-            ["etmf_edl"] = ["read", "create"],
-            ["etmf_taxonomy"] = ["read"],
-            ["etmf_audit_logs"] = ["read"],
             ["quality_event"] = ["create", "read", "update", "delete", "investigate"],
             ["quality_audit_logs"] = ["read"],
             ["eisf_document"] = ["create", "read", "update", "delete", "sync"],
             ["medical_coding"] = ["create", "read", "update"],
-            ["lab_range"] = ["create", "read", "update", "delete", "alert"],
-            ["ecoa_schedule"] = ["create", "read"],
-            ["ecoa_diary"] = ["create", "read", "alert"],
-            ["ecoa_submission"] = ["create", "read"]
+            ["lab_range"] = ["create", "read", "update", "delete", "alert"]
         };
 
         // sponsor_designer
@@ -104,10 +85,7 @@ public static partial class PermissionMatrix
             ["protocol_version"] = ["sign", "transition_approved"],
             ["protocol_section"] = ["lock", "unlock", "approve", "review", "read"],
             ["regulatory_form"] = ["read"],
-            ["training_log"] = ["read"],
-            ["ecoa_schedule"] = ["create", "read"],
-            ["ecoa_diary"] = ["create", "read"],
-            ["ecoa_submission"] = ["create", "read"]
+            ["training_log"] = ["read"]
         };
 
         // protocol_reviewer
@@ -139,29 +117,11 @@ public static partial class PermissionMatrix
             ["protocol_section"] = ["read"],
             ["regulatory_form"] = ["create", "read", "sign"],
             ["training_log"] = ["create", "read", "sign"],
-            ["ctms_study"] = ["create", "read"],
-            ["ctms_audit_logs"] = ["read"],
-            ["ctms_monitoring_visit"] = ["create", "update", "read", "sign_off", "sync"],
-            ["ctms_monitoring_letter"] = ["read", "read_type"],
-            ["ctms_recruitment"] = ["create", "read"],
-            ["ctms_site_milestone"] = ["create", "update", "read"],
-            ["ctms_cra_allocation"] = ["create", "update", "read"],
-            ["ctms_cra_workload"] = ["read"],
-            ["ctms_financial"] = ["create", "read", "update", "write"],
-            ["ctms_financial_budget"] = ["create", "read"],
-            ["ctms_financial_milestone"] = ["create", "read", "trigger"],
-            ["ctms_financial_payable"] = ["read"],
-            ["etmf_document"] = ["tag", "create", "read", "read_raw", "redact", "sign", "transition_technical_qc", "transition_clinical_qc", "transition_approved", "transition_archived", "transition_rejected", "transition_draft", "transition_signed", "manage_expiration"],
-            ["etmf_edl"] = ["read", "create"],
-            ["etmf_taxonomy"] = ["read"],
             ["quality_event"] = ["create", "read", "update", "delete", "investigate"],
             ["quality_audit_logs"] = ["read"],
             ["eisf_document"] = ["create", "read", "update", "delete", "sync"],
             ["medical_coding"] = ["create", "read", "update"],
             ["lab_range"] = ["create", "read", "update", "delete", "alert"],
-            ["ecoa_schedule"] = ["create", "read"],
-            ["ecoa_diary"] = ["create", "read", "alert"],
-            ["ecoa_submission"] = ["create", "read"],
             // SCE: issues and revokes database-lock tokens; cannot run or read unblinded analyses (#5382)
             ["sce_lock_token"] = ["read", "issue", "revoke"]
         };
@@ -213,19 +173,8 @@ public static partial class PermissionMatrix
             ["system_audit_logs"] = ["read"],
             ["regulatory_form"] = ["create", "read", "sign"],
             ["training_log"] = ["create", "read", "sign"],
-            ["ctms_study"] = ["read"],
-            ["ctms_recruitment"] = ["read"],
-            ["ctms_site_milestone"] = ["read"],
-            ["ctms_cra_allocation"] = ["read"],
-            ["ctms_cra_workload"] = ["read"],
-            ["etmf_document"] = ["read"],
-            ["etmf_edl"] = ["read"],
-            ["etmf_taxonomy"] = ["read"],
             ["quality_event"] = ["read"],
-            ["eisf_document"] = ["create", "read", "update", "delete", "sync"],
-            ["ecoa_schedule"] = ["create", "read"],
-            ["ecoa_diary"] = ["create", "read", "alert"],
-            ["ecoa_submission"] = ["create", "read"]
+            ["eisf_document"] = ["create", "read", "update", "delete", "sync"]
         };
 
         // crc
@@ -240,19 +189,8 @@ public static partial class PermissionMatrix
             ["system_audit_logs"] = ["read"],
             ["regulatory_form"] = ["create", "read", "sign"],
             ["training_log"] = ["create", "read", "sign"],
-            ["ctms_study"] = ["read"],
-            ["ctms_recruitment"] = ["read"],
-            ["ctms_site_milestone"] = ["read"],
-            ["ctms_cra_allocation"] = ["read"],
-            ["ctms_cra_workload"] = ["read"],
-            ["etmf_document"] = ["read"],
-            ["etmf_edl"] = ["read"],
-            ["etmf_taxonomy"] = ["read"],
             ["quality_event"] = ["read"],
-            ["eisf_document"] = ["create", "read", "update", "delete", "sync"],
-            ["ecoa_schedule"] = ["create", "read"],
-            ["ecoa_diary"] = ["create", "read", "alert"],
-            ["ecoa_submission"] = ["create", "read"]
+            ["eisf_document"] = ["create", "read", "update", "delete", "sync"]
         };
 
         // trial_coordinator (self-service trial workspace coordinator; write authority restricted to trial-* tenants)
@@ -267,19 +205,8 @@ public static partial class PermissionMatrix
             ["system_audit_logs"] = ["read"],
             ["regulatory_form"] = ["create", "read", "sign"],
             ["training_log"] = ["create", "read", "sign"],
-            ["ctms_study"] = ["read"],
-            ["ctms_recruitment"] = ["read"],
-            ["ctms_site_milestone"] = ["read"],
-            ["ctms_cra_allocation"] = ["read"],
-            ["ctms_cra_workload"] = ["read"],
-            ["etmf_document"] = ["read"],
-            ["etmf_edl"] = ["read"],
-            ["etmf_taxonomy"] = ["read"],
             ["quality_event"] = ["read"],
-            ["eisf_document"] = ["create", "read", "update", "delete", "sync"],
-            ["ecoa_schedule"] = ["create", "read"],
-            ["ecoa_diary"] = ["create", "read", "alert"],
-            ["ecoa_submission"] = ["create", "read"]
+            ["eisf_document"] = ["create", "read", "update", "delete", "sync"]
         };
 
         // cra
@@ -296,23 +223,10 @@ public static partial class PermissionMatrix
             ["export_masked"] = ["read"],
             ["regulatory_form"] = ["create", "read", "sign"],
             ["training_log"] = ["create", "read", "sign"],
-            ["ctms_study"] = ["create", "read"],
-            ["ctms_monitoring_visit"] = ["create", "update", "read", "sync"],
-            ["ctms_monitoring_letter"] = ["read", "read_type"],
-            ["ctms_recruitment"] = ["create", "read"],
-            ["ctms_site_milestone"] = ["create", "update", "read"],
-            ["ctms_cra_allocation"] = ["read"],
-            ["ctms_cra_workload"] = ["read"],
-            ["etmf_document"] = ["tag", "create", "read", "redact", "sign", "transition_clinical_qc"],
-            ["etmf_edl"] = ["read", "create"],
-            ["etmf_taxonomy"] = ["read"],
             ["quality_event"] = ["create", "read", "update"],
             ["eisf_document"] = ["create", "read", "update", "delete", "sync"],
             ["medical_coding"] = ["read"],
-            ["lab_range"] = ["create", "read", "update", "delete", "alert"],
-            ["ecoa_schedule"] = ["create", "read"],
-            ["ecoa_diary"] = ["create", "read", "alert"],
-            ["ecoa_submission"] = ["create", "read"]
+            ["lab_range"] = ["create", "read", "update", "delete", "alert"]
         };
 
         // monitor
@@ -326,22 +240,9 @@ public static partial class PermissionMatrix
             ["system_audit_logs"] = ["read"],
             ["regulatory_form"] = ["create", "read", "sign"],
             ["training_log"] = ["create", "read", "sign"],
-            ["ctms_study"] = ["create", "read"],
-            ["ctms_monitoring_visit"] = ["read", "sign_off", "sync"],
-            ["ctms_monitoring_letter"] = ["read", "read_type"],
-            ["ctms_recruitment"] = ["create", "read"],
-            ["ctms_site_milestone"] = ["create", "update", "read"],
-            ["ctms_cra_allocation"] = ["read"],
-            ["ctms_cra_workload"] = ["read"],
-            ["etmf_document"] = ["tag", "create", "read", "redact", "sign", "transition_clinical_qc"],
-            ["etmf_edl"] = ["read", "create"],
-            ["etmf_taxonomy"] = ["read"],
             ["quality_event"] = ["create", "read", "update"],
             ["eisf_document"] = ["create", "read", "update", "delete", "sync"],
-            ["lab_range"] = ["create", "read", "update", "delete", "alert"],
-            ["ecoa_schedule"] = ["create", "read"],
-            ["ecoa_diary"] = ["create", "read", "alert"],
-            ["ecoa_submission"] = ["create", "read"]
+            ["lab_range"] = ["create", "read", "update", "delete", "alert"]
         };
 
         // subject
@@ -360,22 +261,6 @@ public static partial class PermissionMatrix
             ["system_audit_logs"] = ["read"],
             ["regulatory_form"] = ["read"],
             ["training_log"] = ["read"],
-            ["ctms_study"] = ["read"],
-            ["ctms_audit_logs"] = ["read"],
-            ["ctms_monitoring_visit"] = ["read"],
-            ["ctms_monitoring_letter"] = ["read", "read_type"],
-            ["ctms_recruitment"] = ["read"],
-            ["ctms_site_milestone"] = ["read"],
-            ["ctms_cra_allocation"] = ["read"],
-            ["ctms_cra_workload"] = ["read"],
-            ["ctms_financial"] = ["read"],
-            ["ctms_financial_budget"] = ["read"],
-            ["ctms_financial_milestone"] = ["read"],
-            ["ctms_financial_payable"] = ["read"],
-            ["etmf_document"] = ["read"],
-            ["etmf_edl"] = ["read"],
-            ["etmf_taxonomy"] = ["read"],
-            ["etmf_audit_logs"] = ["read"],
             ["quality_event"] = ["read"],
             ["quality_audit_logs"] = ["read"],
             ["eisf_document"] = ["read"]
@@ -384,10 +269,6 @@ public static partial class PermissionMatrix
         // external_monitor
         _rolePermissions[RoleNormalization.ROLE_EXTERNAL_MONITOR] = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["etmf_document"] = ["read"],
-            ["etmf_edl"] = ["read"],
-            ["etmf_taxonomy"] = ["read"],
-            ["etmf_audit_logs"] = ["read"],
             ["eisf_document"] = ["read"],
             ["regulatory_form"] = ["read"],
             ["training_log"] = ["read"]

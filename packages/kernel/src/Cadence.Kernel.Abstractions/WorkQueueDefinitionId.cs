@@ -11,8 +11,8 @@ namespace Cadence.Kernel;
 /// Strongly-typed UUIDv7 identifier for one version of a work-queue definition: which items are due for whoever holds a
 /// capability (spec §9.3, Canvas D10, ADR-2486).
 /// </summary>
-[TypeConverter(typeof(WorkQueueDefinitionIdTypeConverter))]
-[JsonConverter(typeof(WorkQueueDefinitionIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<WorkQueueDefinitionId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<WorkQueueDefinitionId>))]
 public readonly record struct WorkQueueDefinitionId(Guid Value) : IEntityId<WorkQueueDefinitionId>
 {
     public static WorkQueueDefinitionId New() => new(Guid.CreateVersion7());
@@ -35,62 +35,28 @@ public readonly record struct WorkQueueDefinitionId(Guid Value) : IEntityId<Work
 
     public int CompareTo(WorkQueueDefinitionId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        WorkQueueDefinitionId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(WorkQueueDefinitionId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(WorkQueueDefinitionId left, WorkQueueDefinitionId right) => left.CompareTo(right) < 0;
     public static bool operator <=(WorkQueueDefinitionId left, WorkQueueDefinitionId right) => left.CompareTo(right) <= 0;
     public static bool operator >(WorkQueueDefinitionId left, WorkQueueDefinitionId right) => left.CompareTo(right) > 0;
     public static bool operator >=(WorkQueueDefinitionId left, WorkQueueDefinitionId right) => left.CompareTo(right) >= 0;
 
-    public static WorkQueueDefinitionId Parse(string s) => Parse(s, null);
+    public static WorkQueueDefinitionId Parse(string s) => EntityIdOperations.Parse<WorkQueueDefinitionId>(s);
 
-    public static WorkQueueDefinitionId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new WorkQueueDefinitionId(Guid.Parse(s, provider));
-    }
+    public static WorkQueueDefinitionId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<WorkQueueDefinitionId>(s, provider);
 
-    public static WorkQueueDefinitionId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static WorkQueueDefinitionId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<WorkQueueDefinitionId>(s);
 
-    public static WorkQueueDefinitionId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static WorkQueueDefinitionId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<WorkQueueDefinitionId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out WorkQueueDefinitionId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out WorkQueueDefinitionId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out WorkQueueDefinitionId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out WorkQueueDefinitionId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out WorkQueueDefinitionId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new WorkQueueDefinitionId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out WorkQueueDefinitionId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out WorkQueueDefinitionId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new WorkQueueDefinitionId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out WorkQueueDefinitionId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class WorkQueueDefinitionIdTypeConverter : EntityIdTypeConverter<WorkQueueDefinitionId>;
-
-public sealed class WorkQueueDefinitionIdJsonConverter : EntityIdJsonConverter<WorkQueueDefinitionId>;

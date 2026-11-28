@@ -10,8 +10,8 @@ namespace Cadence.Kernel;
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for an Attestation (21 CFR Part 11 electronic signature ceremony and audit manifest).
 /// </summary>
-[TypeConverter(typeof(AttestationIdTypeConverter))]
-[JsonConverter(typeof(AttestationIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<AttestationId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<AttestationId>))]
 public readonly record struct AttestationId(Guid Value) : IEntityId<AttestationId>
 {
     public static AttestationId New() => new(Guid.CreateVersion7());
@@ -34,62 +34,28 @@ public readonly record struct AttestationId(Guid Value) : IEntityId<AttestationI
 
     public int CompareTo(AttestationId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        AttestationId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(AttestationId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(AttestationId left, AttestationId right) => left.CompareTo(right) < 0;
     public static bool operator <=(AttestationId left, AttestationId right) => left.CompareTo(right) <= 0;
     public static bool operator >(AttestationId left, AttestationId right) => left.CompareTo(right) > 0;
     public static bool operator >=(AttestationId left, AttestationId right) => left.CompareTo(right) >= 0;
 
-    public static AttestationId Parse(string s) => Parse(s, null);
+    public static AttestationId Parse(string s) => EntityIdOperations.Parse<AttestationId>(s);
 
-    public static AttestationId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new AttestationId(Guid.Parse(s, provider));
-    }
+    public static AttestationId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<AttestationId>(s, provider);
 
-    public static AttestationId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static AttestationId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<AttestationId>(s);
 
-    public static AttestationId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static AttestationId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<AttestationId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out AttestationId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out AttestationId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out AttestationId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out AttestationId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out AttestationId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new AttestationId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out AttestationId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out AttestationId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new AttestationId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out AttestationId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class AttestationIdTypeConverter : EntityIdTypeConverter<AttestationId>;
-
-public sealed class AttestationIdJsonConverter : EntityIdJsonConverter<AttestationId>;

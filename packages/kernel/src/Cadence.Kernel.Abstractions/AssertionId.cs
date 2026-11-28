@@ -11,8 +11,8 @@ namespace Cadence.Kernel;
 /// Strongly-typed identifier for an Assertion (spec §8.2): a statement by an actor with authority about an observation,
 /// another assertion or a lock scope, such as Verified, Queried or Locked (ADR-2621).
 /// </summary>
-[TypeConverter(typeof(AssertionIdTypeConverter))]
-[JsonConverter(typeof(AssertionIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<AssertionId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<AssertionId>))]
 public readonly record struct AssertionId(Guid Value) : IEntityId<AssertionId>
 {
     public static AssertionId New() => new(Guid.CreateVersion7());
@@ -35,62 +35,28 @@ public readonly record struct AssertionId(Guid Value) : IEntityId<AssertionId>
 
     public int CompareTo(AssertionId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        AssertionId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(AssertionId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(AssertionId left, AssertionId right) => left.CompareTo(right) < 0;
     public static bool operator <=(AssertionId left, AssertionId right) => left.CompareTo(right) <= 0;
     public static bool operator >(AssertionId left, AssertionId right) => left.CompareTo(right) > 0;
     public static bool operator >=(AssertionId left, AssertionId right) => left.CompareTo(right) >= 0;
 
-    public static AssertionId Parse(string s) => Parse(s, null);
+    public static AssertionId Parse(string s) => EntityIdOperations.Parse<AssertionId>(s);
 
-    public static AssertionId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new AssertionId(Guid.Parse(s, provider));
-    }
+    public static AssertionId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<AssertionId>(s, provider);
 
-    public static AssertionId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static AssertionId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<AssertionId>(s);
 
-    public static AssertionId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static AssertionId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<AssertionId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out AssertionId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out AssertionId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out AssertionId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out AssertionId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out AssertionId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new AssertionId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out AssertionId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out AssertionId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new AssertionId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out AssertionId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class AssertionIdTypeConverter : EntityIdTypeConverter<AssertionId>;
-
-public sealed class AssertionIdJsonConverter : EntityIdJsonConverter<AssertionId>;

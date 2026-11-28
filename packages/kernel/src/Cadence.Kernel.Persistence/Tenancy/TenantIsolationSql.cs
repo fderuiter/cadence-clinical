@@ -1,5 +1,6 @@
 using System.Collections.Generic;
-using System.Linq;
+
+using Cadence.Kernel.Sql;
 
 using Microsoft.EntityFrameworkCore.Migrations;
 
@@ -16,13 +17,13 @@ namespace Cadence.Kernel.Persistence.Tenancy;
 internal static class TenantIsolationSql
 {
     /// <summary>Connection setting that carries the current tenant id.</summary>
-    public const string TenantSetting = "cadence.tenant_id";
+    public const string TenantSetting = PostgresTenantRlsSql.TenantSetting;
 
     /// <summary>Setting that <see cref="DirectoryFunction"/> turns on for its own execution only.</summary>
     public const string DirectorySetting = "cadence.tenant_directory";
 
     /// <summary>Returns the current tenant id, or <c>NULL</c> when none is set.</summary>
-    public const string CurrentTenantFunction = "current_tenant_id";
+    public const string CurrentTenantFunction = PostgresTenantRlsSql.CurrentTenantFunctionName;
 
     /// <summary>Lists every tenant id, for jobs that visit tenants one at a time (ADR-2250 rule 3).</summary>
     public const string DirectoryFunction = "tenant_ids";
@@ -31,7 +32,7 @@ internal static class TenantIsolationSql
     public const string CodeDirectoryFunction = "tenant_id_by_code";
 
     /// <summary>Name of the isolation policy on every tenant-scoped table.</summary>
-    public const string IsolationPolicy = "tenant_isolation";
+    public const string IsolationPolicy = PostgresTenantRlsSql.IsolationPolicy;
 
     /// <summary>Name of the read-only policy on <c>tenants</c> that only <see cref="DirectoryFunction"/> satisfies.</summary>
     public const string DirectoryPolicy = "tenant_directory";
@@ -45,23 +46,19 @@ internal static class TenantIsolationSql
     /// </summary>
     public static readonly IReadOnlySet<string> TablesWithoutTenantColumn = new HashSet<string>(["tenants", "people"]);
 
-    public static string CreateFunctions(string schema)
-    {
-        var s = SqlIdentifier.Quote(schema);
-        return $$"""
-            CREATE OR REPLACE FUNCTION {{s}}.{{CurrentTenantFunction}}() RETURNS uuid
-            LANGUAGE sql STABLE PARALLEL SAFE AS $fn$
-                SELECT NULLIF(pg_catalog.current_setting('{{TenantSetting}}', true), '')::uuid
-            $fn$;
-            """;
-    }
+    public static string CreateFunctions(string schema) =>
+        PostgresTenantRlsSql.CreateCurrentTenantFunctionSql(schema);
 
     public static string DropFunctions(string schema) =>
-        $"DROP FUNCTION IF EXISTS {SqlIdentifier.Quote(schema)}.{CurrentTenantFunction}();";
+        PostgresTenantRlsSql.DropCurrentTenantFunctionSql(schema);
 
     /// <summary>Enables and forces RLS on a table whose rows carry <c>tenant_id</c>, with one policy for all commands.</summary>
     public static string EnableForTenantColumn(string schema, string table) =>
-        Enable(schema, table, IsolationPolicy, $"tenant_id = {SqlIdentifier.Quote(schema)}.{CurrentTenantFunction}()", withCheck: null);
+        PostgresTenantRlsSql.EnableForTenantColumnSql(
+            schema,
+            table,
+            $"{SqlIdentifier.Quote(schema)}.{CurrentTenantFunction}()",
+            quotePolicyName: true);
 
     /// <summary>
     /// Enables and forces RLS on <c>tenants</c>: a tenant sees and creates only its own row. The directory policy
@@ -102,15 +99,8 @@ internal static class TenantIsolationSql
             withCheck: $"{s}.{CurrentTenantFunction}() IS NOT NULL");
     }
 
-    public static string Disable(string schema, string table, params string[] policies)
-    {
-        var qualified = $"{SqlIdentifier.Quote(schema)}.{SqlIdentifier.Quote(table)}";
-        var drops = string.Concat(policies.Select(p => $"DROP POLICY IF EXISTS {SqlIdentifier.Quote(p)} ON {qualified};\n"));
-        return drops + $"""
-            ALTER TABLE {qualified} NO FORCE ROW LEVEL SECURITY;
-            ALTER TABLE {qualified} DISABLE ROW LEVEL SECURITY;
-            """;
-    }
+    public static string Disable(string schema, string table, params string[] policies) =>
+        PostgresTenantRlsSql.DisablePoliciesSql(schema, table, policies, quotePolicyNames: true);
 
     /// <summary>
     /// Creates <see cref="CodeDirectoryFunction"/>: the id of the active tenant with the given code, or null. Like
@@ -138,17 +128,8 @@ internal static class TenantIsolationSql
         $"DROP FUNCTION IF EXISTS {SqlIdentifier.Quote(schema)}.{DirectoryFunction}();\n"
         + $"DROP POLICY IF EXISTS {DirectoryPolicy} ON {SqlIdentifier.Quote(schema)}.\"tenants\";";
 
-    private static string Enable(string schema, string table, string policy, string predicate, string? withCheck)
-    {
-        var qualified = $"{SqlIdentifier.Quote(schema)}.{SqlIdentifier.Quote(table)}";
-        return $"""
-            ALTER TABLE {qualified} ENABLE ROW LEVEL SECURITY;
-            ALTER TABLE {qualified} FORCE ROW LEVEL SECURITY;
-            CREATE POLICY {SqlIdentifier.Quote(policy)} ON {qualified}
-                USING ({predicate})
-                WITH CHECK ({withCheck ?? predicate});
-            """;
-    }
+    private static string Enable(string schema, string table, string policy, string predicate, string? withCheck) =>
+        PostgresTenantRlsSql.EnablePolicySql(schema, table, policy, predicate, withCheck, quotePolicyName: true);
 }
 
 /// <summary>Migration helpers for <see cref="TenantIsolationSql"/>. Migrations name their tables literally.</summary>
