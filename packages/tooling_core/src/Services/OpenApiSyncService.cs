@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
 
+using Cadence.ToolingCore.Primitives;
+
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
@@ -19,7 +21,7 @@ public static class OpenApiSyncService
 
     public static int SyncOpenApiSpec(bool validate = false, string? repoRoot = null, IEnumerable<string>? targetServices = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         string specDir = Path.Combine(repoRoot, "docs", "openapi");
         string exportDir = Path.Combine(Path.GetTempPath(), "cadence-openapi-" + Guid.NewGuid().ToString("N"));
 
@@ -316,18 +318,5 @@ public static class OpenApiSyncService
         }
 
         return ExporterBinaryResolver.RunExporter(repoRoot, ExporterProject, exporterArgs, "OpenAPI exporter");
-    }
-
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
     }
 }

@@ -19,6 +19,7 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ClinicalFieldLayout",
   "ClinicalFormField",
   "ClinicalGatedAction",
+  "ClinicalGovernanceBanner",
   "ClinicalIcon",
   "ClinicalIconButton",
   "ClinicalInput",
@@ -236,7 +237,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(27);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(28);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }

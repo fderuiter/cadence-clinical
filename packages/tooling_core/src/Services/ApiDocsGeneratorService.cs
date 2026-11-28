@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Text.Json.Nodes;
 
+using Cadence.ToolingCore.Primitives;
+
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
@@ -24,7 +26,7 @@ public static class ApiDocsGeneratorService
         bool preCommit = false,
         GitIndexReader? indexReader = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         string specDir = Path.Combine(repoRoot, "docs", "openapi");
         string docsDir = Path.Combine(repoRoot, "docs", "api");
 
@@ -268,17 +270,4 @@ public static class ApiDocsGeneratorService
 
     private static string Escape(string text) =>
         text.Replace("|", "\\|", StringComparison.Ordinal).ReplaceLineEndings(" ").Trim();
-
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
 }

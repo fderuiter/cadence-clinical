@@ -7,6 +7,7 @@ import ClinicalExplanation from "./components/clinical/ClinicalExplanation.vue";
 import ClinicalFieldLayout from "./components/clinical/ClinicalFieldLayout.vue";
 import ClinicalFormField from "./components/clinical/ClinicalFormField.vue";
 import ClinicalGatedAction from "./components/clinical/ClinicalGatedAction.vue";
+import ClinicalGovernanceBanner from "./components/clinical/ClinicalGovernanceBanner.vue";
 import ClinicalIcon from "./components/clinical/ClinicalIcon.vue";
 import ClinicalIconButton from "./components/clinical/ClinicalIconButton.vue";
 import ClinicalInput from "./components/clinical/ClinicalInput.vue";
@@ -88,6 +89,7 @@ export {
   ClinicalFieldLayout,
   ClinicalFormField,
   ClinicalGatedAction,
+  ClinicalGovernanceBanner,
   ClinicalIcon,
   ClinicalIconButton,
   ClinicalInput,

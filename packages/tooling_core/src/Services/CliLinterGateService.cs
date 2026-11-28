@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
+
+using Cadence.ToolingCore.Primitives;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -11,7 +11,7 @@ namespace Cadence.ToolingCore.Services;
 /// Fail-closed <c>actionlint</c>, <c>hadolint</c>, and <c>shellcheck</c> quality gates for <c>cadence check</c> and <c>cadence check --pre-commit</c>,
 /// plus <c>.cadence/bin</c> / <c>PATH</c> binary resolution for <c>actionlint</c>, <c>hadolint</c>, and <c>shellcheck</c>.
 /// </summary>
-public static class CliLinterGateService
+public static partial class CliLinterGateService
 {
     public const string ActionlintVersion = "1.7.12";
     public const string HadolintVersion = "2.15.1";
@@ -50,7 +50,7 @@ public static class CliLinterGateService
         GitIndexReader? indexReader = null,
         Func<string, string?>? getEnvironmentVariable = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         if (targetFiles is { Length: 0 })
         {
             return 0;
@@ -159,7 +159,7 @@ public static class CliLinterGateService
         GitIndexReader? indexReader = null,
         Func<string, string?>? getEnvironmentVariable = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         if (targetFiles is { Length: 0 })
         {
             return 0;
@@ -266,7 +266,7 @@ public static class CliLinterGateService
         GitIndexReader? indexReader = null,
         Func<string, string?>? getEnvironmentVariable = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         if (targetFiles is { Length: 0 })
         {
             return 0;
@@ -470,304 +470,4 @@ public static class CliLinterGateService
 
     private static bool ExistsInSnapshot(string repoRoot, string relativePath, GitIndexReader? reader) =>
         reader is not null ? reader.FileExists(relativePath) : File.Exists(Path.Combine(repoRoot, relativePath));
-
-    private static List<string> DiscoverWorkflowFiles(string repoRoot)
-    {
-        string workflowsDir = Path.Combine(repoRoot, ".github", "workflows");
-        if (!Directory.Exists(workflowsDir))
-        {
-            return [];
-        }
-
-        return Directory.EnumerateFiles(workflowsDir)
-            .Select(f => Path.GetRelativePath(repoRoot, f).Replace('\\', '/'))
-            .Where(IsWorkflowYaml)
-            .Order(StringComparer.Ordinal)
-            .ToList();
-    }
-
-    private static List<string> DiscoverDockerfiles(string repoRoot)
-    {
-        var results = new List<string>();
-        CollectDockerfilesRecursive(repoRoot, repoRoot, results);
-        results.Sort(StringComparer.Ordinal);
-        return results;
-    }
-
-    private static void CollectDockerfilesRecursive(string repoRoot, string currentDir, List<string> results)
-    {
-        if (!Directory.Exists(currentDir))
-        {
-            return;
-        }
-
-        foreach (string file in Directory.EnumerateFiles(currentDir))
-        {
-            string fileName = Path.GetFileName(file);
-            if (fileName.StartsWith("Dockerfile", StringComparison.Ordinal))
-            {
-                results.Add(Path.GetRelativePath(repoRoot, file).Replace('\\', '/'));
-            }
-        }
-
-        foreach (string subDir in Directory.EnumerateDirectories(currentDir))
-        {
-            string dirName = Path.GetFileName(subDir);
-            if (ExcludedDirectories.Contains(dirName, StringComparer.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            CollectDockerfilesRecursive(repoRoot, subDir, results);
-        }
-    }
-
-    private static List<string> DiscoverShellScripts(string repoRoot)
-    {
-        var results = new List<string>();
-        CollectShellScriptsRecursive(repoRoot, repoRoot, results);
-        results.Sort(StringComparer.Ordinal);
-        return results;
-    }
-
-    private static void CollectShellScriptsRecursive(string repoRoot, string currentDir, List<string> results)
-    {
-        if (!Directory.Exists(currentDir))
-        {
-            return;
-        }
-
-        foreach (string file in Directory.EnumerateFiles(currentDir))
-        {
-            string rel = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
-            if (IsShellScriptPath(rel))
-            {
-                results.Add(rel);
-            }
-        }
-
-        foreach (string subDir in Directory.EnumerateDirectories(currentDir))
-        {
-            string dirName = Path.GetFileName(subDir);
-            if (ExcludedDirectories.Contains(dirName, StringComparer.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            CollectShellScriptsRecursive(repoRoot, subDir, results);
-        }
-    }
-
-    private static int ExecuteActionlintBatches(string workingDirectory, string executable, List<string> workflowFiles)
-    {
-        bool failed = false;
-        foreach (string[] batch in workflowFiles.Chunk(MaxFilesPerBatch))
-        {
-            if (RunLinterProcess(workingDirectory, executable, batch) != 0)
-            {
-                failed = true;
-            }
-        }
-
-        if (failed)
-        {
-            Console.WriteLine("[ERROR] actionlint reported workflow or composite-action violations.");
-            return 1;
-        }
-
-        Console.WriteLine($"✔ actionlint validated {workflowFiles.Count} workflow file(s).");
-        return 0;
-    }
-
-    private static int ExecuteHadolintBatches(string workingDirectory, string executable, List<string> dockerfiles)
-    {
-        bool failed = false;
-        foreach (string[] batch in dockerfiles.Chunk(MaxFilesPerBatch))
-        {
-            var args = new List<string>(batch.Length + 2) { "--failure-threshold", "warning" };
-            args.AddRange(batch);
-            if (RunLinterProcess(workingDirectory, executable, args) != 0)
-            {
-                failed = true;
-            }
-        }
-
-        if (failed)
-        {
-            Console.WriteLine("[ERROR] hadolint reported Dockerfile warning- or error-level violations.");
-            return 1;
-        }
-
-        Console.WriteLine($"✔ hadolint validated {dockerfiles.Count} Dockerfile(s).");
-        return 0;
-    }
-
-    private static int ExecuteShellcheckBatches(string workingDirectory, string executable, List<string> shellScripts)
-    {
-        bool failed = false;
-        foreach (string[] batch in shellScripts.Chunk(MaxFilesPerBatch))
-        {
-            var args = new List<string>(batch.Length + 1) { "-x" };
-            args.AddRange(batch);
-            if (RunLinterProcess(workingDirectory, executable, args) != 0)
-            {
-                failed = true;
-            }
-        }
-
-        if (failed)
-        {
-            Console.WriteLine("[ERROR] shellcheck reported shell script violations.");
-            return 1;
-        }
-
-        Console.WriteLine($"✔ shellcheck validated {shellScripts.Count} shell script(s).");
-        return 0;
-    }
-
-    private static ResolvedLinterTool? ResolveBinary(
-        string repoRoot,
-        string toolName,
-        string versionFlag,
-        Func<string, string?>? getEnvironmentVariable)
-    {
-        getEnvironmentVariable ??= Environment.GetEnvironmentVariable;
-        string exeName = OperatingSystem.IsWindows() ? $"{toolName}.exe" : toolName;
-        string cadenceBinDir = DoctorProvisioningService.ResolveCadenceBinDirectory(repoRoot, getEnvironmentVariable);
-        string cadenceBinCandidate = Path.Combine(cadenceBinDir, exeName);
-        if (File.Exists(cadenceBinCandidate) && TryProbeVersion(repoRoot, cadenceBinCandidate, versionFlag, out string binVersion))
-        {
-            return new ResolvedLinterTool(cadenceBinCandidate, ".cadence/bin", binVersion);
-        }
-
-        string? pathTool = DetectSecretsGateService.FindExecutableOnPath(toolName, getEnvironmentVariable("PATH"));
-        if (pathTool is not null && TryProbeVersion(repoRoot, pathTool, versionFlag, out string pathVersion))
-        {
-            return new ResolvedLinterTool(pathTool, "PATH", pathVersion);
-        }
-
-        return null;
-    }
-
-    private static bool TryProbeVersion(string workingDirectory, string fileName, string versionFlag, out string versionOutput)
-    {
-        versionOutput = string.Empty;
-        var psi = new ProcessStartInfo(fileName)
-        {
-            WorkingDirectory = Directory.Exists(workingDirectory) ? workingDirectory : Environment.CurrentDirectory,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        };
-        psi.ArgumentList.Add(versionFlag);
-
-        try
-        {
-            using var process = PosixProcessLauncher.Start(psi);
-            if (process is null)
-            {
-                return false;
-            }
-
-            string stdout = process.StandardOutput.ReadToEnd();
-            string stderr = process.StandardError.ReadToEnd();
-            if (!process.WaitForExit(15_000))
-            {
-                process.Kill(entireProcessTree: true);
-                return false;
-            }
-
-            if (process.ExitCode != 0)
-            {
-                return false;
-            }
-
-            string combined = string.IsNullOrWhiteSpace(stdout) ? stderr : stdout;
-            versionOutput = combined
-                .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .FirstOrDefault() ?? "available";
-            return true;
-        }
-        catch (Exception ex) when (ex is Win32Exception or IOException or InvalidOperationException)
-        {
-            return false;
-        }
-    }
-
-    private static int RunLinterProcess(string workingDirectory, string fileName, IReadOnlyList<string> args)
-    {
-        var psi = new ProcessStartInfo(fileName)
-        {
-            WorkingDirectory = workingDirectory,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        };
-        foreach (string arg in args)
-        {
-            psi.ArgumentList.Add(arg);
-        }
-
-        try
-        {
-            using var process = PosixProcessLauncher.Start(psi);
-            if (process is null)
-            {
-                Console.WriteLine($"[ERROR] Failed to start '{fileName}'.");
-                return 1;
-            }
-
-            string stdout = process.StandardOutput.ReadToEnd();
-            string stderr = process.StandardError.ReadToEnd();
-            process.WaitForExit();
-
-            if (!string.IsNullOrWhiteSpace(stdout))
-            {
-                Console.WriteLine(stdout.TrimEnd());
-            }
-
-            if (!string.IsNullOrWhiteSpace(stderr))
-            {
-                Console.WriteLine(stderr.TrimEnd());
-            }
-
-            return process.ExitCode;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Failed to execute '{fileName}': {ex.Message}");
-            return 1;
-        }
-    }
-
-    private static void PrintMissingToolError(string toolName, string version)
-    {
-        Console.WriteLine($"[ERROR] '{toolName}' was not found in .cadence/bin or on PATH (refusing to skip {toolName} quality gate).");
-        Console.WriteLine($"        Provision pinned CLI linters ({toolName} v{version}) with:");
-        Console.WriteLine("          pnpm cadence doctor --auto-fix --linters-only");
-        if (OperatingSystem.IsWindows())
-        {
-            Console.WriteLine("          pwsh scripts/setup_wizard.ps1 -NonInteractive -Minimal");
-        }
-        else
-        {
-            Console.WriteLine("          bash scripts/setup_wizard.sh --dev --minimal");
-        }
-    }
-
-    private static string FindRepoRoot()
-    {
-        var dir = new DirectoryInfo(Environment.CurrentDirectory);
-        while (dir is not null)
-        {
-            if (File.Exists(Path.Combine(dir.FullName, "Cadence.sln")) || Directory.Exists(Path.Combine(dir.FullName, ".git")))
-            {
-                return dir.FullName;
-            }
-
-            dir = dir.Parent;
-        }
-
-        return Environment.CurrentDirectory;
-    }
 }
