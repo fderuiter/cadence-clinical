@@ -316,6 +316,10 @@ internal sealed class RecordCollectedValuesHandler(IConceptRegistry? concepts = 
             {
                 errors[value.ItemId] = [$"CollectionSpec {spec.Id} has no item {value.ItemId}."];
             }
+            else if (ObservationValue.CallerProblemOf(value.Value) is { } callerProblem)
+            {
+                errors[value.ItemId] = [callerProblem];
+            }
             else if (item.Admits(value.Value) is { } problem)
             {
                 errors[value.ItemId] = [problem];

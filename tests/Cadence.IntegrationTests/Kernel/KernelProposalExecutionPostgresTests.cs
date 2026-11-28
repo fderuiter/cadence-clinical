@@ -202,7 +202,7 @@ public sealed class KernelProposalExecutionPostgresTests : IClassFixture<KernelP
         _fixture.CurrentActor.Actor = Setup;
         _fixture.Authorizer.Inner = null;
         var grant = await _fixture.Sender.SendAsync(
-            new IssueGrant(tenant, GrantId.New(), Agent, "proposal.create", null, AuthorityScope.Study(study), _fixture.Clock.UtcNow, null, false, KernelProtocolScenario.Key(), "Appointed"),
+            new IssueGrant(tenant, GrantId.New(), Agent, "proposal.create", null, AuthorityScope.Study(study), _fixture.Clock.UtcNow, null, false, KernelProtocolScenario.Key(), "Appointed to role"),
             cancellationToken: ct);
         grant.Error!.Code.Should().Be(AuthorityErrors.GrantTargetInvalid.Code);
     }
@@ -296,7 +296,7 @@ public sealed class KernelProposalExecutionPostgresTests : IClassFixture<KernelP
         _fixture.CurrentActor.Actor = Setup;
         _fixture.Authorizer.Inner = null;
         await _scenario.OkAsync(
-            new IssueGrant(tenant, GrantId.New(), grantee, capability, null, scope, _fixture.Clock.UtcNow, null, false, KernelProtocolScenario.Key(), "Appointed"),
+            new IssueGrant(tenant, GrantId.New(), grantee, capability, null, scope, _fixture.Clock.UtcNow, null, false, KernelProtocolScenario.Key(), "Appointed to role"),
             ct);
         (_fixture.CurrentActor.Actor, _fixture.Authorizer.Inner) = previous;
         Tick();

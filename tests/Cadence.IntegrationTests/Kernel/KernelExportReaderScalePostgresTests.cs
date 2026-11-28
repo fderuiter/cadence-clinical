@@ -114,7 +114,7 @@ public sealed class KernelExportReaderScalePostgresTests(KernelPostgresFixture f
             var otherDbp = otherSaved.Values.Single(v => v.ItemId == KernelCollectionScenario.Diastolic).ObservationId;
 
             var ver = await _scenario.Protocol.OkAsync(
-                new VerifyObservation(tenant, AssertionId.New(), otherSubject.Enrollment, otherDbp, 1, KernelProtocolScenario.Key(), "Other SDV"),
+                new VerifyObservation(tenant, AssertionId.New(), otherSubject.Enrollment, otherDbp, 1, KernelProtocolScenario.Key(), "Source data verified"),
                 ct);
             var qry = await _scenario.Protocol.OkAsync(
                 new RaiseQuery(tenant, AssertionId.New(), otherSubject.Enrollment, otherSbp, $"Other query {i}", KernelProtocolScenario.Key(), "Other query"),
@@ -291,11 +291,11 @@ public sealed class KernelExportReaderScalePostgresTests(KernelPostgresFixture f
         var draft = await _scenario.Protocol.CreateDraftAsync(tenant, study, protocolVersionId, ct, ProtocolDesignDocument.Write(design));
         draft.IsSuccess.Should().BeTrue(draft.Error?.Message);
         var inReview = await _scenario.Protocol.OkAsync(
-            new SubmitProtocolVersionForReview(tenant, protocolVersionId, KernelProtocolScenario.Key(), "Ready"), ct);
+            new SubmitProtocolVersionForReview(tenant, protocolVersionId, KernelProtocolScenario.Key(), "Ready for review"), ct);
         var protoSig = await _scenario.Protocol.OkAsync(
             _scenario.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
         await _scenario.Protocol.OkAsync(
-            new ApproveProtocolVersion(tenant, protocolVersionId, protoSig, KernelProtocolScenario.Key(), "Approved"), ct);
+            new ApproveProtocolVersion(tenant, protocolVersionId, protoSig, KernelProtocolScenario.Key(), "Approved protocol"), ct);
 
         var effectivityId = EffectivityId.New();
         await _scenario.Protocol.OkAsync(
@@ -315,7 +315,7 @@ public sealed class KernelExportReaderScalePostgresTests(KernelPostgresFixture f
                 "Ethics filed"),
             ct);
         await _scenario.Protocol.OkAsync(
-            new ChangeEffectivityStatus(tenant, effectivityId, EffectivityStatus.Effective, _scenario.Tick(), [ethicsVersionId], KernelProtocolScenario.Key(), "Effective"),
+            new ChangeEffectivityStatus(tenant, effectivityId, EffectivityStatus.Effective, _scenario.Tick(), [ethicsVersionId], KernelProtocolScenario.Key(), "Made effective"),
             ct);
 
         var enrollments = new List<(EnrollmentId EnrollmentId, ParticipantId ParticipantId, StudySiteId StudySiteId)>(enrollmentCount);

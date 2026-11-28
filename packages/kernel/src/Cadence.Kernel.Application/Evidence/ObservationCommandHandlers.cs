@@ -55,6 +55,11 @@ internal sealed class RecordObservationHandler : ICommandHandler<RecordObservati
             return refused;
         }
 
+        if (ObservationValue.CallerProblemOf(command.Value) is { } callerProblem)
+        {
+            return ObservationErrors.ValueInvalid.WithMessage(callerProblem);
+        }
+
         var recorded = Observation.Record(
             command.ObservationId,
             command.TenantId,
@@ -126,6 +131,11 @@ internal sealed class CorrectObservationHandler(IConceptRegistry? concepts = nul
         {
             return ObservationErrors.VersionStale.WithMessage(
                 $"The observation is at version {observation.VersionIndex}, not {command.ExpectedVersion}; reload it and correct the current value.");
+        }
+
+        if (ObservationValue.CallerProblemOf(command.Value) is { } callerProblem)
+        {
+            return ObservationErrors.ValueInvalid.WithMessage(callerProblem);
         }
 
         if (instance is { } instanceId

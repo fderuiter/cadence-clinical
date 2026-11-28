@@ -44,6 +44,7 @@ internal sealed class KernelObservationRecords(
             FROM kernel.observations AS o
             WHERE o.tenant_id = @tenant
               AND o.id = ANY(@ids)
+              AND NOT (o.value ->> 'type' = 'missing' AND o.value ->> 'reason' = 'NotAsked')
               AND NOT EXISTS (
                   SELECT 1
                   FROM kernel.assertions AS va
@@ -177,10 +178,10 @@ internal sealed class KernelObservationRecords(
         List<UnverifiedSdvTargetRow> rows;
         await using (var db = contexts.Create(tenant))
         {
-            await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
-            try
+            if (db.Database.IsRelational() && ReferenceEquals(_blinding, BlindedTreatmentClassifier.Instance))
             {
-                if (db.Database.IsRelational() && ReferenceEquals(_blinding, BlindedTreatmentClassifier.Instance))
+                await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+                try
                 {
                     object[] parameters =
                     [
@@ -193,14 +194,14 @@ internal sealed class KernelObservationRecords(
                         .ToListAsync(cancellationToken)
                         .ConfigureAwait(false);
                 }
-                else
+                finally
                 {
-                    rows = await LoadUnverifiedSdvTargetsFallbackAsync(db, distinctIds, cancellationToken).ConfigureAwait(false);
+                    await db.Database.CloseConnectionAsync().ConfigureAwait(false);
                 }
             }
-            finally
+            else
             {
-                await db.Database.CloseConnectionAsync().ConfigureAwait(false);
+                rows = await LoadUnverifiedSdvTargetsFallbackAsync(db, distinctIds, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -275,10 +276,11 @@ internal sealed class KernelObservationRecords(
                 .ConfigureAwait(false)).ToHashSet();
 
         var unverified = foundObservations
-            .Where(o => !rawAssertions.Any(a =>
-                a.TargetId == o.Id.Value
-                && a.TargetRevision == o.Revision
-                && !retractedIds.Contains(a.Id)))
+            .Where(o => o.Value is not MissingValue { Reason: NullFlavor.NotAsked }
+                && !rawAssertions.Any(a =>
+                    a.TargetId == o.Id.Value
+                    && a.TargetRevision == o.Revision
+                    && !retractedIds.Contains(a.Id)))
             .ToList();
         if (unverified.Count == 0)
         {

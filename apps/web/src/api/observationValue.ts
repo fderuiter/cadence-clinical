@@ -221,6 +221,20 @@ export function sameObservationValue(
 
 // Field order and absent optional fields do not change what a value says.
 function canonical(value: KernelObservationValue): string {
+  if (value.type === "missing") {
+    const detail = typeof value.detail === "string" ? value.detail.trim() : "";
+    const normalized: Array<[string, unknown]> = detail
+      ? [
+          ["detail", detail],
+          ["reason", value.reason],
+          ["type", "missing"],
+        ]
+      : [
+          ["reason", value.reason],
+          ["type", "missing"],
+        ];
+    return JSON.stringify(normalized);
+  }
   const fields = Object.entries(value)
     .filter(([, field]) => field !== null && field !== undefined)
     .sort(([x], [y]) => (x < y ? -1 : 1));
@@ -231,9 +245,10 @@ function canonical(value: KernelObservationValue): string {
 export function isUnrecordedValue(
   value: KernelObservationValue | null | undefined
 ): boolean {
-  return (
-    !value || (value.type === "missing" && String(value.reason) === "NotAsked")
-  );
+  if (!value) return true;
+  if (value.type !== "missing") return false;
+  const reason = String(value.reason).toLowerCase();
+  return reason === "notasked" || reason === "not_asked";
 }
 
 /** The reasons a user can record a value as missing (ADR-2623 null flavors; Masked and NotAsked are the kernel's), with how each reads. */

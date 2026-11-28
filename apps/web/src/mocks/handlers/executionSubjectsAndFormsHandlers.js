@@ -219,12 +219,28 @@ export function createExecutionSubjectsAndFormsHandlers(store) {
     http.put(
       "*/api/v1/execution/forms/:formId/values",
       async ({ params, request }) => {
+        const reason = decodeReasonHeader(request);
+        if (!reason || reason.trim().length < 10) {
+          return HttpResponse.json(
+            {
+              title: "Reason for change required",
+              status: 422,
+              code: "K.Command.ReasonForChangeRequired",
+              detail:
+                "X-Change-Reason must contain at least 10 non-whitespace characters.",
+            },
+            { status: 422 }
+          );
+        }
         const body = await readJsonBody(request);
         const result = store.saveFormValues(
           decodeURIComponent(String(params.formId)),
           body,
-          decodeReasonHeader(request)
+          reason
         );
+        if (result.invalid) {
+          return HttpResponse.json(result.problem, { status: 422 });
+        }
         if (result.conflict) {
           return HttpResponse.json(result.problem, { status: 409 });
         }

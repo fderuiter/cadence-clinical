@@ -260,7 +260,7 @@ public sealed class ProtocolElementLineagePostgresTests(KernelPostgresFixture fi
                 KernelProtocolScenario.Key(), "Filed approval"),
             ct);
         await forms.Protocol.OkAsync(
-            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, forms.Tick(), [ethicsArtifact], KernelProtocolScenario.Key(), "Effective"),
+            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, forms.Tick(), [ethicsArtifact], KernelProtocolScenario.Key(), "Made effective"),
             ct);
 
         var studySite = await forms.Observations.AddStudySiteAsync(tenant, study, ct);
@@ -281,9 +281,9 @@ public sealed class ProtocolElementLineagePostgresTests(KernelPostgresFixture fi
         var dbpObs = savedVitals.Values.Single(v => v.ItemId == "item.dbp").ObservationId;
 
         var sbpVerified = await forms.Protocol.OkAsync(
-            new VerifyObservation(tenant, AssertionId.New(), enrollment, sbpObs, 1, KernelProtocolScenario.Key(), "SDV SBP"), ct);
+            new VerifyObservation(tenant, AssertionId.New(), enrollment, sbpObs, 1, KernelProtocolScenario.Key(), "Verify systolic BP"), ct);
         var dbpVerified = await forms.Protocol.OkAsync(
-            new VerifyObservation(tenant, AssertionId.New(), enrollment, dbpObs, 1, KernelProtocolScenario.Key(), "SDV DBP"), ct);
+            new VerifyObservation(tenant, AssertionId.New(), enrollment, dbpObs, 1, KernelProtocolScenario.Key(), "Verify diastolic BP"), ct);
 
         var vitalsHash = CollectionInstance.ContentHashOf(
         [
@@ -297,7 +297,7 @@ public sealed class ProtocolElementLineagePostgresTests(KernelPostgresFixture fi
             ct);
 
         var sbpQuery = await forms.Protocol.OkAsync(
-            new RaiseQuery(tenant, AssertionId.New(), enrollment, sbpObs, "Confirm cuff size.", KernelProtocolScenario.Key(), "Query SBP"), ct);
+            new RaiseQuery(tenant, AssertionId.New(), enrollment, sbpObs, "Confirm cuff size.", KernelProtocolScenario.Key(), "Raise systolic query"), ct);
         var sbpAnswer = await forms.Protocol.OkAsync(
             new AnswerQuery(tenant, AssertionId.New(), enrollment, sbpQuery.AssertionId, "Standard cuff used.", KernelProtocolScenario.Key(), "Answer SBP"), ct);
 
@@ -429,14 +429,14 @@ public sealed class ProtocolElementLineagePostgresTests(KernelPostgresFixture fi
     private async Task<ProtocolVersionId> ForkAsync(TenantId tenant, ProtocolVersionId parent, string content, CancellationToken ct)
     {
         var id = ProtocolVersionId.New();
-        await _scenario.OkAsync(new ForkProtocolVersion(tenant, parent, id, KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), "Amendment"), ct);
+        await _scenario.OkAsync(new ForkProtocolVersion(tenant, parent, id, KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), "Protocol amendment"), ct);
         await _scenario.OkAsync(new ReviseProtocolDraft(tenant, id, content, null, KernelProtocolScenario.Key(), "Reword the objective"), ct);
         return id;
     }
 
     private async Task ApproveAsync(TenantId tenant, ProtocolVersionId id, CancellationToken ct)
     {
-        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Ready"), ct);
+        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Ready for review"), ct);
         AttestationId? reviewAttestation = null;
         await using (var db = fixture.CreateContext(tenant))
         {
@@ -451,7 +451,7 @@ public sealed class ProtocolElementLineagePostgresTests(KernelPostgresFixture fi
         }
 
         var attestation = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
-        await _scenario.OkAsync(new ApproveProtocolVersion(tenant, id, attestation, KernelProtocolScenario.Key(), "Approved", reviewAttestation), ct);
+        await _scenario.OkAsync(new ApproveProtocolVersion(tenant, id, attestation, KernelProtocolScenario.Key(), "Approved protocol", reviewAttestation), ct);
     }
 
     private static Task<long> ApprovedVersionIndexAsync(KernelDbContext db, ProtocolVersionId id, CancellationToken ct) =>

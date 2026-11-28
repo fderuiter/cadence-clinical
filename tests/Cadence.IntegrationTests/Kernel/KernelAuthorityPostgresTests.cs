@@ -194,8 +194,8 @@ public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresF
         _fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         var (tenant, study, _) = await NewStudyWithArtifactAsync(ct);
-        var role = await As(Platform, new DefineRole(tenant, RoleId.New(), "CRC", "Coordinator", ["observation.record"], Key(), "Roles"), ct);
-        var grant = await As(Platform, new IssueGrant(tenant, GrantId.New(), Crc, null, role.RoleId, AuthorityScope.Study(study), _fixture.Clock.UtcNow, null, false, Key(), "Grant"), ct);
+        var role = await As(Platform, new DefineRole(tenant, RoleId.New(), "CRC", "Coordinator", ["observation.record"], Key(), "Define study roles"), ct);
+        var grant = await As(Platform, new IssueGrant(tenant, GrantId.New(), Crc, null, role.RoleId, AuthorityScope.Study(study), _fixture.Clock.UtcNow, null, false, Key(), "Issue role grant"), ct);
 
         foreach (var (statement, sqlState) in new[]
         {
@@ -277,7 +277,7 @@ public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresF
         await AppointQualificationAdminAsync(tenant, ct);
         await As(Platform, new IssueGrant(tenant, GrantId.New(), Crc, "artifact.add_version", null, AuthorityScope.Study(study), _fixture.Clock.UtcNow, null, false, Key(), "Coordinator appointed"), ct);
         var requirement = await As(Admin, new DefineQualificationRequirement(
-            tenant, QualificationRequirementId.New(), "artifact.add_version", "gcp", null, AuthorityScope.Study(study), _fixture.Clock.UtcNow, null, Key(), "GCP first"), ct);
+            tenant, QualificationRequirementId.New(), "artifact.add_version", "gcp", null, AuthorityScope.Study(study), _fixture.Clock.UtcNow, null, Key(), "Require GCP training"), ct);
         Tick();
 
         var denied = await SendAs(Crc, AddVersion(tenant, artifact, "v2"), ct);
@@ -332,7 +332,7 @@ public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresF
         var (tenant, study, _) = await NewStudyWithArtifactAsync(ct);
         var ethicsApproval = ArtifactVersionId.New();
         await _scenario.OkAsync(
-            new RegisterArtifact(tenant, ArtifactId.New(), ethicsApproval, ArtifactKind.EthicsApproval, study, "IRB approval", Content("irb"), Key(), "Filed"), ct);
+            new RegisterArtifact(tenant, ArtifactId.New(), ethicsApproval, ArtifactKind.EthicsApproval, study, "IRB approval", Content("irb"), Key(), "Artifact filed"), ct);
         var record = await TrainingRecordAsync(tenant, study, ct);
         var from = _fixture.Clock.UtcNow;
 
@@ -365,7 +365,7 @@ public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresF
     {
         var version = ArtifactVersionId.New();
         await _scenario.OkAsync(
-            new RegisterArtifact(tenant, ArtifactId.New(), version, ArtifactKind.TrainingRecord, study, "Training record", Content($"training-{version}"), Key(), "Filed"), ct);
+            new RegisterArtifact(tenant, ArtifactId.New(), version, ArtifactKind.TrainingRecord, study, "Training record", Content($"training-{version}"), Key(), "Artifact filed"), ct);
         return version;
     }
 
@@ -388,7 +388,7 @@ public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresF
         var (tenant, study) = await _scenario.NewStudyAsync(ct);
         var artifact = ArtifactId.New();
         await _scenario.OkAsync(
-            new RegisterArtifact(tenant, artifact, ArtifactVersionId.New(), ArtifactKind.EthicsApproval, study, "IRB approval", Content("v1"), Key(), "Filed"), ct);
+            new RegisterArtifact(tenant, artifact, ArtifactVersionId.New(), ArtifactKind.EthicsApproval, study, "IRB approval", Content("v1"), Key(), "Artifact filed"), ct);
         return (tenant, study, artifact);
     }
 

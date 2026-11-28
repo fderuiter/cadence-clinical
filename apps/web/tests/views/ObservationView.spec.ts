@@ -1364,4 +1364,139 @@ describe("ObservationView (ADR-2620)", () => {
 
     wrapper.unmount();
   });
+
+  it("supports recording allowed missing reasons with optional detail (--REASND), excludes NotAsked from SDV states, and enforces 10-char change reasons", async () => {
+    // 1. NotAsked observation displays 'No value' SDV badge even if legacy Verified assertions exist
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValueOnce(
+      observation({
+        value: { type: "missing", reason: "NotAsked" },
+        assertions: [
+          {
+            assertion_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a999",
+            kind: "Verified",
+            target: OBSERVATION,
+            revision: 1,
+            text: null,
+            asserted_at: "2026-10-15T10:00:00Z",
+            asserted_by: "cra@sponsor.test",
+            reason_for_change: "Verified against chart",
+            retracted_at: null,
+            retracted_by: null,
+            masked: false,
+          },
+        ],
+      })
+    );
+
+    const notAskedWrapper = mount(ObservationView, {
+      props: { observationRef: OBSERVATION, embedded: true },
+      attachTo: document.body,
+    });
+    await flushPromises();
+    expect(
+      notAskedWrapper.find('[data-testid="observation-sdv-badge"]').text()
+    ).toBe("No value");
+    expect(
+      notAskedWrapper
+        .find('[data-testid="observation-sdv-edit-warning"]')
+        .exists()
+    ).toBe(false);
+    notAskedWrapper.unmount();
+
+    // 2. Correcting a committed quantity to a MissingValue with optional detail
+    vi.spyOn(kernelApi, "getObservation")
+      .mockResolvedValueOnce(observation())
+      .mockResolvedValueOnce(
+        observation({
+          ref: `${OBSERVATION}@2`,
+          value: {
+            type: "missing",
+            reason: "NotDone",
+            detail: "Arterial line removed prior to draw",
+          },
+          version: 2,
+        })
+      );
+    const correctSpy = vi
+      .spyOn(kernelApi, "correctObservation")
+      .mockResolvedValueOnce({
+        ref: `${OBSERVATION}@2`,
+        enrollment_ref: ENROLLMENT,
+        value: {
+          type: "missing",
+          reason: "NotDone",
+          detail: "Arterial line removed prior to draw",
+        },
+        version: 2,
+        revision: 2,
+      });
+
+    const wrapper = mount(ObservationView, {
+      props: { observationRef: OBSERVATION, embedded: true },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    const missingSelect = wrapper.find("#observation-missing-reason");
+    expect(missingSelect.exists()).toBe(true);
+    const optionValues = missingSelect
+      .findAll("option")
+      .map((o) => (o.element as HTMLOptionElement).value);
+    expect(optionValues).toEqual([
+      "",
+      "NotDone",
+      "Unknown",
+      "AskedButUnknown",
+      "NotApplicable",
+    ]);
+
+    // Typing a value then selecting a missing reason clears typed text and disables #observation-new-value
+    await wrapper.find("#observation-new-value").setValue("135");
+    await missingSelect.setValue("NotDone");
+    expect(
+      (wrapper.find("#observation-new-value").element as HTMLInputElement).value
+    ).toBe("");
+    expect(
+      wrapper.find("#observation-new-value").attributes("disabled")
+    ).toBeDefined();
+
+    const detailInput = wrapper.find("#observation-missing-detail");
+    expect(detailInput.exists()).toBe(true);
+    await detailInput.setValue("  Arterial line removed prior to draw  ");
+
+    await expect(wrapper.element).toBeAccessible();
+
+    // Submit form -> ReasonForChangeModal opens -> <10-char Other reason is rejected -> >=10-char reason saves
+    await wrapper.find("form.observation-correction").trigger("submit");
+    await flushPromises();
+
+    await wrapper.find("#observation-change-reason-select").setValue("Other");
+    await wrapper.find("#observation-change-reason-text").setValue("  short  ");
+    await wrapper.find("#observation-btn-save-change").trigger("click");
+    await flushPromises();
+    expect(correctSpy).not.toHaveBeenCalled();
+    expect(wrapper.find("#observation-reason-error").text()).toContain(
+      "Reason for change must be at least 10 characters"
+    );
+
+    await wrapper
+      .find("#observation-change-reason-text")
+      .setValue("Nursing flowsheet documented line removal");
+    await wrapper.find("#observation-btn-save-change").trigger("click");
+    await flushPromises();
+
+    expect(correctSpy).toHaveBeenCalledTimes(1);
+    expect(correctSpy.mock.calls[0][0]).toMatchObject({
+      value: {
+        type: "missing",
+        reason: "NotDone",
+        detail: "Arterial line removed prior to draw",
+      },
+      reason: "Nursing flowsheet documented line removal",
+    });
+    expect((missingSelect.element as HTMLSelectElement).value).toBe("");
+    expect(wrapper.find("#observation-missing-detail").exists()).toBe(false);
+
+    wrapper.unmount();
+  });
 });

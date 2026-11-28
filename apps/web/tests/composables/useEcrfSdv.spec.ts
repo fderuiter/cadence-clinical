@@ -356,4 +356,50 @@ describe("useEcrfSdv indexed verification and selection lookups", () => {
     expect(sdv.selectedSdvItems.value).toEqual([]);
     expect(sdv.isSdvSelected("DIABP")).toBe(false);
   });
+
+  it("excludes NullFlavor.NotAsked placeholders from active SDV queries and unverifiedItems (K-FACT-3)", () => {
+    const notAskedItem = makeItem({
+      item_id: "NOT_ASKED_ITEM",
+      observation_id: "obs-not-asked",
+      value: { type: "missing", reason: "NotAsked" },
+      revision: 2,
+    });
+    const notDoneItem = makeItem({
+      item_id: "NOT_DONE_ITEM",
+      observation_id: "obs-not-done",
+      value: {
+        type: "missing",
+        reason: "NotDone",
+        detail: "Participant declined orthostatic stand",
+      },
+      revision: 1,
+    });
+    const form = ref<EcrfForm | null>(
+      makeForm({
+        items: [notAskedItem, notDoneItem],
+        assertions: [
+          makeAssertion({
+            assertion_id: "a-not-asked-r1",
+            target: "observation:obs-not-asked",
+            revision: 1,
+          }),
+          makeAssertion({
+            assertion_id: "a-not-asked-r2",
+            target: "observation:obs-not-asked",
+            revision: 2,
+          }),
+        ],
+      })
+    );
+    const items = computed(() => form.value?.items ?? []);
+    const sdv = useEcrfSdv({ form, items, reload: vi.fn() });
+
+    expect(sdv.hasRecordedValue(notAskedItem)).toBe(false);
+    expect(sdv.activeVerification(notAskedItem)).toBeNull();
+    expect(sdv.needsReverification(notAskedItem)).toBe(false);
+    expect(sdv.hasRecordedValue(notDoneItem)).toBe(true);
+    expect(sdv.unverifiedItems.value.map((i) => i.item_id)).toEqual([
+      "NOT_DONE_ITEM",
+    ]);
+  });
 });

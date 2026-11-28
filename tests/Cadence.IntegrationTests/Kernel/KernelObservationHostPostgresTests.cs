@@ -413,6 +413,67 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         }
     }
 
+    [Fact(DisplayName = "HostObservation_RejectsReservedNullFlavorsAndShortReasonsWith422_AndRecordsMissingDetail")]
+    public async Task HostObservationRejectsReservedNullFlavorsAndShortReasonsWith422AndRecordsMissingDetail()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (code, _, enrollment) = await SeedAsync(grant: true, ct);
+        using var crc = Client(code, Crc);
+        var enrollmentRef = NodeRef.For(enrollment).ToString();
+        var concept = $"{ConceptId.New()}@1";
+        var observedAt = SystemClock.Instance.UtcNow.AddHours(-1);
+
+        foreach (var reserved in new[] { "Masked", "NotAsked" })
+        {
+            (await ProblemAsync(crc, "observations", "Attempt reserved null flavor", new
+            {
+                enrollment_ref = enrollmentRef,
+                concept,
+                value = new { type = "missing", reason = reserved },
+                observed_at = observedAt,
+            }, ct)).Should().Be(((HttpStatusCode)422, ObservationErrors.ValueInvalid.Code));
+        }
+
+        var recorded = await SendAsync<KernelObservationStateResponse>(crc, HttpMethod.Post, "observations", "Initial entry", new
+        {
+            enrollment_ref = enrollmentRef,
+            concept,
+            value = Systolic(126),
+            observed_at = observedAt,
+        }, HttpStatusCode.Created, ct);
+        var observation = NodeRef.Parse(recorded.Ref).Unversioned();
+
+        foreach (var reserved in new[] { "Masked", "NotAsked" })
+        {
+            (await ProblemAsync(crc, $"observations/{observation}/corrections", CorrectionReason, new
+            {
+                enrollment_ref = enrollmentRef,
+                value = new { type = "missing", reason = reserved },
+                expected_version = 1,
+            }, ct)).Should().Be(((HttpStatusCode)422, ObservationErrors.ValueInvalid.Code));
+        }
+
+        (await ProblemAsync(crc, $"observations/{observation}/corrections", "TooShort9", Correction(enrollment, 130, 1), ct))
+            .Should().Be(((HttpStatusCode)422, KernelErrors.ReasonForChangeRequired.Code));
+
+        var corrected = await SendAsync<KernelObservationStateResponse>(
+            crc,
+            HttpMethod.Post,
+            $"observations/{observation}/corrections",
+            "Subject declined repeat cuff check",
+            new
+            {
+                enrollment_ref = enrollmentRef,
+                value = new { type = "missing", reason = "NotDone", detail = "Subject declined repeat cuff" },
+                expected_version = 1,
+            },
+            HttpStatusCode.OK,
+            ct);
+        corrected.Value.Should().Be(new MissingValue(NullFlavor.NotDone, "Subject declined repeat cuff"));
+        corrected.Version.Should().Be(2);
+    }
+
     private static object Correction(EnrollmentId enrollment, decimal systolic, long expectedVersion) =>
         new { enrollment_ref = NodeRef.For(enrollment).ToString(), value = Systolic(systolic), expected_version = expectedVersion };
 
@@ -439,7 +500,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
             studySite = link.Id;
         }
 
-        var participant = await _scenario.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented"), ct);
+        var participant = await _scenario.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Participant consented"), ct);
         SubjectCode.TryFrom("OBS-001", out var subject);
         var enrollment = await _scenario.OkAsync(
             new ScreenParticipant(tenant, EnrollmentId.New(), participant, studySite, subject, Tick(), KernelProtocolScenario.Key(), "Screening visit"), ct);
@@ -449,7 +510,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
             {
                 await _scenario.OkAsync(
                     new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), capability, null, AuthorityScope.StudySite(studySite), Tick(), null, false,
-                        KernelProtocolScenario.Key(), "Appointed"),
+                        KernelProtocolScenario.Key(), "Appointed to role"),
                     ct);
             }
 

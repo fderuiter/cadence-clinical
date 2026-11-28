@@ -168,6 +168,9 @@ public sealed class KernelCommandPipeline(
         }
     }
 
+    /// <summary>Minimum trimmed character length required for <see cref="ICommand.ReasonForChange"/> (PRD-CRF-010).</summary>
+    public const int MinimumReasonLength = 10;
+
     private static KernelError? Validate(ICommand command)
     {
         if (command.TenantId.IsEmpty)
@@ -180,7 +183,10 @@ public sealed class KernelCommandPipeline(
             return KernelErrors.IdempotencyKeyRequired;
         }
 
-        return string.IsNullOrWhiteSpace(command.ReasonForChange) ? KernelErrors.ReasonForChangeRequired : null;
+        return string.IsNullOrWhiteSpace(command.ReasonForChange)
+            || command.ReasonForChange.Trim().Length < MinimumReasonLength
+                ? KernelErrors.ReasonForChangeRequired
+                : null;
     }
 
     /// <summary>

@@ -533,6 +533,62 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
         signSql.Count(sql => sql.Contains("kernel.protocol_versions", StringComparison.Ordinal)).Should().Be(1);
     }
 
+    [Fact(DisplayName = "HostForm_RejectsReservedNullFlavorsAndShortReasonsWith422_AndPersistsMissingDetail")]
+    public async Task HostFormRejectsReservedNullFlavorsAndShortReasonsWith422AndPersistsMissingDetail()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (code, enrollment, collectedAt) = await SeedAsync(ct);
+        using var crc = Client(code, Crc);
+
+        var opened = await SendAsync<FormStateResponse>(crc, HttpMethod.Post, string.Empty, "Week 12 visit performed", new
+        {
+            enrollment_id = enrollment.Value,
+            collection_spec_id = SpecId,
+            planned_activity_id = VisitId,
+            collected_at = collectedAt,
+        }, HttpStatusCode.Created, ct);
+
+        var baseline = await SendAsync<FormSavedResponse>(
+            crc, HttpMethod.Put, $"/{opened.FormId:D}/values", SaveReason, Page((Systolic, Quantity(122), 0)), HttpStatusCode.OK, ct);
+        var baselineHash = baseline.Form!.ContentHash;
+
+        foreach (var reserved in new[] { "Masked", "NotAsked" })
+        {
+            using var res = await crc.SendAsync(
+                Request(HttpMethod.Put, $"/{opened.FormId:D}/values", SaveReason, Page((Systolic, new { type = "missing", reason = reserved }, 1))),
+                ct);
+            res.StatusCode.Should().Be((HttpStatusCode)422);
+            (await ProblemCodeAsync(res, ct)).Should().Be(CollectionErrors.ValuesInvalid.Code);
+        }
+
+        foreach (var shortReason in new[] { "TooShort9", "   123456789   " })
+        {
+            using var res = await crc.SendAsync(
+                Request(HttpMethod.Put, $"/{opened.FormId:D}/values", shortReason, Page((Systolic, Quantity(130), 1))),
+                ct);
+            res.StatusCode.Should().Be((HttpStatusCode)422);
+            (await ProblemCodeAsync(res, ct)).Should().Be(KernelErrors.ReasonForChangeRequired.Code);
+        }
+
+        var unchanged = await SendAsync<FormResponse>(crc, HttpMethod.Get, $"/{opened.FormId:D}", null, null, HttpStatusCode.OK, ct);
+        unchanged.ContentHash.Should().Be(baselineHash);
+        unchanged.Items[0].Value.Should().Be(new QuantityValue(122m, "mm[Hg]"));
+        unchanged.Items[0].Revision.Should().Be(1);
+
+        var missingSaved = await SendAsync<FormSavedResponse>(
+            crc,
+            HttpMethod.Put,
+            $"/{opened.FormId:D}/values",
+            "Blood pressure cuff malfunction",
+            Page((Systolic, new { type = "missing", reason = "NotDone", detail = "Equipment cuff failure" }, 1)),
+            HttpStatusCode.OK,
+            ct);
+        missingSaved.Form!.ContentHash.Should().NotBe(baselineHash);
+        missingSaved.Form.Items[0].Value.Should().Be(new MissingValue(NullFlavor.NotDone, "Equipment cuff failure"));
+        missingSaved.Form.Items[0].Revision.Should().Be(2);
+    }
+
     private static object Page(params (string Item, object Value, int ExpectedRevision)[] values) =>
         new { values = values.Select(v => new { item_id = v.Item, value = v.Value, expected_revision = v.ExpectedRevision }).ToArray() };
 
@@ -557,7 +613,7 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
         {
             await _scenario.Protocol.OkAsync(
                 new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), capability, null, AuthorityScope.StudySite(studySite), _scenario.Tick(), null, false,
-                    KernelProtocolScenario.Key(), "Appointed"),
+                    KernelProtocolScenario.Key(), "Appointed to role"),
                 ct);
         }
 

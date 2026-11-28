@@ -34,7 +34,7 @@ namespace Cadence.UnitTests.Kernel;
 [Trait("Category", "Unit")]
 public sealed class KernelAuthorizationTests
 {
-    private const string Reason = "Unit test";
+    private const string Reason = "Unit test reason";
 
     private static readonly Actor Monitor = Actor.Person("00u-monitor");
 

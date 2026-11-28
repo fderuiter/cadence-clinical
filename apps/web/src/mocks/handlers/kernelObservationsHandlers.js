@@ -31,13 +31,28 @@ export function createKernelObservationsHandlers(store) {
     http.post(
       "*/api/v1/kernel/observations/:observationRef/corrections",
       async ({ params, request }) => {
-        const body = await readJsonBody(request);
         const reason = decodeReasonHeader(request);
+        if (!reason || reason.trim().length < 10) {
+          return HttpResponse.json(
+            {
+              title: "Reason for change required",
+              status: 422,
+              code: "K.Command.ReasonForChangeRequired",
+              detail:
+                "X-Change-Reason must contain at least 10 non-whitespace characters.",
+            },
+            { status: 422 }
+          );
+        }
+        const body = await readJsonBody(request);
         const result = store.correctObservation(
           decodeURIComponent(String(params.observationRef)),
           body,
           reason
         );
+        if (result.invalid) {
+          return HttpResponse.json(result.problem, { status: 422 });
+        }
         if (result.conflict) {
           return HttpResponse.json(result.problem, { status: 409 });
         }

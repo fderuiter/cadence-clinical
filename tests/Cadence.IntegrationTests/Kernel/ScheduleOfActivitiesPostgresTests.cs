@@ -66,11 +66,11 @@ public sealed class ScheduleOfActivitiesPostgresTests(KernelPostgresFixture fixt
         var cardio = await CardioAsync(tenant, ct);
         var parent = ProtocolVersionId.New();
         (await _scenario.CreateDraftAsync(tenant, study, parent, ct, ProtocolDesignDocument.Write(cardio))).IsSuccess.Should().BeTrue();
-        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, parent, KernelProtocolScenario.Key(), "Ready"), ct);
+        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, parent, KernelProtocolScenario.Key(), "Ready for review"), ct);
         var attestation = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
-        await _scenario.OkAsync(new ApproveProtocolVersion(tenant, parent, attestation, KernelProtocolScenario.Key(), "Approved"), ct);
+        await _scenario.OkAsync(new ApproveProtocolVersion(tenant, parent, attestation, KernelProtocolScenario.Key(), "Approved protocol"), ct);
         var amendment = ProtocolVersionId.New();
-        await _scenario.OkAsync(new ForkProtocolVersion(tenant, parent, amendment, KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), "Amendment"), ct);
+        await _scenario.OkAsync(new ForkProtocolVersion(tenant, parent, amendment, KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), "Protocol amendment"), ct);
         await _scenario.OkAsync(new ReviseProtocolDraft(tenant, amendment, ProtocolDesignDocument.Write(Amended(cardio)), null, KernelProtocolScenario.Key(), "Move week 8"), ct);
 
         var impact = await fixture.AmendmentImpact.ComputeAsync(tenant, fixture.CurrentActor.Actor!, amendment, cancellationToken: ct);

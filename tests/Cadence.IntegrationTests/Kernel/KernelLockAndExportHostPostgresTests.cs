@@ -2189,18 +2189,18 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         var protoSig = await _scenario.Protocol.OkAsync(
             _scenario.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, new AttestationTarget(AttestationTarget.ProtocolVersionKind, version.Value, inReview.ContentHash!)),
             ct);
-        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, protoSig, KernelProtocolScenario.Key(), "Approved"), ct);
+        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, protoSig, KernelProtocolScenario.Key(), "Approved protocol"), ct);
 
         var ethicsBytes = Encoding.UTF8.GetBytes($"ethics-{Guid.NewGuid():N}");
         var ethicsVer = ArtifactVersionId.New();
         await _scenario.Protocol.OkAsync(
             new RegisterArtifact(tenant, ArtifactId.New(), ethicsVer, ArtifactKind.EthicsApproval, study, "Ethics approval",
-                new ArtifactContent(ContentHash.OfBytes(ethicsBytes), ethicsBytes.Length, "application/pdf", "blob://ethics/1"), KernelProtocolScenario.Key(), "Ethics"),
+                new ArtifactContent(ContentHash.OfBytes(ethicsBytes), ethicsBytes.Length, "application/pdf", "blob://ethics/1"), KernelProtocolScenario.Key(), "Register ethics approval"),
             ct);
         var effId = EffectivityId.New();
-        await _scenario.Protocol.OkAsync(new DeclareEffectivity(tenant, effId, version, EffectivityScope.Study(), originAt, KernelProtocolScenario.Key(), "Declare"), ct);
+        await _scenario.Protocol.OkAsync(new DeclareEffectivity(tenant, effId, version, EffectivityScope.Study(), originAt, KernelProtocolScenario.Key(), "Declare effectivity"), ct);
         Tick();
-        await _scenario.Protocol.OkAsync(new ChangeEffectivityStatus(tenant, effId, EffectivityStatus.Effective, originAt.AddMinutes(1), [ethicsVer], KernelProtocolScenario.Key(), "Effective"), ct);
+        await _scenario.Protocol.OkAsync(new ChangeEffectivityStatus(tenant, effId, EffectivityStatus.Effective, originAt.AddMinutes(1), [ethicsVer], KernelProtocolScenario.Key(), "Made effective"), ct);
 
         StudySiteId site;
         await using (var db = fixture.CreateContext(tenant))
@@ -2213,7 +2213,7 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         }
 
         // 1. Active enrolled participant (enrolled 30 days ago): Day 1 opened/verified/signed; Day 28 unopened & overdue!
-        var partActive = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Active"), ct);
+        var partActive = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Register active subject"), ct);
         var screenedActive = await _scenario.Protocol.OkAsync(
             new ScreenParticipant(tenant, EnrollmentId.New(), partActive, site, SubjectCode.From("SUBJ-ACT"), baseTime.AddDays(-31), KernelProtocolScenario.Key(), "Screened active"), ct);
         Tick();
@@ -2234,7 +2234,7 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             new ChangeEnrollmentStatus(tenant, screenedFailed.EnrollmentId, EnrollmentStatus.ScreenFailed, baseTime.AddDays(-29), KernelProtocolScenario.Key(), "Failed screening"), ct);
 
         // 3. Withdrawn participant (enrolled 30 days ago, Day 1 completed/verified/signed, withdrawn 10 days after enrollment — before Day 28 target!):
-        var partWithdrawn = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Withdrawn"), ct);
+        var partWithdrawn = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Register test subject"), ct);
         var screenedWithdrawn = await _scenario.Protocol.OkAsync(
             new ScreenParticipant(tenant, EnrollmentId.New(), partWithdrawn, site, SubjectCode.From("SUBJ-WD"), baseTime.AddDays(-31), KernelProtocolScenario.Key(), "Screened WD"), ct);
         Tick();
@@ -2242,7 +2242,7 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             new ChangeEnrollmentStatus(tenant, screenedWithdrawn.EnrollmentId, EnrollmentStatus.Enrolled, baseTime.AddDays(-30), KernelProtocolScenario.Key(), "Enrolled WD"), ct);
         var subjWithdrawn = new KernelObservationScenario.Subject(tenant, study, site, enrolledWithdrawn.EnrollmentId);
         var day1Withdrawn = await _scenario.Protocol.OkAsync(
-            new OpenCollectionInstance(tenant, CollectionInstanceId.New(), enrolledWithdrawn.EnrollmentId, SpecId, "act.day1", baseTime.AddDays(-30).AddHours(1), KernelProtocolScenario.Key(), "Day 1 WD"), ct);
+            new OpenCollectionInstance(tenant, CollectionInstanceId.New(), enrolledWithdrawn.EnrollmentId, SpecId, "act.day1", baseTime.AddDays(-30).AddHours(1), KernelProtocolScenario.Key(), "Open Day 1 visit"), ct);
         await _scenario.Protocol.OkAsync(Save(new Form(subjWithdrawn, version, day1Withdrawn.CollectionInstanceId), Value(Systolic, Mmhg(119))), ct);
         await _scenario.VerifyAndSignAsync(new Form(subjWithdrawn, version, day1Withdrawn.CollectionInstanceId), ct);
         var wdSig = await _scenario.Protocol.OkAsync(

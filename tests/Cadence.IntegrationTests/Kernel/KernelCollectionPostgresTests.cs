@@ -143,9 +143,9 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
         };
         var version = ProtocolVersionId.New();
         (await _forms.Protocol.CreateDraftAsync(tenant, study, version, ct, ProtocolDesignDocument.Write(design))).IsSuccess.Should().BeTrue();
-        var inReview = await _forms.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready"), ct);
+        var inReview = await _forms.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready for review"), ct);
         var signature = await _forms.Protocol.OkAsync(_forms.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
-        await _forms.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, signature, KernelProtocolScenario.Key(), "Approved"), ct);
+        await _forms.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, signature, KernelProtocolScenario.Key(), "Approved protocol"), ct);
         var effectivity = EffectivityId.New();
         await _forms.Protocol.OkAsync(new DeclareEffectivity(tenant, effectivity, version, EffectivityScope.Study(), Tick(), KernelProtocolScenario.Key(), "Study-wide"), ct);
         var ethicsBytes = System.Text.Encoding.UTF8.GetBytes($"ethics-{Guid.NewGuid():N}");
@@ -160,10 +160,10 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
                 "Ethics approval",
                 new ArtifactContent(ContentHash.OfBytes(ethicsBytes), ethicsBytes.Length, "application/pdf", "blob://ethics/timing"),
                 KernelProtocolScenario.Key(),
-                "Filed"),
+                "Artifact filed"),
             ct);
         await _forms.Protocol.OkAsync(
-            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, Tick(), [ethicsVersion], KernelProtocolScenario.Key(), "Effective"),
+            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, Tick(), [ethicsVersion], KernelProtocolScenario.Key(), "Made effective"),
             ct);
 
         var studySite = await _forms.Observations.AddStudySiteAsync(tenant, study, ct);

@@ -109,7 +109,7 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
             Edge(tenant, approved, otherEnrollment, LineageEdgeKind.GovernedBy));
         await _scenario.OkAsync(
             new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), "observation.record", null, AuthorityScope.StudySite(ownSite), Tick(), null, false,
-                KernelProtocolScenario.Key(), "Appointed"),
+                KernelProtocolScenario.Key(), "Appointed to role"),
             ct);
         Tick();
         using var crc = Client(code, Crc);
@@ -167,7 +167,7 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
         var other = NodeRef.For(await ScreenAsync(tenant, otherSite, "ACT-002", ct));
         await _scenario.OkAsync(
             new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), "observation.record", null, AuthorityScope.StudySite(ownSite), Tick(), null, false,
-                KernelProtocolScenario.Key(), "Appointed"),
+                KernelProtocolScenario.Key(), "Appointed to role"),
             ct);
         using var crc = Client(code, Crc);
         using var stranger = Client(code, Stranger);
@@ -889,9 +889,9 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
     {
         var id = ProtocolVersionId.New();
         (await _scenario.CreateDraftAsync(tenant, study, id, ct, ProtocolDesignDocument.Write(Design))).IsSuccess.Should().BeTrue();
-        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Ready"), ct);
+        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Ready for review"), ct);
         var attestation = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
-        await _scenario.OkAsync(new ApproveProtocolVersion(tenant, id, attestation, KernelProtocolScenario.Key(), "Approved"), ct);
+        await _scenario.OkAsync(new ApproveProtocolVersion(tenant, id, attestation, KernelProtocolScenario.Key(), "Approved protocol"), ct);
         return id;
     }
 
@@ -902,7 +902,7 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
         {
             Objectives = [Design.Objectives[0] with { Text = "Show that the drug lowers blood pressure." }],
         });
-        await _scenario.OkAsync(new ForkProtocolVersion(tenant, parent, id, KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), "Amendment"), ct);
+        await _scenario.OkAsync(new ForkProtocolVersion(tenant, parent, id, KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), "Protocol amendment"), ct);
         await _scenario.OkAsync(new ReviseProtocolDraft(tenant, id, reworded, null, KernelProtocolScenario.Key(), "Reword the objective"), ct);
         return id;
     }
@@ -920,7 +920,7 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
 
     private async Task<EnrollmentId> ScreenAsync(TenantId tenant, StudySiteId studySite, string code, CancellationToken ct)
     {
-        var participant = await _scenario.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented"), ct);
+        var participant = await _scenario.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Participant consented"), ct);
         SubjectCode.TryFrom(code, out var subjectCode);
         var enrollment = await _scenario.OkAsync(
             new ScreenParticipant(tenant, EnrollmentId.New(), participant, studySite, subjectCode, Tick(), KernelProtocolScenario.Key(), "Screening visit"), ct);

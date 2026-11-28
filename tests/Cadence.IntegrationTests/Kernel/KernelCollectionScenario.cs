@@ -101,9 +101,9 @@ internal sealed class KernelCollectionScenario(KernelPostgresFixture fixture)
         var version = ProtocolVersionId.New();
         var draft = await Protocol.CreateDraftAsync(tenant, study, version, ct, ProtocolDesignDocument.Write(design));
         draft.IsSuccess.Should().BeTrue(draft.Error?.Message);
-        var inReview = await Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready"), ct);
+        var inReview = await Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready for review"), ct);
         var signature = await Protocol.OkAsync(Protocol.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
-        await Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, signature, KernelProtocolScenario.Key(), "Approved"), ct);
+        await Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, signature, KernelProtocolScenario.Key(), "Approved protocol"), ct);
 
         var effectivity = EffectivityId.New();
         await Protocol.OkAsync(
@@ -162,9 +162,9 @@ internal sealed class KernelCollectionScenario(KernelPostgresFixture fixture)
         var id = ProtocolVersionId.New();
         var draft = await Protocol.CreateDraftAsync(tenant, study, id, ct, ProtocolDesignDocument.Write(design));
         draft.IsSuccess.Should().BeTrue(draft.Error?.Message);
-        var inReview = await Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Ready"), ct);
+        var inReview = await Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Ready for review"), ct);
         var signature = await Protocol.OkAsync(Protocol.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
-        await Protocol.OkAsync(new ApproveProtocolVersion(tenant, id, signature, KernelProtocolScenario.Key(), "Approved"), ct);
+        await Protocol.OkAsync(new ApproveProtocolVersion(tenant, id, signature, KernelProtocolScenario.Key(), "Approved protocol"), ct);
 
         var effectivity = EffectivityId.New();
         await Protocol.OkAsync(

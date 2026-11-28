@@ -159,6 +159,18 @@ public sealed class ObservationValueTests
         sysbp.Admits(new QuantityValue(16m, "kPa")).Should().Contain("collected in mm[Hg]");
         sysbp.Admits(new TextValue("120")).Should().Contain("takes a Quantity value");
         sysbp.Admits(new MissingValue(NullFlavor.NotDone, "Cuff unavailable")).Should().BeNull();
+        sysbp.Admits(new MissingValue(NullFlavor.Unknown)).Should().BeNull();
+        sysbp.Admits(new MissingValue(NullFlavor.AskedButUnknown)).Should().BeNull();
+        sysbp.Admits(new MissingValue(NullFlavor.NotApplicable)).Should().BeNull();
+        sysbp.Admits(new MissingValue(NullFlavor.Masked)).Should().Contain("Masked");
+        sysbp.Admits(new MissingValue(NullFlavor.NotAsked)).Should().Contain("NotAsked");
+        ObservationValue.CallerProblemOf(new MissingValue(NullFlavor.Masked)).Should().Contain("Masked");
+        ObservationValue.CallerProblemOf(new MissingValue(NullFlavor.NotAsked)).Should().Contain("NotAsked");
+        ObservationValue.ProblemOf(new MissingValue(NullFlavor.NotAsked)).Should().BeNull("internal unasked placeholders remain valid kernel facts");
+        ObservationValue.ProblemOf(new MissingValue(NullFlavor.Masked)).Should().BeNull("blinded read projections remain valid wire values");
+        ObservationValue.IsCallerAdmissibleNullFlavor(NullFlavor.NotDone).Should().BeTrue();
+        ObservationValue.IsCallerAdmissibleNullFlavor(NullFlavor.Masked).Should().BeFalse();
+        ObservationValue.IsCallerAdmissibleNullFlavor(NullFlavor.NotAsked).Should().BeFalse();
         sysbp.Admits(new QuantityValue(120m, "mm Hg")).Should().Contain("not a UCUM unit");
         sysbp.Admits(null).Should().Contain("required");
 

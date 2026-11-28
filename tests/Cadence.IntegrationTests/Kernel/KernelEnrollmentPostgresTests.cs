@@ -116,7 +116,7 @@ public sealed class KernelEnrollmentPostgresTests(KernelPostgresFixture fixture)
 
         var enrolledAt = Tick();
         var results = await Task.WhenAll(enrollments.Select(id => fixture.Sender.SendAsync(
-            new ChangeEnrollmentStatus(tenant, id, EnrollmentStatus.Enrolled, enrolledAt, KernelProtocolScenario.Key(), "Eligible"),
+            new ChangeEnrollmentStatus(tenant, id, EnrollmentStatus.Enrolled, enrolledAt, KernelProtocolScenario.Key(), "Participant eligible"),
             cancellationToken: ct)));
 
         results.Should().OnlyContain(r => r.IsSuccess);
@@ -571,7 +571,7 @@ public sealed class KernelEnrollmentPostgresTests(KernelPostgresFixture fixture)
     }
 
     private Task<ParticipantId> RegisterAsync(TenantId tenant, CancellationToken ct) =>
-        _scenario.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented"), ct);
+        _scenario.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Participant consented"), ct);
 
     private async Task<(ParticipantId Participant, EnrollmentId Enrollment)> ScreenAsync(
         TenantId tenant, StudySiteId studySite, string code, DateTimeOffset screenedAt, CancellationToken ct)

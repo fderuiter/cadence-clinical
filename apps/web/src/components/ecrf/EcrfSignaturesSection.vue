@@ -31,7 +31,12 @@
             data-testid="ecrf-signature-superseded"
             >Superseded by a later correction</span
           >
-          <span v-else class="ecrf-signature-state">Current</span>
+          <span
+            v-else
+            class="ecrf-signature-state"
+            data-testid="ecrf-signature-current"
+            >Current</span
+          >
         </div>
         <div
           v-if="signature.superseded && signature.signed_values?.length"

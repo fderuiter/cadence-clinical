@@ -231,9 +231,9 @@ public sealed class ExecutionFormSignatureHostPostgresTests(ExecutionFormModuleP
         var version = ProtocolVersionId.New();
         var draft = await _scenario.Protocol.CreateDraftAsync(tenant, study, version, ct, Cadence.Kernel.Protocol.Design.ProtocolDesignDocument.Write(design));
         draft.IsSuccess.Should().BeTrue(draft.Error?.Message);
-        var inReview = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready"), ct);
+        var inReview = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready for review"), ct);
         var protocolSig = await _scenario.Protocol.OkAsync(_scenario.Protocol.AttestCommand(tenant, Cadence.Kernel.Trust.AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
-        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, protocolSig, KernelProtocolScenario.Key(), "Approved"), ct);
+        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, protocolSig, KernelProtocolScenario.Key(), "Approved protocol"), ct);
 
         var effectivity = EffectivityId.New();
         await _scenario.Protocol.OkAsync(
@@ -253,7 +253,7 @@ public sealed class ExecutionFormSignatureHostPostgresTests(ExecutionFormModuleP
                 "Filed approval"),
             ct);
         await _scenario.Protocol.OkAsync(
-            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, _scenario.Tick(), [ethicsVersion], KernelProtocolScenario.Key(), "Effective"),
+            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, _scenario.Tick(), [ethicsVersion], KernelProtocolScenario.Key(), "Made effective"),
             ct);
 
         var studySite = await _scenario.Observations.AddStudySiteAsync(tenant, study, ct);
@@ -268,7 +268,7 @@ public sealed class ExecutionFormSignatureHostPostgresTests(ExecutionFormModuleP
         {
             await _scenario.Protocol.OkAsync(
                 new IssueGrant(tenant, GrantId.New(), Actor.Person(person), capability, null, AuthorityScope.StudySite(studySite), _scenario.Tick(), null, false,
-                    KernelProtocolScenario.Key(), "Appointed"),
+                    KernelProtocolScenario.Key(), "Appointed to role"),
                 ct);
         }
 
@@ -440,7 +440,7 @@ public sealed class ExecutionFormSignatureHostPostgresTests(ExecutionFormModuleP
         {
             await _scenario.Protocol.OkAsync(
                 new IssueGrant(tenant, GrantId.New(), Actor.Person(person), capability, null, AuthorityScope.StudySite(studySite), _scenario.Tick(), null, false,
-                    KernelProtocolScenario.Key(), "Appointed"),
+                    KernelProtocolScenario.Key(), "Appointed to role"),
                 ct);
         }
 

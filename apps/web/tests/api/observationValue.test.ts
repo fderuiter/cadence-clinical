@@ -254,11 +254,44 @@ describe("parseFormEntry (ADR-2622)", () => {
     expect(isUnrecordedValue({ type: "missing", reason: "NotAsked" })).toBe(
       true
     );
+    expect(
+      isUnrecordedValue({
+        type: "missing",
+        reason: "not_asked" as unknown as "NotAsked",
+      })
+    ).toBe(true);
     expect(isUnrecordedValue({ type: "missing", reason: "NotDone" })).toBe(
       false
     );
     expect(
       isUnrecordedValue({ type: "quantity", value: 120, unit: "mm[Hg]" })
+    ).toBe(false);
+  });
+
+  it("compares missing observation detail canonically (K-FACT-3)", () => {
+    expect(
+      sameObservationValue(
+        { type: "missing", reason: "NotDone", detail: "   " },
+        { type: "missing", reason: "NotDone" }
+      )
+    ).toBe(true);
+    expect(
+      sameObservationValue(
+        { type: "missing", reason: "NotDone", detail: "Patient refused" },
+        { type: "missing", reason: "NotDone" }
+      )
+    ).toBe(false);
+    expect(
+      sameObservationValue(
+        { type: "missing", reason: "NotDone", detail: "Patient refused" },
+        { type: "missing", reason: "NotDone", detail: "  Patient refused  " }
+      )
+    ).toBe(true);
+    expect(
+      sameObservationValue(
+        { type: "missing", reason: "NotDone", detail: "Patient refused" },
+        { type: "missing", reason: "NotDone", detail: "Equipment malfunction" }
+      )
     ).toBe(false);
   });
 });

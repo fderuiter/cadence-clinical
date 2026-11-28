@@ -155,7 +155,7 @@ public sealed class KernelProposalHostPostgresTests(KernelPostgresFixture fixtur
             ct);
         await _scenario.OkAsync(
             new IssueGrant(tenant, GrantId.New(), Actor.Person(Reviewer), "proposal.reject", null, AuthorityScope.Study(study), Tick(), null, false,
-                KernelProtocolScenario.Key(), "Appointed"),
+                KernelProtocolScenario.Key(), "Appointed to role"),
             ct);
 
         var proposal = ProposalId.New();

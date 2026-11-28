@@ -41,7 +41,7 @@ public sealed class ModuleAuthorizationTests
     {
         var ct = TestContext.Current.CancellationToken;
         var study = StudyId.New();
-        var command = new AnnotateStudy(TenantId.New(), study, "key-1", "Unit test");
+        var command = new AnnotateStudy(TenantId.New(), study, "key-1", "Unit test reason");
         var registered = new RecordingEvaluator();
         var unregistered = new RecordingEvaluator();
 

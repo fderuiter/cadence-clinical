@@ -801,7 +801,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
     {
         var grant = GrantId.New();
         await _scenario.OkAsync(
-            new IssueGrant(tenant, grant, grantee, "observation.record", null, scope, fixture.Clock.UtcNow, null, withGrantOption, KernelProtocolScenario.Key(), "Appointed"),
+            new IssueGrant(tenant, grant, grantee, "observation.record", null, scope, fixture.Clock.UtcNow, null, withGrantOption, KernelProtocolScenario.Key(), "Appointed to role"),
             ct);
         return grant;
     }
@@ -842,7 +842,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
 
         var countryEffectivity = EffectivityId.New();
         await _scenario.OkAsync(
-            new DeclareEffectivity(tenant, countryEffectivity, protocolVersionA, EffectivityScope.InCountry("US"), Tick(), KernelProtocolScenario.Key(), "US filing"),
+            new DeclareEffectivity(tenant, countryEffectivity, protocolVersionA, EffectivityScope.InCountry("US"), Tick(), KernelProtocolScenario.Key(), "US regulatory filing"),
             ct);
         var siteEffectivity = EffectivityId.New();
         await _scenario.OkAsync(
@@ -858,7 +858,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
 
         var orgRequirement = QualificationRequirementId.New();
         await _scenario.OkAsync(
-            new DefineQualificationRequirement(tenant, orgRequirement, "observation.record", "gcp", null, AuthorityScope.Organization(sponsor), Tick(), null, KernelProtocolScenario.Key(), "Org GCP"),
+            new DefineQualificationRequirement(tenant, orgRequirement, "observation.record", "gcp", null, AuthorityScope.Organization(sponsor), Tick(), null, KernelProtocolScenario.Key(), "Organization GCP rule"),
             ct);
         var studyRequirement = QualificationRequirementId.New();
         await _scenario.OkAsync(
@@ -866,11 +866,11 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             ct);
         var countryRequirement = QualificationRequirementId.New();
         await _scenario.OkAsync(
-            new DefineQualificationRequirement(tenant, countryRequirement, "observation.record", "us_reg", null, AuthorityScope.StudyCountry(studyA, "US"), Tick(), null, KernelProtocolScenario.Key(), "US reg"),
+            new DefineQualificationRequirement(tenant, countryRequirement, "observation.record", "us_reg", null, AuthorityScope.StudyCountry(studyA, "US"), Tick(), null, KernelProtocolScenario.Key(), "US regulatory rule"),
             ct);
         var siteRequirement = QualificationRequirementId.New();
         await _scenario.OkAsync(
-            new DefineQualificationRequirement(tenant, siteRequirement, "observation.record", "site_sop", null, AuthorityScope.StudySite(bostonSite), Tick(), null, KernelProtocolScenario.Key(), "Site SOP"),
+            new DefineQualificationRequirement(tenant, siteRequirement, "observation.record", "site_sop", null, AuthorityScope.StudySite(bostonSite), Tick(), null, KernelProtocolScenario.Key(), "Require site SOP"),
             ct);
 
         // Site-level and study-level lock assertions:
@@ -1133,7 +1133,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
         var participant = await _scenario.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Registered"), ct);
         SubjectCode.TryFrom(code, out var subjectCode);
         var enrollment = await _scenario.OkAsync(
-            new ScreenParticipant(tenant, EnrollmentId.New(), participant, studySite, subjectCode, Tick(), KernelProtocolScenario.Key(), "Screening"),
+            new ScreenParticipant(tenant, EnrollmentId.New(), participant, studySite, subjectCode, Tick(), KernelProtocolScenario.Key(), "Participant screening"),
             ct);
         return (participant, enrollment.EnrollmentId);
     }
@@ -1189,7 +1189,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Randomization Arm", "Blinded treatment allocation.", KernelProtocolScenario.Key(), "Define Arm"),
             ct);
         var amendedBlindedConcept = await forms.Protocol.OkAsync(
-            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Investigational Product Allocation", "Masked kit assignment.", KernelProtocolScenario.Key(), "Define IP"),
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Investigational Product Allocation", "Masked kit assignment.", KernelProtocolScenario.Key(), "Define IP concept"),
             ct);
         var customTagConcept = await forms.Protocol.OkAsync(
             new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Clinic Visit Note", "Routine clinic note.", KernelProtocolScenario.Key(), "Define Note"),
@@ -1230,7 +1230,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
 
         var version1 = ProtocolVersionId.New();
         (await forms.Protocol.CreateDraftAsync(tenant, study, version1, ct, v1Json)).IsSuccess.Should().BeTrue();
-        var v1Review = await forms.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version1, KernelProtocolScenario.Key(), "Submit v1"), ct);
+        var v1Review = await forms.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version1, KernelProtocolScenario.Key(), "Submit protocol v1"), ct);
         var v1Sig = await forms.Protocol.OkAsync(forms.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(v1Review)), ct);
         await forms.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version1, v1Sig, KernelProtocolScenario.Key(), "Approve v1"), ct);
 
@@ -1250,7 +1250,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
                 KernelProtocolScenario.Key(),
                 "IRB approval"),
             ct);
-        await forms.Protocol.OkAsync(new ChangeEffectivityStatus(tenant, eff, EffectivityStatus.Effective, Tick(), [ethics], KernelProtocolScenario.Key(), "Effective"), ct);
+        await forms.Protocol.OkAsync(new ChangeEffectivityStatus(tenant, eff, EffectivityStatus.Effective, Tick(), [ethics], KernelProtocolScenario.Key(), "Made effective"), ct);
 
         // Fork protocol v2 adding a neutral-named spec/item whose Concept metadata is blinded ("Investigational Product Allocation").
         var designV2 = designV1 with
@@ -1286,10 +1286,10 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
                     ["CollectionSpecs"],
                     TransitionPolicy.Automatic),
                 KernelProtocolScenario.Key(),
-                "Fork v2"),
+                "Fork protocol v2"),
             ct);
         await forms.Protocol.OkAsync(
-            new ReviseProtocolDraft(tenant, version2, v2Json, null, KernelProtocolScenario.Key(), "Revise v2"),
+            new ReviseProtocolDraft(tenant, version2, v2Json, null, KernelProtocolScenario.Key(), "Revise protocol v2"),
             ct);
 
         var (bostonSite, _) = await AddStudySiteAsync(tenant, study, "US", ct);
@@ -1323,11 +1323,29 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             ct);
         var dispenseObs1 = savedDispense1.Values.Single().ObservationId;
 
-        await forms.Protocol.OkAsync(
-            KernelCollectionScenario.Save(
-                new KernelCollectionScenario.Form(subj1, version1, ancillaryForm1),
-                new CollectedValue("aux_note", new MissingValue(NullFlavor.Masked), 0)),
-            ct);
+        await using (var adminDb = fixture.CreateAdminContext())
+        {
+            using var writes = adminDb.PermitPipelineWrites();
+            var ancillaryInstance = await adminDb.CollectionInstances
+                .Include(c => c.Members)
+                .SingleAsync(c => c.Id == ancillaryForm1, ct);
+            var maskedSiblingObs = Observation.Record(
+                ObservationId.New(),
+                ancillaryInstance.TenantId,
+                ancillaryInstance.EnrollmentId,
+                ancillaryInstance.ParticipantId,
+                ancillaryInstance.StudyId,
+                customTagConcept,
+                new MissingValue(NullFlavor.Masked),
+                ancillaryInstance.CollectedAt,
+                "Persisted masked sibling fixture",
+                KernelPostgresFixture.ActorId,
+                Tick()).Value!;
+            adminDb.Add(maskedSiblingObs);
+            ancillaryInstance.Join("aux_note", maskedSiblingObs.Id, Tick());
+            ancillaryInstance.Saved(Tick());
+            await adminDb.SaveChangesAsync(ct);
+        }
 
         var savedVitals2 = await forms.Protocol.OkAsync(
             KernelCollectionScenario.Save(
@@ -1487,7 +1505,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
         await IssueGrantAsync(tenant, tenantMonitor, AuthorityScope.Tenant(), ct);
         await IssueGrantAsync(tenant, unblindedPharm, AuthorityScope.StudySite(bostonSite), ct);
         await _scenario.OkAsync(
-            new IssueGrant(tenant, GrantId.New(), unblindedPharm, "enrollment.unblind", null, AuthorityScope.StudySite(bostonSite), fixture.Clock.UtcNow, null, false, KernelProtocolScenario.Key(), "Unblind"),
+            new IssueGrant(tenant, GrantId.New(), unblindedPharm, "enrollment.unblind", null, AuthorityScope.StudySite(bostonSite), fixture.Clock.UtcNow, null, false, KernelProtocolScenario.Key(), "Grant unblind access"),
             ct);
         await IssueGrantAsync(tenant, blindedBostonCrc, AuthorityScope.StudySite(bostonSite), ct);
         Tick();
@@ -1532,7 +1550,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic Blood Pressure", "Resting arterial systolic pressure.", KernelProtocolScenario.Key(), "Define SBP"),
             ct);
         var hrConcept = await forms.Protocol.OkAsync(
-            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Heart Rate", "Resting ventricular rate.", KernelProtocolScenario.Key(), "Define HR"),
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Heart Rate", "Resting ventricular rate.", KernelProtocolScenario.Key(), "Define HR concept"),
             ct);
         var armConcept = await forms.Protocol.OkAsync(
             new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Randomization Arm", "Blinded treatment arm allocation.", KernelProtocolScenario.Key(), "Define Arm"),
@@ -1630,7 +1648,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
                 KernelProtocolScenario.Key(),
                 "Central IRB"),
             ct);
-        await forms.Protocol.OkAsync(new ChangeEffectivityStatus(tenant, eff, EffectivityStatus.Effective, Tick(), [ethics], KernelProtocolScenario.Key(), "Effective"), ct);
+        await forms.Protocol.OkAsync(new ChangeEffectivityStatus(tenant, eff, EffectivityStatus.Effective, Tick(), [ethics], KernelProtocolScenario.Key(), "Made effective"), ct);
 
         var (bostonSite, _) = await AddStudySiteAsync(tenant, study, "US", ct);
 

@@ -947,7 +947,7 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
         // Provision a blinded study in the workspace tenant with a cross-form Error rule referencing RAND.TRT_ARM.
         var (_, blindedStudy) = await _scenario.Protocol.NewStudyAsync(seed.Tenant, ct);
         var sbpConcept = await _scenario.Protocol.OkAsync(
-            new DefineConcept(seed.Tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic blood pressure.", KernelProtocolScenario.Key(), "Concept"),
+            new DefineConcept(seed.Tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic blood pressure.", KernelProtocolScenario.Key(), "Define concept"),
             ct);
         var armConcept = await _scenario.Protocol.OkAsync(
             new DefineConcept(seed.Tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Assigned arm (randomization_treatment_assignment)", "Blinded randomization allocation.", KernelProtocolScenario.Key(), "Blinded concept"),
@@ -978,18 +978,18 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
         var versionId = ProtocolVersionId.New();
         var draft = await _scenario.Protocol.CreateDraftAsync(seed.Tenant, blindedStudy, versionId, ct, ProtocolDesignDocument.Write(blindedDesign));
         draft.IsSuccess.Should().BeTrue(draft.Error?.Message);
-        var submitted = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(seed.Tenant, versionId, KernelProtocolScenario.Key(), "Submit"), ct);
+        var submitted = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(seed.Tenant, versionId, KernelProtocolScenario.Key(), "Submit for review"), ct);
         var approvalSig = await _scenario.Protocol.OkAsync(_scenario.Protocol.AttestCommand(seed.Tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(submitted)), ct);
-        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(seed.Tenant, versionId, approvalSig, KernelProtocolScenario.Key(), "Approve"), ct);
+        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(seed.Tenant, versionId, approvalSig, KernelProtocolScenario.Key(), "Approve protocol"), ct);
 
         var effectivity = EffectivityId.New();
-        await _scenario.Protocol.OkAsync(new DeclareEffectivity(seed.Tenant, effectivity, versionId, EffectivityScope.Study(), _scenario.Tick(), KernelProtocolScenario.Key(), "Declare"), ct);
+        await _scenario.Protocol.OkAsync(new DeclareEffectivity(seed.Tenant, effectivity, versionId, EffectivityScope.Study(), _scenario.Tick(), KernelProtocolScenario.Key(), "Declare effectivity"), ct);
         var irbBytes = Encoding.UTF8.GetBytes($"irb-blind-{Guid.NewGuid():N}");
         var irbArtifact = ArtifactVersionId.New();
         await _scenario.Protocol.OkAsync(
-            new RegisterArtifact(seed.Tenant, ArtifactId.New(), irbArtifact, ArtifactKind.EthicsApproval, blindedStudy, "IRB approval", new ArtifactContent(ContentHash.OfBytes(irbBytes), irbBytes.Length, "application/pdf", "blob://irb/blind.pdf"), KernelProtocolScenario.Key(), "Register"),
+            new RegisterArtifact(seed.Tenant, ArtifactId.New(), irbArtifact, ArtifactKind.EthicsApproval, blindedStudy, "IRB approval", new ArtifactContent(ContentHash.OfBytes(irbBytes), irbBytes.Length, "application/pdf", "blob://irb/blind.pdf"), KernelProtocolScenario.Key(), "Register artifact"),
             ct);
-        await _scenario.Protocol.OkAsync(new ChangeEffectivityStatus(seed.Tenant, effectivity, EffectivityStatus.Effective, _scenario.Tick(), [irbArtifact], KernelProtocolScenario.Key(), "Activate"), ct);
+        await _scenario.Protocol.OkAsync(new ChangeEffectivityStatus(seed.Tenant, effectivity, EffectivityStatus.Effective, _scenario.Tick(), [irbArtifact], KernelProtocolScenario.Key(), "Activate effectivity"), ct);
 
         var armVar = new VariableExpression($"{RandSpecId}.{ArmItemId}");
         var sbpVar = new VariableExpression(Systolic);
@@ -1066,7 +1066,7 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
 
         var blindSubject = new KernelObservationScenario.Subject(seed.Tenant, blindedStudy, blindSite, blindEnrollment);
         var randForm = await _scenario.Protocol.OkAsync(
-            new OpenCollectionInstance(seed.Tenant, CollectionInstanceId.New(), blindSubject.Enrollment, RandSpecId, VisitId, _scenario.Tick(), KernelProtocolScenario.Key(), "Open RAND"),
+            new OpenCollectionInstance(seed.Tenant, CollectionInstanceId.New(), blindSubject.Enrollment, RandSpecId, VisitId, _scenario.Tick(), KernelProtocolScenario.Key(), "Open randomization"),
             ct);
         var vsForm = await _scenario.Protocol.OkAsync(Open(blindSubject, CollectionInstanceId.New(), _scenario.Tick()), ct);
         await RelayOutboxAsync(ct);
@@ -1345,10 +1345,10 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
     private async Task<ProtocolVersionId> CreateEffectiveProtocolAsync(TenantId tenant, StudyId study, CancellationToken ct)
     {
         var sbp = await _scenario.Protocol.OkAsync(
-            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic blood pressure.", KernelProtocolScenario.Key(), "Concept"),
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic blood pressure.", KernelProtocolScenario.Key(), "Define concept"),
             ct);
         var dbp = await _scenario.Protocol.OkAsync(
-            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Diastolic BP", "Diastolic blood pressure.", KernelProtocolScenario.Key(), "Concept"),
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Diastolic BP", "Diastolic blood pressure.", KernelProtocolScenario.Key(), "Define concept"),
             ct);
 
         var design = ProtocolDesignSamples.MinimalDesign() with
@@ -1374,22 +1374,22 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
         var versionId = ProtocolVersionId.New();
         var draft = await _scenario.Protocol.CreateDraftAsync(tenant, study, versionId, ct, ProtocolDesignDocument.Write(design));
         draft.IsSuccess.Should().BeTrue(draft.Error?.Message);
-        var submitted = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, versionId, KernelProtocolScenario.Key(), "Submit"), ct);
+        var submitted = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, versionId, KernelProtocolScenario.Key(), "Submit for review"), ct);
         var approvalSig = await _scenario.Protocol.OkAsync(_scenario.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(submitted)), ct);
-        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, versionId, approvalSig, KernelProtocolScenario.Key(), "Approve"), ct);
+        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, versionId, approvalSig, KernelProtocolScenario.Key(), "Approve protocol"), ct);
 
         var effectivity = EffectivityId.New();
         await _scenario.Protocol.OkAsync(
-            new DeclareEffectivity(tenant, effectivity, versionId, EffectivityScope.Study(), _scenario.Tick(), KernelProtocolScenario.Key(), "Declare"),
+            new DeclareEffectivity(tenant, effectivity, versionId, EffectivityScope.Study(), _scenario.Tick(), KernelProtocolScenario.Key(), "Declare effectivity"),
             ct);
         var artifactBytes = Encoding.UTF8.GetBytes($"irb-{Guid.NewGuid():N}");
         var artifactVersion = ArtifactVersionId.New();
         var artifactContent = new ArtifactContent(ContentHash.OfBytes(artifactBytes), artifactBytes.Length, "application/pdf", "blob://irb/approval.pdf");
         await _scenario.Protocol.OkAsync(
-            new RegisterArtifact(tenant, ArtifactId.New(), artifactVersion, ArtifactKind.EthicsApproval, study, "IRB approval", artifactContent, KernelProtocolScenario.Key(), "Register"),
+            new RegisterArtifact(tenant, ArtifactId.New(), artifactVersion, ArtifactKind.EthicsApproval, study, "IRB approval", artifactContent, KernelProtocolScenario.Key(), "Register artifact"),
             ct);
         await _scenario.Protocol.OkAsync(
-            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, _scenario.Tick(), [artifactVersion], KernelProtocolScenario.Key(), "Activate"),
+            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, _scenario.Tick(), [artifactVersion], KernelProtocolScenario.Key(), "Activate effectivity"),
             ct);
 
         return versionId;
@@ -1455,7 +1455,7 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
             ct);
         await _scenario.Protocol.OkAsync(new ApproveStandardVersion(tenant, stdId, stdSig, KernelProtocolScenario.Key(), "Approve std"), ct);
         await _scenario.Protocol.OkAsync(
-            new DeclareStudyStandards(tenant, study, StudyStandardsProfileId.New(), [stdId], [], [itemId], KernelProtocolScenario.Key(), "Pin pack"),
+            new DeclareStudyStandards(tenant, study, StudyStandardsProfileId.New(), [stdId], [], [itemId], KernelProtocolScenario.Key(), "Pin standards pack"),
             ct);
     }
 

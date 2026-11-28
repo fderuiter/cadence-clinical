@@ -152,4 +152,45 @@ describe("ReasonModal.vue", () => {
     expect(wrapper.emitted("confirm")).toBeTruthy();
     expect(wrapper.emitted("confirm")[0]).toEqual(["Authorized modification"]);
   });
+
+  it("enforces a 10-character trimmed minimum reason length and updates the tabular counter (PRD-CRF-010)", async () => {
+    const wrapper = mount(ReasonModal, {
+      props: {
+        show: true,
+        idPrefix: "min-",
+        options: [
+          { value: "Short", text: "Short preset" },
+          { value: "Other", text: "Other (specify below)" },
+        ],
+      },
+    });
+
+    const counter = wrapper.find("#min-reason-char-count");
+    expect(counter.exists()).toBe(true);
+    expect(counter.classes()).toContain("tabular-nums");
+    expect(counter.text()).toBe("5 / 10 min characters");
+
+    // 5-char preset fails 10-char minimum
+    await wrapper.find("#min-btn-save-change").trigger("click");
+    expect(wrapper.emitted("confirm")).toBeFalsy();
+    expect(wrapper.find("#min-reason-error").text()).toContain(
+      "Reason for change must be at least 10 characters (currently 5)."
+    );
+
+    // Selecting 'Other' with whitespace-padded <10-char string is also rejected
+    await wrapper.find("select").setValue("Other");
+    await wrapper.find("textarea").setValue("   fix   ");
+    expect(counter.text()).toBe("3 / 10 min characters");
+    await wrapper.find("#min-btn-save-change").trigger("click");
+    expect(wrapper.emitted("confirm")).toBeFalsy();
+    expect(wrapper.find("#min-reason-error").text()).toContain(
+      "Reason for change must be at least 10 characters (currently 3)."
+    );
+
+    // 10+ trimmed characters succeeds
+    await wrapper.find("textarea").setValue("  Verified chart correction  ");
+    expect(counter.text()).toBe("25 / 10 min characters");
+    await wrapper.find("#min-btn-save-change").trigger("click");
+    expect(wrapper.emitted("confirm")).toEqual([["Verified chart correction"]]);
+  });
 });

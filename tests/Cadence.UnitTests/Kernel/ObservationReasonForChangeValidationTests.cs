@@ -39,6 +39,9 @@ public sealed class ObservationReasonForChangeValidationTests
     [Theory(DisplayName = "Pipeline_CorrectObservation_WithoutAReason_IsRefusedBeforeAUnitOfWork")]
     [InlineData("")]
     [InlineData("   ")]
+    [InlineData("Entry")]
+    [InlineData("TooShort9")]
+    [InlineData("   123456789   ")]
     public async Task PipelineCorrectObservationWithoutAReasonIsRefusedBeforeAUnitOfWork(string reason)
     {
         var ct = TestContext.Current.CancellationToken;
@@ -65,6 +68,8 @@ public sealed class ObservationReasonForChangeValidationTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
+    [InlineData("Entry")]
+    [InlineData("   123456789   ")]
     public void DomainObservationCorrectWithoutAReasonReturnsThePipelineCode(string? reason)
     {
         var observation = Record();

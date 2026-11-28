@@ -205,7 +205,7 @@ public sealed class KernelProtocolImportPostgresTests(KernelPostgresFixture fixt
         }
 
         // 4. Submit v1 for review -> importing reopens InReview v1 back to Draft (200 OK) without trigger failure.
-        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, v1Id, KernelProtocolScenario.Key(), "Submit v1"), ct);
+        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, v1Id, KernelProtocolScenario.Key(), "Submit protocol v1"), ct);
         inReview.Status.Should().Be(ProtocolVersionStatus.InReview);
 
         using (var reopenReq = BuildJsonImport(studyCode, new { template_ids = new[] { aeTemplateId }, replace_forms = false }, "imp-reopen", "Reopen v1 and merge AE"))

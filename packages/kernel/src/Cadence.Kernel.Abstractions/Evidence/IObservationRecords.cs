@@ -133,7 +133,9 @@ public interface IObservationRecords
             }
 
             var obs = await FindForReaderAsync(tenant, observationId, CanUnblindOnceAsync, cancellationToken).ConfigureAwait(false);
-            if (obs is null || (obs.IsBlindedTreatment && obs.ObservationId.IsEmpty))
+            if (obs is null
+                || (obs.IsBlindedTreatment && obs.ObservationId.IsEmpty)
+                || obs.Value is MissingValue { Reason: NullFlavor.NotAsked })
             {
                 continue;
             }

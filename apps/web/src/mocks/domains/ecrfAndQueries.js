@@ -21,6 +21,22 @@ import {
   resolveSiteUuid,
 } from "./shared.js";
 
+function isNotAskedMockValue(value) {
+  if (!value || value.type !== "missing") return false;
+  const normalized = String(value.reason || "").toLowerCase();
+  return normalized === "notasked" || normalized === "not_asked";
+}
+
+function isReservedCallerNullFlavor(value) {
+  if (!value || value.type !== "missing") return false;
+  const normalized = String(value.reason || "").toLowerCase();
+  return (
+    normalized === "masked" ||
+    normalized === "notasked" ||
+    normalized === "not_asked"
+  );
+}
+
 function createInitialForm() {
   const items = [
     {
@@ -396,17 +412,14 @@ export function createEcrfAndQueriesDomain(ctx) {
           (it) =>
             it.value !== null &&
             it.value !== undefined &&
-            !(it.value.type === "missing" && it.value.reason === "not_asked")
+            !isNotAskedMockValue(it.value)
         );
         const recordedCount = recordedItems.length;
         const missingRequiredCount = Array.isArray(f.missing_required)
           ? f.missing_required.length
           : itemsList.filter(
               (it) =>
-                it.required &&
-                (!it.value ||
-                  (it.value.type === "missing" &&
-                    it.value.reason === "not_asked"))
+                it.required && (!it.value || isNotAskedMockValue(it.value))
             ).length;
 
         const formQueries = [...state.queries.values()].filter(
@@ -546,6 +559,17 @@ export function createEcrfAndQueriesDomain(ctx) {
       let anyChanged = false;
 
       for (const entry of incoming) {
+        if (isReservedCallerNullFlavor(entry?.value)) {
+          return {
+            invalid: true,
+            problem: {
+              title: "Invalid collection item values",
+              status: 422,
+              code: "K.Collection.ValuesInvalid",
+              detail: `Null flavor '${entry.value.reason}' is system-reserved and cannot be recorded by callers.`,
+            },
+          };
+        }
         let item = form.items.find((it) => it.item_id === entry.item_id);
         if (!item) {
           const idx = nextCounter();
@@ -676,10 +700,7 @@ export function createEcrfAndQueriesDomain(ctx) {
 
       const missingRequired = form.items
         .filter(
-          (it) =>
-            it.required &&
-            (!it.value ||
-              (it.value.type === "missing" && it.value.reason === "not_asked"))
+          (it) => it.required && (!it.value || isNotAskedMockValue(it.value))
         )
         .map((it) => it.item_id);
       form.missing_required = missingRequired;
@@ -736,7 +757,7 @@ export function createEcrfAndQueriesDomain(ctx) {
         content_hash: form.content_hash,
         superseded: false,
         signed_values: form.items
-          .filter((it) => it.value)
+          .filter((it) => it.value && !isNotAskedMockValue(it.value))
           .map((it) => ({
             item_id: it.item_id,
             observation_id: it.observation_id,
@@ -839,7 +860,13 @@ export function createEcrfAndQueriesDomain(ctx) {
           continue;
         }
         for (const item of form.items || []) {
-          if (!item.observation_id || Number(item.revision) <= 1) continue;
+          if (
+            !item.observation_id ||
+            Number(item.revision) <= 1 ||
+            isNotAskedMockValue(item.value)
+          ) {
+            continue;
+          }
           const obsTarget = `observation:${item.observation_id}`;
           const hasCurrentVerified = (form.assertions || []).some(
             (a) =>

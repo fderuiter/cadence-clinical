@@ -656,6 +656,39 @@ public sealed class ExecutionSdvAlertPostgresTests(ExecutionFormModulePostgresFi
         attentionSql.Count(sql => sql.Contains("WITH unverified AS MATERIALIZED", StringComparison.OrdinalIgnoreCase)).Should().Be(1);
     }
 
+    [Fact(DisplayName = "FindUnverifiedSdvTargets_OnPostgres_ExcludesNotAskedPlaceholderObservations")]
+    public async Task FindUnverifiedSdvTargetsOnPostgresExcludesNotAskedPlaceholderObservations()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (_, tenant, _, _, enrollment, form, systolicObs, diastolicObs) = await SeedAsync(ct);
+
+        var unasked = await _scenario.Protocol.OkAsync(
+            new RecordUnaskedCollectionItem(
+                tenant,
+                CollectionInstanceId.FromGuid(form),
+                enrollment,
+                Comment,
+                null,
+                KernelProtocolScenario.Key(),
+                "Raise query on blank comment item"),
+            ct);
+
+        var targets = await fixture.ObservationRecords.FindUnverifiedSdvTargetsAsync(
+            tenant,
+            [
+                ObservationId.FromGuid(systolicObs),
+                ObservationId.FromGuid(diastolicObs),
+                unasked.ObservationId,
+            ],
+            (_, _) => ValueTask.FromResult(true),
+            ct);
+
+        targets.Keys.Should().Contain(ObservationId.FromGuid(systolicObs));
+        targets.Keys.Should().Contain(ObservationId.FromGuid(diastolicObs));
+        targets.Keys.Should().NotContain(unasked.ObservationId);
+    }
+
     private async Task<(string Code, TenantId Tenant, StudyId Study, string StudyCode, EnrollmentId Enrollment, Guid Form, Guid SystolicObs, Guid DiastolicObs)> SeedAsync(
         CancellationToken ct)
     {
@@ -715,10 +748,10 @@ public sealed class ExecutionSdvAlertPostgresTests(ExecutionFormModulePostgresFi
         var version = ProtocolVersionId.New();
         var draft = await _scenario.Protocol.CreateDraftAsync(tenant, study, version, ct, ProtocolDesignDocument.Write(design));
         draft.IsSuccess.Should().BeTrue(draft.Error?.Message);
-        var inReview = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready"), ct);
+        var inReview = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready for review"), ct);
         var signature = await _scenario.Protocol.OkAsync(
             _scenario.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
-        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, signature, KernelProtocolScenario.Key(), "Approved"), ct);
+        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, signature, KernelProtocolScenario.Key(), "Approved protocol"), ct);
 
         var effectivity = EffectivityId.New();
         await _scenario.Protocol.OkAsync(
@@ -743,7 +776,7 @@ public sealed class ExecutionSdvAlertPostgresTests(ExecutionFormModulePostgresFi
                 "IRB approval"),
             ct);
         await _scenario.Protocol.OkAsync(
-            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, _scenario.Tick(), [ethicsVersion], KernelProtocolScenario.Key(), "Effective"),
+            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, _scenario.Tick(), [ethicsVersion], KernelProtocolScenario.Key(), "Made effective"),
             ct);
         return version;
     }
@@ -755,7 +788,7 @@ public sealed class ExecutionSdvAlertPostgresTests(ExecutionFormModulePostgresFi
             foreach (var capability in capabilities)
             {
                 await _scenario.Protocol.OkAsync(
-                    new IssueGrant(tenant, GrantId.New(), actor, capability, null, scope, _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Appointed"),
+                    new IssueGrant(tenant, GrantId.New(), actor, capability, null, scope, _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Appointed to role"),
                     ct);
             }
         }

@@ -159,7 +159,7 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
         {
             new AnswerFormQuery(tenant, id, enrollment, "Too late", Key(), Reason),
             new ReopenFormQuery(tenant, id, enrollment, "Too late", Key(), Reason),
-            new CloseFormQuery(tenant, id, enrollment, Key(), "Too late"),
+            new CloseFormQuery(tenant, id, enrollment, Key(), "Attempted too late"),
         })
         {
             (await StepAsync(command, ct)).Error!.Code.Should().Be(FormQueryErrors.InvalidTransition.Code);

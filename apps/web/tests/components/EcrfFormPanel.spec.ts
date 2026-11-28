@@ -423,7 +423,7 @@ describe("EcrfFormPanel: a kernel form instance saved a page at a time (ADR-2622
     const view = await mountWith({ formId: FORM_ID });
 
     await view.find("#ecrf-item-COMMENT").setValue("x");
-    await view.find("#ecrf-save-reason").setValue("Entry");
+    await view.find("#ecrf-save-reason").setValue("Initial entry");
     await view.find("#ecrf-form-page").trigger("submit");
     await flushPromises();
 
@@ -575,7 +575,7 @@ describe("useEcrfForm outcomes (ADR-2622)", () => {
     wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
     await flushPromises();
     await wrapper.find("#ecrf-item-COMMENT").setValue(text);
-    await wrapper.find("#ecrf-save-reason").setValue("Entry");
+    await wrapper.find("#ecrf-save-reason").setValue("Initial entry");
     await wrapper.find("#ecrf-form-page").trigger("submit");
     await flushPromises();
     return wrapper;
@@ -609,7 +609,7 @@ describe("useEcrfForm outcomes (ADR-2622)", () => {
       .find('select[aria-label="Why DIABP is missing"]')
       .setValue("NotDone");
     await wrapper.find("#ecrf-item-COMMENT").setValue("note");
-    await wrapper.find("#ecrf-save-reason").setValue("Entry");
+    await wrapper.find("#ecrf-save-reason").setValue("Initial entry");
     await wrapper.find("#ecrf-form-page").trigger("submit");
     await flushPromises();
 
@@ -3717,5 +3717,329 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
       }
       vi.useRealTimers();
     }
+  });
+});
+
+describe("missing reasons, detail persistence, signature supersession, and 10-char change reasons", () => {
+  let wrapper: VueWrapper | undefined;
+
+  beforeEach(() => {
+    localStorage.clear();
+    setActivePinia(createPinia());
+    vi.mocked(ecrfFormsApi.getForm).mockReset();
+    vi.mocked(ecrfFormsApi.openForm).mockReset();
+    vi.mocked(ecrfFormsApi.saveValues).mockReset();
+    resetQueries();
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    wrapper = undefined;
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  it("hydrates, edits, persists in browser drafts, and submits MissingValue.Detail (--REASND), clearing stale text and detail on transitions", async () => {
+    vi.useFakeTimers();
+    signInUser("crc-1", "tenant-1");
+    const draftKey = scopedKey(
+      { tenantId: "tenant-1", userId: "crc-1" },
+      "ecrf_form_draft",
+      FORM_ID
+    )!;
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(
+      form({
+        items: [
+          item({
+            item_id: "SYSBP",
+            unit: "mm[Hg]",
+            value_kind: "Quantity",
+            required: true,
+            value: {
+              type: "missing",
+              reason: "NotDone",
+              detail: "Cuff unavailable",
+            },
+            observation_id: OBS_ID,
+            revision: 2,
+          }),
+          item({
+            item_id: "DIABP",
+            unit: "mm[Hg]",
+            value_kind: "Quantity",
+            required: true,
+            value: { type: "quantity", value: 82, unit: "mm[Hg]" },
+            observation_id: "obs-diabp",
+            revision: 1,
+          }),
+        ],
+      }) as never
+    );
+    vi.mocked(ecrfFormsApi.saveValues).mockResolvedValue({
+      form_id: FORM_ID,
+      version: 3,
+      values: [],
+    } as never);
+
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+
+    // Hydrated missing detail renders and unchanged detail is not dirty
+    const sysDetail = wrapper.find("#ecrf-missing-detail-SYSBP");
+    expect(sysDetail.exists()).toBe(true);
+    expect((sysDetail.element as HTMLInputElement).value).toBe(
+      "Cuff unavailable"
+    );
+    expect(
+      wrapper.find("#ecrf-form-save").attributes("disabled")
+    ).toBeDefined();
+
+    // Editing only MissingValue.Detail marks the row dirty
+    await sysDetail.setValue("Cuff bladder punctured");
+    expect(wrapper.find("#ecrf-form-save").text()).toBe("Save page (1)");
+
+    // Typing text on DIABP then selecting a Missing reason clears stale typed text
+    await wrapper.find("#ecrf-item-DIABP").setValue("88");
+    await wrapper.find("#ecrf-missing-DIABP").setValue("AskedButUnknown");
+    expect(
+      (wrapper.find("#ecrf-item-DIABP").element as HTMLInputElement).value
+    ).toBe("");
+    await wrapper
+      .find("#ecrf-missing-detail-DIABP")
+      .setValue("Home log misplaced");
+
+    // Persist draft and remount to verify draft restoration preserves detail
+    vi.advanceTimersByTime(500);
+    const savedRaw = localStorage.getItem(draftKey);
+    expect(savedRaw).toContain("Cuff bladder punctured");
+    expect(savedRaw).toContain("Home log misplaced");
+
+    wrapper.unmount();
+    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    await flushPromises();
+    expect(
+      (wrapper.find("#ecrf-missing-detail-SYSBP").element as HTMLInputElement)
+        .value
+    ).toBe("Cuff bladder punctured");
+    expect(
+      (wrapper.find("#ecrf-missing-detail-DIABP").element as HTMLInputElement)
+        .value
+    ).toBe("Home log misplaced");
+
+    // Submitting sends trimmed detail on MissingValue payloads
+    await wrapper
+      .find("#ecrf-save-reason")
+      .setValue("Updated missing details against source worksheet");
+    await wrapper.find("#ecrf-form-page").trigger("submit");
+    await flushPromises();
+
+    expect(ecrfFormsApi.saveValues).toHaveBeenCalledTimes(1);
+    const payload = vi.mocked(ecrfFormsApi.saveValues).mock.calls[0][0];
+    expect(payload.values).toEqual([
+      {
+        item_id: "SYSBP",
+        observation_id: null,
+        observed_at: null,
+        value: {
+          type: "missing",
+          reason: "NotDone",
+          detail: "Cuff bladder punctured",
+        },
+        expected_revision: 2,
+      },
+      {
+        item_id: "DIABP",
+        observation_id: null,
+        observed_at: null,
+        value: {
+          type: "missing",
+          reason: "AskedButUnknown",
+          detail: "Home log misplaced",
+        },
+        expected_revision: 1,
+      },
+    ]);
+  });
+
+  it("marks cleared committed values and Missing->Not missing resets dirty immediately and blocks save until resolved", async () => {
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(
+      form({
+        items: [
+          item({
+            item_id: "SYSBP",
+            unit: "mm[Hg]",
+            value_kind: "Quantity",
+            required: true,
+            value: { type: "quantity", value: 120, unit: "mm[Hg]" },
+            observation_id: OBS_ID,
+            revision: 3,
+          }),
+          item({
+            item_id: "PULSE",
+            unit: "/min",
+            value_kind: "Quantity",
+            required: true,
+            value: {
+              type: "missing",
+              reason: "NotDone",
+              detail: "Patient declined",
+            },
+            observation_id: "obs-pulse",
+            revision: 2,
+          }),
+        ],
+      }) as never
+    );
+
+    wrapper = mount(EcrfFormPanel, {
+      props: { formId: FORM_ID },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    // 1. Clearing committed SYSBP value marks row dirty, shows Revert + amber guidance, and disables Save
+    await wrapper.find("#ecrf-item-SYSBP").setValue("");
+    await wrapper
+      .find("#ecrf-save-reason")
+      .setValue("Cleared outdated transcription value");
+
+    expect(wrapper.find("#ecrf-revert-SYSBP").exists()).toBe(true);
+    const sysGuidance = wrapper.find(
+      '[data-testid="ecrf-incomplete-guidance-SYSBP"]'
+    );
+    expect(sysGuidance.exists()).toBe(true);
+    expect(sysGuidance.text()).toContain(
+      "Enter a corrected value or select why this item is missing."
+    );
+    expect(
+      wrapper.find("#ecrf-form-save").attributes("disabled")
+    ).toBeDefined();
+
+    // Attempting form submit does not invoke saveValues while incomplete
+    await wrapper.find("#ecrf-form-page").trigger("submit");
+    await flushPromises();
+    expect(ecrfFormsApi.saveValues).not.toHaveBeenCalled();
+
+    // 2. Resetting committed Missing item PULSE to Not missing clears detail and marks row dirty immediately
+    await wrapper.find("#ecrf-missing-PULSE").setValue("");
+    expect(wrapper.find("#ecrf-missing-detail-PULSE").exists()).toBe(false);
+    expect(wrapper.find("#ecrf-revert-PULSE").exists()).toBe(true);
+    expect(
+      wrapper.find('[data-testid="ecrf-incomplete-guidance-PULSE"]').exists()
+    ).toBe(true);
+
+    await expect(wrapper.element).toBeAccessible();
+
+    // Selecting a missing reason for SYSBP and entering a replacement value for PULSE enables Save
+    await wrapper.find("#ecrf-missing-SYSBP").setValue("NotDone");
+    await wrapper.find("#ecrf-item-PULSE").setValue("74");
+    expect(
+      wrapper.find('[data-testid="ecrf-incomplete-guidance-SYSBP"]').exists()
+    ).toBe(false);
+    expect(
+      wrapper.find('[data-testid="ecrf-incomplete-guidance-PULSE"]').exists()
+    ).toBe(false);
+    expect(
+      wrapper.find("#ecrf-form-save").attributes("disabled")
+    ).toBeUndefined();
+  });
+
+  it("enforces 10 trimmed characters on #ecrf-save-reason and warns + confirms before superseding a Current signature", async () => {
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(
+      form({
+        signatures: [
+          {
+            attestation_id: "sig-current-1",
+            meaning: "Approved",
+            signed_by: "usr-pi-01",
+            signed_at: "2027-03-21T10:00:00Z",
+            reason: "Investigator review complete",
+            content_hash: "sha256:form-v2",
+            superseded: false,
+            signed_values: null,
+          },
+        ],
+      }) as never
+    );
+    vi.mocked(ecrfFormsApi.saveValues).mockResolvedValue({
+      form_id: FORM_ID,
+      version: 3,
+      values: [],
+    } as never);
+
+    wrapper = mount(EcrfFormPanel, {
+      props: { formId: FORM_ID },
+      attachTo: document.body,
+    });
+    const hostWrapper = mount(ConfirmationDialogHost, {
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    // Signed form notice does not appear before editing
+    expect(
+      wrapper.find('[data-testid="ecrf-signed-form-notice"]').exists()
+    ).toBe(false);
+
+    // Editing SYSBP reveals the inline signed-form warning banner
+    await wrapper.find("#ecrf-item-SYSBP").setValue("126");
+    const signedNotice = wrapper.find(
+      '[data-testid="ecrf-signed-form-notice"]'
+    );
+    expect(signedNotice.exists()).toBe(true);
+    expect(signedNotice.text()).toContain("Signed form notice");
+    expect(signedNotice.text()).toContain(
+      "supersede the Current attestation and require re-signing"
+    );
+
+    // Whitespace-padded <10-char reason keeps Save disabled and updates counter
+    await wrapper.find("#ecrf-save-reason").setValue("   short   ");
+    expect(wrapper.find("#ecrf-save-reason-counter").text()).toBe(
+      "5 / 10 min characters"
+    );
+    expect(
+      wrapper.find("#ecrf-form-save").attributes("disabled")
+    ).toBeDefined();
+
+    // >=10 trimmed characters enables Save
+    await wrapper
+      .find("#ecrf-save-reason")
+      .setValue("Corrected against nursing triage chart");
+    expect(wrapper.find("#ecrf-save-reason-counter").text()).toBe(
+      "38 / 10 min characters"
+    );
+    expect(
+      wrapper.find("#ecrf-form-save").attributes("disabled")
+    ).toBeUndefined();
+
+    await expect(wrapper.element).toBeAccessible();
+
+    // Submitting prompts confirmation dialog; cancelling aborts saveValues
+    const submitCancel = wrapper.find("#ecrf-form-page").trigger("submit");
+    await nextTick();
+    const dialog1 = document.querySelector(
+      '.clinical-modal-dialog[role="alertdialog"]'
+    );
+    expect(dialog1).not.toBeNull();
+    expect(dialog1?.textContent).toContain("Supersede Current Signature?");
+    (dialog1?.querySelector(".btn-cancel") as HTMLElement).click();
+    await submitCancel;
+    await flushPromises();
+    expect(ecrfFormsApi.saveValues).not.toHaveBeenCalled();
+
+    // Submitting again and confirming invokes saveValues
+    const submitConfirm = wrapper.find("#ecrf-form-page").trigger("submit");
+    await nextTick();
+    (
+      document.querySelector(
+        '.clinical-modal-dialog[role="alertdialog"] .btn-confirm'
+      ) as HTMLElement
+    ).click();
+    await submitConfirm;
+    await flushPromises();
+    expect(ecrfFormsApi.saveValues).toHaveBeenCalledTimes(1);
+
+    hostWrapper.unmount();
   });
 });

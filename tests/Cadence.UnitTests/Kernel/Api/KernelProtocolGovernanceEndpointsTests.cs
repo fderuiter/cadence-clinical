@@ -549,7 +549,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
 
         // 1. First version approves with AttestationMeaning.Approved alone (no SimulationReport required for v1).
         string v1Hash;
-        using (var submitV1 = await designer.SendAsync(BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/submit-for-review", "fork-v1-submit", "Freeze v1", null), ct))
+        using (var submitV1 = await designer.SendAsync(BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/submit-for-review", "fork-v1-submit", "Freeze protocol v1", null), ct))
         {
             submitV1.StatusCode.Should().Be(HttpStatusCode.OK);
             v1Hash = JsonDocument.Parse(await submitV1.Content.ReadAsStringAsync(ct)).RootElement.GetProperty("content_hash").GetString()!;
@@ -659,7 +659,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
 
         string v2Hash;
         using (var submitV2 = await designer.SendAsync(
-            BuildPost($"/api/v1/kernel/protocol-versions/{v2Ref}/submit-for-review", "fork-v2-submit-ok", "Freeze v2", null),
+            BuildPost($"/api/v1/kernel/protocol-versions/{v2Ref}/submit-for-review", "fork-v2-submit-ok", "Freeze protocol v2", null),
             ct))
         {
             submitV2.StatusCode.Should().Be(HttpStatusCode.OK, await submitV2.Content.ReadAsStringAsync(ct));
@@ -915,7 +915,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         var v1Id = _store.SeedDraftProtocolVersion(ProtocolDesignSamples.Minimal);
         var v1Ref = NodeRef.For(v1Id).ToString();
         string v1Hash;
-        using (var submitV1 = await designer.SendAsync(BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/submit-for-review", "actor-unresolved-v1-submit", "Freeze v1", null), ct))
+        using (var submitV1 = await designer.SendAsync(BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/submit-for-review", "actor-unresolved-v1-submit", "Freeze protocol v1", null), ct))
         {
             submitV1.StatusCode.Should().Be(HttpStatusCode.OK);
             v1Hash = JsonDocument.Parse(await submitV1.Content.ReadAsStringAsync(ct)).RootElement.GetProperty("content_hash").GetString()!;
@@ -998,7 +998,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         // 3. Submit v1 for review, then verify CRC (who holds attestation.sign but lacks protocol.withdraw) gets 403 and writes zero orphan attestations.
         string v1Hash;
         using (var submitV1 = await designer.SendAsync(
-            BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/submit-for-review", "withdraw-v1-submit", "Freeze v1", null),
+            BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/submit-for-review", "withdraw-v1-submit", "Freeze protocol v1", null),
             ct))
         {
             submitV1.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -1039,7 +1039,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
 
         string v2Ref;
         using (var forkV2 = await designer.SendAsync(
-            BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/fork", "withdraw-v2-fork", "Fork v2", null, new
+            BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/fork", "withdraw-v2-fork", "Fork protocol v2", null, new
             {
                 intent = "Adjust screening window",
                 rationale = "Operational site feedback",
@@ -1056,7 +1056,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
 
         string v2Hash;
         using (var submitV2 = await designer.SendAsync(
-            BuildPost($"/api/v1/kernel/protocol-versions/{v2Ref}/submit-for-review", "withdraw-v2-submit", "Submit v2", null),
+            BuildPost($"/api/v1/kernel/protocol-versions/{v2Ref}/submit-for-review", "withdraw-v2-submit", "Submit protocol v2", null),
             ct))
         {
             submitV2.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -1123,7 +1123,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         });
         using var designer = factory.CreateSignedClient(DesignerIdentity);
 
-        using var submitV1 = await designer.SendAsync(BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/submit-for-review", "mask-v1-sub", "Freeze v1", null), ct);
+        using var submitV1 = await designer.SendAsync(BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/submit-for-review", "mask-v1-sub", "Freeze protocol v1", null), ct);
         var v1Hash = JsonDocument.Parse(await submitV1.Content.ReadAsStringAsync(ct)).RootElement.GetProperty("content_hash").GetString()!;
         var v1ApproveSig = TestSecurityContext.CreateSigToken(
             DesignerIdentity.UserId,
@@ -1136,7 +1136,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         approveV1.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var forkV2 = await designer.SendAsync(
-            BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/fork", "mask-v2-fork", "Fork v2", null, new
+            BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/fork", "mask-v2-fork", "Fork protocol v2", null, new
             {
                 intent = "Masking check",
                 rationale = "Verify wire masking",
@@ -1147,7 +1147,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
             }),
             ct);
         var v2Ref = JsonDocument.Parse(await forkV2.Content.ReadAsStringAsync(ct)).RootElement.GetProperty("ref").GetString()!;
-        using var submitV2 = await designer.SendAsync(BuildPost($"/api/v1/kernel/protocol-versions/{v2Ref}/submit-for-review", "mask-v2-sub", "Freeze v2", null), ct);
+        using var submitV2 = await designer.SendAsync(BuildPost($"/api/v1/kernel/protocol-versions/{v2Ref}/submit-for-review", "mask-v2-sub", "Freeze protocol v2", null), ct);
         submitV2.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var httpJsonOptions = factory.Services.GetRequiredService<IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>().Value.SerializerOptions;

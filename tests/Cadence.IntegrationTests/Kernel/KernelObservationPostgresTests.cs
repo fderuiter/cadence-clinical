@@ -225,7 +225,7 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         subject = await _observations.NewEnrollmentAsync(ct);
         recorded = await RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(182), ct);
         await _observations.Protocol.OkAsync(
-            new VerifyObservation(subject.Tenant, AssertionId.New(), subject.Enrollment, recorded.ObservationId, 1, KernelProtocolScenario.Key(), "SDV rev 1"),
+            new VerifyObservation(subject.Tenant, AssertionId.New(), subject.Enrollment, recorded.ObservationId, 1, KernelProtocolScenario.Key(), "Verify revision 1"),
             ct);
         var hardLockRace = await _observations.LockAsync(subject.Tenant, subject.Study, subject.Scope(scopeKind, recorded.ObservationId), ct, LockKind.Locked);
         using (var paused = new KernelCommitPause(fixture))
@@ -245,7 +245,7 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         subject = await _observations.NewEnrollmentAsync(ct);
         recorded = await RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(182), ct);
         await _observations.Protocol.OkAsync(
-            new VerifyObservation(subject.Tenant, AssertionId.New(), subject.Enrollment, recorded.ObservationId, 1, KernelProtocolScenario.Key(), "SDV rev 1"),
+            new VerifyObservation(subject.Tenant, AssertionId.New(), subject.Enrollment, recorded.ObservationId, 1, KernelProtocolScenario.Key(), "Verify revision 1"),
             ct);
         lockCommand = await _observations.LockAsync(subject.Tenant, subject.Study, subject.Scope(scopeKind, recorded.ObservationId), ct);
         using (var paused = new KernelCommitPause(fixture))

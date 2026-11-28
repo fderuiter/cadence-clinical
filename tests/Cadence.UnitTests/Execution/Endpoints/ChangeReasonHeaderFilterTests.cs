@@ -121,4 +121,21 @@ public class ChangeReasonHeaderFilterTests
         result.Should().BeOfType<ProblemHttpResult>().Which.ProblemDetails.Detail
             .Should().Be("X-Change-Reason header is required.");
     }
+
+    [Theory]
+    [InlineData("Entry")]
+    [InlineData("TooShort9")]
+    [InlineData("   123456789   ")]
+    public async Task InvokeAsync_HeaderShorterThan10TrimmedCharacters_ShortCircuitsWith400(string headerValue)
+    {
+        var context = CreateContext(headerValue);
+        var (next, invoked) = CreateTrackingNext();
+
+        var result = await new ChangeReasonHeaderFilter().InvokeAsync(context, next);
+
+        invoked().Should().BeFalse();
+        var problem = result.Should().BeOfType<ProblemHttpResult>().Which;
+        problem.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        problem.ProblemDetails.Detail.Should().Be("X-Change-Reason must be at least 10 characters.");
+    }
 }
