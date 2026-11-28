@@ -8,13 +8,14 @@ using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Apps.Ctms.Application.Services;
 
@@ -52,7 +53,7 @@ public sealed class StartupGreenlightApplicationService(
     CtmsDbContext db,
     ICtmsUnitOfWork unitOfWork,
     IClock clock,
-    IConfiguration config) : IStartupGreenlightApplicationService
+    IOptions<GatewayAuthenticationOptions> gatewayAuthentication) : IStartupGreenlightApplicationService
 {
     public async Task<Results<Ok<SiteGreenlightGateResponseDto>, ProblemHttpResult>> GetSiteGreenlightAsync(
         string siteId,
@@ -100,7 +101,7 @@ public sealed class StartupGreenlightApplicationService(
         }
 
         string signer = CallerScope.RequiredUserId(httpContext, "An admitted greenlight request has no signed caller.");
-        string secret = TokenSecret(config);
+        string secret = TokenSecret(gatewayAuthentication);
         DateTimeOffset now = clock.UtcNow;
         long issuedAt = now.ToUnixTimeSeconds();
         long expiresAt = issuedAt + (86400 * 365);
@@ -229,7 +230,7 @@ public sealed class StartupGreenlightApplicationService(
 
         string signer = CallerScope.RequiredUserId(httpContext, "An admitted greenlight request has no signed caller.");
         string role = CallerScope.Roles(httpContext);
-        string secret = TokenSecret(config);
+        string secret = TokenSecret(gatewayAuthentication);
         DateTimeOffset now = clock.UtcNow;
         long issuedAt = now.ToUnixTimeSeconds();
         long expiresAt = issuedAt + (86400 * 365);
@@ -278,10 +279,14 @@ public sealed class StartupGreenlightApplicationService(
         ));
     }
 
-    private static string TokenSecret(IConfiguration config) =>
-        config["GATEWAY_SECRET"] is { Length: > 0 } secret
+    public static string TokenSecret(IOptions<GatewayAuthenticationOptions> gatewayAuthentication)
+    {
+        ArgumentNullException.ThrowIfNull(gatewayAuthentication);
+        return gatewayAuthentication.Value.GatewaySecret is { Length: >= GatewayAuthenticationOptions.MinimumSecretLength } secret
             ? secret
-            : throw new InvalidOperationException("GATEWAY_SECRET is not configured; greenlight tokens cannot be sealed.");
+            : throw new InvalidOperationException(
+                $"GATEWAY_SECRET must be set to a secret of at least {GatewayAuthenticationOptions.MinimumSecretLength} characters; greenlight tokens cannot be sealed.");
+    }
 
     private static ProblemHttpResult StudyRequired() =>
         TypedResults.Problem(

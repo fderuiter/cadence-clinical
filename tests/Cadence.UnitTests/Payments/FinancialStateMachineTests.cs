@@ -9,6 +9,7 @@ using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Endpoints;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
 
@@ -19,6 +20,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Options;
 
 using Xunit;
 
@@ -892,7 +894,11 @@ public sealed class FinancialStateMachineTests : IDisposable
         var req = new ReviewExpenseClaimRequestDto(Status: "APPROVED", ReviewNotes: "Second approval");
 
         var expenseService = new ExpenseApplicationService(
-            db, new PaymentsUnitOfWork(db), new WalletRowLockRepository(db), new FakeClock());
+            db,
+            new PaymentsUnitOfWork(db),
+            new WalletRowLockRepository(db),
+            new FakeClock(),
+            Options.Create(new GatewayAuthenticationOptions { GatewaySecret = TestSecurityContext.GatewaySecret }));
         var result = await ExpenseEndpoints.ReviewExpenseClaim(
             "claim-001", req, expenseService, new DefaultHttpContext { User = caller });
 
@@ -1034,7 +1040,11 @@ public sealed class FinancialStateMachineTests : IDisposable
         var clock = new FakeClock();
 
         var expenseService = new ExpenseApplicationService(
-            db, new PaymentsUnitOfWork(db), new WalletRowLockRepository(db), clock);
+            db,
+            new PaymentsUnitOfWork(db),
+            new WalletRowLockRepository(db),
+            clock,
+            Options.Create(new GatewayAuthenticationOptions { GatewaySecret = TestSecurityContext.GatewaySecret }));
         var result = await ExpenseEndpoints.SettleDisbursement(
             "disb-001", expenseService, new DefaultHttpContext { User = caller });
 
@@ -1083,7 +1093,11 @@ public sealed class FinancialStateMachineTests : IDisposable
         var clock = new FakeClock();
 
         var expenseService = new ExpenseApplicationService(
-            db, new PaymentsUnitOfWork(db), new WalletRowLockRepository(db), clock);
+            db,
+            new PaymentsUnitOfWork(db),
+            new WalletRowLockRepository(db),
+            clock,
+            Options.Create(new GatewayAuthenticationOptions { GatewaySecret = TestSecurityContext.GatewaySecret }));
         var result = await ExpenseEndpoints.SettleDisbursement(
             "disb-002", expenseService, new DefaultHttpContext { User = caller });
 

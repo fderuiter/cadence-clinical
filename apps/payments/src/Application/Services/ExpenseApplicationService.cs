@@ -24,7 +24,7 @@ public sealed class ExpenseApplicationService(
     IPaymentsUnitOfWork unitOfWork,
     IWalletRowLockRepository walletLocks,
     IClock clock,
-    IOptionsMonitor<GatewayAuthenticationOptions>? gatewayAuthentication = null)
+    IOptions<GatewayAuthenticationOptions> gatewayAuthentication)
 {
     public async Task<IResult> ListExpenseClaimsAsync(HttpContext httpContext, string? status = null, string? subjectId = null)
     {
@@ -70,7 +70,7 @@ public sealed class ExpenseApplicationService(
         }
 
         DateTimeOffset now = clock.UtcNow;
-        string? gatewaySecret = PaymentHmacTokenHelper.ResolveConfiguredGatewaySecret(gatewayAuthentication);
+        string gatewaySecret = PaymentHmacTokenHelper.ResolveConfiguredGatewaySecret(gatewayAuthentication);
         string rolesText = CallerScope.Roles(httpContext, PaymentScopeAndMappingHelpers.MaxRolesLength);
 
         return await walletLocks.ExecuteWalletUnitOfWorkAsync(async ct =>
@@ -208,7 +208,7 @@ public sealed class ExpenseApplicationService(
         }
 
         DateTimeOffset now = clock.UtcNow;
-        string? gatewaySecret = PaymentHmacTokenHelper.ResolveConfiguredGatewaySecret(gatewayAuthentication);
+        string gatewaySecret = PaymentHmacTokenHelper.ResolveConfiguredGatewaySecret(gatewayAuthentication);
 
         byte[] receiptBytes = PaymentHmacTokenHelper.DecodeReceiptImageBytes(request.ImageBase64);
         var extracted = ReceiptOcrEngine.ExtractDecodedOrFallback(
@@ -222,7 +222,6 @@ public sealed class ExpenseApplicationService(
         string? ocrToken = receiptSha256 is not null
             && string.IsNullOrEmpty(request.RawText)
             && extracted.OcrReadable
-            && !string.IsNullOrWhiteSpace(gatewaySecret)
             ? PaymentHmacTokenHelper.IssueReceiptOcrToken(new PaymentHmacTokenHelper.ReceiptOcrTokenPayload(
                 ScanId: scanId,
                 CallerUserId: userId,

@@ -12,6 +12,7 @@ using Cadence.Compliance;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 using Cadence.Testing;
+using Cadence.Testing.Security;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
@@ -19,7 +20,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 using Xunit;
 
@@ -31,7 +32,7 @@ public sealed class StartupGreenlightEndpointsTests
 
     private readonly CtmsDbContext _db;
     private readonly FakeClock _clock;
-    private readonly IConfiguration _config;
+    private readonly IOptions<GatewayAuthenticationOptions> _gatewayAuthentication;
 
     public StartupGreenlightEndpointsTests()
     {
@@ -41,16 +42,14 @@ public sealed class StartupGreenlightEndpointsTests
         _db = new CtmsDbContext(options);
 
         _clock = new FakeClock(new DateTimeOffset(2026, 10, 2, 9, 0, 0, TimeSpan.Zero));
-
-        var inMemorySettings = new Dictionary<string, string?>
+        _gatewayAuthentication = Options.Create(new GatewayAuthenticationOptions
         {
-            ["GATEWAY_SECRET"] = "test-gateway-secret-32-chars-long-12345"
-        };
-        _config = new ConfigurationBuilder().AddInMemoryCollection(inMemorySettings).Build();
+            GatewaySecret = TestSecurityContext.GatewaySecret
+        });
     }
 
     private StartupGreenlightApplicationService CreateService() =>
-        new(_db, new CtmsUnitOfWork(_db), _clock, _config);
+        new(_db, new CtmsUnitOfWork(_db), _clock, _gatewayAuthentication);
 
     /// <summary>
     /// Verifies that country matrix endpoint returns 6-facet readiness for the recorded sites in a target country.
@@ -387,6 +386,19 @@ public sealed class StartupGreenlightEndpointsTests
         var crossSiteRead = await StartupGreenlightEndpoints.GetSiteGreenlightAsync(
             "SITE-DE-2", Study, "DE", CreateService(), Caller(["cra"], [Study], ["SITE-DE-1"]), TestContext.Current.CancellationToken);
         crossSiteRead.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("short-raw-marker")]
+    public void TokenSecret_WhenUnsetOrShorterThanMinimumLength_ThrowsInvalidOperationException(string? secret)
+    {
+        var options = Options.Create(new GatewayAuthenticationOptions { GatewaySecret = secret });
+
+        Action act = () => StartupGreenlightEndpoints.TokenSecret(options);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*GATEWAY_SECRET*");
     }
 
     private async Task AddGatesAsync(params (string SiteId, string Country, bool Compliant)[] sites)

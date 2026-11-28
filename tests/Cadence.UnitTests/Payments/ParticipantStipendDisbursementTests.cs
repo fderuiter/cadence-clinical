@@ -9,6 +9,7 @@ using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Endpoints;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.FieldProtection;
 using Cadence.Testing.Security;
 
@@ -17,6 +18,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 using Xunit;
 
@@ -49,7 +51,12 @@ public class ParticipantStipendDisbursementTests
         new(db, new PaymentsUnitOfWork(db), new WalletRowLockRepository(db), SystemClock.Instance);
 
     private static ExpenseApplicationService CreateExpenseService(PaymentsDbContext db) =>
-        new(db, new PaymentsUnitOfWork(db), new WalletRowLockRepository(db), SystemClock.Instance);
+        new(
+            db,
+            new PaymentsUnitOfWork(db),
+            new WalletRowLockRepository(db),
+            SystemClock.Instance,
+            Options.Create(new GatewayAuthenticationOptions { GatewaySecret = TestSecurityContext.GatewaySecret }));
 
     [Fact]
     public async Task IngestVisitVerifiedEvent_WithinThreshold_CreditsWalletAndRecordsAudit()

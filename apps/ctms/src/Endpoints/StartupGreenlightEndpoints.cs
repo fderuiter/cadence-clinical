@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Apps.Ctms.Endpoints;
 
@@ -103,4 +104,7 @@ public static class StartupGreenlightEndpoints
         HttpContext httpContext,
         CancellationToken ct) =>
         service.BatchCertifyCountrySitesAsync(request, changeReasonHeader, httpContext, ct);
+
+    public static string TokenSecret(IOptions<GatewayAuthenticationOptions> gatewayAuthentication) =>
+        StartupGreenlightApplicationService.TokenSecret(gatewayAuthentication);
 }

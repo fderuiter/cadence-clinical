@@ -9,6 +9,7 @@ using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Endpoints;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.FieldProtection;
 using Cadence.Testing;
 using Cadence.Testing.Security;
@@ -18,6 +19,8 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 using Xunit;
 
@@ -32,9 +35,16 @@ public class ExpenseClaimAutoApprovalTests
     private static readonly ClaimsPrincipal SiteInvestigator = TestSecurityContext.CreateScopedPrincipal(
         "pi-1", TestSecurityContext.AllStudies, ["SITE-101"], "investigator");
 
-    private static HttpContext SiteCoordinatorContext() => new DefaultHttpContext { User = SiteCoordinator };
+    private static readonly IServiceProvider TestRequestServices = new ServiceCollection()
+        .AddSingleton<IOptions<GatewayAuthenticationOptions>>(
+            Options.Create(new GatewayAuthenticationOptions { GatewaySecret = TestSecurityContext.GatewaySecret }))
+        .BuildServiceProvider();
 
-    private static HttpContext SiteInvestigatorContext() => new DefaultHttpContext { User = SiteInvestigator };
+    private static HttpContext SiteCoordinatorContext() =>
+        new DefaultHttpContext { User = SiteCoordinator, RequestServices = TestRequestServices };
+
+    private static HttpContext SiteInvestigatorContext() =>
+        new DefaultHttpContext { User = SiteInvestigator, RequestServices = TestRequestServices };
 
     private static string NewTempDbPath() => Path.Combine(Path.GetTempPath(), $"payments-ocr-test-{Guid.NewGuid():N}.db");
 
@@ -48,8 +58,13 @@ public class ExpenseClaimAutoApprovalTests
         return dbContext;
     }
 
-    private static ExpenseApplicationService CreateExpenseService(PaymentsDbContext db) =>
-        new(db, new PaymentsUnitOfWork(db), new WalletRowLockRepository(db), SystemClock.Instance);
+    private static ExpenseApplicationService CreateExpenseService(PaymentsDbContext db, HttpContext? httpContext = null) =>
+        new(
+            db,
+            new PaymentsUnitOfWork(db),
+            new WalletRowLockRepository(db),
+            SystemClock.Instance,
+            (httpContext?.RequestServices ?? TestRequestServices).GetRequiredService<IOptions<GatewayAuthenticationOptions>>());
 
     /// <summary>
     /// Receipt OCR extraction parses merchant, date, amount, category and records audit log.

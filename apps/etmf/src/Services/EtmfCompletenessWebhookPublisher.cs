@@ -18,7 +18,6 @@ using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -61,8 +60,7 @@ public interface IEtmfCompletenessWebhookPublisher
 
 public sealed class HttpEtmfCompletenessWebhookPublisher(
     HttpClient httpClient,
-    IOptionsMonitor<GatewayAuthenticationOptions> gatewayOptions,
-    IConfiguration configuration,
+    IOptions<GatewayAuthenticationOptions> gatewayOptions,
     IClock clock,
     ILogger<HttpEtmfCompletenessWebhookPublisher> logger,
     IHttpContextAccessor? httpContextAccessor = null) : IEtmfCompletenessWebhookPublisher
@@ -501,7 +499,7 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
     private bool TryEnsureWebhookConfigured(string studyId, out byte[] secretBytes)
     {
         byte[]? resolved = ResolveGatewaySecretBytes();
-        if (resolved is null || resolved.Length == 0)
+        if (resolved is null || resolved.Length < GatewayAuthenticationOptions.MinimumSecretLength)
         {
             logger.LogWarning(
                 "Skipping eTMF completeness webhook for study {StudyId}: GATEWAY_SECRET is not configured.",
@@ -671,14 +669,16 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
 
     private byte[]? ResolveGatewaySecretBytes()
     {
-        var configuredBytes = gatewayOptions.CurrentValue.GatewaySecretBytes;
-        if (configuredBytes.Length > 0)
+        var configured = gatewayOptions.Value;
+        if (configured.GatewaySecret is not { Length: >= GatewayAuthenticationOptions.MinimumSecretLength })
         {
-            return configuredBytes.ToArray();
+            return null;
         }
 
-        string? secret = configuration["GATEWAY_SECRET"];
-        return string.IsNullOrEmpty(secret) ? null : GatewayIdentity.EncodeSecret(secret);
+        var configuredBytes = configured.GatewaySecretBytes;
+        return configuredBytes.Length >= GatewayAuthenticationOptions.MinimumSecretLength
+            ? configuredBytes.ToArray()
+            : null;
     }
 
     private static bool AnyApprovedMatching(IReadOnlyList<ProjectedDoc> docs, string expectedArtifact)

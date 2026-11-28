@@ -695,17 +695,10 @@ public sealed class EtmfCompletenessWebhookTests : IDisposable
             observedWebhookRequests);
         using var webhookHttpClient = new HttpClient(execForwarder) { BaseAddress = new Uri("http://localhost") };
 
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["GATEWAY_SECRET"] = TestSecurityContext.GatewaySecret,
-            })
-            .Build();
         var execClock = execFactory.Services.GetRequiredService<IClock>();
         var publisher = new HttpEtmfCompletenessWebhookPublisher(
             webhookHttpClient,
-            new StaticGatewayOptions(TestSecurityContext.GatewaySecret),
-            config,
+            Options.Create(new GatewayAuthenticationOptions { GatewaySecret = TestSecurityContext.GatewaySecret }),
             execClock,
             NullLogger<HttpEtmfCompletenessWebhookPublisher>.Instance);
 
@@ -896,15 +889,6 @@ public sealed class EtmfCompletenessWebhookTests : IDisposable
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
             Task.FromResult(responder(request));
-    }
-
-    private sealed class StaticGatewayOptions(string secret) : IOptionsMonitor<GatewayAuthenticationOptions>
-    {
-        public GatewayAuthenticationOptions CurrentValue { get; } = new() { GatewaySecret = secret };
-
-        public GatewayAuthenticationOptions Get(string? name) => CurrentValue;
-
-        public IDisposable? OnChange(Action<GatewayAuthenticationOptions, string?> listener) => null;
     }
 
     private sealed class SqlAndConnectionRecorder : DbCommandInterceptor, IDbConnectionInterceptor

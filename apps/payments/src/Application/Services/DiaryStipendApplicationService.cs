@@ -24,7 +24,7 @@ public sealed class DiaryStipendApplicationService(
     IPaymentsUnitOfWork unitOfWork,
     IWalletRowLockRepository walletLocks,
     IClock clock,
-    IOptionsMonitor<GatewayAuthenticationOptions>? gatewayAuthentication = null)
+    IOptions<GatewayAuthenticationOptions> gatewayAuthentication)
 {
     public async Task<IResult> CreditSelfDiaryStipendAsync(
         SelfServiceDiaryStipendRequestDto request,
@@ -56,7 +56,7 @@ public sealed class DiaryStipendApplicationService(
         }
 
         DateTimeOffset now = clock.UtcNow;
-        string? gatewaySecret = PaymentHmacTokenHelper.ResolveConfiguredGatewaySecret(gatewayAuthentication);
+        string gatewaySecret = PaymentHmacTokenHelper.ResolveConfiguredGatewaySecret(gatewayAuthentication);
         string? resolvedWalletId = null;
 
         try
