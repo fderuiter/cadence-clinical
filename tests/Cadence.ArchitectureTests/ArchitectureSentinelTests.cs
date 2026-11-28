@@ -774,6 +774,99 @@ public partial class ArchitectureSentinelTests
         violations.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Enforces a 500 non-empty line ceiling across hand-written C# source files in <c>packages/kernel/src/</c>,
+    /// <c>packages/ddf/src/</c>, <c>apps/intelligence/</c>, and <c>apps/*/module/</c> via <see cref="ShrinkOnlyBaseline"/>
+    /// so new kernel and module capabilities are authored as focused vertical classes rather than merge-prone monoliths.
+    /// </summary>
+    [Fact(DisplayName = "KernelDdfAndModuleCSharpFiles_MustNotExceed_500NonEmptyLines")]
+    [Trait("Category", "Architecture")]
+    public void KernelDdfAndModuleCSharpFilesMustNotExceed500NonEmptyLines()
+    {
+        string repoRoot = KernelBoundaryBaseline.RepositoryRoot();
+        var (inspectedFileCount, actual) = CSharpFileSizeRules.EvaluateRepository(repoRoot);
+
+        inspectedFileCount.Should().BeGreaterThan(300,
+            "the sentinel must inspect hand-written C# files across packages/kernel/src, packages/ddf/src, apps/intelligence, and apps/*/module");
+
+        var comparison = ShrinkOnlyBaseline.Verify(
+            CSharpFileSizeRules.BaselineRelativePath,
+            CSharpFileSizeRules.BaselineHeader,
+            actual);
+
+        comparison.IsClean.Should().BeTrue(
+            comparison.Describe(
+                "CSharpFileSize",
+                nameof(KernelDdfAndModuleCSharpFilesMustNotExceed500NonEmptyLines),
+                CSharpFileSizeRules.RemediationGuidance));
+
+        var recorded = ShrinkOnlyBaseline.Read(CSharpFileSizeRules.BaselineRelativePath);
+        recorded.Should().BeInAscendingOrder(StringComparer.Ordinal).And.OnlyHaveUniqueItems();
+    }
+
+    /// <summary>
+    /// Proves that <see cref="CSharpFileSizeRules"/> and <see cref="ShrinkOnlyBaseline"/> fail when a hand-written C#
+    /// file in a governed kernel, DDF, or module directory exceeds 500 non-empty lines while allowing files at or below
+    /// 500 non-empty lines (regardless of blank lines) and ignoring generated <c>Migrations/</c> artifacts.
+    /// </summary>
+    [Fact(DisplayName = "CSharpFileSizeSentinel_Bites_OnSyntheticOversizedFile")]
+    [Trait("Category", "Architecture")]
+    public void CSharpFileSizeSentinelBitesOnSyntheticOversizedFile()
+    {
+        string syntheticRoot = Path.Combine(Path.GetTempPath(), $"cadence-filesize-sentinel-{Guid.NewGuid():N}");
+        try
+        {
+            string kernelDir = Path.Combine(syntheticRoot, "packages", "kernel", "src", "Cadence.Kernel.Api");
+            string moduleDir = Path.Combine(syntheticRoot, "apps", "execution", "module", "Endpoints");
+            string migrationsDir = Path.Combine(syntheticRoot, "apps", "execution", "module", "Migrations");
+            Directory.CreateDirectory(kernelDir);
+            Directory.CreateDirectory(moduleDir);
+            Directory.CreateDirectory(migrationsDir);
+
+            // 500 non-empty lines + 80 blank lines -> must pass.
+            var atLimitLines = Enumerable.Range(1, 500)
+                .SelectMany(i => i % 6 == 0
+                    ? new[] { $"public sealed record LineRecord{i}(int Value);", string.Empty }
+                    : new[] { $"public sealed record LineRecord{i}(int Value);" });
+            File.WriteAllLines(Path.Combine(moduleDir, "AtLimitSlice.cs"), atLimitLines);
+
+            // 501 non-empty lines -> must fail.
+            var oversizedLines = Enumerable.Range(1, 501)
+                .Select(i => $"public sealed record MonolithItem{i}(int Value);");
+            File.WriteAllLines(Path.Combine(kernelDir, "OversizedMonolith.cs"), oversizedLines);
+
+            // 700 non-empty lines inside Migrations/ -> generated EF migration, must be excluded.
+            var migrationLines = Enumerable.Range(1, 700)
+                .Select(i => $"// migration statement {i}");
+            File.WriteAllLines(Path.Combine(migrationsDir, "20261101000000_Initial.cs"), migrationLines);
+
+            var (inspectedCount, violations) = CSharpFileSizeRules.EvaluateRepository(syntheticRoot);
+            inspectedCount.Should().Be(2);
+            violations.Should().Equal(
+                "packages/kernel/src/Cadence.Kernel.Api/OversizedMonolith.cs (501 non-empty lines > 500)");
+
+            var ratchet = ShrinkOnlyBaseline.Compare(
+                CSharpFileSizeRules.BaselineRelativePath,
+                violations,
+                []);
+            ratchet.IsClean.Should().BeFalse();
+            ratchet.NewViolations.Should().Equal(violations);
+            ratchet.Describe(
+                    "CSharpFileSize",
+                    nameof(KernelDdfAndModuleCSharpFilesMustNotExceed500NonEmptyLines),
+                    CSharpFileSizeRules.RemediationGuidance)
+                .Should().Contain("OversizedMonolith.cs")
+                .And.Contain("500 non-empty lines");
+        }
+        finally
+        {
+            if (Directory.Exists(syntheticRoot))
+            {
+                Directory.Delete(syntheticRoot, recursive: true);
+            }
+        }
+    }
+
     private static bool HasProjectOrAssemblyReference(Assembly assembly, string targetProjectOrAssemblyName)
     {
         if (assembly.GetReferencedAssemblies().Any(a => string.Equals(a.Name, targetProjectOrAssemblyName, StringComparison.OrdinalIgnoreCase)))

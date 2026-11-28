@@ -1,29 +1,15 @@
 using System;
-using System.Collections.Frozen;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Api.Validation;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
-using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
-using Cadence.Kernel.Evidence;
-using Cadence.Kernel.Execution;
-using Cadence.Kernel.Intelligence;
-using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Modules;
-using Cadence.Kernel.Navigation;
-using Cadence.Kernel.Protocol;
-using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
-using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
-using Cadence.Kernel.Trust;
 using Cadence.Kernel.Validation;
 using Cadence.Security.Authentication;
 
@@ -32,7 +18,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Kernel.Api;
 
@@ -51,13 +36,6 @@ public static class KernelValidationEndpoints
 
     /// <summary>The semantic action a validation-finding explanation step-up token must carry.</summary>
     public const string ExplainFindingSemanticAction = "kernel.validation_finding.explain";
-
-    private static readonly Capability ApproveLibraryItemCapability = new("library_item.approve", VerbClass.Approve);
-    private static readonly Capability RegisterStandardCapability = new("standard.register", VerbClass.Execute);
-    private static readonly Capability ApproveStandardCapability = new("standard.approve", VerbClass.Approve);
-    private static readonly Capability AcceptFindingCapability = new("validation_finding.accept", VerbClass.Approve);
-    private static readonly Capability ExplainFindingCapability = new("validation_finding.explain", VerbClass.Approve);
-    private static readonly Capability EnrollmentUnblindCapability = new("enrollment.unblind", VerbClass.Read);
 
     /// <summary>The canonical concrete action path for approving a library item reference.</summary>
     public static string ApproveLibraryItemAction(string itemRef) =>
@@ -195,137 +173,25 @@ public static class KernelValidationEndpoints
         return kernel;
     }
 
-    internal static async Task<Results<Ok<KernelStudyRulePacksResponse>, ProblemHttpResult>> ListStudyRulePacksAsync(
+    internal static Task<Results<Ok<KernelStudyRulePacksResponse>, ProblemHttpResult>> ListStudyRulePacksAsync(
         string studyRef,
         HttpContext context,
         INodeVisibility visibility,
         ICurrentActor actor,
-        CancellationToken cancellationToken)
-    {
-        var tenant = KernelRequestTenant.Get(context);
-        var resolved = await ResolveVisibleStudyAsync(tenant, studyRef, context, visibility, actor, cancellationToken).ConfigureAwait(false);
-        if (resolved.Problem is { } problem)
-        {
-            return problem;
-        }
+        CancellationToken cancellationToken) =>
+        KernelRulePackGovernanceEndpoints.ListStudyRulePacksAsync(studyRef, context, visibility, actor, cancellationToken);
 
-        var studyId = resolved.StudyId;
-        var registry = context.RequestServices.GetService<IStandardsRegistry>();
-        if (registry is null)
-        {
-            return TypedResults.Ok(new KernelStudyRulePacksResponse(NodeRef.For(studyId).ToString(), null, [], []));
-        }
-
-        var profile = await registry.FindStudyStandardsAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
-        var pinnedIds = (profile?.LibraryPins ?? []).ToHashSet();
-        var items = await registry.ListLibraryItemsAsync(tenant, LibraryItemKind.RulePack, cancellationToken).ConfigureAwait(false);
-        var packs = items.Select(item => KernelRulePackResponse.From(item, pinnedIds.Contains(item.Id))).ToList();
-        var pinnedRulePackRefs = items
-            .Where(item => pinnedIds.Contains(item.Id))
-            .Select(item => NodeRef.For(item.Id).ToString())
-            .ToList();
-
-        return TypedResults.Ok(new KernelStudyRulePacksResponse(
-            NodeRef.For(studyId).ToString(),
-            profile is not null ? NodeRef.For(profile.Id).ToString() : null,
-            pinnedRulePackRefs,
-            packs));
-    }
-
-    internal static async Task<Results<Ok<KernelRulePackPreviewResponse>, ProblemHttpResult>> PreviewStudyRulePackAsync(
+    internal static Task<Results<Ok<KernelRulePackPreviewResponse>, ProblemHttpResult>> PreviewStudyRulePackAsync(
         string studyRef,
         string itemRef,
         HttpContext context,
         INodeVisibility visibility,
         ICurrentActor actor,
         IClock clock,
-        CancellationToken cancellationToken)
-    {
-        if (!TryParseLibraryItem(itemRef, out var itemId))
-        {
-            return KernelProblems.BadRequest("Invalid NodeRef", $"'{itemRef}' is not a library_item NodeRef (library_item:<uuid>).");
-        }
+        CancellationToken cancellationToken) =>
+        KernelRulePackGovernanceEndpoints.PreviewStudyRulePackAsync(studyRef, itemRef, context, visibility, actor, clock, cancellationToken);
 
-        var tenant = KernelRequestTenant.Get(context);
-        var resolved = await ResolveVisibleStudyAsync(tenant, studyRef, context, visibility, actor, cancellationToken).ConfigureAwait(false);
-        if (resolved.Problem is { } problem)
-        {
-            return problem;
-        }
-
-        var registry = context.RequestServices.GetService<IStandardsRegistry>();
-        var validation = context.RequestServices.GetService<ICollectionValidationService>();
-        if (registry is null || validation is null)
-        {
-            return TypedResults.Ok(new KernelRulePackPreviewResponse(NodeRef.For(itemId).ToString(), 0, 0, 0, []));
-        }
-
-        var item = await registry.FindLibraryItemAsync(tenant, itemId, cancellationToken).ConfigureAwait(false);
-        if (item is null || item.Kind != LibraryItemKind.RulePack)
-        {
-            return KernelProblems.NotFound(NodeRef.For(itemId));
-        }
-
-        IReadOnlyList<CollectionInstanceRecord>? studyForms = null;
-        IReadOnlySet<EnrollmentId>? unblindedEnrollments = null;
-        var probe = context.RequestServices.GetService<IAuthorizationProbe>();
-        var collections = context.RequestServices.GetService<ICollectionInstanceRecords>();
-        if (probe is not null && collections is not null)
-        {
-            studyForms = await collections.ListForStudyAsync(tenant, resolved.StudyId, cancellationToken).ConfigureAwait(false);
-            var enrollmentNodes = studyForms
-                .Select(f => (EnrollmentId: f.EnrollmentId, Node: NodeRef.For(f.EnrollmentId)))
-                .DistinctBy(x => x.EnrollmentId)
-                .ToArray();
-            var permitted = new HashSet<EnrollmentId>();
-            if (enrollmentNodes.Length > 0)
-            {
-                var decisions = await probe.CanIManyAsync(
-                    tenant,
-                    EnrollmentUnblindCapability,
-                    [.. enrollmentNodes.Select(x => x.Node)],
-                    cancellationToken).ConfigureAwait(false);
-                foreach (var (enrollmentId, node) in enrollmentNodes)
-                {
-                    if (decisions.TryGetValue(node, out var decision) && decision.Permitted)
-                    {
-                        permitted.Add(enrollmentId);
-                    }
-                }
-            }
-
-            unblindedEnrollments = permitted;
-        }
-
-        var asOf = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
-        var preview = studyForms is not null
-            ? await validation.PreviewRulePackAsync(
-                tenant,
-                resolved.StudyId,
-                itemId,
-                studyForms,
-                asOf,
-                actor.Actor,
-                unblindedEnrollments,
-                cancellationToken).ConfigureAwait(false)
-            : await validation.PreviewRulePackAsync(
-                tenant,
-                resolved.StudyId,
-                itemId,
-                asOf,
-                actor.Actor,
-                unblindedEnrollments,
-                cancellationToken).ConfigureAwait(false);
-
-        return TypedResults.Ok(new KernelRulePackPreviewResponse(
-            NodeRef.For(itemId).ToString(),
-            preview.FormsEvaluated,
-            preview.RulesEvaluated,
-            preview.Violations.Count,
-            [.. preview.Violations.Select(KernelRulePackPreviewViolationResponse.From)]));
-    }
-
-    internal static async Task<Results<Ok<KernelRulePackResponse>, ProblemHttpResult>> ApproveLibraryItemAsync(
+    internal static Task<Results<Ok<KernelRulePackResponse>, ProblemHttpResult>> ApproveLibraryItemAsync(
         string itemRef,
         KernelApproveLibraryItemRequest? request,
         HttpContext context,
@@ -333,105 +199,10 @@ public static class KernelValidationEndpoints
         IKernelCommandSender sender,
         IAuthorizationProbe probe,
         IKernelChangeReason changeReason,
-        CancellationToken cancellationToken)
-    {
-        if (context.VerifiedSigToken() is not { } sigToken)
-        {
-            return TypedResults.Problem(
-                title: "Electronic signature required",
-                detail: "Supply a fresh, single-use X-Sig-Token step-up header bound to this library item approval.",
-                statusCode: StatusCodes.Status401Unauthorized);
-        }
+        CancellationToken cancellationToken) =>
+        KernelRulePackGovernanceEndpoints.ApproveLibraryItemAsync(itemRef, request, context, registry, sender, probe, changeReason, cancellationToken);
 
-        if (!TryParseLibraryItem(itemRef, out var itemId))
-        {
-            return KernelProblems.BadRequest("Invalid NodeRef", $"'{itemRef}' is not a library_item NodeRef (library_item:<uuid>).");
-        }
-
-        var idempotencyKey = context.Request.Headers[KernelObservationEndpoints.IdempotencyKeyHeader].ToString().Trim();
-        if (string.IsNullOrWhiteSpace(idempotencyKey))
-        {
-            return KernelErrorEndpoints.Problem(KernelErrors.IdempotencyKeyRequired);
-        }
-
-        var reason = (changeReason.Read(context) ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(reason))
-        {
-            return KernelErrorEndpoints.Problem(KernelErrors.ReasonForChangeRequired);
-        }
-
-        var tenant = KernelRequestTenant.Get(context);
-        if (context.RequestServices.GetService<ITenantEntitlementReader>() is { } entitlementReader)
-        {
-            var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
-            var entitlements = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
-            if (entitlements.IsReadOnly)
-            {
-                return KernelErrorEndpoints.Problem(KernelErrors.SubscriptionExpired);
-            }
-
-            if (!entitlements.ProductFamilies.Contains(ProductFamily.Blueprint))
-            {
-                return KernelErrorEndpoints.Problem(CommercialErrors.ProductFamilyNotEntitled);
-            }
-        }
-
-        var existing = await registry.FindLibraryItemAsync(tenant, itemId, cancellationToken).ConfigureAwait(false);
-        if (existing is null)
-        {
-            return KernelErrorEndpoints.Problem(StandardsErrors.LibraryItemUnknown);
-        }
-
-        var attestationId = request?.AttestationId is { } given && given != Guid.Empty
-            ? AttestationId.FromGuid(given)
-            : AttestationId.FromGuid(DeriveGuid(tenant, "approve-library-item-attest", idempotencyKey));
-
-        var canApprove = await probe.CanIAsync(tenant, ApproveLibraryItemCapability, NodeRef.For(itemId), cancellationToken).ConfigureAwait(false);
-        if (canApprove.Permitted)
-        {
-            var attestResult = await sender.SendAsync(
-                new Attest(
-                    tenant,
-                    attestationId,
-                    AttestationMeaning.Approved,
-                    new AttestationTarget(NodeKinds.LibraryItem, itemId.Value, existing.ContentHash),
-                    new DateTimeOffset(sigToken.IssuedAt, TimeSpan.Zero),
-                    KernelLockEndpoints.StepUpMethod,
-                    $"{idempotencyKey}:attest",
-                    reason),
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-            if (!attestResult.IsSuccess && attestResult.Error?.Code != KernelErrors.AlreadyExists.Code)
-            {
-                return KernelErrorEndpoints.Problem(attestResult.Error!);
-            }
-        }
-
-        var approveResult = await sender.SendAsync(
-            new ApproveLibraryItem(tenant, itemId, attestationId, idempotencyKey, reason),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (!approveResult.IsSuccess)
-        {
-            return KernelErrorEndpoints.Problem(approveResult.Error!);
-        }
-
-        if (existing.Kind == LibraryItemKind.RulePack)
-        {
-            await EnsureBaselineStandardApprovedAsync(
-                tenant,
-                registry,
-                sender,
-                probe,
-                new DateTimeOffset(sigToken.IssuedAt, TimeSpan.Zero),
-                idempotencyKey,
-                reason,
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        var updated = await registry.FindLibraryItemAsync(tenant, itemId, cancellationToken).ConfigureAwait(false) ?? existing;
-        return TypedResults.Ok(KernelRulePackResponse.From(updated, pinned: false));
-    }
-
-    internal static async Task<Results<Ok<KernelStudyRulePacksResponse>, ProblemHttpResult>> DeclareStudyRulePacksAsync(
+    internal static Task<Results<Ok<KernelStudyRulePacksResponse>, ProblemHttpResult>> DeclareStudyRulePacksAsync(
         string studyRef,
         KernelDeclareStudyRulePacksRequest? request,
         HttpContext context,
@@ -440,92 +211,10 @@ public static class KernelValidationEndpoints
         INodeVisibility visibility,
         ICurrentActor actor,
         IKernelChangeReason changeReason,
-        CancellationToken cancellationToken)
-    {
-        if (request?.RulePackRefs is null)
-        {
-            return KernelProblems.BadRequest("Invalid standards declaration", "Provide rule_pack_refs as an array of library_item NodeRefs.");
-        }
+        CancellationToken cancellationToken) =>
+        KernelRulePackGovernanceEndpoints.DeclareStudyRulePacksAsync(studyRef, request, context, registry, sender, visibility, actor, changeReason, cancellationToken);
 
-        var idempotencyKey = context.Request.Headers[KernelObservationEndpoints.IdempotencyKeyHeader].ToString().Trim();
-        if (string.IsNullOrWhiteSpace(idempotencyKey))
-        {
-            return KernelErrorEndpoints.Problem(KernelErrors.IdempotencyKeyRequired);
-        }
-
-        var reason = (changeReason.Read(context) ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(reason))
-        {
-            return KernelErrorEndpoints.Problem(KernelErrors.ReasonForChangeRequired);
-        }
-
-        var requestedRulePacks = new List<LibraryItemId>();
-        foreach (var rawRef in request.RulePackRefs)
-        {
-            if (!TryParseLibraryItem(rawRef, out var itemId))
-            {
-                return KernelProblems.BadRequest("Invalid NodeRef", $"'{rawRef}' is not a library_item NodeRef (library_item:<uuid>).");
-            }
-
-            requestedRulePacks.Add(itemId);
-        }
-
-        var tenant = KernelRequestTenant.Get(context);
-        var resolved = await ResolveVisibleStudyAsync(tenant, studyRef, context, visibility, actor, cancellationToken).ConfigureAwait(false);
-        if (resolved.Problem is { } problem)
-        {
-            return problem;
-        }
-
-        var studyId = resolved.StudyId;
-        var currentProfile = await registry.FindStudyStandardsAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
-        var profileId = currentProfile?.Id
-            ?? StudyStandardsProfileId.FromGuid(DeriveGuid(tenant, "study-standards-profile", studyId.Value.ToString("D")));
-
-        var preservedPins = new List<LibraryItemId>();
-        if (currentProfile is not null)
-        {
-            foreach (var pinId in currentProfile.LibraryPins)
-            {
-                var pinnedItem = await registry.FindLibraryItemAsync(tenant, pinId, cancellationToken).ConfigureAwait(false);
-                if (pinnedItem is not null && pinnedItem.Kind != LibraryItemKind.RulePack)
-                {
-                    preservedPins.Add(pinId);
-                }
-            }
-        }
-
-        IReadOnlyList<StandardVersionId> standardVersions = currentProfile?.StandardVersions ?? [];
-        if (standardVersions.Count == 0)
-        {
-            var allStandards = await registry.ListStandardVersionsAsync(tenant, cancellationToken).ConfigureAwait(false);
-            standardVersions = [.. allStandards
-                .Where(s => s.Status == GovernanceStatus.Approved)
-                .GroupBy(s => s.StandardCode, StringComparer.Ordinal)
-                .Select(g => g.Last().Id)];
-        }
-
-        var mergedPins = preservedPins.Concat(requestedRulePacks).Distinct().ToList();
-        var declareResult = await sender.SendAsync(
-            new DeclareStudyStandards(
-                tenant,
-                studyId,
-                profileId,
-                standardVersions,
-                currentProfile?.ControlledTerminology ?? [],
-                mergedPins,
-                idempotencyKey,
-                reason),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (!declareResult.IsSuccess)
-        {
-            return KernelErrorEndpoints.Problem(declareResult.Error!);
-        }
-
-        return await ListStudyRulePacksAsync(studyRef, context, visibility, actor, cancellationToken).ConfigureAwait(false);
-    }
-
-    internal static async Task<Results<Ok<KernelValidationFindingPageResponse>, ProblemHttpResult>> ListStudyFindingsAsync(
+    internal static Task<Results<Ok<KernelValidationFindingPageResponse>, ProblemHttpResult>> ListStudyFindingsAsync(
         string studyRef,
         string? stage,
         [FromQuery(Name = "status")] string[]? status,
@@ -536,236 +225,30 @@ public static class KernelValidationEndpoints
         HttpContext context,
         INodeVisibility visibility,
         ICurrentActor actor,
-        CancellationToken cancellationToken)
-    {
-        ValidationStage? parsedStage = null;
-        if (!string.IsNullOrWhiteSpace(stage))
-        {
-            if (!Enum.TryParse<ValidationStage>(stage, ignoreCase: true, out var s) || !Enum.IsDefined(s) || int.TryParse(stage, out _))
-            {
-                return KernelProblems.BadRequest("Invalid stage", $"'{stage}' is not a valid validation stage.");
-            }
+        CancellationToken cancellationToken) =>
+        KernelValidationFindingReadEndpoints.ListStudyFindingsAsync(
+            studyRef, stage, status, severity, dataset, pack_key, limit, context, visibility, actor, cancellationToken);
 
-            parsedStage = s;
-        }
-
-        HashSet<FindingStatus>? parsedStatuses = null;
-        if (status is { Length: > 0 })
-        {
-            foreach (var rawStatus in status)
-            {
-                if (string.IsNullOrWhiteSpace(rawStatus))
-                {
-                    continue;
-                }
-
-                if (!Enum.TryParse<FindingStatus>(rawStatus, ignoreCase: true, out var st) || !Enum.IsDefined(st) || int.TryParse(rawStatus, out _))
-                {
-                    return KernelProblems.BadRequest("Invalid status", $"'{rawStatus}' is not a valid finding status.");
-                }
-
-                parsedStatuses ??= [];
-                parsedStatuses.Add(st);
-            }
-        }
-
-        ValidationSeverity? parsedSeverity = null;
-        if (!string.IsNullOrWhiteSpace(severity))
-        {
-            if (!Enum.TryParse<ValidationSeverity>(severity, ignoreCase: true, out var sev) || !Enum.IsDefined(sev))
-            {
-                return KernelProblems.BadRequest("Invalid severity", $"'{severity}' is not a valid validation severity.");
-            }
-
-            parsedSeverity = sev;
-        }
-
-        if (limit is < 1 or > FindingQuery.MaxTake)
-        {
-            return KernelProblems.BadRequest("Invalid limit", $"Limit must be between 1 and {FindingQuery.MaxTake}.");
-        }
-
-        var tenant = KernelRequestTenant.Get(context);
-        var resolved = await ResolveVisibleStudyAsync(tenant, studyRef, context, visibility, actor, cancellationToken).ConfigureAwait(false);
-        if (resolved.Problem is { } problem)
-        {
-            return problem;
-        }
-
-        var findings = context.RequestServices.GetService<IValidationFindings>();
-        if (findings is null)
-        {
-            return TypedResults.Ok(new KernelValidationFindingPageResponse(0, []));
-        }
-
-        var rawPage = await findings.ListAsync(
-            tenant,
-            new FindingQuery(resolved.StudyId)
-            {
-                Stage = parsedStage,
-                Statuses = parsedStatuses,
-                Severity = parsedSeverity,
-                Dataset = string.IsNullOrWhiteSpace(dataset) ? null : dataset.Trim(),
-                PackKey = string.IsNullOrWhiteSpace(pack_key) ? null : pack_key.Trim(),
-                Take = FindingQuery.MaxTake,
-            },
-            cancellationToken).ConfigureAwait(false);
-
-        if (rawPage.Findings.Count == 0)
-        {
-            return TypedResults.Ok(new KernelValidationFindingPageResponse(0, []));
-        }
-
-        var visibleFindings = await FilterVisibleFindingsAsync(
-            tenant,
-            resolved.StudyId,
-            rawPage.Findings,
-            context.RequestServices,
-            visibility,
-            actor,
-            cancellationToken).ConfigureAwait(false);
-        var take = limit ?? 100;
-
-        return TypedResults.Ok(new KernelValidationFindingPageResponse(
-            visibleFindings.Count,
-            [.. visibleFindings.Take(take).Select(KernelValidationFindingResponse.From)]));
-    }
-
-    internal static async Task<Results<Ok<KernelStudyAttentionResponse>, ProblemHttpResult>> GetStudyAttentionAsync(
+    internal static Task<Results<Ok<KernelStudyAttentionResponse>, ProblemHttpResult>> GetStudyAttentionAsync(
         string studyRef,
         [FromQuery] int? limit,
         HttpContext context,
         INodeVisibility visibility,
         ICurrentActor actor,
         IClock clock,
-        CancellationToken cancellationToken)
-    {
-        var take = limit ?? 20;
-        if (take is < 1 or > KernelProposalEndpoints.MaxLimit)
-        {
-            return KernelProblems.BadRequest("Invalid limit", $"Limit must be between 1 and {KernelProposalEndpoints.MaxLimit}.");
-        }
+        CancellationToken cancellationToken) =>
+        KernelValidationFindingReadEndpoints.GetStudyAttentionAsync(studyRef, limit, context, visibility, actor, clock, cancellationToken);
 
-        var tenant = KernelRequestTenant.Get(context);
-        var resolved = await KernelStudyLookup.ResolveVisibleStudyAsync(
-            tenant,
-            studyRef,
-            context,
-            visibility,
-            actor,
-            static (studyNode, mask) => $"You may not access study {studyNode} ({mask}).",
-            allowVersionedStudyRef: true,
-            cancellationToken).ConfigureAwait(false);
-        if (resolved.Problem is { } problem)
-        {
-            return problem;
-        }
-
-        IReadOnlyList<KernelProposalResponse> proposalResponses = [];
-        if (context.RequestServices.GetService<IProposalReader>() is { } proposalReader)
-        {
-            var proposals = await proposalReader
-                .ListForStudyAsync(tenant, resolved.Study.StudyId, ProposalStatus.Open, clock.UtcNow, take, cancellationToken)
-                .ConfigureAwait(false);
-            if (proposals.Count > 0)
-            {
-                var masks = await KernelProposalEndpoints
-                    .MaskProposalsAsync(visibility, actor, tenant, proposals, cancellationToken)
-                    .ConfigureAwait(false);
-                proposalResponses = [.. proposals.Select(p => KernelProposalResponse.From(p, masks))];
-            }
-        }
-
-        IReadOnlyList<KernelValidationFindingResponse> findingResponses = [];
-        if (context.RequestServices.GetService<IValidationFindings>() is { } findings)
-        {
-            var rawPage = await findings.ListAsync(
-                tenant,
-                new FindingQuery(resolved.Study.StudyId)
-                {
-                    Statuses = [FindingStatus.Open, FindingStatus.Investigating],
-                    Take = FindingQuery.MaxTake,
-                },
-                cancellationToken).ConfigureAwait(false);
-            if (rawPage.Findings.Count > 0)
-            {
-                var visibleFindings = await FilterVisibleFindingsAsync(
-                    tenant,
-                    resolved.Study.StudyId,
-                    rawPage.Findings,
-                    context.RequestServices,
-                    visibility,
-                    actor,
-                    cancellationToken).ConfigureAwait(false);
-                findingResponses = [.. visibleFindings.Take(take).Select(KernelValidationFindingResponse.From)];
-            }
-        }
-
-        IReadOnlyList<KernelStudySdvAlertResponse> sdvAlertResponses = [];
-        if (context.RequestServices.GetService<IStudySdvAlertReader>() is { } sdvAlerts)
-        {
-            var rawAlerts = await sdvAlerts
-                .ListForStudyAsync(tenant, resolved.Study.StudyId, resolved.Study.StudyCode, cancellationToken)
-                .ConfigureAwait(false);
-            if (rawAlerts.Count > 0)
-            {
-                sdvAlertResponses = [.. rawAlerts.Select(KernelStudySdvAlertResponse.From)];
-            }
-        }
-
-        return TypedResults.Ok(new KernelStudyAttentionResponse(
-            resolved.Study.PinnedRef.ToString(),
-            proposalResponses,
-            findingResponses,
-            sdvAlertResponses));
-    }
-
-    internal static async Task<Results<Ok<KernelValidationFindingDetailResponse>, ProblemHttpResult>> GetFindingAsync(
+    internal static Task<Results<Ok<KernelValidationFindingDetailResponse>, ProblemHttpResult>> GetFindingAsync(
         string findingRef,
         HttpContext context,
         IValidationFindings findings,
         INodeVisibility visibility,
         ICurrentActor actor,
-        CancellationToken cancellationToken)
-    {
-        if (!NodeRef.TryParse(findingRef, out var node) || node.Kind != NodeKinds.ValidationFinding)
-        {
-            return KernelProblems.BadRequest("Invalid NodeRef", $"'{findingRef}' is not a validation_finding NodeRef.");
-        }
+        CancellationToken cancellationToken) =>
+        KernelValidationFindingReadEndpoints.GetFindingAsync(findingRef, context, findings, visibility, actor, cancellationToken);
 
-        var tenant = KernelRequestTenant.Get(context);
-        var view = await findings.FindAsync(tenant, ValidationFindingId.FromGuid(node.Id), cancellationToken).ConfigureAwait(false);
-        if (view is null)
-        {
-            return KernelProblems.NotFound(node);
-        }
-
-        var studyNode = NodeRef.For(view.Study);
-        var studyMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [studyNode], cancellationToken).ConfigureAwait(false);
-        if (studyMasks.For(studyNode) is { } studyMask)
-        {
-            return KernelProblems.NotVisible($"You may not see findings for study {studyNode} ({studyMask}).");
-        }
-
-        var visibleFindings = await FilterVisibleFindingsAsync(
-            tenant,
-            view.Study,
-            [view],
-            context.RequestServices,
-            visibility,
-            actor,
-            cancellationToken).ConfigureAwait(false);
-        if (visibleFindings.Count == 0)
-        {
-            return KernelProblems.NotVisible($"You may not see validation finding {node}.");
-        }
-
-        return TypedResults.Ok(new KernelValidationFindingDetailResponse(
-            KernelValidationFindingResponse.From(view),
-            view.Explain()));
-    }
-
-    internal static async Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> InvestigateFindingAsync(
+    internal static Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> InvestigateFindingAsync(
         string findingRef,
         HttpContext context,
         IValidationFindings findings,
@@ -773,39 +256,11 @@ public static class KernelValidationEndpoints
         IKernelChangeReason changeReason,
         INodeVisibility visibility,
         ICurrentActor actor,
-        CancellationToken cancellationToken)
-    {
-        if (!TryParseFinding(findingRef, out var findingId))
-        {
-            return KernelProblems.BadRequest("Invalid NodeRef", $"'{findingRef}' is not a validation_finding NodeRef.");
-        }
+        CancellationToken cancellationToken) =>
+        KernelValidationFindingDecisionEndpoints.InvestigateFindingAsync(
+            findingRef, context, findings, sender, changeReason, visibility, actor, cancellationToken);
 
-        if (ReadCommandHeaders(context, changeReason) is var (idempotencyKey, reason, headerProblem) && headerProblem is not null)
-        {
-            return headerProblem;
-        }
-
-        var tenant = KernelRequestTenant.Get(context);
-        if (await CheckValidationDecisionEntitlementsAsync(context, tenant, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
-        {
-            return entitlementProblem;
-        }
-
-        var (_, visibilityProblem) = await AuthorizeDecisionVisibilityAsync(
-            tenant, findingId, findings, context, visibility, actor, cancellationToken).ConfigureAwait(false);
-        if (visibilityProblem is not null)
-        {
-            return visibilityProblem;
-        }
-
-        var result = await sender.SendAsync(
-            new InvestigateFinding(tenant, findingId, idempotencyKey, reason),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        return await ToFindingDecisionResultAsync(result, tenant, findingId, findings, context.RequestServices, visibility, actor, cancellationToken)
-            .ConfigureAwait(false);
-    }
-
-    internal static async Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> ClassifyFindingAsync(
+    internal static Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> ClassifyFindingAsync(
         string findingRef,
         KernelClassifyFindingRequest? request,
         HttpContext context,
@@ -814,49 +269,11 @@ public static class KernelValidationEndpoints
         IKernelChangeReason changeReason,
         INodeVisibility visibility,
         ICurrentActor actor,
-        CancellationToken cancellationToken)
-    {
-        if (!TryParseFinding(findingRef, out var findingId))
-        {
-            return KernelProblems.BadRequest("Invalid NodeRef", $"'{findingRef}' is not a validation_finding NodeRef.");
-        }
+        CancellationToken cancellationToken) =>
+        KernelValidationFindingDecisionEndpoints.ClassifyFindingAsync(
+            findingRef, request, context, findings, sender, changeReason, visibility, actor, cancellationToken);
 
-        if (request is null
-            || string.IsNullOrWhiteSpace(request.Classification)
-            || !Enum.TryParse<FindingClassification>(request.Classification.Trim(), ignoreCase: true, out var classification)
-            || !Enum.IsDefined(classification))
-        {
-            return KernelProblems.BadRequest(
-                "Invalid classification",
-                "Classification must be DataIssue, MappingIssue, MetadataIssue, RuleIssue or NotAnIssue.");
-        }
-
-        if (ReadCommandHeaders(context, changeReason) is var (idempotencyKey, reason, headerProblem) && headerProblem is not null)
-        {
-            return headerProblem;
-        }
-
-        var tenant = KernelRequestTenant.Get(context);
-        if (await CheckValidationDecisionEntitlementsAsync(context, tenant, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
-        {
-            return entitlementProblem;
-        }
-
-        var (_, visibilityProblem) = await AuthorizeDecisionVisibilityAsync(
-            tenant, findingId, findings, context, visibility, actor, cancellationToken).ConfigureAwait(false);
-        if (visibilityProblem is not null)
-        {
-            return visibilityProblem;
-        }
-
-        var result = await sender.SendAsync(
-            new ClassifyFinding(tenant, findingId, classification, idempotencyKey, reason),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        return await ToFindingDecisionResultAsync(result, tenant, findingId, findings, context.RequestServices, visibility, actor, cancellationToken)
-            .ConfigureAwait(false);
-    }
-
-    internal static async Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> AcceptFindingAsync(
+    internal static Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> AcceptFindingAsync(
         string findingRef,
         KernelAcceptFindingRequest? request,
         HttpContext context,
@@ -866,89 +283,11 @@ public static class KernelValidationEndpoints
         IKernelChangeReason changeReason,
         INodeVisibility visibility,
         ICurrentActor actor,
-        CancellationToken cancellationToken)
-    {
-        if (context.VerifiedSigToken() is not { } sigToken)
-        {
-            return TypedResults.Problem(
-                title: "Electronic signature required",
-                detail: "Supply a fresh, single-use X-Sig-Token step-up header bound to accepting this validation finding.",
-                statusCode: StatusCodes.Status401Unauthorized);
-        }
+        CancellationToken cancellationToken) =>
+        KernelValidationFindingDecisionEndpoints.AcceptFindingAsync(
+            findingRef, request, context, findings, sender, probe, changeReason, visibility, actor, cancellationToken);
 
-        if (!TryParseFinding(findingRef, out var findingId))
-        {
-            return KernelProblems.BadRequest("Invalid NodeRef", $"'{findingRef}' is not a validation_finding NodeRef.");
-        }
-
-        var rationale = (request?.Rationale ?? string.Empty).Trim();
-        if (!FindingText.IsValid(rationale))
-        {
-            return KernelErrorEndpoints.Problem(ValidationErrors.DecisionTextInvalid);
-        }
-
-        if (ReadCommandHeaders(context, changeReason) is var (idempotencyKey, reason, headerProblem) && headerProblem is not null)
-        {
-            return headerProblem;
-        }
-
-        var tenant = KernelRequestTenant.Get(context);
-        if (await CheckValidationDecisionEntitlementsAsync(context, tenant, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
-        {
-            return entitlementProblem;
-        }
-
-        var (existing, visibilityProblem) = await AuthorizeDecisionVisibilityAsync(
-            tenant, findingId, findings, context, visibility, actor, cancellationToken).ConfigureAwait(false);
-        if (visibilityProblem is not null)
-        {
-            return visibilityProblem;
-        }
-
-        var attestationId = request?.AttestationId is { } given && given != Guid.Empty
-            ? AttestationId.FromGuid(given)
-            : AttestationId.FromGuid(DeriveGuid(tenant, "accept-finding-attest", idempotencyKey));
-
-        var findingNode = NodeRef.For(findingId);
-        var canAccept = await probe.CanIAsync(tenant, AcceptFindingCapability, findingNode, cancellationToken).ConfigureAwait(false);
-        if (canAccept.Permitted)
-        {
-            existing ??= await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
-            if (existing is null)
-            {
-                return KernelErrorEndpoints.Problem(ValidationErrors.FindingUnknown);
-            }
-
-            if (existing.Status is FindingStatus.Open or FindingStatus.Investigating)
-            {
-                var hash = FindingDecisionContent.Hash(findingId, existing.LastDetectedRun, FindingStatus.Accepted, rationale);
-                var attestResult = await sender.SendAsync(
-                    new Attest(
-                        tenant,
-                        attestationId,
-                        AttestationMeaning.Responsibility,
-                        new AttestationTarget(NodeKinds.ValidationFinding, findingId.Value, hash),
-                        new DateTimeOffset(sigToken.IssuedAt, TimeSpan.Zero),
-                        KernelLockEndpoints.StepUpMethod,
-                        $"{idempotencyKey}:attest",
-                        reason,
-                        findingNode),
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-                if (!attestResult.IsSuccess && attestResult.Error?.Code != KernelErrors.AlreadyExists.Code)
-                {
-                    return KernelErrorEndpoints.Problem(attestResult.Error!);
-                }
-            }
-        }
-
-        var result = await sender.SendAsync(
-            new AcceptFinding(tenant, findingId, rationale, attestationId, idempotencyKey, reason),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        return await ToFindingDecisionResultAsync(result, tenant, findingId, findings, context.RequestServices, visibility, actor, cancellationToken)
-            .ConfigureAwait(false);
-    }
-
-    internal static async Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> ExplainFindingAsync(
+    internal static Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> ExplainFindingAsync(
         string findingRef,
         KernelExplainFindingRequest? request,
         HttpContext context,
@@ -958,89 +297,11 @@ public static class KernelValidationEndpoints
         IKernelChangeReason changeReason,
         INodeVisibility visibility,
         ICurrentActor actor,
-        CancellationToken cancellationToken)
-    {
-        if (context.VerifiedSigToken() is not { } sigToken)
-        {
-            return TypedResults.Problem(
-                title: "Electronic signature required",
-                detail: "Supply a fresh, single-use X-Sig-Token step-up header bound to explaining this validation finding.",
-                statusCode: StatusCodes.Status401Unauthorized);
-        }
+        CancellationToken cancellationToken) =>
+        KernelValidationFindingDecisionEndpoints.ExplainFindingAsync(
+            findingRef, request, context, findings, sender, probe, changeReason, visibility, actor, cancellationToken);
 
-        if (!TryParseFinding(findingRef, out var findingId))
-        {
-            return KernelProblems.BadRequest("Invalid NodeRef", $"'{findingRef}' is not a validation_finding NodeRef.");
-        }
-
-        var explanation = (request?.Explanation ?? string.Empty).Trim();
-        if (!FindingText.IsValid(explanation))
-        {
-            return KernelErrorEndpoints.Problem(ValidationErrors.DecisionTextInvalid);
-        }
-
-        if (ReadCommandHeaders(context, changeReason) is var (idempotencyKey, reason, headerProblem) && headerProblem is not null)
-        {
-            return headerProblem;
-        }
-
-        var tenant = KernelRequestTenant.Get(context);
-        if (await CheckValidationDecisionEntitlementsAsync(context, tenant, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
-        {
-            return entitlementProblem;
-        }
-
-        var (existing, visibilityProblem) = await AuthorizeDecisionVisibilityAsync(
-            tenant, findingId, findings, context, visibility, actor, cancellationToken).ConfigureAwait(false);
-        if (visibilityProblem is not null)
-        {
-            return visibilityProblem;
-        }
-
-        var attestationId = request?.AttestationId is { } given && given != Guid.Empty
-            ? AttestationId.FromGuid(given)
-            : AttestationId.FromGuid(DeriveGuid(tenant, "explain-finding-attest", idempotencyKey));
-
-        var findingNode = NodeRef.For(findingId);
-        var canExplain = await probe.CanIAsync(tenant, ExplainFindingCapability, findingNode, cancellationToken).ConfigureAwait(false);
-        if (canExplain.Permitted)
-        {
-            existing ??= await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
-            if (existing is null)
-            {
-                return KernelErrorEndpoints.Problem(ValidationErrors.FindingUnknown);
-            }
-
-            if (existing.Status is FindingStatus.Open or FindingStatus.Investigating)
-            {
-                var hash = FindingDecisionContent.Hash(findingId, existing.LastDetectedRun, FindingStatus.Explained, explanation);
-                var attestResult = await sender.SendAsync(
-                    new Attest(
-                        tenant,
-                        attestationId,
-                        AttestationMeaning.Approved,
-                        new AttestationTarget(NodeKinds.ValidationFinding, findingId.Value, hash),
-                        new DateTimeOffset(sigToken.IssuedAt, TimeSpan.Zero),
-                        KernelLockEndpoints.StepUpMethod,
-                        $"{idempotencyKey}:attest",
-                        reason,
-                        findingNode),
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-                if (!attestResult.IsSuccess && attestResult.Error?.Code != KernelErrors.AlreadyExists.Code)
-                {
-                    return KernelErrorEndpoints.Problem(attestResult.Error!);
-                }
-            }
-        }
-
-        var result = await sender.SendAsync(
-            new ExplainFinding(tenant, findingId, explanation, attestationId, idempotencyKey, reason),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        return await ToFindingDecisionResultAsync(result, tenant, findingId, findings, context.RequestServices, visibility, actor, cancellationToken)
-            .ConfigureAwait(false);
-    }
-
-    internal static async Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> ReopenFindingAsync(
+    internal static Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> ReopenFindingAsync(
         string findingRef,
         HttpContext context,
         IValidationFindings findings,
@@ -1048,615 +309,19 @@ public static class KernelValidationEndpoints
         IKernelChangeReason changeReason,
         INodeVisibility visibility,
         ICurrentActor actor,
-        CancellationToken cancellationToken)
-    {
-        if (!TryParseFinding(findingRef, out var findingId))
-        {
-            return KernelProblems.BadRequest("Invalid NodeRef", $"'{findingRef}' is not a validation_finding NodeRef.");
-        }
-
-        if (ReadCommandHeaders(context, changeReason) is var (idempotencyKey, reason, headerProblem) && headerProblem is not null)
-        {
-            return headerProblem;
-        }
-
-        var tenant = KernelRequestTenant.Get(context);
-        if (await CheckValidationDecisionEntitlementsAsync(context, tenant, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
-        {
-            return entitlementProblem;
-        }
-
-        var (_, visibilityProblem) = await AuthorizeDecisionVisibilityAsync(
-            tenant, findingId, findings, context, visibility, actor, cancellationToken).ConfigureAwait(false);
-        if (visibilityProblem is not null)
-        {
-            return visibilityProblem;
-        }
-
-        var result = await sender.SendAsync(
-            new ReopenFinding(tenant, findingId, idempotencyKey, reason),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        return await ToFindingDecisionResultAsync(result, tenant, findingId, findings, context.RequestServices, visibility, actor, cancellationToken)
-            .ConfigureAwait(false);
-    }
-
-    internal static IValidationFindings? ResolveActiveValidationFindings(IServiceProvider services)
-    {
-        if (services.GetService<IValidationFindings>() is not { } findings)
-        {
-            return null;
-        }
-
-        var isPersistenceFindings = findings.GetType().Namespace?.StartsWith("Cadence.Kernel.Persistence", StringComparison.Ordinal) ?? false;
-        if (isPersistenceFindings
-            && services.GetService<IAuthorityStore>() is { } authorityStore
-            && !(authorityStore.GetType().Namespace?.StartsWith("Cadence.Kernel.Persistence", StringComparison.Ordinal) ?? false))
-        {
-            return null;
-        }
-
-        return findings;
-    }
-
-    internal static async Task<bool> IsFindingVisibleAsync(
-        TenantId tenant,
-        ValidationFindingView finding,
-        IServiceProvider services,
-        INodeVisibility visibility,
-        ICurrentActor actor,
-        CancellationToken cancellationToken)
-    {
-        var studyNode = NodeRef.For(finding.Study);
-        var studyMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [studyNode], cancellationToken).ConfigureAwait(false);
-        if (studyMasks.For(studyNode) is not null)
-        {
-            return false;
-        }
-
-        var visible = await FilterVisibleFindingsAsync(tenant, finding.Study, [finding], services, visibility, actor, cancellationToken)
-            .ConfigureAwait(false);
-        return visible.Count > 0;
-    }
-
-    private static async Task<(ValidationFindingView? Existing, ProblemHttpResult? Problem)> AuthorizeDecisionVisibilityAsync(
-        TenantId tenant,
-        ValidationFindingId findingId,
-        IValidationFindings findings,
-        HttpContext context,
-        INodeVisibility visibility,
-        ICurrentActor actor,
-        CancellationToken cancellationToken)
-    {
-        if (actor.Actor is null)
-        {
-            return (null, null);
-        }
-
-        var findingNode = NodeRef.For(findingId);
-        if (ResolveActiveValidationFindings(context.RequestServices) is null)
-        {
-            var fallbackMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [findingNode], cancellationToken).ConfigureAwait(false);
-            return fallbackMasks.For(findingNode) is not null
-                ? (null, KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied))
-                : (null, null);
-        }
-
-        var existing = await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
-        if (existing is not null)
-        {
-            return await IsFindingVisibleAsync(tenant, existing, context.RequestServices, visibility, actor, cancellationToken).ConfigureAwait(false)
-                ? (existing, null)
-                : (null, KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied));
-        }
-
-        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [findingNode], cancellationToken).ConfigureAwait(false);
-        if (masks.For(findingNode) is not null)
-        {
-            return (null, KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied));
-        }
-
-        if (context.RequestServices.GetService<IAuthorizationProbe>() is { } probe)
-        {
-            var canUnblindTenant = await probe.CanIAsync(tenant, EnrollmentUnblindCapability, NodeRef.For(tenant), cancellationToken)
-                .ConfigureAwait(false);
-            if (!canUnblindTenant.Permitted)
-            {
-                return (null, KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied));
-            }
-        }
-
-        return (null, null);
-    }
-
-    private static async Task<ProblemHttpResult?> CheckValidationDecisionEntitlementsAsync(
-        HttpContext context,
-        TenantId tenant,
-        CancellationToken cancellationToken)
-    {
-        if (context.RequestServices.GetService<ITenantEntitlementReader>() is not { } entitlementReader)
-        {
-            return null;
-        }
-
-        var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
-        var entitlements = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
-        if (entitlements.IsReadOnly)
-        {
-            return KernelErrorEndpoints.Problem(KernelErrors.SubscriptionExpired);
-        }
-
-        if (!entitlements.ProductFamilies.Any(static f =>
-                f is ProductFamily.Blueprint or ProductFamily.Capture or ProductFamily.Assure))
-        {
-            return KernelErrorEndpoints.Problem(CommercialErrors.ProductFamilyNotEntitled);
-        }
-
-        return null;
-    }
-
-    private static (string IdempotencyKey, string Reason, ProblemHttpResult? Problem) ReadCommandHeaders(
-        HttpContext context, IKernelChangeReason changeReason)
-    {
-        var idempotencyKey = context.Request.Headers[KernelObservationEndpoints.IdempotencyKeyHeader].ToString().Trim();
-        if (string.IsNullOrWhiteSpace(idempotencyKey))
-        {
-            return (string.Empty, string.Empty, KernelErrorEndpoints.Problem(KernelErrors.IdempotencyKeyRequired));
-        }
-
-        var reason = (changeReason.Read(context) ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(reason))
-        {
-            return (string.Empty, string.Empty, KernelErrorEndpoints.Problem(KernelErrors.ReasonForChangeRequired));
-        }
-
-        return (idempotencyKey, reason, null);
-    }
-
-    private static async Task<Results<Ok<KernelValidationFindingResponse>, ProblemHttpResult>> ToFindingDecisionResultAsync(
-        CommandResult<ValidationFindingId> result,
-        TenantId tenant,
-        ValidationFindingId findingId,
-        IValidationFindings findings,
-        IServiceProvider services,
-        INodeVisibility visibility,
-        ICurrentActor actor,
-        CancellationToken cancellationToken)
-    {
-        if (!result.IsSuccess)
-        {
-            return KernelErrorEndpoints.Problem(result.Error!);
-        }
-
-        var updated = await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
-        if (updated is null)
-        {
-            return KernelProblems.NotFound(NodeRef.For(findingId));
-        }
-
-        if (!await IsFindingVisibleAsync(tenant, updated, services, visibility, actor, cancellationToken).ConfigureAwait(false))
-        {
-            return KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied);
-        }
-
-        return TypedResults.Ok(KernelValidationFindingResponse.From(updated));
-    }
-
-    private static bool TryParseFinding(string text, out ValidationFindingId findingId)
-    {
-        findingId = default;
-        if (!NodeRef.TryParse(text, out var node) || node.Kind != NodeKinds.ValidationFinding || node.Version is not null)
-        {
-            return false;
-        }
-
-        findingId = ValidationFindingId.FromGuid(node.Id);
-        return !findingId.IsEmpty;
-    }
-
-    private static async Task<(StudyId StudyId, ProblemHttpResult? Problem)> ResolveVisibleStudyAsync(
-        TenantId tenant,
-        string studyRef,
-        HttpContext context,
-        INodeVisibility visibility,
-        ICurrentActor actor,
-        CancellationToken cancellationToken)
-    {
-        var (study, problem) = await KernelStudyLookup.ResolveVisibleStudyAsync(
-            tenant,
-            studyRef,
-            context,
-            visibility,
-            actor,
-            static (studyNode, mask) => $"You may not access study {studyNode} ({mask}).",
-            allowVersionedStudyRef: true,
-            cancellationToken).ConfigureAwait(false);
-        return (study.StudyId, problem);
-    }
-
-    private static bool TryParseLibraryItem(string text, out LibraryItemId itemId)
-    {
-        itemId = default;
-        if (!NodeRef.TryParse(text, out var node) || node.Kind != NodeKinds.LibraryItem)
-        {
-            return false;
-        }
-
-        itemId = LibraryItemId.FromGuid(node.Id);
-        return !itemId.IsEmpty;
-    }
-
-    private static async Task EnsureBaselineStandardApprovedAsync(
-        TenantId tenant,
-        IStandardsRegistry registry,
-        IKernelCommandSender sender,
-        IAuthorizationProbe probe,
-        DateTimeOffset authenticatedAt,
-        string idempotencyKey,
-        string reason,
-        CancellationToken cancellationToken)
-    {
-        var existingStandards = await registry.ListStandardVersionsAsync(tenant, cancellationToken).ConfigureAwait(false);
-        if (existingStandards.Any(s => s.Status == GovernanceStatus.Approved))
-        {
-            return;
-        }
-
-        var package = Cadence.Standards.StandardSeeds.Load(Cadence.Standards.StandardSeeds.Names[0]).Package;
-        var summary = existingStandards.FirstOrDefault(s =>
-            string.Equals(s.StandardCode, package.StandardCode, StringComparison.Ordinal)
-            && string.Equals(s.Version, package.Version, StringComparison.Ordinal));
-
-        if (summary is null)
-        {
-            var canRegister = await probe.CanIAsync(tenant, RegisterStandardCapability, NodeRef.For(tenant), cancellationToken).ConfigureAwait(false);
-            if (!canRegister.Permitted)
-            {
-                return;
-            }
-
-            var standardId = StandardVersionId.FromGuid(DeriveGuid(tenant, "baseline-standard", $"{package.StandardCode}:{package.Version}"));
-            var regResult = await sender.SendAsync(
-                new RegisterStandardVersion(tenant, standardId, package, null, $"{idempotencyKey}:std-register", reason),
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-            if (!regResult.IsSuccess && regResult.Error?.Code != KernelErrors.AlreadyExists.Code)
-            {
-                return;
-            }
-
-            summary = await registry.FindStandardVersionAsync(tenant, package.StandardCode, package.Version, cancellationToken).ConfigureAwait(false);
-        }
-
-        if (summary is not null && summary.Status == GovernanceStatus.Draft)
-        {
-            var canApprove = await probe.CanIAsync(tenant, ApproveStandardCapability, NodeRef.For(summary.Id), cancellationToken).ConfigureAwait(false);
-            if (!canApprove.Permitted)
-            {
-                return;
-            }
-
-            var attestId = AttestationId.FromGuid(DeriveGuid(tenant, "baseline-standard-attest", $"{idempotencyKey}:{summary.Id.Value:D}"));
-            var attestResult = await sender.SendAsync(
-                new Attest(
-                    tenant,
-                    attestId,
-                    AttestationMeaning.Approved,
-                    new AttestationTarget(NodeKinds.StandardVersion, summary.Id.Value, summary.ContentHash),
-                    authenticatedAt,
-                    KernelLockEndpoints.StepUpMethod,
-                    $"{idempotencyKey}:std-attest",
-                    reason),
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-            if (!attestResult.IsSuccess && attestResult.Error?.Code != KernelErrors.AlreadyExists.Code)
-            {
-                return;
-            }
-
-            await sender.SendAsync(
-                new ApproveStandardVersion(tenant, summary.Id, attestId, $"{idempotencyKey}:std-approve", reason),
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-        }
-    }
-
-    private static async Task<IReadOnlyList<ValidationFindingView>> FilterVisibleFindingsAsync(
-        TenantId tenant,
-        StudyId studyId,
-        IReadOnlyList<ValidationFindingView> candidates,
-        IServiceProvider services,
-        INodeVisibility visibility,
-        ICurrentActor actor,
-        CancellationToken cancellationToken)
-    {
-        var collections = services.GetService<ICollectionInstanceRecords>();
-        var protocols = services.GetService<IProtocolVersionReader>();
-        var concepts = services.GetService<IConceptRegistry>();
-        var probe = services.GetService<IAuthorizationProbe>();
-        var classifier = services.GetService<IBlindedTreatmentClassifier>() ?? BlindedTreatmentClassifier.Instance;
-
-        var formsByKey = new Dictionary<string, CollectionInstanceRecord>(StringComparer.Ordinal);
-        var formsByEnrollment = new Dictionary<EnrollmentId, List<CollectionInstanceRecord>>();
-        if (collections is not null && candidates.Any(f => f.Target.Kind == FindingTargetKind.DatasetRecord))
-        {
-            var studyForms = await collections.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
-            foreach (var form in studyForms)
-            {
-                formsByKey[form.CollectionInstanceId.Value.ToString("D")] = form;
-                if (!formsByEnrollment.TryGetValue(form.EnrollmentId, out var list))
-                {
-                    formsByEnrollment[form.EnrollmentId] = list = [];
-                }
-
-                list.Add(form);
-            }
-        }
-
-        var perFindingRefs = new Dictionary<ValidationFindingId, List<NodeRef>>(candidates.Count);
-        var allNodesToCheck = new List<NodeRef>(candidates.Count * 2);
-        foreach (var finding in candidates)
-        {
-            var refs = new List<NodeRef> { NodeRef.For(finding.Id) };
-            if (finding.Target.Node is { } targetNode)
-            {
-                refs.Add(targetNode);
-            }
-
-            if (finding.Target.Kind == FindingTargetKind.DatasetRecord
-                && formsByKey.TryGetValue(finding.Target.Key, out var targetForm))
-            {
-                refs.Add(NodeRef.For(targetForm.EnrollmentId));
-                var siblings = formsByEnrollment.GetValueOrDefault(targetForm.EnrollmentId) ?? [targetForm];
-                foreach (var obsId in ResolveReferencedObservationIds(finding, targetForm, siblings))
-                {
-                    refs.Add(NodeRef.For(obsId));
-                }
-            }
-
-            perFindingRefs[finding.Id] = refs;
-            allNodesToCheck.AddRange(refs);
-        }
-
-        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, allNodesToCheck, cancellationToken).ConfigureAwait(false);
-
-        IReadOnlyList<ProtocolDesign>? designs = null;
-        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>? conceptCache = null;
-
-        var unmaskedCandidates = new List<(ValidationFindingView Finding, NodeRef? BlindedScope)>(candidates.Count);
-        var blindedScopes = new HashSet<NodeRef>();
-        foreach (var finding in candidates)
-        {
-            var refs = perFindingRefs[finding.Id];
-            if (refs.Any(r => masks.For(r) is not null))
-            {
-                continue;
-            }
-
-            NodeRef? blindedScope = null;
-            if (probe is not null)
-            {
-                designs ??= await LoadStudyDesignsAsync(tenant, studyId, protocols, formsByKey.Values, cancellationToken).ConfigureAwait(false);
-                conceptCache ??= await LoadStudyConceptsAsync(tenant, concepts, formsByKey.Values, designs, cancellationToken).ConfigureAwait(false);
-                BlindedConceptMetadata? ResolveConcept(ConceptId id) => conceptCache.TryGetValue(id, out var m) ? m : null;
-
-                var isBlinded = classifier.IsBlindedFinding(finding.Target, finding.Observed, designs, ResolveConcept);
-                NodeRef unblindScope = NodeRef.For(studyId);
-                if (finding.Target.Kind == FindingTargetKind.DatasetRecord
-                    && formsByKey.TryGetValue(finding.Target.Key, out var targetForm))
-                {
-                    unblindScope = NodeRef.For(targetForm.EnrollmentId);
-                    if (!isBlinded)
-                    {
-                        var siblings = formsByEnrollment.GetValueOrDefault(targetForm.EnrollmentId) ?? [targetForm];
-                        isBlinded = ReferencesBlindedFormItem(finding, targetForm, siblings, classifier, designs, conceptCache);
-                    }
-                }
-
-                if (isBlinded)
-                {
-                    blindedScope = unblindScope;
-                    blindedScopes.Add(unblindScope);
-                }
-            }
-
-            unmaskedCandidates.Add((finding, blindedScope));
-        }
-
-        IReadOnlyDictionary<NodeRef, AuthorizationDecision>? unblindDecisions = null;
-        if (probe is not null && blindedScopes.Count > 0)
-        {
-            unblindDecisions = await probe.CanIManyAsync(
-                tenant,
-                EnrollmentUnblindCapability,
-                blindedScopes,
-                cancellationToken).ConfigureAwait(false);
-        }
-
-        var visible = new List<ValidationFindingView>(unmaskedCandidates.Count);
-        foreach (var (finding, blindedScope) in unmaskedCandidates)
-        {
-            if (blindedScope is { } scope
-                && (unblindDecisions is null
-                    || !unblindDecisions.TryGetValue(scope, out var decision)
-                    || !decision.Permitted))
-            {
-                continue;
-            }
-
-            visible.Add(finding);
-        }
-
-        return visible;
-    }
-
-    private static IReadOnlyList<ObservationId> ResolveReferencedObservationIds(
-        ValidationFindingView finding,
-        CollectionInstanceRecord targetForm,
-        IReadOnlyList<CollectionInstanceRecord> siblingForms)
-    {
-        var matched = MatchVariableObservations(targetForm.CollectionSpecId, finding.Target.Variable, targetForm, siblingForms)
-            .Concat(finding.Observed.SelectMany(observed =>
-                MatchVariableObservations(targetForm.CollectionSpecId, observed.Variable, targetForm, siblingForms)))
-            .Distinct()
-            .ToList();
-
-        if (matched.Count == 0 && BlindedTreatmentClassifier.MatchesMarkers(targetForm.CollectionSpecId))
-        {
-            return [.. targetForm.Values.Select(val => val.ObservationId).Distinct()];
-        }
-
-        return matched;
-    }
-
-    private static IEnumerable<ObservationId> MatchVariableObservations(
-        string defaultSpecId,
-        string? variable,
-        CollectionInstanceRecord targetForm,
-        IReadOnlyList<CollectionInstanceRecord> siblingForms)
-    {
-        if (string.IsNullOrWhiteSpace(variable))
-        {
-            yield break;
-        }
-
-        var dot = variable.IndexOf('.', StringComparison.Ordinal);
-        if (dot > 0 && dot < variable.Length - 1)
-        {
-            var specId = variable[..dot];
-            var itemId = variable[(dot + 1)..];
-            foreach (var form in siblingForms.Where(f => string.Equals(f.CollectionSpecId, specId, StringComparison.Ordinal)))
-            {
-                foreach (var val in form.Values.Where(v => string.Equals(v.ItemId, itemId, StringComparison.Ordinal)))
-                {
-                    yield return val.ObservationId;
-                }
-            }
-
-            yield break;
-        }
-
-        foreach (var val in targetForm.Values.Where(v => string.Equals(v.ItemId, variable, StringComparison.Ordinal)))
-        {
-            yield return val.ObservationId;
-        }
-
-        foreach (var form in siblingForms.Where(f => !string.Equals(f.CollectionSpecId, defaultSpecId, StringComparison.Ordinal)))
-        {
-            foreach (var val in form.Values.Where(v => string.Equals(v.ItemId, variable, StringComparison.Ordinal)))
-            {
-                yield return val.ObservationId;
-            }
-        }
-    }
-
-    private static bool ReferencesBlindedFormItem(
-        ValidationFindingView finding,
-        CollectionInstanceRecord targetForm,
-        IReadOnlyList<CollectionInstanceRecord> siblingForms,
-        IBlindedTreatmentClassifier classifier,
-        IReadOnlyList<ProtocolDesign> designs,
-        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptCache)
-    {
-        bool IsFormBlindedItem(CollectionInstanceRecord form, string itemId)
-        {
-            if (ReferenceEquals(classifier, BlindedTreatmentClassifier.Instance)
-                && form.BlindedItemIds is not null
-                && form.BlindedItemIds.Contains(itemId))
-            {
-                return true;
-            }
-
-            var specItem = form.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal));
-            var recorded = form.Values.FirstOrDefault(v => string.Equals(v.ItemId, itemId, StringComparison.Ordinal));
-            BlindedConceptMetadata? meta = specItem is not null && conceptCache.TryGetValue(specItem.Concept.ConceptId, out var m)
-                ? m
-                : null;
-            return classifier.IsBlindedCollectionItem(form.CollectionSpecId, form.CollectionTitle, specItem, recorded?.Value, meta, designs);
-        }
-
-        bool MatchesVariable(string? variable)
-        {
-            if (string.IsNullOrWhiteSpace(variable))
-            {
-                return false;
-            }
-
-            var dot = variable.IndexOf('.', StringComparison.Ordinal);
-            if (dot > 0 && dot < variable.Length - 1)
-            {
-                var specId = variable[..dot];
-                var itemId = variable[(dot + 1)..];
-                return siblingForms
-                    .Where(f => string.Equals(f.CollectionSpecId, specId, StringComparison.Ordinal))
-                    .Any(f => IsFormBlindedItem(f, itemId));
-            }
-
-            return IsFormBlindedItem(targetForm, variable)
-                || siblingForms.Any(f => IsFormBlindedItem(f, variable));
-        }
-
-        return classifier.IsBlindedCollectionSpec(targetForm.CollectionSpecId, targetForm.CollectionTitle, designs: designs)
-            || MatchesVariable(finding.Target.Variable)
-            || finding.Observed.Any(o => MatchesVariable(o.Variable));
-    }
-
-    private static async Task<IReadOnlyList<ProtocolDesign>> LoadStudyDesignsAsync(
-        TenantId tenant,
-        StudyId studyId,
-        IProtocolVersionReader? protocols,
-        IEnumerable<CollectionInstanceRecord> forms,
-        CancellationToken cancellationToken)
-    {
-        if (protocols is null)
-        {
-            return [];
-        }
-
-        var distinctFormVersions = forms.Select(f => f.ProtocolVersionId).Distinct().ToList();
-        var studyDesigns = await protocols.GetDesignsForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
-        if (studyDesigns.Count > 0)
-        {
-            var formDesigns = new List<ProtocolDesign>();
-            foreach (var versionId in distinctFormVersions)
-            {
-                if (studyDesigns.TryGetValue(versionId, out var design))
-                {
-                    formDesigns.Add(design);
-                }
-            }
-
-            return formDesigns.Count > 0 ? formDesigns : [.. studyDesigns.Values];
-        }
-
-        var fallbackDesigns = new List<ProtocolDesign>();
-        foreach (var versionId in distinctFormVersions.Where(id => !id.IsEmpty))
-        {
-            if (await protocols.GetDesignAsync(tenant, versionId, cancellationToken).ConfigureAwait(false) is { } design)
-            {
-                fallbackDesigns.Add(design);
-            }
-        }
-
-        return fallbackDesigns;
-    }
-
-    private static Task<IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> LoadStudyConceptsAsync(
-        TenantId tenant,
-        IConceptRegistry? concepts,
-        IEnumerable<CollectionInstanceRecord> forms,
-        IReadOnlyList<ProtocolDesign> designs,
         CancellationToken cancellationToken) =>
-        BlindedConceptMetadata.ResolveManyAsync(
-            concepts,
-            tenant,
-            forms.SelectMany(f => f.Items).Select(i => i.Concept)
-                .Concat(designs.SelectMany(d => d.CollectionSpecs).SelectMany(s => s.Items).Select(i => i.Concept)),
-            cancellationToken);
+        KernelValidationFindingDecisionEndpoints.ReopenFindingAsync(
+            findingRef, context, findings, sender, changeReason, visibility, actor, cancellationToken);
 
-    private static Guid DeriveGuid(TenantId tenant, string kind, string seed)
-    {
-        Span<byte> hash = stackalloc byte[32];
-        SHA256.HashData(Encoding.UTF8.GetBytes($"cadence-kernel-validation:{tenant}:{kind}:{seed}"), hash);
-        var bytes = hash[..16];
-        bytes[6] = (byte)((bytes[6] & 0x0F) | 0x80);
-        bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
-        return new Guid(bytes, bigEndian: true);
-    }
+    internal static IValidationFindings? ResolveActiveValidationFindings(IServiceProvider services) =>
+        KernelValidationFindingVisibility.ResolveActiveValidationFindings(services);
+
+    internal static Task<bool> IsFindingVisibleAsync(
+        TenantId tenant,
+        ValidationFindingView finding,
+        IServiceProvider services,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        CancellationToken cancellationToken) =>
+        KernelValidationFindingVisibility.IsFindingVisibleAsync(tenant, finding, services, visibility, actor, cancellationToken);
 }

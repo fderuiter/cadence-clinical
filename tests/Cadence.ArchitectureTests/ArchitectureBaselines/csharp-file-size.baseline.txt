@@ -1,0 +1,3 @@
+# Shrink-only baseline for CSharpFileSizeRules (> 500 non-empty lines across kernel, DDF, and module C# sources).
+# Do NOT hand-add entries; split oversized C# files into focused vertical single-responsibility classes instead.
+# Format: <repo-relative-path> (<non-empty-lines> non-empty lines > 500)
