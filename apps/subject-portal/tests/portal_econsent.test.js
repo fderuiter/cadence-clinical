@@ -87,7 +87,6 @@ beforeEach(async () => {
             <div id="consent-liveness-card">
               <div id="liveness-status-banner" style="display: none;" role="status" aria-live="polite"></div>
               <button type="button" id="btn-verify-liveness">Verify Liveness</button>
-              <button type="button" id="btn-liveness-fallback">Fallback</button>
             </div>
 
             <div id="consent-signature-card">
@@ -230,21 +229,55 @@ describe("eConsent Patient Portal - Workflow and Gating Integration Tests", () =
     expect(livenessBanner.textContent).toContain("Camera check complete");
   });
 
-  it("supports study coordinator video fallback for liveness verification", async () => {
+  it("blocks direct study coordinator fallback in the participant portal and sends valid PNG frames in camera mode", async () => {
     const portal = await import("../src/index.js");
     await portal.initializeApp();
     await portal.loadConsentDetails();
 
+    globalThis.fetch.mockClear();
     await portal.verifyBiometricLiveness(true);
 
-    expect(portal.state.livenessVerified).toBe(true);
-    expect(portal.state.consentLivenessToken).toContain("fallback");
+    expect(portal.state.livenessVerified).toBe(false);
+    expect(portal.state.consentLivenessToken).toBeNull();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
 
     const livenessBanner = document.getElementById("liveness-status-banner");
     expect(livenessBanner.style.display).toBe("block");
     expect(livenessBanner.textContent).toContain(
-      "Identity confirmed with your study coordinator"
+      "Coordinator identity checks can only be started by your study coordinator"
     );
+
+    portal.state.session.token = "jwt-subject-session";
+    portal.state.session.isOfflineMode = false;
+    portal.state.session.isDemoMode = false;
+    globalThis.fetch.mockImplementationOnce((_url, init) => {
+      const parsedBody = JSON.parse(init.body);
+      expect(parsedBody.fallback_mode).toBe(false);
+      expect(parsedBody.subject_pseudonym).toBe("subject_001");
+      expect(Array.isArray(parsedBody.video_frames)).toBe(true);
+      expect(parsedBody.video_frames.length).toBeGreaterThan(0);
+      for (const frame of parsedBody.video_frames) {
+        const bytes = Uint8Array.from(atob(frame), (c) => c.charCodeAt(0));
+        expect(Array.from(bytes.slice(0, 8))).toEqual([
+          0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        ]);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            liveness_token: "live-camera-token",
+            is_live: true,
+            anti_spoof_score: 0.98,
+            expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+            status: "VERIFIED",
+          }),
+      });
+    });
+
+    await portal.verifyBiometricLiveness(false);
+    expect(portal.state.livenessVerified).toBe(true);
+    expect(portal.state.consentLivenessToken).toBe("live-camera-token");
   });
 
   it("verifies strict credential hygiene: cleans PIN/password inputs immediately on submit or cancel", async () => {

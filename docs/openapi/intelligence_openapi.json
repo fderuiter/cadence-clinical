@@ -895,6 +895,16 @@
               }
             }
           },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Intelligence_ProblemDetails"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
             "content": {
@@ -1667,6 +1677,18 @@
           "fallback_mode": {
             "type": "boolean",
             "default": false
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

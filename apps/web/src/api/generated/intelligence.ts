@@ -391,6 +391,8 @@ export interface components {
       challenge_id: null | string;
       /** @default false */
       fallback_mode: boolean;
+      study_id?: null | string;
+      site_id?: null | string;
     };
     Intelligence_VerifyLivenessResponse: {
       liveness_token: string;
@@ -914,6 +916,15 @@ export interface operations {
       };
       /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Intelligence_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };

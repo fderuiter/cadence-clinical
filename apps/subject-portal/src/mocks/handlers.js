@@ -35,14 +35,25 @@ function createPortalActionHandlers(store = portalDemoStore) {
   return [
     http.post("*/api/v1/ai/biometrics/verify-liveness", async ({ request }) => {
       const body = await request.json().catch(() => ({}));
+      if (body.fallback_mode) {
+        return HttpResponse.json(
+          {
+            title: "Forbidden",
+            status: 403,
+            detail:
+              "Coordinator biometric liveness fallback requires econsent_consent:capture permission.",
+          },
+          { status: 403 }
+        );
+      }
+
       const subject = body.subject_pseudonym || DEFAULT_MOCK_SUBJECT_ID;
-      const isFallback = Boolean(body.fallback_mode);
-      const frames = body.video_frames || [];
-      const isLive = isFallback || frames.length > 0;
-      const score = isFallback ? 0.92 : isLive ? 0.98 : 0.15;
+      const frames = Array.isArray(body.video_frames) ? body.video_frames : [];
+      const isLive = frames.length > 0;
+      const score = isLive ? 0.98 : 0.15;
       const nowMs = store.nextWalletTimestampMs();
       const expiresAt = new Date(nowMs + 15 * 60 * 1000).toISOString();
-      const token = `mock_liveness_token_${subject}_${isFallback ? "fallback" : "camera"}_${nowMs}`;
+      const token = `mock_liveness_token_${subject}_camera_${nowMs}`;
 
       if (!isLive) {
         return HttpResponse.json(

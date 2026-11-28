@@ -403,19 +403,46 @@ export function updateConsentReadinessGuidance() {
   bindStepJump("link-jump-liveness", "consent-liveness-card");
 }
 
+const CAMERA_CHECK_PNG_FRAMES = Object.freeze([
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGNQSX4NRAwQCgAlagXJu/VFxAAAAABJRU5ErkJggg==",
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGOQc1gPRAwQCgAbNgQ16pJthAAAAABJRU5ErkJggg==",
+]);
+
 export async function verifyBiometricLiveness(isFallback = false) {
   ensureLivenessExpiryWatcher();
   clearLivenessExpiryTimer();
   const banner = document.getElementById("liveness-status-banner");
   if (banner) banner.style.display = "none";
 
-  const frames = isFallback
-    ? []
-    : ["simulated_frame_base64_1", "simulated_frame_base64_2"];
+  if (isFallback) {
+    state.livenessVerified = false;
+    state.consentLivenessToken = null;
+    state.consentLivenessExpiresAt = null;
+    if (banner) {
+      banner.setAttribute("role", "alert");
+      banner.setAttribute("aria-live", "assertive");
+      banner.textContent =
+        "Coordinator identity checks can only be started by your study coordinator during a clinic or video visit.";
+      banner.style.display = "block";
+      banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
+      banner.style.color = "var(--semantic-color-error-text-dark)";
+      banner.style.border = "1px solid var(--semantic-color-error)";
+    }
+    const btnSign =
+      typeof document !== "undefined"
+        ? document.getElementById("btn-trigger-consent-sign")
+        : null;
+    if (btnSign) {
+      btnSign.disabled = true;
+    }
+    renderConsentUI();
+    return;
+  }
+
   const payload = {
     subject_pseudonym: state.session.userId,
-    video_frames: frames,
-    fallback_mode: isFallback,
+    video_frames: [...CAMERA_CHECK_PNG_FRAMES],
+    fallback_mode: false,
   };
 
   try {
@@ -426,12 +453,12 @@ export async function verifyBiometricLiveness(isFallback = false) {
         body: JSON.stringify(payload),
       });
     } else if (allowUnbackedAction("Biometric liveness verification")) {
-      // Explicit demo mode fallback
-      const token = `mock_liveness_token_${state.session.userId}_${isFallback ? "fallback" : "camera"}_${Date.now()}`;
+      // Explicit demo mode camera simulation
+      const token = `mock_liveness_token_${state.session.userId}_camera_${Date.now()}`;
       response = {
         liveness_token: token,
         is_live: true,
-        anti_spoof_score: isFallback ? 0.92 : 0.98,
+        anti_spoof_score: 0.98,
         expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
         status: "VERIFIED",
       };
@@ -453,9 +480,8 @@ export async function verifyBiometricLiveness(isFallback = false) {
       if (state.livenessVerified && banner) {
         banner.setAttribute("role", "status");
         banner.setAttribute("aria-live", "polite");
-        banner.textContent = isFallback
-          ? "Identity confirmed with your study coordinator (valid for 15 minutes)."
-          : "Camera check complete — identity confirmed for the next 15 minutes.";
+        banner.textContent =
+          "Camera check complete — identity confirmed for the next 15 minutes.";
         banner.style.display = "block";
         banner.style.backgroundColor = "var(--semantic-color-success-bg-soft)";
         banner.style.color = "var(--semantic-color-success-dark)";
@@ -469,7 +495,7 @@ export async function verifyBiometricLiveness(isFallback = false) {
         banner.setAttribute("role", "alert");
         banner.setAttribute("aria-live", "assertive");
         banner.textContent =
-          "We could not complete the camera check. Please try again or verify with your study coordinator instead.";
+          "We could not complete the camera check. Please try again or ask your study coordinator for assistance.";
         banner.style.display = "block";
         banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
         banner.style.color = "var(--semantic-color-error-text-dark)";

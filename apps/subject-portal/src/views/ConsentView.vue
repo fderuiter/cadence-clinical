@@ -249,19 +249,14 @@
           >
             Complete Camera Check
           </button>
-
-          <button
-            id="btn-liveness-fallback"
-            type="button"
-            class="btn btn-secondary"
-            style="
-              border: 1px solid var(--semantic-color-border-control);
-              background: var(--semantic-color-surface);
-            "
-          >
-            Verify with Study Coordinator Instead
-          </button>
         </div>
+        <p
+          id="liveness-coordinator-guidance"
+          style="margin: 12px 0 0 0; font-size: 13px; color: var(--text-muted)"
+        >
+          Need help with your camera? Ask your study coordinator to complete an
+          in-person or video check with you.
+        </p>
       </div>
 
       <!-- Signature Section -->

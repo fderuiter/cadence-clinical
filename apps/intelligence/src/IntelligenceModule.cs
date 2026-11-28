@@ -14,6 +14,7 @@ using Cadence.Modules.Intelligence.Infrastructure.Tasks;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.OpenApi;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
@@ -78,6 +79,7 @@ public static class IntelligenceModule
             .AddCommandValidator<SuspendTaskConfiguration, SuspendTaskConfigurationValidator>();
         services.AddModuleAttestationTarget<TaskConfigurationAttestationCheck>();
         services.TryAddScoped<ITaskConfigurationSuspension, TaskConfigurationSuspension>();
+        services.ConfigureAll<OpenApiOptions>(o => o.AddSchemaTransformer<LivenessScopeCodeOpenApiTransformer>());
 
         var prices = options.Prices;
 
