@@ -10,6 +10,7 @@ using Cadence.Apps.Econsent.Endpoints;
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
 using Cadence.Contracts;
 using Cadence.Kernel.Time;
+using Cadence.Modules.Intelligence.Endpoints;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 using Cadence.Testing;
@@ -38,6 +39,8 @@ public sealed class EconsentEndpointsTests : IDisposable
 {
     private const string ActionUrl = "/api/v1/econsent/templates/icf-001/versions/1/capture-consent";
     private const string SemanticAction = "econsent.consent.capture";
+    private const string DefaultTenant = "tenant-alpha";
+    private const string DefaultIssuer = "crc-1";
     private static readonly byte[] Secret = Encoding.UTF8.GetBytes("test-econsent-secret-key-32-bytes-long!!");
 
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
@@ -126,7 +129,13 @@ public sealed class EconsentEndpointsTests : IDisposable
         {
             string tokenSubject = string.IsNullOrWhiteSpace(subjectPseudonym) ? "SUBJ-1" : subjectPseudonym;
             livenessToken = BiometricLivenessTokenService.IssueToken(
-                tokenSubject, 0.95m, true, secret: TestSecurityContext.BiometricLivenessKeyBytes, now: clock.UtcNow);
+                tokenSubject,
+                0.95m,
+                true,
+                secret: TestSecurityContext.BiometricLivenessKeyBytes,
+                now: clock.UtcNow,
+                tenantId: DefaultTenant,
+                issuerId: DefaultIssuer);
         }
 
         var request = new CaptureConsentRequest(
@@ -164,7 +173,13 @@ public sealed class EconsentEndpointsTests : IDisposable
         string signerName = "Jane \"The Doctor\" O'Connor\tSpecialist";
         string meaning = "Reason with \"quotes\", newlines:\nLine 2\ttab and \\backslash.";
         string livenessToken = BiometricLivenessTokenService.IssueToken(
-            "SUBJ-999", 0.98m, true, secret: TestSecurityContext.BiometricLivenessKeyBytes, now: clock.UtcNow);
+            "SUBJ-999",
+            0.98m,
+            true,
+            secret: TestSecurityContext.BiometricLivenessKeyBytes,
+            now: clock.UtcNow,
+            tenantId: DefaultTenant,
+            issuerId: DefaultIssuer);
 
         var request = new CaptureConsentRequest(
             SubjectPseudonym: "SUBJ-999",
@@ -206,7 +221,13 @@ public sealed class EconsentEndpointsTests : IDisposable
         using var context = CreateContext();
         var clock = new FakeClock();
         string livenessToken = BiometricLivenessTokenService.IssueToken(
-            "SUBJ-123", 0.98m, true, secret: TestSecurityContext.BiometricLivenessKeyBytes, now: clock.UtcNow);
+            "SUBJ-123",
+            0.98m,
+            true,
+            secret: TestSecurityContext.BiometricLivenessKeyBytes,
+            now: clock.UtcNow,
+            tenantId: DefaultTenant,
+            issuerId: DefaultIssuer);
         var request = new CaptureConsentRequest(
             SubjectPseudonym: "SUBJ-123",
             StudyId: "STUDY-101",
@@ -251,7 +272,13 @@ public sealed class EconsentEndpointsTests : IDisposable
         var clock = new FakeClock();
         var past = clock.UtcNow.AddMinutes(-30);
         string expiredToken = BiometricLivenessTokenService.IssueToken(
-            "SUBJ-EXP", 0.95m, true, secret: TestSecurityContext.BiometricLivenessKeyBytes, now: past);
+            "SUBJ-EXP",
+            0.95m,
+            true,
+            secret: TestSecurityContext.BiometricLivenessKeyBytes,
+            now: past,
+            tenantId: DefaultTenant,
+            issuerId: DefaultIssuer);
 
         var request = new CaptureConsentRequest(
             SubjectPseudonym: "SUBJ-EXP",
@@ -355,7 +382,13 @@ public sealed class EconsentEndpointsTests : IDisposable
         var clock = new FakeClock();
         var useStore = new ReplayCache(clock);
         string livenessToken = BiometricLivenessTokenService.IssueToken(
-            "SUBJ-1", 0.95m, true, secret: TestSecurityContext.BiometricLivenessKeyBytes, now: clock.UtcNow);
+            "SUBJ-1",
+            0.95m,
+            true,
+            secret: TestSecurityContext.BiometricLivenessKeyBytes,
+            now: clock.UtcNow,
+            tenantId: DefaultTenant,
+            issuerId: DefaultIssuer);
         var request = new CaptureConsentRequest(
             "SUBJ-1", "STUDY-1", "SITE-1", "Signer", null, "Subject", "I agree", null, "v1.0", "digest123", "sigdata123", livenessToken, clock.UtcNow);
 
@@ -382,7 +415,14 @@ public sealed class EconsentEndpointsTests : IDisposable
         var clock = new FakeClock();
 
         Action unkeyedMint = () => BiometricLivenessTokenService.IssueToken(
-            "SUBJ-VERIFY-01", 0.99m, true, "camera", secret: null, lifetime: TimeSpan.FromDays(3650));
+            "SUBJ-VERIFY-01",
+            0.99m,
+            true,
+            "camera",
+            secret: null,
+            lifetime: TimeSpan.FromDays(3650),
+            tenantId: DefaultTenant,
+            issuerId: DefaultIssuer);
         unkeyedMint.Should().Throw<ArgumentException>();
 
         string oversizedTtlToken = BiometricLivenessTokenService.IssueToken(
@@ -392,7 +432,9 @@ public sealed class EconsentEndpointsTests : IDisposable
             "camera",
             secret: TestSecurityContext.BiometricLivenessKeyBytes,
             now: clock.UtcNow,
-            lifetime: TimeSpan.FromDays(3650));
+            lifetime: TimeSpan.FromDays(3650),
+            tenantId: DefaultTenant,
+            issuerId: DefaultIssuer);
 
         var request = new CaptureConsentRequest(
             SubjectPseudonym: "SUBJ-VERIFY-01",
@@ -438,7 +480,9 @@ public sealed class EconsentEndpointsTests : IDisposable
             true,
             "camera",
             secret: TestSecurityContext.BiometricLivenessKeyBytes,
-            now: clock.UtcNow);
+            now: clock.UtcNow,
+            tenantId: DefaultTenant,
+            issuerId: DefaultIssuer);
 
         var firstRequest = new CaptureConsentRequest(
             SubjectPseudonym: "SUBJ-VERIFY-01",
@@ -497,7 +541,9 @@ public sealed class EconsentEndpointsTests : IDisposable
             true,
             "camera",
             secret: TestSecurityContext.BiometricLivenessKeyBytes,
-            now: clock.UtcNow);
+            now: clock.UtcNow,
+            tenantId: DefaultTenant,
+            issuerId: DefaultIssuer);
 
         var incompleteRequest = new CaptureConsentRequest(
             SubjectPseudonym: "SUBJ-RETRY-01",
@@ -595,15 +641,169 @@ public sealed class EconsentEndpointsTests : IDisposable
         await publishEndpoint.DidNotReceiveWithAnyArgs().Publish(default(EconsentReconsentRequired)!, TestContext.Current.CancellationToken);
     }
 
-    private static DefaultHttpContext Caller(params string[] studies)
+    [Theory]
+    [InlineData("crc")]
+    [InlineData("investigator")]
+    public async Task ProcessCaptureConsentAsync_AuthorizedCoordinatorFallbackToken_SucceedsInMatchingTenantStudyAndSite(string role)
+    {
+        using var context = CreateContext();
+        var clock = new FakeClock();
+        var useStore = new ReplayCache(clock);
+        var caller = ScopedCaller(userId: $"{role}-alpha-1", role: role, tenantId: "tenant-alpha", studies: ["STUDY-ALPHA"], sites: ["SITE-ALPHA"]);
+
+        var livenessResult = await BiometricEndpoints.VerifyLivenessAsync(
+            new VerifyLivenessRequest(
+                SubjectPseudonym: "SUBJ-CANARY-ALPHA",
+                VideoFrames: [],
+                ChallengeId: "ch-fallback-alpha",
+                FallbackMode: true,
+                StudyId: "STUDY-ALPHA",
+                SiteId: "SITE-ALPHA"),
+            caller,
+            TestSecurityContext.BiometricLivenessOptions,
+            clock,
+            TestContext.Current.CancellationToken);
+
+        var minted = livenessResult.Should().BeOfType<Ok<VerifyLivenessResponse>>().Which.Value!;
+        var captureRequest = new CaptureConsentRequest(
+            SubjectPseudonym: "SUBJ-CANARY-ALPHA",
+            StudyId: "STUDY-ALPHA",
+            SiteId: "SITE-ALPHA",
+            SignerName: "Participant Alpha",
+            SignerEmail: null,
+            SignerRole: "Subject",
+            Meaning: "I agree to participate",
+            SigningReason: null,
+            ProtocolVersion: "v1.0",
+            DigestSha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", // pragma: allowlist secret
+            SignatureData: "SYNTHETIC-PART11-CANARY-SIG",
+            LivenessToken: minted.LivenessToken,
+            DeviceTimestamp: clock.UtcNow);
+
+        var captureResult = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-canary-01",
+            1,
+            captureRequest,
+            CreateService(context, clock, useStore),
+            caller,
+            TestContext.Current.CancellationToken);
+
+        captureResult.Should().BeOfType<Ok<CaptureConsentResponse>>();
+    }
+
+    [Fact]
+    public async Task ProcessCaptureConsentAsync_CrossTenantOrMismatchedScopeToken_RejectedWithValidationProblemBeforeConsumingJti()
+    {
+        using var context = CreateContext();
+        var clock = new FakeClock();
+        var sharedUseStore = new ReplayCache(clock);
+        var service = CreateService(context, clock, sharedUseStore);
+
+        string betaToken = BiometricLivenessTokenService.IssueToken(
+            "SUBJ-CANARY-ALPHA",
+            0.98m,
+            true,
+            "camera",
+            secret: TestSecurityContext.BiometricLivenessKeyBytes,
+            now: clock.UtcNow,
+            tenantId: "tenant-beta",
+            issuerId: "SUBJ-CANARY-ALPHA",
+            studyId: "STUDY-ALPHA",
+            siteId: "SITE-ALPHA");
+
+        var alphaRequest = new CaptureConsentRequest(
+            SubjectPseudonym: "SUBJ-CANARY-ALPHA",
+            StudyId: "STUDY-ALPHA",
+            SiteId: "SITE-ALPHA",
+            SignerName: "Participant Alpha",
+            SignerEmail: null,
+            SignerRole: "Subject",
+            Meaning: "I agree to participate",
+            SigningReason: null,
+            ProtocolVersion: "v1.0",
+            DigestSha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", // pragma: allowlist secret
+            SignatureData: "SYNTHETIC-PART11-CANARY-SIG",
+            LivenessToken: betaToken,
+            DeviceTimestamp: clock.UtcNow);
+
+        var alphaCaller = ScopedCaller("crc-alpha", "crc", "tenant-alpha", ["STUDY-ALPHA"], ["SITE-ALPHA"]);
+        var crossTenantResult = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-canary-01", 1, alphaRequest, service, alphaCaller, TestContext.Current.CancellationToken);
+
+        var crossTenantProblem = crossTenantResult.Should().BeOfType<ValidationProblem>().Which;
+        crossTenantProblem.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        crossTenantProblem.ProblemDetails.Errors.Should().ContainKey("liveness_token");
+        (await context.SubjectConsents.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+
+        // Rejected tenant check must not consume liveness:{jti}; valid tenant-beta submission still succeeds once.
+        var betaCaller = ScopedCaller("crc-beta", "crc", "tenant-beta", ["STUDY-ALPHA"], ["SITE-ALPHA"]);
+        var validBetaResult = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-canary-01", 1, alphaRequest, service, betaCaller, TestContext.Current.CancellationToken);
+        validBetaResult.Should().BeOfType<Ok<CaptureConsentResponse>>();
+
+        // Study/site scope mismatch in same tenant also fails closed with ValidationProblem before consuming JTI.
+        string studyBoundToken = BiometricLivenessTokenService.IssueToken(
+            "SUBJ-SCOPE-02",
+            0.92m,
+            true,
+            "coordinator_fallback",
+            secret: TestSecurityContext.BiometricLivenessKeyBytes,
+            now: clock.UtcNow,
+            tenantId: "tenant-alpha",
+            issuerId: "crc-alpha",
+            studyId: "STUDY-OTHER",
+            siteId: "SITE-OTHER");
+
+        var multiScopeCaller = ScopedCaller("crc-alpha", "crc", "tenant-alpha", ["STUDY-ALPHA", "STUDY-OTHER"], ["SITE-ALPHA", "SITE-OTHER"]);
+        var wrongStudyResult = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-canary-01",
+            1,
+            alphaRequest with { SubjectPseudonym = "SUBJ-SCOPE-02", LivenessToken = studyBoundToken },
+            service,
+            multiScopeCaller,
+            TestContext.Current.CancellationToken);
+        wrongStudyResult.Should().BeOfType<ValidationProblem>()
+            .Which.ProblemDetails.Errors.Should().ContainKey("liveness_token");
+
+        var matchingScopeRetry = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-canary-01",
+            1,
+            alphaRequest with
+            {
+                SubjectPseudonym = "SUBJ-SCOPE-02",
+                StudyId = "STUDY-OTHER",
+                SiteId = "SITE-OTHER",
+                LivenessToken = studyBoundToken,
+            },
+            service,
+            multiScopeCaller,
+            TestContext.Current.CancellationToken);
+        matchingScopeRetry.Should().BeOfType<Ok<CaptureConsentResponse>>();
+    }
+
+    private static DefaultHttpContext Caller(params string[] studies) =>
+        ScopedCaller(
+            userId: DefaultIssuer,
+            role: "crc",
+            tenantId: DefaultTenant,
+            studies: studies.Length == 0 ? ["*"] : studies,
+            sites: ["SITE-01", "SITE-05", "SITE-1"]);
+
+    private static DefaultHttpContext ScopedCaller(
+        string userId,
+        string role,
+        string? tenantId,
+        string[] studies,
+        string[] sites)
     {
         var httpContext = new DefaultHttpContext();
         httpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
         {
-            UserId = "crc-1",
-            Roles = ["crc"],
-            AssignedStudies = studies.Length == 0 ? ["*"] : studies,
-            AssignedSites = ["SITE-01", "SITE-05", "SITE-1"],
+            UserId = userId,
+            TenantId = tenantId,
+            Roles = [role],
+            AssignedStudies = studies,
+            AssignedSites = sites,
         };
         return httpContext;
     }

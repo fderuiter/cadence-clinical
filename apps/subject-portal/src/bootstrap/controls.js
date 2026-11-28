@@ -85,14 +85,7 @@ export function bindPortalControls() {
   const btnVerifyLiveness = document.getElementById("btn-verify-liveness");
   if (btnVerifyLiveness) {
     btnVerifyLiveness.addEventListener("click", () => {
-      verifyBiometricLiveness(false);
-    });
-  }
-
-  const btnLivenessFallback = document.getElementById("btn-liveness-fallback");
-  if (btnLivenessFallback) {
-    btnLivenessFallback.addEventListener("click", () => {
-      verifyBiometricLiveness(true);
+      verifyBiometricLiveness();
     });
   }
 

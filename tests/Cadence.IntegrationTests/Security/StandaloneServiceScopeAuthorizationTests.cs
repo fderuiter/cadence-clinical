@@ -529,8 +529,26 @@ public sealed class StandaloneServiceScopeAuthorizationTests(StandaloneScopePost
 
         // 1. eConsent capture stamps verified tenant code on ConsentAuditLog and resolved UUID on PostgreSQL tenant_id.
         string actionPath = "/api/v1/econsent/templates/tpl-rls-1/capture-consent";
+        string crossTenantToken = BiometricLivenessTokenService.IssueToken(
+            "SUBJ-EC-1",
+            0.99m,
+            true,
+            secret: TestSecurityContext.BiometricLivenessKeyBytes,
+            now: SystemClock.Instance.UtcNow,
+            tenantId: "tenant-beta",
+            issuerId: "SUBJ-EC-1",
+            studyId: "STUDY-EC-1",
+            siteId: "SITE-01");
         string livenessToken = BiometricLivenessTokenService.IssueToken(
-            "SUBJ-EC-1", 0.99m, true, secret: TestSecurityContext.BiometricLivenessKeyBytes, now: SystemClock.Instance.UtcNow);
+            "SUBJ-EC-1",
+            0.99m,
+            true,
+            secret: TestSecurityContext.BiometricLivenessKeyBytes,
+            now: SystemClock.Instance.UtcNow,
+            tenantId: "tenant-alpha",
+            issuerId: "crc-ec-alpha",
+            studyId: "STUDY-EC-1",
+            siteId: "SITE-01");
         var crcAlpha = new GatewayIdentity(
             UserId: "crc-ec-alpha",
             Roles: ["crc"],
@@ -538,6 +556,28 @@ public sealed class StandaloneServiceScopeAuthorizationTests(StandaloneScopePost
             TenantId: "tenant-alpha",
             StudyIds: ["STUDY-EC-1"],
             SigToken: TestSecurityContext.CreateSigToken("crc-ec-alpha", actionPath, "econsent.consent.capture", ["crc"]));
+
+        using (var ecCrossTenantClient = fixture.Econsent.CreateSignedClient(crcAlpha with
+        {
+            SigToken = TestSecurityContext.CreateSigToken("crc-ec-alpha", actionPath, "econsent.consent.capture", ["crc"]),
+        }))
+        {
+            var crossTenantResp = await ecCrossTenantClient.PostAsJsonAsync(
+                actionPath,
+                new
+                {
+                    subject_pseudonym = "SUBJ-EC-1",
+                    study_id = "STUDY-EC-1",
+                    site_id = "SITE-01",
+                    digest_sha256 = "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
+                    signature_data = "SIG-PART11-CROSS-TENANT",
+                    liveness_token = crossTenantToken,
+                },
+                Ct);
+
+            crossTenantResp.StatusCode.Should().Be(HttpStatusCode.BadRequest, await crossTenantResp.Content.ReadAsStringAsync(Ct));
+            (await crossTenantResp.Content.ReadAsStringAsync(Ct)).Should().Contain("liveness_token");
+        }
 
         using (var ecAlphaClient = fixture.Econsent.CreateSignedClient(crcAlpha))
         {

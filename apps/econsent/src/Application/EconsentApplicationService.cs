@@ -65,6 +65,11 @@ public sealed class EconsentApplicationService(
             });
         }
 
+        if (ClinicalScopeGuard.RequireTenant(httpContext, out string callerTenantId) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
+
         if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext) is { } callerScopeDenied)
         {
             return callerScopeDenied;
@@ -122,9 +127,12 @@ public sealed class EconsentApplicationService(
             request.SubjectPseudonym,
             out livenessData,
             secret: livenessSecret,
-            now: now))
+            now: now,
+            expectedTenantId: callerTenantId,
+            expectedStudyId: request.StudyId,
+            expectedSiteId: request.SiteId))
         {
-            errors["liveness_token"] = ["Liveness token is invalid or expired."];
+            errors["liveness_token"] = ["Liveness token is invalid, expired, or out of scope."];
         }
 
         if (errors.Count > 0)
