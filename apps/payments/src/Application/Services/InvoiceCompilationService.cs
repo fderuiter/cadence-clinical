@@ -10,6 +10,7 @@ using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Endpoints;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Http;
@@ -169,9 +170,20 @@ public sealed class InvoiceCompilationService(
             return PaymentScopeAndMappingHelpers.OutsideScope();
         }
 
-        if (request.AutoApprove && !PermissionMatrix.HasPermission(caller, "payments_invoice:approve"))
+        VerifiedInvoiceSignature? verifiedSignature = null;
+        if (request.AutoApprove)
         {
-            return ClinicalScopeGuard.Forbidden("Compiling with auto_approve needs payments_invoice:approve.");
+            if (!PermissionMatrix.HasPermission(caller, "payments_invoice:approve"))
+            {
+                return ClinicalScopeGuard.Forbidden("Compiling with auto_approve needs payments_invoice:approve.");
+            }
+
+            if (!TryResolveVerifiedAutoApproveSignature(httpContext, caller.UserId, out var resolvedSig))
+            {
+                return ElectronicSignatureEndpointFilter.ReauthenticationRequired();
+            }
+
+            verifiedSignature = resolvedSig;
         }
 
         DateTimeOffset now = clock.UtcNow;
@@ -189,7 +201,8 @@ public sealed class InvoiceCompilationService(
                 periodEnd,
                 request.AutoApprove,
                 caller.UserId,
-                rolesText);
+                rolesText,
+                signature: verifiedSignature);
 
             await unitOfWork.CommitAsync();
 
@@ -225,9 +238,20 @@ public sealed class InvoiceCompilationService(
             return PaymentScopeAndMappingHelpers.OutsideScope();
         }
 
-        if (request.AutoApprove && !PermissionMatrix.HasPermission(caller, "payments_invoice:approve"))
+        VerifiedInvoiceSignature? verifiedSignature = null;
+        if (request.AutoApprove)
         {
-            return ClinicalScopeGuard.Forbidden("Compiling with auto_approve needs payments_invoice:approve.");
+            if (!PermissionMatrix.HasPermission(caller, "payments_invoice:approve"))
+            {
+                return ClinicalScopeGuard.Forbidden("Compiling with auto_approve needs payments_invoice:approve.");
+            }
+
+            if (!TryResolveVerifiedAutoApproveSignature(httpContext, caller.UserId, out var resolvedSig))
+            {
+                return ElectronicSignatureEndpointFilter.ReauthenticationRequired();
+            }
+
+            verifiedSignature = resolvedSig;
         }
 
         DateTimeOffset now = clock.UtcNow;
@@ -286,7 +310,8 @@ public sealed class InvoiceCompilationService(
                     request.AutoApprove,
                     userId,
                     rolesText,
-                    batchExecutionId);
+                    batchExecutionId,
+                    verifiedSignature);
 
                 await unitOfWork.CommitAsync();
 
@@ -413,7 +438,29 @@ public sealed class InvoiceCompilationService(
         bool autoApprove,
         string userId,
         string rolesText,
-        string? batchExecutionId = null) =>
+        string? batchExecutionId = null,
+        VerifiedInvoiceSignature? signature = null) =>
         SiteInvoiceCompiler.CompileSiteAsync(
-            dbContext, clock, studyId, siteId, billingCycle, periodStart, periodEnd, autoApprove, userId, rolesText, batchExecutionId);
+            dbContext, clock, studyId, siteId, billingCycle, periodStart, periodEnd, autoApprove, userId, rolesText, batchExecutionId, signature);
+
+    private static bool TryResolveVerifiedAutoApproveSignature(
+        HttpContext httpContext,
+        string callerUserId,
+        out VerifiedInvoiceSignature signature)
+    {
+        var sigToken = httpContext.VerifiedSigToken();
+        if (sigToken is null
+            || string.IsNullOrWhiteSpace(sigToken.Id)
+            || !string.Equals(sigToken.Subject, callerUserId, StringComparison.Ordinal))
+        {
+            signature = default;
+            return false;
+        }
+
+        signature = new VerifiedInvoiceSignature(
+            sigToken.Subject,
+            sigToken.Id,
+            InvoiceEndpoints.InvoiceApproveSemanticAction);
+        return true;
+    }
 }
