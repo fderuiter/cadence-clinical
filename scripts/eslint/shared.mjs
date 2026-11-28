@@ -264,6 +264,53 @@ export const ALLOWED_TOKENIZED_FONT_FAMILIES = new Set([
   "var(--font-mono)",
 ]);
 
+function buildVueStyleVisitors(
+  context,
+  sourceText,
+  { matchAttribute, onStyleBlock, onAttrValue }
+) {
+  const styleBlockCheck = {
+    "Program:exit"() {
+      for (const styleMatch of sourceText.matchAll(
+        /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+      )) {
+        const contentStart = styleMatch.index + styleMatch[1].length;
+        onStyleBlock(styleMatch[2], contentStart);
+      }
+    },
+  };
+
+  const parserServices =
+    context.sourceCode?.parserServices || context.parserServices;
+  if (!parserServices?.defineTemplateBodyVisitor) {
+    return styleBlockCheck;
+  }
+
+  return parserServices.defineTemplateBodyVisitor(
+    {
+      VAttribute(node) {
+        if (matchAttribute(node) && node.value) {
+          onAttrValue(node.value, context.sourceCode.getText(node.value));
+        }
+      },
+    },
+    styleBlockCheck
+  );
+}
+
+function isStyleVAttribute(node) {
+  const isStaticStyle =
+    !node.directive &&
+    node.key?.type === "VIdentifier" &&
+    node.key.name === "style";
+  const isDynamicStyle =
+    node.directive &&
+    node.key?.type === "VDirectiveKey" &&
+    node.key.name?.name === "bind" &&
+    node.key.argument?.name === "style";
+  return isStaticStyle || isDynamicStyle;
+}
+
 export function createTypographyScanVisitors(
   context,
   { onCssBlock, onVueStyleAttr, onJsProgram }
@@ -289,40 +336,20 @@ export function createTypographyScanVisitors(
   }
 
   if (filename.endsWith(".vue")) {
-    const styleBlockCheck = {
-      "Program:exit"() {
-        for (const styleMatch of sourceText.matchAll(
-          /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
-        )) {
-          const contentStart = styleMatch.index + styleMatch[1].length;
-          onCssBlock(
-            stripUrlFragmentsPreservingLength(
-              stripCssCommentsPreservingNewlines(styleMatch[2])
-            ),
-            contentStart,
-            sourceText,
-            filename
-          );
-        }
+    return buildVueStyleVisitors(context, sourceText, {
+      matchAttribute: isStyleOrColorVAttribute,
+      onStyleBlock(rawStyle, contentStart) {
+        onCssBlock(
+          stripUrlFragmentsPreservingLength(
+            stripCssCommentsPreservingNewlines(rawStyle)
+          ),
+          contentStart,
+          sourceText,
+          filename
+        );
       },
-    };
-
-    const parserServices =
-      context.sourceCode?.parserServices || context.parserServices;
-    if (!parserServices?.defineTemplateBodyVisitor) {
-      return styleBlockCheck;
-    }
-
-    return parserServices.defineTemplateBodyVisitor(
-      {
-        VAttribute(node) {
-          if (isStyleOrColorVAttribute(node) && node.value) {
-            onVueStyleAttr(node.value, context.sourceCode.getText(node.value));
-          }
-        },
-      },
-      styleBlockCheck
-    );
+      onAttrValue: onVueStyleAttr,
+    });
   }
 
   return {
@@ -382,4 +409,42 @@ export function extractClassNamesFromJsExpr(expr, out) {
     extractClassNamesFromJsExpr(expr.left, out);
     extractClassNamesFromJsExpr(expr.right, out);
   }
+}
+
+export function createCssAndVueStyleVisitors(
+  context,
+  { ignoreTests = false, onCssText, onStyleAttr }
+) {
+  const filename = (context.filename || context.getFilename() || "")
+    .split(path.sep)
+    .join("/");
+
+  if (
+    ignoreTests &&
+    (filename.includes("/tests/") || /\.(?:test|spec)\.[a-z]+$/i.test(filename))
+  ) {
+    return {};
+  }
+
+  const sourceText = context.sourceCode.getText();
+
+  if (filename.endsWith(".css")) {
+    return {
+      Program() {
+        onCssText(sourceText, 0, sourceText);
+      },
+    };
+  }
+
+  if (!filename.endsWith(".vue")) {
+    return {};
+  }
+
+  return buildVueStyleVisitors(context, sourceText, {
+    matchAttribute: isStyleVAttribute,
+    onStyleBlock(rawStyle, contentStart) {
+      onCssText(rawStyle, contentStart, sourceText);
+    },
+    onAttrValue: onStyleAttr,
+  });
 }

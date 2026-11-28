@@ -80,6 +80,7 @@
         title="Scanned Kits Reconciliation Buffer"
         hide-header
         plain
+        mobile-mode="table"
         :columns="BATCH_RECONCILIATION_COLUMNS"
         :data="scannedItems"
         row-key="kitNumber"

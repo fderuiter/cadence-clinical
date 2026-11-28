@@ -1,9 +1,9 @@
 <script setup>
-import { defineAsyncComponent } from "vue";
+import { computed, defineAsyncComponent } from "vue";
 
 const EntityLink = defineAsyncComponent(() => import("./EntityLink.vue"));
 
-defineProps({
+const props = defineProps({
   density: {
     type: String,
     default: "compact",
@@ -88,6 +88,12 @@ function onCardKeydown(event) {
     emit("card-click", event);
   }
 }
+
+const cardInteractionListeners = computed(() =>
+  props.interactive && !props.masked
+    ? { click: onCardClick, keydown: onCardKeydown }
+    : {}
+);
 </script>
 
 <template>
@@ -106,8 +112,7 @@ function onCardKeydown(event) {
     ]"
     v-bind="cardAttrs || undefined"
     :tabindex="interactive && !masked ? 0 : undefined"
-    @click="interactive && !masked ? onCardClick($event) : undefined"
-    @keydown="interactive && !masked ? onCardKeydown($event) : undefined"
+    v-on="cardInteractionListeners"
   >
     <template v-if="masked">
       <div class="clinical-record-card__masked">

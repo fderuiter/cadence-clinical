@@ -449,6 +449,7 @@ export const ClinicalDataTable: DefineSlotsComponent<
     pageSize?: number;
     selectable?: boolean;
     title?: string;
+    caption?: string;
     hideHeader?: boolean;
     captionVisible?: boolean;
     labelledBy?: string;

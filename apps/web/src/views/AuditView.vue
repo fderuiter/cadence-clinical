@@ -397,7 +397,8 @@
         :data="documents"
         :loading="documentsLoading"
         row-key="id"
-        caption="eTMF Document Directory Registry"
+        title="eTMF Document Directory Registry"
+        hide-header
         empty-message="No documents found in the eTMF registry. Ingest some documents from design or execution views!"
         sticky-header
       >
@@ -811,7 +812,8 @@
         :data="auditLogs"
         :loading="auditLoading"
         row-key="id"
-        caption="Immutable eTMF Audit Ledger Trail"
+        title="Immutable eTMF Audit Ledger Trail"
+        hide-header
         empty-message="No audit trail logs match the specified criteria."
         table-class="audit-ledger-table"
         external-pagination
@@ -870,15 +872,24 @@
           </button>
         </template>
         <template #after-row="{ row: log, colSpan, isCardView }">
-          <tr
-            v-if="!isCardView && isRowExpanded(log.id)"
-            class="audit-details-row"
-            style="
-              border-bottom: 2px solid var(--border);
-              background: var(--semantic-color-surface-muted);
+          <component
+            :is="isCardView ? 'div' : 'tr'"
+            v-if="isRowExpanded(log.id)"
+            :class="[
+              'audit-details-row',
+              { 'audit-details-card-panel': isCardView },
+            ]"
+            :style="
+              isCardView
+                ? undefined
+                : 'border-bottom: 2px solid var(--border); background: var(--semantic-color-surface-muted);'
             "
           >
-            <td :colspan="colSpan" style="padding: 16px 20px">
+            <component
+              :is="isCardView ? 'div' : 'td'"
+              :colspan="isCardView ? undefined : colSpan"
+              :style="isCardView ? undefined : 'padding: 16px 20px'"
+            >
               <div class="audit-details-stack">
                 <div class="audit-details-header">
                   <div>
@@ -958,84 +969,8 @@
                   >
                 </div>
               </div>
-            </td>
-          </tr>
-          <div
-            v-else-if="isCardView && isRowExpanded(log.id)"
-            class="audit-details-row audit-details-card-panel"
-          >
-            <div class="audit-details-stack">
-              <div class="audit-details-header">
-                <div>
-                  <strong>21 CFR Part 11 Audit Record:</strong>
-                  <code
-                    style="margin-left: 6px; font-size: var(--font-size-2xs)"
-                    >{{ log.id }}</code
-                  >
-                </div>
-                <div
-                  style="
-                    font-size: var(--font-size-2xs);
-                    color: var(--semantic-color-text-secondary);
-                  "
-                >
-                  Actor Role: <strong>{{ log.user_role }}</strong> | Record:
-                  <strong>{{ log.record_id || log.document_id || "-" }}</strong>
-                </div>
-              </div>
-
-              <div class="reason-for-change audit-reason-box">
-                <strong style="color: var(--text-main)"
-                  >Mandatory GxP Reason for Change:</strong
-                >
-                <p style="margin: 4px 0 0 0; color: var(--semantic-color-text)">
-                  {{
-                    log.reason_for_change ||
-                    log.change_reason ||
-                    log.reasonForChange ||
-                    "GxP compliance state verified and recorded."
-                  }}
-                </p>
-              </div>
-
-              <div class="audit-diff-grid">
-                <div class="old-value-diff audit-diff-card">
-                  <div class="audit-diff-heading audit-diff-heading--old">
-                    <span><ClinicalIcon name="alert-circle" :size="16" /></span>
-                    Previous State (old_value)
-                  </div>
-                  <pre class="audit-diff-pre audit-diff-pre--old">{{
-                    formatDiffValue(log.old_value, log, "old")
-                  }}</pre>
-                </div>
-
-                <div class="new-value-diff audit-diff-card">
-                  <div class="audit-diff-heading audit-diff-heading--new">
-                    <span><ClinicalIcon name="check-circle" :size="16" /></span>
-                    Committed State (new_value)
-                  </div>
-                  <pre class="audit-diff-pre audit-diff-pre--new">{{
-                    formatDiffValue(log.new_value, log, "new")
-                  }}</pre>
-                </div>
-              </div>
-
-              <div class="sha256-hash audit-sha256-box">
-                <div class="audit-sha256-meta">
-                  <span style="font-size: 14px"
-                    ><ClinicalIcon name="shield-check" :size="16"
-                  /></span>
-                  <span><strong>Cryptographic SHA-256 Digest:</strong></span>
-                  <code class="hash-code">{{ getSha256Hash(log) }}</code>
-                </div>
-                <span
-                  class="badge status-approved"
-                  style="font-size: var(--font-size-2xs)"
-                  >SEAL VERIFIED</span
-                >
-              </div>
-            </div>
-          </div>
+            </component>
+          </component>
         </template>
         <template #pagination />
       </ClinicalDataTable>
@@ -1279,7 +1214,8 @@
           :columns="completenessColumns"
           :data="completenessResult.per_artifact_detail || []"
           row-key="artifact_type"
-          caption="Expected Document List Completeness Artifacts"
+          title="Expected Document List Completeness Artifacts"
+          hide-header
           empty-message="No expected artifacts configured for this milestone."
           sticky-header
         >

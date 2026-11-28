@@ -189,15 +189,39 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
       path.join(docsDistDir, "DOCUMENTATION_INDEX.html"),
       "utf8"
     );
-    const tbodyBlocks = Array.from(
-      docIndexHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
-      (m) => m[1]
-    );
-    const dataRowCount = tbodyBlocks.reduce(
-      (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
-      0
-    );
-    expect(dataRowCount).toBeGreaterThanOrEqual(715);
+    const countTableRowsInHtml = (rawHtml) =>
+      Array.from(
+        rawHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
+        (m) => m[1]
+      ).reduce(
+        (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
+        0
+      );
+    const topLevelShardRowCount = countTableRowsInHtml(docIndexHtml);
+    expect(topLevelShardRowCount).toBeGreaterThanOrEqual(25);
+
+    const shardIndexFiles = htmlFiles.filter((relPath) => {
+      const rel = relPath.replace(/\\/g, "/");
+      return (
+        rel === "ROOT_INDEX.html" ||
+        /\/(?:INDEX|DOC_INDEX)\.html$/i.test(rel) ||
+        /^adr\/(?:.*\/)?(?:index|legacy-index)\.html$/i.test(rel)
+      );
+    });
+    const indexedEntryCount = shardIndexFiles.reduce((sum, relPath) => {
+      const shardHtml = fs.readFileSync(
+        path.join(docsDistDir, relPath),
+        "utf8"
+      );
+      const rel = relPath.replace(/\\/g, "/");
+      const tableRows =
+        rel === "adr/index.html" ? 0 : countTableRowsInHtml(shardHtml);
+      const adrItems = (
+        shardHtml.match(/<li\b[^>]*>\s*<a\b[^>]*>\s*ADR-\d+/gi) || []
+      ).length;
+      return sum + tableRows + adrItems;
+    }, 0);
+    expect(indexedEntryCount).toBeGreaterThanOrEqual(715);
   });
 
   test("navbar items and portal layout render without clipping, overlap, or horizontal scroll across 375px–1920px viewports", async ({

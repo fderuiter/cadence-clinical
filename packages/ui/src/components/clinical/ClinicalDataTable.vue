@@ -2,6 +2,7 @@
 import {
   computed,
   defineAsyncComponent,
+  nextTick,
   onBeforeUnmount,
   onMounted,
   ref,
@@ -10,9 +11,8 @@ import {
 } from "vue";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-vue-next";
 
-const ClinicalRecordCard = defineAsyncComponent(
-  () => import("./ClinicalRecordCard.vue")
-);
+const loadClinicalRecordCard = () => import("./ClinicalRecordCard.vue");
+const ClinicalRecordCard = defineAsyncComponent(loadClinicalRecordCard);
 
 const CLINICAL_ICON_STROKE_WIDTH = 1.75;
 
@@ -36,6 +36,10 @@ const props = defineProps({
   title: {
     type: String,
     default: "Clinical Dataset",
+  },
+  caption: {
+    type: String,
+    default: "",
   },
   hideHeader: {
     type: Boolean,
@@ -193,6 +197,7 @@ const headingId = computed(
 const mobileSortSelectId = computed(
   () => `clinical-data-table-mobile-sort-${rawHeadingId || "default"}`
 );
+const effectiveTitle = computed(() => props.caption || props.title);
 const effectiveTableLabelledBy = computed(
   () => props.labelledBy || (props.ariaLabel ? undefined : headingId.value)
 );
@@ -200,7 +205,7 @@ const effectiveRegionLabelledBy = computed(() =>
   props.ariaLabel ? undefined : headingId.value
 );
 const srOnlyHeadingText = computed(() =>
-  props.labelledBy ? `${props.title} table` : props.title
+  props.labelledBy ? `${effectiveTitle.value} table` : effectiveTitle.value
 );
 
 const sortKey = ref(props.initialSortKey || "");
@@ -236,8 +241,19 @@ let mediaQueryListener = null;
 let windowResizeListener = null;
 let resizeObserver = null;
 
+function syncContainerWidth(explicitWidth) {
+  const width =
+    typeof explicitWidth === "number" && explicitWidth > 0
+      ? explicitWidth
+      : (rootRef.value?.getBoundingClientRect?.().width ?? 0);
+  if (width > 0) {
+    isNarrowContainer.value = width <= (props.mobileBreakpoint || 480);
+  }
+}
+
 function syncViewportMatches() {
   isMobileViewport.value = readInitialMobileViewport();
+  syncContainerWidth();
 }
 
 onMounted(() => {
@@ -265,13 +281,7 @@ onMounted(() => {
   if (typeof ResizeObserver === "function" && rootRef.value) {
     resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const width =
-          entry.contentRect?.width ??
-          rootRef.value?.getBoundingClientRect?.().width ??
-          0;
-        if (width > 0) {
-          isNarrowContainer.value = width <= (props.mobileBreakpoint || 480);
-        }
+        syncContainerWidth(entry.contentRect?.width);
       }
     });
     resizeObserver.observe(rootRef.value);
@@ -302,6 +312,68 @@ const shouldProjectCards = computed(() => {
   }
   return isMobileViewport.value || isNarrowContainer.value;
 });
+
+watch(
+  () => props.data,
+  () => {
+    syncContainerWidth();
+  },
+  { flush: "post" }
+);
+
+watch(
+  shouldProjectCards,
+  async (nextProjected) => {
+    if (nextProjected) {
+      loadClinicalRecordCard();
+    }
+    if (typeof document === "undefined" || !rootRef.value) return;
+    const activeEl = document.activeElement;
+    if (
+      !activeEl ||
+      activeEl === document.body ||
+      !rootRef.value.contains(activeEl)
+    ) {
+      return;
+    }
+    const activeId = activeEl.id || "";
+    if (nextProjected) {
+      await loadClinicalRecordCard();
+    }
+    await nextTick();
+    await nextTick();
+    if (!rootRef.value) return;
+    if (
+      document.activeElement &&
+      document.activeElement !== document.body &&
+      rootRef.value.contains(document.activeElement)
+    ) {
+      return;
+    }
+    let replacement = null;
+    if (
+      activeId &&
+      typeof CSS !== "undefined" &&
+      typeof CSS.escape === "function"
+    ) {
+      replacement = rootRef.value.querySelector(`#${CSS.escape(activeId)}`);
+    } else if (activeId) {
+      const candidate = document.getElementById(activeId);
+      if (candidate && rootRef.value.contains(candidate)) {
+        replacement = candidate;
+      }
+    }
+    if (!replacement) {
+      replacement = rootRef.value.querySelector(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+    }
+    if (replacement && typeof replacement.focus === "function") {
+      replacement.focus({ preventScroll: true });
+    }
+  },
+  { flush: "pre" }
+);
 
 const effectiveCardDensity = computed(() => {
   if (props.density === "touch") return "touch";
@@ -367,9 +439,10 @@ const activeSortableColumnLabel = computed(() => {
 });
 
 const mobileSortDirectionLabel = computed(() => {
-  if (!sortKey.value) return "Toggle sort direction";
+  if (!sortKey.value) return "Order: toggle sort direction";
+  const currentBadge = sortOrder.value === "asc" ? "Asc" : "Desc";
   const nextDir = sortOrder.value === "asc" ? "descending" : "ascending";
-  return `Sort ${activeSortableColumnLabel.value} ${nextDir}`;
+  return `${currentBadge}: sort ${activeSortableColumnLabel.value} ${nextDir}`;
 });
 
 const getAriaSort = (column) => {
@@ -662,7 +735,7 @@ const handleRowKeydown = (event, row, idx) => {
   >
     <div v-if="!hideHeader" class="table-header">
       <h3 :id="headingId" class="table-title">
-        {{ title }}
+        {{ effectiveTitle }}
       </h3>
       <div class="table-header-right">
         <slot name="header-actions" />
@@ -740,14 +813,14 @@ const handleRowKeydown = (event, row, idx) => {
         :aria-labelledby="effectiveRegionLabelledBy"
       >
         <p v-if="captionVisible" class="table-caption-visible">
-          {{ title }}
+          {{ effectiveTitle }}
         </p>
 
         <div
           v-if="paginatedData.length === 0"
           :id="tableId || undefined"
           :data-testid="tableTestId || undefined"
-          class="empty-card-state"
+          :class="['empty-card-state', tableClass]"
         >
           <slot name="empty">
             {{ emptyMessage }}
@@ -758,7 +831,7 @@ const handleRowKeydown = (event, row, idx) => {
           v-else
           :id="tableId || undefined"
           :data-testid="tableTestId || undefined"
-          class="clinical-record-card-list"
+          :class="['clinical-record-card-list', tableClass]"
         >
           <ClinicalRecordCard
             v-for="(row, idx) in paginatedData"
@@ -936,7 +1009,7 @@ const handleRowKeydown = (event, row, idx) => {
       >
         <caption :class="captionVisible ? 'table-caption-visible' : 'sr-only'">
           {{
-            title
+            effectiveTitle
           }}
         </caption>
         <thead>

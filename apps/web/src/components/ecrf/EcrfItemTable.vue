@@ -335,15 +335,15 @@
       </template>
 
       <template #after-row="{ row: item, colSpan, isCardView }">
-        <tr
-          v-if="
-            !isCardView &&
-            sdv.pendingSdv &&
-            sdv.pendingSdv.item_id === item.item_id
-          "
+        <component
+          :is="isCardView ? 'div' : 'tr'"
+          v-if="sdv.pendingSdv && sdv.pendingSdv.item_id === item.item_id"
           class="ecrf-sdv-row"
         >
-          <td :colspan="colSpan">
+          <component
+            :is="isCardView ? 'div' : 'td'"
+            :colspan="isCardView ? undefined : colSpan"
+          >
             <div class="ecrf-form-row">
               <label for="ecrf-sdv-reason">
                 <template v-if="sdv.pendingSdv.mode === 'verify'">
@@ -393,72 +393,18 @@
                 Back
               </button>
             </div>
-          </td>
-        </tr>
-        <div
-          v-else-if="
-            isCardView &&
-            sdv.pendingSdv &&
-            sdv.pendingSdv.item_id === item.item_id
-          "
-          class="ecrf-sdv-row"
-        >
-          <div class="ecrf-form-row">
-            <label for="ecrf-sdv-reason">
-              <template v-if="sdv.pendingSdv.mode === 'verify'">
-                Reason for verifying
-                {{ sdv.pendingSdv.item_id }} (revision
-                {{ sdv.pendingSdv.revision }})
-              </template>
-              <template v-else>
-                Reason for withdrawing verification on
-                {{ sdv.pendingSdv.item_id }}
-              </template>
-            </label>
-            <input
-              id="ecrf-sdv-reason"
-              :value="sdv.sdvReason"
-              type="text"
-              autocomplete="off"
-              :disabled="sdv.sdvBusy || formState.assertionsLocked"
-              @input="
-                sdv.setSdvReason(($event.target as HTMLInputElement).value)
-              "
-            />
-            <button
-              id="ecrf-sdv-confirm"
-              class="btn btn-primary"
-              type="button"
-              :disabled="
-                sdv.sdvBusy ||
-                formState.assertionsLocked ||
-                !sdv.sdvReason.trim()
-              "
-              @click="sdv.confirmSdv()"
-            >
-              {{
-                sdv.pendingSdv.mode === "verify"
-                  ? "Confirm verification"
-                  : "Withdraw verification"
-              }}
-            </button>
-            <button
-              id="ecrf-sdv-cancel"
-              class="btn btn-secondary"
-              type="button"
-              :disabled="sdv.sdvBusy"
-              @click="sdv.cancelPendingSdv(true)"
-            >
-              Back
-            </button>
-          </div>
-        </div>
+          </component>
+        </component>
 
-        <tr
-          v-if="!isCardView && raising && raising.item_id === item.item_id"
+        <component
+          :is="isCardView ? 'div' : 'tr'"
+          v-if="raising && raising.item_id === item.item_id"
           class="ecrf-raise-row"
         >
-          <td :colspan="colSpan">
+          <component
+            :is="isCardView ? 'div' : 'td'"
+            :colspan="isCardView ? undefined : colSpan"
+          >
             <div class="ecrf-form-row">
               <label for="ecrf-raise-text">
                 <template v-if="raising.unrecorded">
@@ -518,70 +464,8 @@
                 Back
               </button>
             </div>
-          </td>
-        </tr>
-        <div
-          v-else-if="isCardView && raising && raising.item_id === item.item_id"
-          class="ecrf-raise-row"
-        >
-          <div class="ecrf-form-row">
-            <label for="ecrf-raise-text">
-              <template v-if="raising.unrecorded">
-                Missing-data query on {{ raising.item_id }} (no value recorded)
-              </template>
-              <template v-else>
-                Query on {{ raising.item_id }} (revision {{ raising.revision }})
-              </template>
-            </label>
-            <textarea id="ecrf-raise-text" v-model="raiseText" rows="2" />
-            <label for="ecrf-raise-reason">Reason for change</label>
-            <input
-              id="ecrf-raise-reason"
-              v-model="raiseReason"
-              type="text"
-              autocomplete="off"
-            />
-            <label for="ecrf-raise-owner">Owner</label>
-            <select id="ecrf-raise-owner" v-model="raiseOwnerRole">
-              <option value="site">Site</option>
-              <option value="monitor">Monitor</option>
-              <option value="data_manager">Data manager</option>
-            </select>
-            <label for="ecrf-raise-priority">Priority</label>
-            <select id="ecrf-raise-priority" v-model="raisePriority">
-              <option value="normal">Normal</option>
-              <option value="high">High</option>
-              <option value="low">Low</option>
-            </select>
-            <label for="ecrf-raise-assignee">Assignee (optional)</label>
-            <input
-              id="ecrf-raise-assignee"
-              v-model="raiseAssignee"
-              type="text"
-              autocomplete="off"
-              placeholder="Actor ID (optional)"
-            />
-            <button
-              id="ecrf-raise-confirm"
-              class="btn btn-primary"
-              type="button"
-              :disabled="
-                queries.busy || !raiseText.trim() || !raiseReason.trim()
-              "
-              @click="confirmRaise"
-            >
-              Raise query
-            </button>
-            <button
-              id="ecrf-raise-cancel"
-              class="btn btn-secondary"
-              type="button"
-              @click="cancelRaise"
-            >
-              Back
-            </button>
-          </div>
-        </div>
+          </component>
+        </component>
       </template>
     </ClinicalDataTable>
 
