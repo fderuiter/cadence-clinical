@@ -7,15 +7,15 @@
       </button>
     </div>
 
-    <div class="table-wrapper">
+    <div ref="matrixContainerRef" class="table-wrapper">
       <table class="log-table">
         <thead>
           <tr>
-            <th style="width: 40px">#</th>
-            <th v-for="col in columns" :key="col.id">
+            <th scope="col" class="row-num-header" style="width: 40px">#</th>
+            <th v-for="col in columns" :key="col.id" scope="col">
               {{ col.label }}
             </th>
-            <th style="width: 50px">Action</th>
+            <th scope="col" style="width: 50px">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -25,10 +25,19 @@
             </td>
           </tr>
           <tr v-for="(row, rIdx) in rows" :key="rIdx">
-            <td class="row-num">
+            <th scope="row" class="row-num">
               {{ rIdx + 1 }}
-            </td>
-            <td v-for="col in columns" :key="col.id">
+            </th>
+            <td
+              v-for="(col, cIdx) in columns"
+              :key="col.id"
+              class="focus-ring-inset"
+              :data-row="rIdx"
+              :data-col="cIdx"
+              :tabindex="getCellTabindex(rIdx, cIdx)"
+              @click="selectCell(rIdx, cIdx, false)"
+              @keydown="handleCellKeyDown($event, rIdx, cIdx)"
+            >
               <input
                 v-if="col.type === 'number'"
                 type="number"
@@ -78,7 +87,7 @@
 
 <script setup>
 import { ref, watch } from "vue";
-import { ClinicalIconButton } from "ui";
+import { ClinicalIconButton, use2DGrid } from "ui";
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
@@ -96,6 +105,20 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 const rows = ref([...props.modelValue]);
+const matrixContainerRef = ref(null);
+const { getCellTabindex, selectCell, handleCellKeyDown } = use2DGrid(
+  () => rows.value.length,
+  () => props.columns.length,
+  {
+    containerRef: matrixContainerRef,
+    onCellAction: (rIdx, cIdx) => {
+      const input = matrixContainerRef.value?.querySelector(
+        `[data-row="${rIdx}"][data-col="${cIdx}"] input`
+      );
+      input?.focus();
+    },
+  }
+);
 
 watch(
   () => props.modelValue,
@@ -160,6 +183,7 @@ const calculateSum = (columnId) => {
 }
 
 .table-wrapper {
+  position: relative;
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
@@ -198,10 +222,28 @@ const calculateSum = (columnId) => {
   border-color: var(--primary);
 }
 
+.row-num-header {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background-color: var(--semantic-color-surface-muted);
+}
+
 .row-num {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: var(--semantic-color-surface);
   text-align: center;
   color: var(--semantic-color-text-secondary);
   font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-table td.focus-ring-inset:focus-visible {
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--semantic-color-accent));
+  outline-offset: -3px;
 }
 
 .btn-delete-row {

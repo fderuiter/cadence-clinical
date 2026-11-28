@@ -2351,6 +2351,7 @@ onMounted(() => {
   padding: 6px;
   margin: -6px -6px 0 -6px;
   border-bottom: 2px solid var(--semantic-color-border);
+  position: relative;
   overflow-x: auto;
 }
 
@@ -2444,6 +2445,7 @@ onMounted(() => {
 }
 
 .table-wrap {
+  position: relative;
   overflow-x: auto;
   border: 1px solid var(--semantic-color-border);
   border-radius: 4px;

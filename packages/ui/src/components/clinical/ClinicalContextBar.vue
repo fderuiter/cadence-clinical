@@ -315,6 +315,7 @@ function handleNavigate(step) {
   border-bottom: 1px solid var(--semantic-color-border);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
+  position: relative;
   overflow-x: auto;
   scrollbar-width: none;
 }

@@ -207,7 +207,7 @@
 
     <!-- High Density Matrix Table -->
     <!-- eslint-disable vuejs-accessibility/mouse-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div class="matrix-table-container">
+    <div ref="matrixContainerRef" class="matrix-table-container">
       <table class="soa-interactive-table">
         <thead>
           <tr>
@@ -289,13 +289,16 @@
             <td
               v-for="(visit, cIdx) in visits"
               :key="visit.visit_name"
-              class="cell-toggle"
+              class="cell-toggle focus-ring-inset"
               :class="{
                 active: isAssigned(act, visit.visit_name),
                 'in-range': isCellInSelectedRange(rIdx, cIdx),
               }"
               :data-r-idx="rIdx"
               :data-c-idx="cIdx"
+              :data-row="rIdx"
+              :data-col="cIdx"
+              :tabindex="getCellTabindex(rIdx, cIdx)"
               @pointerdown.prevent="handleCellPointerDown(rIdx, cIdx, $event)"
               @pointermove="handleCellPointerMove($event)"
               @pointerup="handleCellPointerUp(rIdx, cIdx, $event)"
@@ -303,8 +306,10 @@
               @mousedown="handleCellPointerDown(rIdx, cIdx, $event)"
               @mouseenter="handleCellMouseEnter(rIdx, cIdx)"
               @mouseup="handleCellPointerUp(rIdx, cIdx, $event)"
+              @keydown="handleCellKeyDown($event, rIdx, cIdx)"
               @click="
-                handleCellClick(act, visit.visit_name, rIdx, cIdx, $event)
+                selectCell(rIdx, cIdx, false);
+                handleCellClick(act, visit.visit_name, rIdx, cIdx, $event);
               "
             >
               <input
@@ -326,6 +331,7 @@
 
 <script setup>
 import { computed, ref, watch, onUnmounted } from "vue";
+import { use2DGrid } from "ui";
 
 const props = defineProps({
   activities: {
@@ -341,6 +347,21 @@ const props = defineProps({
 const emit = defineEmits(["update:activities", "add-visit"]);
 
 const localActivities = ref([]);
+const matrixContainerRef = ref(null);
+const { getCellTabindex, selectCell, handleCellKeyDown } = use2DGrid(
+  () => localActivities.value.length,
+  () => props.visits.length,
+  {
+    containerRef: matrixContainerRef,
+    onCellAction: (rIdx, cIdx) => {
+      const act = localActivities.value[rIdx];
+      const visit = props.visits[cIdx];
+      if (act && visit) {
+        toggleAssignment(act, visit.visit_name);
+      }
+    },
+  }
+);
 const showAddProcedure = ref(false);
 const showAddVisit = ref(false);
 const showCloneGroup = ref(false);
@@ -847,6 +868,7 @@ onUnmounted(() => {
 }
 
 .matrix-table-container {
+  position: relative;
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -868,6 +890,9 @@ onUnmounted(() => {
 }
 
 .col-procedure-header {
+  position: sticky;
+  left: 0;
+  z-index: 2;
   background-color: var(--semantic-color-surface-muted);
   color: var(--text-main);
   font-weight: 700;
@@ -921,8 +946,22 @@ onUnmounted(() => {
   background-color: var(--semantic-color-surface-muted);
 }
 
+.soa-row:hover .cell-procedure-name {
+  background-color: var(--semantic-color-surface-muted);
+}
+
 .cell-procedure-name {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: var(--semantic-color-surface);
   font-weight: 500;
+}
+
+.cell-toggle.focus-ring-inset:focus-visible {
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--semantic-color-accent));
+  outline-offset: -3px;
 }
 
 .procedure-label {

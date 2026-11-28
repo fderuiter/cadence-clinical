@@ -2120,6 +2120,7 @@ onMounted(() => {
   padding: 6px 6px 2px;
   margin: -6px -6px 0;
   border-bottom: 2px solid var(--semantic-color-border);
+  position: relative;
   overflow-x: auto;
 }
 
@@ -2196,6 +2197,7 @@ onMounted(() => {
 
 /* Forensics Table */
 .table-wrapper {
+  position: relative;
   overflow-x: auto;
 }
 
@@ -2623,6 +2625,7 @@ onMounted(() => {
   border-radius: 6px;
   font-size: var(--font-size-2xs);
   font-family: var(--semantic-font-mono);
+  position: relative;
   overflow-x: auto;
   margin-top: 10px;
 }

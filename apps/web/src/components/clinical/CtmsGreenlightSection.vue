@@ -271,14 +271,27 @@ const {
 const canCertify = computed(() => canCertifyGreenlight(authStore));
 const matrixColumns = computed(() => {
   const cols = [
-    { key: "site_id", label: "Site", rowHeader: true },
-    { key: "overall_status", label: "Status" },
+    {
+      key: "site_id",
+      label: "Site",
+      rowHeader: true,
+      sticky: "left",
+      cardRole: "identifier",
+      mono: true,
+      sortable: true,
+    },
+    {
+      key: "overall_status",
+      label: "Status",
+      cardRole: "status",
+      sortable: true,
+    },
     { key: "facets", label: "Satisfied facets" },
-    { key: "reasons", label: "Blocking reasons" },
+    { key: "reasons", label: "Blocking reasons", fullWidth: true },
     { key: "certified", label: "Certified" },
   ];
   return canCertify.value
-    ? [{ key: "select", label: "Select" }, ...cols]
+    ? [{ key: "select", label: "Select", cardRole: "select" }, ...cols]
     : cols;
 });
 const countryCode = ref("US");

@@ -1129,6 +1129,7 @@ function executeChairSignoff() {
 }
 
 .lesion-table-container {
+  position: relative;
   overflow-x: auto;
 }
 

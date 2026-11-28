@@ -2153,6 +2153,7 @@ function formatResolutionAction(act?: string | null): string {
   border-radius: 6px;
   font-size: 0.75rem;
   max-height: 250px;
+  position: relative;
   overflow: auto;
   margin: 0;
 }

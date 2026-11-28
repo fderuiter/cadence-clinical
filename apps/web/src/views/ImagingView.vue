@@ -1096,6 +1096,7 @@ function handleBatchIngested(result) {
 }
 
 .trajectory-table-wrapper {
+  position: relative;
   overflow-x: auto;
 }
 

@@ -2135,6 +2135,7 @@ onMounted(() => {
 
 /* Table Styles */
 .table-container {
+  position: relative;
   overflow-x: auto;
 }
 
@@ -2369,6 +2370,7 @@ onMounted(() => {
   padding: 8px;
   background: var(--semantic-color-surface-muted);
   border-radius: var(--radius-sm);
+  position: relative;
   overflow-x: auto;
 }
 

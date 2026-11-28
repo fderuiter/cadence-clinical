@@ -15,6 +15,9 @@ export const CLINICAL_SHELL_ICON_NAMES = [
 export const CLINICAL_ROUTE_ICON_NAMES = [
   "alert-circle",
   "alert-triangle",
+  "arrow-down",
+  "arrow-up",
+  "arrow-up-down",
   "book-open",
   "calendar",
   "camera",

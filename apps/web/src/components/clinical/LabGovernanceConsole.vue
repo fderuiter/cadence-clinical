@@ -3344,6 +3344,7 @@ onMounted(() => {
 
 .svg-container {
   width: 100%;
+  position: relative;
   overflow-x: auto;
 }
 

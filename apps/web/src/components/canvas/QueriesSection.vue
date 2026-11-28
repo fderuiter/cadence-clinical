@@ -524,11 +524,19 @@ const OWNER_LABELS: Record<string, string> = {
 };
 
 const digestColumns = [
-  { key: "subject", label: "Subject" },
-  { key: "site", label: "Site" },
-  { key: "item", label: "Item" },
+  {
+    key: "subject",
+    label: "Subject",
+    rowHeader: true,
+    sticky: "left",
+    cardRole: "identifier",
+    mono: true,
+    sortable: true,
+  },
+  { key: "site", label: "Site", mono: true, sortable: true },
+  { key: "item", label: "Item", cardRole: "title" },
   { key: "owner", label: "Owner" },
-  { key: "age", label: "Age", cellClass: "study-digest-num" },
+  { key: "age", label: "Age", cellClass: "study-digest-num", sortable: true },
   { key: "form", label: "Form" },
 ];
 
@@ -1324,6 +1332,7 @@ watch(
 }
 
 :deep(.study-digest-table-wrap) {
+  position: relative;
   overflow-x: auto;
 }
 

@@ -378,12 +378,21 @@ const emit = defineEmits<{
 }>();
 
 const siteColumns = [
-  { key: "site_code", label: "Site", cellClass: "code-cell" },
-  { key: "site_name", label: "Name" },
-  { key: "country", label: "Country" },
+  {
+    key: "site_code",
+    label: "Site",
+    rowHeader: true,
+    sticky: "left",
+    cardRole: "identifier",
+    mono: true,
+    sortable: true,
+    cellClass: "code-cell",
+  },
+  { key: "site_name", label: "Name", cardRole: "title", sortable: true },
+  { key: "country", label: "Country", sortable: true },
   { key: "institution", label: "Institution" },
-  { key: "status", label: "Status" },
-  { key: "actions", label: "Actions" },
+  { key: "status", label: "Status", cardRole: "status", sortable: true },
+  { key: "actions", label: "Actions", sticky: "right", cardRole: "actions" },
 ];
 
 const loading = ref(false);
@@ -741,6 +750,7 @@ onMounted(() => {
 }
 
 :deep(.table-wrap) {
+  position: relative;
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: 8px;

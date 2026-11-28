@@ -493,4 +493,238 @@ describe("ClinicalDataTable WCAG 2.2 keyboard & ARIA primitive", () => {
       styleEl.remove();
     }
   });
+
+  it("projects rows into ClinicalRecordCard items at <= 480px viewports reusing #cell-*, #masked-row, #after-row, and #empty slots with a mobile sort bar", async () => {
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 390,
+    });
+    window.dispatchEvent(new Event("resize"));
+
+    const rowsRef = ref([
+      {
+        id: "VISIT-02",
+        site: "Site 102",
+        status: "OPEN",
+        due: "2026-09-10",
+        masked: false,
+      },
+      {
+        id: "VISIT-01",
+        site: "Site 101",
+        status: "VERIFIED",
+        due: "2026-09-02",
+        masked: false,
+      },
+      {
+        id: "VISIT-99",
+        masked: true,
+        maskReason: "Unassigned site",
+      },
+    ]);
+    const onSortChange = vi.fn();
+    const onInspect = vi.fn();
+
+    try {
+      const host = mountHost(
+        () => () =>
+          h(
+            ClinicalDataTable,
+            {
+              title: "Monitoring Visits",
+              density: "touch",
+              mobileMode: "auto",
+              columns: [
+                {
+                  key: "id",
+                  label: "Visit ID",
+                  sortable: true,
+                  sticky: "left",
+                  cardRole: "identifier",
+                  mono: true,
+                },
+                {
+                  key: "site",
+                  label: "Site",
+                  sortable: true,
+                  cardRole: "title",
+                },
+                {
+                  key: "status",
+                  label: "Status",
+                  sortable: true,
+                  cardRole: "status",
+                },
+                { key: "due", label: "Target Date", mono: true },
+                {
+                  key: "actions",
+                  label: "Actions",
+                  sticky: "right",
+                  cardRole: "actions",
+                },
+              ],
+              data: rowsRef.value,
+              isRowMasked: (r) => Boolean(r.masked),
+              "onSort-change": onSortChange,
+            },
+            {
+              "cell-status": ({ row }) =>
+                h("span", { class: "custom-status-pill" }, row.status),
+              "cell-actions": ({ row }) =>
+                h(
+                  "button",
+                  {
+                    type: "button",
+                    class: "card-action-btn",
+                    onClick: () => onInspect(row.id),
+                  },
+                  [h("span", "Review"), h("span", { class: "sr-only" }, row.id)]
+                ),
+              "masked-row": ({ row }) =>
+                h("span", { class: "masked-card-msg" }, row.maskReason),
+              "after-row": ({ row, isCardView }) =>
+                isCardView && row.id === "VISIT-01"
+                  ? h("div", { class: "projected-after-card" }, "Expanded note")
+                  : null,
+              empty: () => h("div", { class: "custom-empty-slot" }, "Zero due"),
+            }
+          )
+      );
+
+      await nextTick();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await nextTick();
+
+      // Table is replaced by projected ClinicalRecordCard list
+      expect(host.querySelector("table.clinical-table")).toBeNull();
+      const cards = Array.from(host.querySelectorAll(".clinical-record-card"));
+      expect(cards).toHaveLength(3);
+      expect(cards[0].classList.contains("clinical-record-card--touch")).toBe(
+        true
+      );
+      expect(host.querySelector(".custom-status-pill")?.textContent).toBe(
+        "OPEN"
+      );
+      expect(host.querySelector(".masked-card-msg")?.textContent).toBe(
+        "Unassigned site"
+      );
+      expect(host.querySelector(".projected-after-card")?.textContent).toBe(
+        "Expanded note"
+      );
+
+      // Mobile sort selector bar is rendered and sorts cards
+      const sortBar = host.querySelector(
+        '[data-testid="clinical-mobile-sort-bar"]'
+      );
+      expect(sortBar).not.toBeNull();
+      const sortSelect = sortBar.querySelector("select");
+      sortSelect.value = "id";
+      sortSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      await nextTick();
+
+      const sortedIds = Array.from(
+        host.querySelectorAll(".clinical-record-card__identifier")
+      ).map((el) => el.textContent.trim());
+      expect(sortedIds[0]).toBe("VISIT-01");
+      expect(onSortChange).toHaveBeenCalledWith({
+        key: "id",
+        order: "asc",
+      });
+
+      const orderBtn = sortBar.querySelector(".mobile-sort-order-btn");
+      orderBtn.click();
+      await nextTick();
+      expect(onSortChange).toHaveBeenLastCalledWith({
+        key: "id",
+        order: "desc",
+      });
+
+      // Slotted action button works in card footer
+      host.querySelector(".card-action-btn").click();
+      expect(onInspect).toHaveBeenCalledTimes(1);
+
+      // Empty state reuses #empty slot in card mode
+      rowsRef.value = [];
+      await nextTick();
+      expect(host.querySelector(".custom-empty-slot")?.textContent).toBe(
+        "Zero due"
+      );
+
+      const audit = await toBeAccessible({ element: host });
+      expect(audit.pass, audit.message()).toBe(true);
+    } finally {
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        writable: true,
+        value: originalInnerWidth,
+      });
+      window.dispatchEvent(new Event("resize"));
+    }
+  });
+
+  it("renders sticky left/right column classes, stickyHeader, Lucide SVG sort icons without Unicode arrows, and density modifiers on desktop viewports", async () => {
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 1280,
+    });
+    window.dispatchEvent(new Event("resize"));
+
+    try {
+      const host = mountHost(
+        () => () =>
+          h(ClinicalDataTable, {
+            title: "Desktop Sticky Matrix",
+            stickyHeader: true,
+            density: "compact",
+            captionVisible: true,
+            columns: [
+              { key: "id", label: "ID", sticky: "left", sortable: true },
+              { key: "glucose", label: "Glucose", sortable: true },
+              { key: "actions", label: "Actions", sticky: "right" },
+            ],
+            data: sampleRows,
+          })
+      );
+
+      await nextTick();
+
+      const container = host.querySelector(".clinical-data-table-container");
+      expect(
+        container.classList.contains("clinical-data-table-container--compact")
+      ).toBe(true);
+      const table = host.querySelector("table.clinical-table");
+      expect(table.classList.contains("clinical-table--sticky-header")).toBe(
+        true
+      );
+      expect(
+        table.querySelector("caption.table-caption-visible")
+      ).not.toBeNull();
+
+      const headers = table.querySelectorAll("thead th");
+      expect(headers[0].classList.contains("col-sticky-left")).toBe(true);
+      expect(headers[2].classList.contains("col-sticky-right")).toBe(true);
+
+      const firstRowCells = table.querySelectorAll("tbody tr:first-child > *");
+      expect(firstRowCells[0].classList.contains("col-sticky-left")).toBe(true);
+      expect(firstRowCells[2].classList.contains("col-sticky-right")).toBe(
+        true
+      );
+
+      const sortSvg = headers[0].querySelector(".sort-icon svg");
+      expect(sortSvg).not.toBeNull();
+      expect(sortSvg.getAttribute("stroke-width")).toBe("1.75");
+      expect(headers[0].textContent).not.toMatch(/[\u21C5\u25B2\u25BC]/);
+    } finally {
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        writable: true,
+        value: originalInnerWidth,
+      });
+      window.dispatchEvent(new Event("resize"));
+    }
+  });
 });

@@ -1005,6 +1005,7 @@ function downloadDefineXml() {
   font-size: 0.8rem;
   line-height: 1.4;
   max-height: 480px;
+  position: relative;
   overflow: auto;
 }
 

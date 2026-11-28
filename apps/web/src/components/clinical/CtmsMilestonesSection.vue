@@ -246,13 +246,36 @@ const {
 const canManage = computed(() => canManageMilestones(authStore));
 const milestoneColumns = computed(() => {
   const cols = [
-    { key: "site_id", label: "Site", rowHeader: true },
-    { key: "milestone_type", label: "Milestone" },
-    { key: "status", label: "Status" },
-    { key: "planned_date", label: "Planned date" },
-    { key: "actual_date", label: "Actual date" },
+    {
+      key: "site_id",
+      label: "Site",
+      rowHeader: true,
+      sticky: "left",
+      cardRole: "identifier",
+      mono: true,
+      sortable: true,
+    },
+    {
+      key: "milestone_type",
+      label: "Milestone",
+      cardRole: "title",
+      sortable: true,
+    },
+    { key: "status", label: "Status", cardRole: "status", sortable: true },
+    { key: "planned_date", label: "Planned date", sortable: true },
+    { key: "actual_date", label: "Actual date", sortable: true },
   ];
-  return canManage.value ? [...cols, { key: "action", label: "Action" }] : cols;
+  return canManage.value
+    ? [
+        ...cols,
+        {
+          key: "action",
+          label: "Action",
+          sticky: "right",
+          cardRole: "actions",
+        },
+      ]
+    : cols;
 });
 const milestones = ref<SiteMilestone[]>([]);
 const newType = ref("SITE_ACTIVATION");
@@ -378,7 +401,7 @@ async function confirmAchieve() {
     void achieveHandoff.handoff([
       () =>
         document.querySelector<HTMLElement>(
-          "#milestones-table button:not([disabled])"
+          "#milestones-table tbody button:not([disabled]), #milestones-table .clinical-record-card button:not([disabled])"
         ),
       "#ctms-milestones-title",
     ]);

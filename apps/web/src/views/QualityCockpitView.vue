@@ -1846,6 +1846,7 @@ function downloadDossierJson() {
   gap: 8px;
   border-bottom: 2px solid var(--border);
   margin: -6px -6px 20px -6px;
+  position: relative;
   overflow-x: auto;
   padding: 6px;
 }
@@ -2049,6 +2050,7 @@ function downloadDossierJson() {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
   margin-top: 16px;
+  position: relative;
   overflow-x: auto;
   padding-bottom: 8px;
 }

@@ -1001,10 +1001,18 @@ const emit = defineEmits<{
 }>();
 
 const versionColumns = [
-  { key: "number", label: "Version", align: "right", rowHeader: true },
-  { key: "status", label: "Status" },
+  {
+    key: "number",
+    label: "Version",
+    align: "right",
+    rowHeader: true,
+    sticky: "left",
+    cardRole: "identifier",
+    mono: true,
+  },
+  { key: "status", label: "Status", cardRole: "status" },
   { key: "parent", label: "Amends" },
-  { key: "amendment_intent", label: "Amendment intent" },
+  { key: "amendment_intent", label: "Amendment intent", fullWidth: true },
 ];
 
 const APPROVAL_EVIDENCE_KINDS = new Set([

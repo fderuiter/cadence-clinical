@@ -408,13 +408,22 @@ const queueColumns = [
   {
     key: "filename",
     label: "File Name",
+    rowHeader: true,
+    sticky: "left",
+    cardRole: "title",
     cellClass: "filename-cell font-mono",
   },
   { key: "size", label: "Size", cellClass: "size-cell" },
-  { key: "status", label: "Status" },
+  { key: "status", label: "Status", cardRole: "status" },
   { key: "classification", label: "Predicted Classification" },
   { key: "confidence", label: "Confidence" },
-  { key: "action", label: "Action", cellClass: "queue-actions-cell" },
+  {
+    key: "action",
+    label: "Action",
+    sticky: "right",
+    cardRole: "actions",
+    cellClass: "queue-actions-cell",
+  },
 ];
 const reasonForChange = ref(
   "Site regulatory documents batch ingestion for CRA Quality Control"
@@ -831,6 +840,7 @@ function handleClose() {
 :deep(.queue-table-wrapper) {
   border: 1px solid var(--border);
   border-radius: 6px;
+  position: relative;
   overflow-x: auto;
   max-width: 100%;
 }

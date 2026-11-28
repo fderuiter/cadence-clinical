@@ -633,6 +633,7 @@ h4 {
 
 /* Table styling */
 .table-responsive {
+  position: relative;
   overflow-x: auto;
 }
 
@@ -1446,6 +1447,7 @@ textarea {
   font-family: var(--semantic-font-mono);
   font-size: 0.75rem;
   margin-top: 4px;
+  position: relative;
   overflow-x: auto;
 }
 

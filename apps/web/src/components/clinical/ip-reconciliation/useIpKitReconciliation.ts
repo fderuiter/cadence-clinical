@@ -30,6 +30,10 @@ export const BATCH_RECONCILIATION_COLUMNS = [
   {
     key: "kitNumber",
     label: "Kit Barcode",
+    rowHeader: true,
+    sticky: "left" as const,
+    cardRole: "identifier" as const,
+    mono: true,
     cellClass: "col-kit mono fw-bold",
   },
   { key: "scannedLotNumber", label: "Scanned Lot", cellClass: "col-lot mono" },
@@ -49,8 +53,19 @@ export const BATCH_RECONCILIATION_COLUMNS = [
     label: "Disposition Reason",
     cellClass: "col-reason",
   },
-  { key: "flags", label: "Validation Flags", cellClass: "col-flags" },
-  { key: "action", label: "Action", cellClass: "col-action" },
+  {
+    key: "flags",
+    label: "Validation Flags",
+    cardRole: "status" as const,
+    cellClass: "col-flags",
+  },
+  {
+    key: "action",
+    label: "Action",
+    sticky: "right" as const,
+    cardRole: "actions" as const,
+    cellClass: "col-action",
+  },
 ];
 
 export const resolveKitRowClass = (item: ScannedKitBufferItem) => [

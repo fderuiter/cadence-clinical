@@ -1056,6 +1056,7 @@ function onResetSimulation() {
   border: 1px solid var(--semantic-color-border);
   border-radius: 16px;
   padding: 24px;
+  position: relative;
   overflow-x: auto;
   min-height: 480px;
 }

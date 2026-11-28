@@ -7,3 +7,5 @@ Active Architectural Decision Records for **6. Frontend & Design System**.
 - Entries below use `# ADR-FRONTEND-YYYYMMDD-<slug>: <title>` and are sorted alphabetically by filename.
 
 ## Decisions
+
+- [ADR-FRONTEND-20261128-slot-projected-clinicalrecordcard-mobile-mode-and-shared-use2dgrid: Slot-projected ClinicalRecordCard mobile mode and shared use2DGrid](2026-11-28-slot-projected-clinicalrecordcard-mobile-mode-and-shared-use2dgrid.md) (2026-11-28)

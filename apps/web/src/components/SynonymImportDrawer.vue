@@ -1075,6 +1075,7 @@ onMounted(() => {
 .table-scroll-box {
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
+  position: relative;
   overflow-x: auto;
   max-width: 100%;
 }

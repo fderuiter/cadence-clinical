@@ -793,6 +793,7 @@ function submitCohortTransition(): void {
 }
 
 .table-wrapper {
+  position: relative;
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: 6px;

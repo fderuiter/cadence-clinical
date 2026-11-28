@@ -33,66 +33,54 @@
           >
           <span v-else class="ecrf-signature-state">Current</span>
         </div>
-        <div
+        <ClinicalDataTable
           v-if="signature.superseded && signature.signed_values?.length"
-          class="ecrf-table-scroll ecrf-signed-values-scroll scrollable-table-wrapper"
-          data-testid="ecrf-signed-values-scroll"
-          role="region"
+          plain
+          hide-header
+          caption-visible
+          density="compact"
+          :interactive-rows="false"
+          :page-size="Math.max(signature.signed_values.length, 50)"
+          title="What this signature signed, beside the current values"
           :aria-label="`Superseded signed values (${meaningLabel(signature.meaning)} by ${signature.signed_by})`"
-          tabindex="0"
+          wrapper-class="ecrf-table-scroll ecrf-signed-values-scroll"
+          wrapper-test-id="ecrf-signed-values-scroll"
+          table-class="ecrf-signed-values"
+          table-test-id="ecrf-signed-values"
+          :columns="signedValueColumns"
+          :data="signature.signed_values"
+          row-key="item_id"
+          :row-attrs="(signed) => ({ 'data-signed-item': signed.item_id })"
+          :row-class="
+            (signed) => ({ 'ecrf-signed-changed': changedSince(signed) })
+          "
         >
-          <table class="ecrf-signed-values" data-testid="ecrf-signed-values">
-            <caption>
-              What this signature signed, beside the current values
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">Item</th>
-                <th scope="col">Signed value</th>
-                <th scope="col">Signed revision</th>
-                <th scope="col">Current value</th>
-                <th scope="col">Current revision</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="signed in signature.signed_values"
-                :key="signed.item_id"
-                :data-signed-item="signed.item_id"
-                :class="{
-                  'ecrf-signed-changed': changedSince(signed),
-                }"
-              >
-                <th scope="row">
-                  {{ signed.item_id }}
-                </th>
-                <td>{{ formatObservationValue(signed.value) }}</td>
-                <td>
-                  <component
-                    :is="routerLinkTag"
-                    v-if="
-                      itemObservationLink(signed.observation_id, signed.item_id)
-                    "
-                    class="ecrf-observation-link"
-                    :to="
-                      itemObservationLink(
-                        signed.observation_id,
-                        signed.item_id
-                      )!
-                    "
-                  >
-                    {{ signed.revision }}
-                  </component>
-                  <template v-else>
-                    {{ signed.revision }}
-                  </template>
-                </td>
-                <td>{{ currentValueText(signed.item_id) }}</td>
-                <td>{{ currentOf(signed.item_id)?.revision ?? "None" }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+          <template #cell-item_id="{ row: signed }">
+            {{ signed.item_id }}
+          </template>
+          <template #cell-signed_value="{ row: signed }">
+            {{ formatObservationValue(signed.value) }}
+          </template>
+          <template #cell-signed_revision="{ row: signed }">
+            <component
+              :is="routerLinkTag"
+              v-if="itemObservationLink(signed.observation_id, signed.item_id)"
+              class="ecrf-observation-link"
+              :to="itemObservationLink(signed.observation_id, signed.item_id)!"
+            >
+              {{ signed.revision }}
+            </component>
+            <template v-else>
+              {{ signed.revision }}
+            </template>
+          </template>
+          <template #cell-current_value="{ row: signed }">
+            {{ currentValueText(signed.item_id) }}
+          </template>
+          <template #cell-current_revision="{ row: signed }">
+            {{ currentOf(signed.item_id)?.revision ?? "None" }}
+          </template>
+        </ClinicalDataTable>
       </li>
     </ul>
 
@@ -175,6 +163,7 @@
 
 <script setup lang="ts">
 import { getCurrentInstance, toRef } from "vue";
+import { ClinicalDataTable } from "ui";
 import type { RouteLocationRaw } from "vue-router";
 import { formatObservationValue } from "../../api/observationValue";
 import {
@@ -212,6 +201,21 @@ const emit = defineEmits<{
 
 const instance = getCurrentInstance();
 const routerLinkTag = instance?.appContext.components.RouterLink ?? "a";
+
+const signedValueColumns = [
+  {
+    key: "item_id",
+    label: "Item",
+    rowHeader: true,
+    sticky: "left" as const,
+    cardRole: "identifier" as const,
+    mono: true,
+  },
+  { key: "signed_value", label: "Signed value", mono: true },
+  { key: "signed_revision", label: "Signed revision", mono: true },
+  { key: "current_value", label: "Current value", mono: true },
+  { key: "current_revision", label: "Current revision", mono: true },
+];
 
 const {
   ECRF_INVESTIGATOR_REASONS,
@@ -264,8 +268,8 @@ const {
   min-width: 0;
   max-width: 100%;
 }
-.ecrf-signed-values th[scope="row"],
-.ecrf-signed-values td {
+:deep(.ecrf-signed-values th[scope="row"]),
+:deep(.ecrf-signed-values td) {
   font-family: var(--semantic-font-mono);
 }
 .ecrf-signature {
@@ -294,7 +298,7 @@ const {
   background-color: var(--semantic-badge-warning-bg);
   color: var(--semantic-badge-warning-text);
 }
-.ecrf-signed-values-scroll {
+:deep(.ecrf-signed-values-scroll) {
   position: relative;
   overflow-x: auto;
   max-width: 100%;
@@ -303,30 +307,18 @@ const {
   padding: 4px;
   margin-top: 6px;
 }
-.ecrf-signed-values-scroll:focus-visible {
+:deep(.ecrf-signed-values-scroll:focus-visible) {
   outline: 3px solid var(--semantic-color-accent);
   outline-offset: 2px;
   box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid);
   border-radius: 4px;
 }
-.ecrf-signed-values {
-  width: 100%;
-  min-width: 34rem;
-  border-collapse: collapse;
-  font-size: 0.8rem;
+@media (min-width: 481px) {
+  :deep(table.ecrf-signed-values) {
+    min-width: 34rem;
+  }
 }
-.ecrf-signed-values caption {
-  text-align: left;
-  font-weight: 600;
-  padding-bottom: 4px;
-}
-.ecrf-signed-values th,
-.ecrf-signed-values td {
-  border-bottom: 1px solid var(--border);
-  padding: 4px 6px;
-  text-align: left;
-}
-.ecrf-signed-changed {
+:deep(.ecrf-signed-changed) {
   background-color: var(--semantic-color-warning-bg-soft);
   color: var(--semantic-color-text);
 }

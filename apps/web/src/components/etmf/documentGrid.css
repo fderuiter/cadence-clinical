@@ -65,6 +65,7 @@
 }
 
 .table-responsive {
+  position: relative;
   flex: 1;
   overflow-x: auto;
 }
@@ -102,11 +103,26 @@
   font-style: italic;
 }
 
+.documents-table thead th:nth-child(2) {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background-color: var(--semantic-color-surface-muted);
+}
+
 .doc-name-cell {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: var(--semantic-color-surface);
   display: flex;
   align-items: center;
   gap: 8px;
   max-width: 250px;
+}
+
+.document-row:hover .doc-name-cell {
+  background-color: var(--semantic-color-surface-muted);
 }
 
 .doc-name-cell .filename {

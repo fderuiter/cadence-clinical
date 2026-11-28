@@ -149,23 +149,27 @@
         Draw calipers directly on the MPR viewer canvas to measure lesions.
       </div>
 
-      <div v-else class="annotations-table-wrapper">
+      <div
+        v-else
+        ref="annotationsContainerRef"
+        class="annotations-table-wrapper"
+      >
         <table class="annotations-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Timepoint</th>
-              <th>Site</th>
-              <th>Type</th>
-              <th>Method</th>
-              <th>Longest (mm)</th>
-              <th>Perp (mm)</th>
-              <th>Action</th>
+              <th scope="col" class="sticky-col-left">ID</th>
+              <th scope="col">Timepoint</th>
+              <th scope="col">Site</th>
+              <th scope="col">Type</th>
+              <th scope="col">Method</th>
+              <th scope="col">Longest (mm)</th>
+              <th scope="col">Perp (mm)</th>
+              <th scope="col">Action</th>
             </tr>
           </thead>
           <tbody>
             <tr
-              v-for="a in annotations"
+              v-for="(a, rIdx) in annotations"
               :key="a.id"
               :class="{
                 'row-new-lesion': a.lesion_type === 'NEW_LESION',
@@ -173,10 +177,24 @@
                   a.measurement_type === 'AI_AUTO_CONTOUR' || a.is_ai_assisted,
               }"
             >
-              <td class="font-bold">
+              <td
+                class="font-bold sticky-col-left focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="0"
+                :tabindex="getCellTabindex(rIdx, 0)"
+                @click="selectCell(rIdx, 0, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 0)"
+              >
                 {{ a.lesion_id }}
               </td>
-              <td>
+              <td
+                class="focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="1"
+                :tabindex="getCellTabindex(rIdx, 1)"
+                @click="selectCell(rIdx, 1, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 1)"
+              >
                 <span
                   class="timepoint-pill"
                   :class="getTimepointClass(a.timepoint)"
@@ -184,13 +202,36 @@
                   {{ formatTimepoint(a.timepoint) }}
                 </span>
               </td>
-              <td>{{ a.organ_site }}</td>
-              <td>
+              <td
+                class="focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="2"
+                :tabindex="getCellTabindex(rIdx, 2)"
+                @click="selectCell(rIdx, 2, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 2)"
+              >
+                {{ a.organ_site }}
+              </td>
+              <td
+                class="focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="3"
+                :tabindex="getCellTabindex(rIdx, 3)"
+                @click="selectCell(rIdx, 3, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 3)"
+              >
                 <span class="type-pill" :class="a.lesion_type.toLowerCase()">
                   {{ a.lesion_type }}
                 </span>
               </td>
-              <td>
+              <td
+                class="focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="4"
+                :tabindex="getCellTabindex(rIdx, 4)"
+                @click="selectCell(rIdx, 4, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 4)"
+              >
                 <span
                   v-if="a.measurement_type === 'AI_AUTO_CONTOUR'"
                   class="ai-badge"
@@ -215,18 +256,42 @@
                 </span>
                 <span v-else class="manual-badge"> Manual</span>
               </td>
-              <td>
+              <td
+                class="focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="5"
+                :tabindex="getCellTabindex(rIdx, 5)"
+                @click="selectCell(rIdx, 5, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 5)"
+              >
                 <input
                   type="number"
                   step="0.1"
                   class="diameter-input"
+                  data-tabular-nums="true"
                   :value="a.longest_diameter_mm"
                   aria-label="Longest Diameter mm"
                   @change="updateLongestDiameter(a, $event.target.value)"
                 />
               </td>
-              <td>{{ a.perpendicular_diameter_mm || "-" }}</td>
-              <td>
+              <td
+                class="focus-ring-inset tabular-nums"
+                :data-row="rIdx"
+                :data-col="6"
+                :tabindex="getCellTabindex(rIdx, 6)"
+                @click="selectCell(rIdx, 6, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 6)"
+              >
+                {{ a.perpendicular_diameter_mm || "-" }}
+              </td>
+              <td
+                class="focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="7"
+                :tabindex="getCellTabindex(rIdx, 7)"
+                @click="selectCell(rIdx, 7, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 7)"
+              >
                 <div class="action-btn-group">
                   <button
                     v-if="a.measurement_type === 'AI_AUTO_CONTOUR'"
@@ -409,7 +474,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { ClinicalIconButton, useFocusTrap, ClinicalIcon } from "ui";
+import { ClinicalIconButton, useFocusTrap, ClinicalIcon, use2DGrid } from "ui";
 
 const props = defineProps({
   annotations: {
@@ -443,6 +508,21 @@ const emit = defineEmits([
 ]);
 
 const currentTool = ref("CALIPER_1D");
+const annotationsContainerRef = ref(null);
+const { getCellTabindex, selectCell, handleCellKeyDown } = use2DGrid(
+  () => props.annotations.length,
+  8,
+  {
+    containerRef: annotationsContainerRef,
+    onCellAction: (rIdx, cIdx) => {
+      const control = annotationsContainerRef.value?.querySelector(
+        `[data-row="${rIdx}"][data-col="${cIdx}"] input, [data-row="${rIdx}"][data-col="${cIdx}"] button`
+      );
+      if (control?.tagName === "INPUT") control.focus();
+      else control?.click?.();
+    },
+  }
+);
 const isModalOpen = ref(false);
 const signoffModalRef = ref(null);
 const signoffReason = ref("Routine Oncologic Caliper Response Evaluation");
@@ -697,12 +777,34 @@ function getTimepointClass(tp) {
 }
 
 .annotations-table-wrapper {
+  position: relative;
   max-height: 160px;
   padding: 6px;
+  overflow-x: auto;
   overflow-y: auto;
   background-color: var(--semantic-color-surface-sunken);
   border: 1px solid var(--semantic-color-text-dark);
   border-radius: 6px;
+}
+
+.annotations-table th.sticky-col-left {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background-color: var(--semantic-color-surface-inverse);
+}
+
+.annotations-table td.sticky-col-left {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: var(--semantic-color-surface-sunken);
+}
+
+.annotations-table td.focus-ring-inset:focus-visible {
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--semantic-color-focus-ring-inverse));
+  outline-offset: -2px;
 }
 
 .annotations-table {

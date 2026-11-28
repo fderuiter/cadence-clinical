@@ -173,8 +173,17 @@
 
 .scrollable-table-wrapper table {
   width: 100%;
-  min-width: 600px; /* Force scroll on narrow screens if table has multiple columns */
   border-collapse: collapse;
+}
+
+@media (min-width: 481px) {
+  .scrollable-table-wrapper table {
+    min-width: 600px; /* Force scroll above phone card breakpoint when table has multiple columns */
+  }
+}
+
+.scrollable-table-wrapper--matrix table {
+  min-width: 600px;
 }
 
 /* 6. High-Density Compact Spacing and Padding (Requirement 4) */

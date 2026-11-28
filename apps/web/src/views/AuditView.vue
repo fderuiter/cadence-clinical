@@ -246,7 +246,7 @@
       </div>
 
       <!-- Card 3: Ingest / Upload TMF Document -->
-      <div class="card card-upload-document" style="grid-column: span 2">
+      <div class="card card-upload-document audit-span-full">
         <div class="card-title">
           <span>Ingest New TMF Document</span>
         </div>
@@ -392,151 +392,87 @@
         copies.
       </p>
 
-      <div style="overflow-x: auto">
-        <table
-          class="clinical-table"
-          style="width: 100%; border-collapse: collapse; font-size: 13px"
-        >
-          <thead>
-            <tr
+      <ClinicalDataTable
+        :columns="documentColumns"
+        :data="documents"
+        :loading="documentsLoading"
+        row-key="id"
+        caption="eTMF Document Directory Registry"
+        empty-message="No documents found in the eTMF registry. Ingest some documents from design or execution views!"
+        sticky-header
+      >
+        <template #cell-id="{ row: doc }">
+          <span class="audit-doc-id" :title="doc.id">{{ doc.id }}</span>
+        </template>
+        <template #cell-filename="{ row: doc }">
+          <span style="font-weight: 500">{{ doc.filename }}</span>
+        </template>
+        <template #cell-zone_section="{ row: doc }">
+          Zone {{ String(doc.zone).padStart(2, "0") }} / {{ doc.section }}
+        </template>
+        <template #cell-status="{ row: doc }">
+          <span
+            :class="
+              doc.status === 'SIGNED'
+                ? 'badge status-approved'
+                : 'badge status-draft'
+            "
+            style="font-size: var(--font-size-2xs)"
+          >
+            {{ doc.status }}
+          </span>
+        </template>
+        <template #cell-version_index="{ row: doc }">
+          <span data-tabular-nums="true">v{{ doc.version_index }}</span>
+        </template>
+        <template #cell-actions="{ row: doc }">
+          <div class="audit-row-actions">
+            <button
+              type="button"
+              class="btn btn-secondary btn-preview-doc"
               style="
-                background: var(--semantic-color-surface-muted);
-                border-bottom: 1px solid var(--border);
-                text-align: left;
+                padding: 4px 8px;
+                font-size: var(--font-size-2xs);
+                cursor: pointer;
               "
+              @click="previewDocument(doc)"
             >
-              <th style="padding: 10px">ID</th>
-              <th style="padding: 10px">Filename</th>
-              <th style="padding: 10px">TMF Zone/Sec</th>
-              <th style="padding: 10px">Artifact Type</th>
-              <th style="padding: 10px">Status</th>
-              <th style="padding: 10px">Ver.</th>
-              <th style="padding: 10px; text-align: right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="documentsLoading" style="text-align: center">
-              <td
-                colspan="7"
-                style="
-                  padding: 20px;
-                  color: var(--semantic-color-text-secondary);
-                "
+              Preview<span class="sr-only">
+                secure document {{ doc.filename }}</span
               >
-                Retrieving active eTMF document registry...
-              </td>
-            </tr>
-            <tr v-else-if="documents.length === 0" style="text-align: center">
-              <td
-                colspan="7"
-                style="
-                  padding: 20px;
-                  color: var(--semantic-color-text-secondary);
-                "
-              >
-                No documents found in the eTMF registry. Ingest some documents
-                from design or execution views!
-              </td>
-            </tr>
-            <tr
-              v-for="doc in documents"
-              v-else
-              :key="doc.id"
-              style="border-bottom: 1px solid var(--border)"
+            </button>
+            <button
+              v-if="doc.status !== 'SIGNED'"
+              type="button"
+              class="btn btn-primary btn-sign-doc"
+              style="
+                padding: 4px 8px;
+                font-size: var(--font-size-2xs);
+                cursor: pointer;
+              "
+              @click="openSignModal(doc)"
             >
-              <td
-                style="
-                  padding: 10px;
-                  font-family: var(--semantic-font-mono);
-                  font-size: var(--font-size-2xs);
-                  max-width: 80px;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                  white-space: nowrap;
-                "
-                :title="doc.id"
+              Sign<span class="sr-only">
+                and manifestation seal document {{ doc.filename }}</span
               >
-                {{ doc.id }}
-              </td>
-              <td style="padding: 10px; font-weight: 500">
-                {{ doc.filename }}
-              </td>
-              <td style="padding: 10px">
-                Zone {{ String(doc.zone).padStart(2, "0") }} / {{ doc.section }}
-              </td>
-              <td style="padding: 10px">
-                {{ doc.artifact_type }}
-              </td>
-              <td style="padding: 10px">
-                <span
-                  :class="
-                    doc.status === 'SIGNED'
-                      ? 'badge status-approved'
-                      : 'badge status-draft'
-                  "
-                  style="font-size: var(--font-size-2xs)"
-                >
-                  {{ doc.status }}
-                </span>
-              </td>
-              <td style="padding: 10px">v{{ doc.version_index }}</td>
-              <td
-                style="
-                  padding: 10px;
-                  text-align: right;
-                  display: flex;
-                  gap: 8px;
-                  justify-content: flex-end;
-                "
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary btn-download-watermarked"
+              style="
+                padding: 4px 8px;
+                font-size: var(--font-size-2xs);
+                cursor: pointer;
+              "
+              @click="downloadWatermarkedDoc(doc)"
+            >
+              Download (Watermarked)<span class="sr-only">
+                copy of {{ doc.filename }}</span
               >
-                <button
-                  type="button"
-                  class="btn btn-secondary btn-preview-doc"
-                  style="
-                    padding: 4px 8px;
-                    font-size: var(--font-size-2xs);
-                    cursor: pointer;
-                  "
-                  @click="previewDocument(doc)"
-                >
-                  Preview<span class="sr-only">
-                    secure document {{ doc.filename }}</span
-                  >
-                </button>
-                <button
-                  v-if="doc.status !== 'SIGNED'"
-                  type="button"
-                  class="btn btn-primary btn-sign-doc"
-                  style="
-                    padding: 4px 8px;
-                    font-size: var(--font-size-2xs);
-                    cursor: pointer;
-                  "
-                  @click="openSignModal(doc)"
-                >
-                  Sign<span class="sr-only">
-                    and manifestation seal document {{ doc.filename }}</span
-                  >
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-secondary btn-download-watermarked"
-                  style="
-                    padding: 4px 8px;
-                    font-size: var(--font-size-2xs);
-                    cursor: pointer;
-                  "
-                  @click="downloadWatermarkedDoc(doc)"
-                >
-                  Download (Watermarked)<span class="sr-only">
-                    copy of {{ doc.filename }}</span
-                  >
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+            </button>
+          </div>
+        </template>
+      </ClinicalDataTable>
 
       <!-- Secure Interactive Watermarked Document Preview Panel -->
       <div
@@ -652,7 +588,7 @@
             <span><ClinicalIcon name="edit" :size="16" /></span> 21 CFR Part 11
             Electronic Signature Manifestation
           </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+          <div class="audit-manifest-grid">
             <div>
               Signer:
               <strong id="manifest-signer">{{
@@ -665,15 +601,15 @@
                 previewDoc.signature_manifestation.timestamp
               }}</strong>
             </div>
-            <div style="grid-column: span 2">
+            <div class="audit-span-full">
               Reason:
               <strong id="manifest-reason">{{
                 previewDoc.signature_manifestation.signing_reason
               }}</strong>
             </div>
             <div
+              class="audit-span-full"
               style="
-                grid-column: span 2;
                 font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 word-break: break-all;
@@ -684,8 +620,8 @@
             </div>
             <div
               v-if="previewDoc.signature_manifestation.signature"
+              class="audit-span-full"
               style="
-                grid-column: span 2;
                 font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 word-break: break-all;
@@ -870,335 +806,239 @@
       </div>
 
       <!-- Logs Table with Expandable Inspection Details -->
-      <div style="overflow-x: auto">
-        <table
-          class="clinical-table audit-ledger-table"
-          style="width: 100%; border-collapse: collapse; font-size: 13px"
-        >
-          <thead>
-            <tr
-              style="
-                background: var(--semantic-color-surface-muted);
-                border-bottom: 1px solid var(--border);
-                text-align: left;
-              "
-            >
-              <th style="padding: 10px; width: 170px">UTC Timestamp</th>
-              <th style="padding: 10px; width: 110px">Actor ID</th>
-              <th style="padding: 10px; width: 110px">Entity Type</th>
-              <th style="padding: 10px; width: 120px">Action</th>
-              <th style="padding: 10px">Operation Details</th>
-              <th style="padding: 10px; width: 100px; text-align: right">
-                Inspection
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="auditLoading" style="text-align: center">
-              <td
-                colspan="6"
-                style="
-                  padding: 20px;
-                  color: var(--semantic-color-text-secondary);
-                "
-              >
-                Retrieving chronological ledger events...
-              </td>
-            </tr>
-            <tr v-else-if="auditLogs.length === 0" style="text-align: center">
-              <td
-                colspan="6"
-                style="
-                  padding: 20px;
-                  color: var(--semantic-color-text-secondary);
-                "
-              >
-                No audit trail logs match the specified criteria.
-              </td>
-            </tr>
-            <template v-for="log in auditLogs" v-else :key="log.id">
-              <!-- Primary Row -->
-              <tr
-                style="border-bottom: 1px solid var(--border); cursor: pointer"
-                :style="{
-                  background: isRowExpanded(log.id)
-                    ? 'var(--semantic-color-info-bg)'
-                    : 'transparent',
-                }"
-                @click="toggleRowDetails(log.id)"
-              >
-                <td
+      <ClinicalDataTable
+        :columns="auditLogColumns"
+        :data="auditLogs"
+        :loading="auditLoading"
+        row-key="id"
+        caption="Immutable eTMF Audit Ledger Trail"
+        empty-message="No audit trail logs match the specified criteria."
+        table-class="audit-ledger-table"
+        external-pagination
+        sticky-header
+        :row-class="
+          (log) => (isRowExpanded(log.id) ? 'audit-row-expanded' : '')
+        "
+      >
+        <template #cell-timestamp="{ row: log }">
+          <span class="audit-timestamp-cell" data-tabular-nums="true">
+            {{ formatTimestamp(log.timestamp) }}
+          </span>
+        </template>
+        <template #cell-user_id="{ row: log }">
+          <span style="font-weight: 500">{{ log.user_id }}</span>
+        </template>
+        <template #cell-entity_type="{ row: log }">
+          <span
+            class="badge"
+            style="
+              background: var(--semantic-color-surface-header);
+              color: var(--semantic-color-text-secondary);
+              font-size: var(--font-size-2xs);
+            "
+          >
+            {{ getEntityType(log) }}
+          </span>
+        </template>
+        <template #cell-action="{ row: log }">
+          <span
+            :class="getActionBadgeClass(log.action)"
+            style="font-size: var(--font-size-2xs)"
+          >
+            {{ log.action }}
+          </span>
+        </template>
+        <template #cell-details="{ row: log }">
+          <span style="font-size: 12px; line-height: 1.4">{{
+            log.details
+          }}</span>
+        </template>
+        <template #cell-inspection="{ row: log }">
+          <button
+            type="button"
+            class="btn btn-secondary btn-inspect-row"
+            style="
+              padding: 3px 8px;
+              font-size: var(--font-size-2xs);
+              cursor: pointer;
+            "
+            :aria-expanded="isRowExpanded(log.id) ? 'true' : 'false'"
+            @click.stop="toggleRowDetails(log.id)"
+          >
+            {{ isRowExpanded(log.id) ? "Hide" : "Inspect"
+            }}<span class="sr-only"> audit details for {{ log.id }}</span>
+          </button>
+        </template>
+        <template #after-row="{ row: log, colSpan, isCardView }">
+          <tr
+            v-if="!isCardView && isRowExpanded(log.id)"
+            class="audit-details-row"
+            style="
+              border-bottom: 2px solid var(--border);
+              background: var(--semantic-color-surface-muted);
+            "
+          >
+            <td :colspan="colSpan" style="padding: 16px 20px">
+              <div class="audit-details-stack">
+                <div class="audit-details-header">
+                  <div>
+                    <strong>21 CFR Part 11 Audit Record:</strong>
+                    <code
+                      style="margin-left: 6px; font-size: var(--font-size-2xs)"
+                      >{{ log.id }}</code
+                    >
+                  </div>
+                  <div
+                    style="
+                      font-size: var(--font-size-2xs);
+                      color: var(--semantic-color-text-secondary);
+                    "
+                  >
+                    Actor Role: <strong>{{ log.user_role }}</strong> | Record:
+                    <strong>{{
+                      log.record_id || log.document_id || "-"
+                    }}</strong>
+                  </div>
+                </div>
+
+                <div class="reason-for-change audit-reason-box">
+                  <strong style="color: var(--text-main)"
+                    >Mandatory GxP Reason for Change:</strong
+                  >
+                  <p
+                    style="margin: 4px 0 0 0; color: var(--semantic-color-text)"
+                  >
+                    {{
+                      log.reason_for_change ||
+                      log.change_reason ||
+                      log.reasonForChange ||
+                      "GxP compliance state verified and recorded."
+                    }}
+                  </p>
+                </div>
+
+                <div class="audit-diff-grid">
+                  <div class="old-value-diff audit-diff-card">
+                    <div class="audit-diff-heading audit-diff-heading--old">
+                      <span
+                        ><ClinicalIcon name="alert-circle" :size="16"
+                      /></span>
+                      Previous State (old_value)
+                    </div>
+                    <pre class="audit-diff-pre audit-diff-pre--old">{{
+                      formatDiffValue(log.old_value, log, "old")
+                    }}</pre>
+                  </div>
+
+                  <div class="new-value-diff audit-diff-card">
+                    <div class="audit-diff-heading audit-diff-heading--new">
+                      <span
+                        ><ClinicalIcon name="check-circle" :size="16"
+                      /></span>
+                      Committed State (new_value)
+                    </div>
+                    <pre class="audit-diff-pre audit-diff-pre--new">{{
+                      formatDiffValue(log.new_value, log, "new")
+                    }}</pre>
+                  </div>
+                </div>
+
+                <div class="sha256-hash audit-sha256-box">
+                  <div class="audit-sha256-meta">
+                    <span style="font-size: 14px"
+                      ><ClinicalIcon name="shield-check" :size="16"
+                    /></span>
+                    <span><strong>Cryptographic SHA-256 Digest:</strong></span>
+                    <code class="hash-code">{{ getSha256Hash(log) }}</code>
+                  </div>
+                  <span
+                    class="badge status-approved"
+                    style="font-size: var(--font-size-2xs)"
+                    >SEAL VERIFIED</span
+                  >
+                </div>
+              </div>
+            </td>
+          </tr>
+          <div
+            v-else-if="isCardView && isRowExpanded(log.id)"
+            class="audit-details-row audit-details-card-panel"
+          >
+            <div class="audit-details-stack">
+              <div class="audit-details-header">
+                <div>
+                  <strong>21 CFR Part 11 Audit Record:</strong>
+                  <code
+                    style="margin-left: 6px; font-size: var(--font-size-2xs)"
+                    >{{ log.id }}</code
+                  >
+                </div>
+                <div
                   style="
-                    padding: 10px;
-                    font-family: var(--semantic-font-mono);
                     font-size: var(--font-size-2xs);
-                    white-space: nowrap;
                     color: var(--semantic-color-text-secondary);
                   "
                 >
-                  {{ formatTimestamp(log.timestamp) }}
-                </td>
-                <td style="padding: 10px; font-weight: 500">
-                  {{ log.user_id }}
-                </td>
-                <td style="padding: 10px; font-size: 12px">
-                  <span
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-surface-header);
-                      color: var(--semantic-color-text-secondary);
-                      font-size: var(--font-size-2xs);
-                    "
-                  >
-                    {{ getEntityType(log) }}
-                  </span>
-                </td>
-                <td style="padding: 10px">
-                  <span
-                    :class="getActionBadgeClass(log.action)"
-                    style="font-size: var(--font-size-2xs)"
-                  >
-                    {{ log.action }}
-                  </span>
-                </td>
-                <td style="padding: 10px; font-size: 12px; line-height: 1.4">
-                  {{ log.details }}
-                </td>
-                <td style="padding: 10px; text-align: right">
-                  <button
-                    type="button"
-                    class="btn btn-secondary btn-inspect-row"
-                    style="
-                      padding: 3px 8px;
-                      font-size: var(--font-size-2xs);
-                      cursor: pointer;
-                    "
-                    :aria-expanded="isRowExpanded(log.id) ? 'true' : 'false'"
-                    @click.stop="toggleRowDetails(log.id)"
-                  >
-                    {{ isRowExpanded(log.id) ? "Hide" : "Inspect"
-                    }}<span class="sr-only">
-                      audit details for {{ log.id }}</span
-                    >
-                  </button>
-                </td>
-              </tr>
+                  Actor Role: <strong>{{ log.user_role }}</strong> | Record:
+                  <strong>{{ log.record_id || log.document_id || "-" }}</strong>
+                </div>
+              </div>
 
-              <!-- Detailed Inspection Row Rendering old_value vs new_value, reason_for_change, and sha256_hash -->
-              <tr
-                v-if="isRowExpanded(log.id)"
-                class="audit-details-row"
-                style="
-                  border-bottom: 2px solid var(--border);
-                  background: var(--semantic-color-surface-muted);
-                "
-              >
-                <td colspan="6" style="padding: 16px 20px">
-                  <div
-                    style="
-                      display: flex;
-                      flex-direction: column;
-                      gap: 12px;
-                      font-size: 12px;
-                    "
-                  >
-                    <!-- Header Info -->
-                    <div
-                      style="
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        border-bottom: 1px solid var(--border);
-                        padding-bottom: 8px;
-                      "
-                    >
-                      <div>
-                        <strong>21 CFR Part 11 Audit Record:</strong>
-                        <code
-                          style="
-                            margin-left: 6px;
-                            font-size: var(--font-size-2xs);
-                          "
-                          >{{ log.id }}</code
-                        >
-                      </div>
-                      <div
-                        style="
-                          font-size: var(--font-size-2xs);
-                          color: var(--semantic-color-text-secondary);
-                        "
-                      >
-                        Actor Role: <strong>{{ log.user_role }}</strong> |
-                        Record:
-                        <strong>{{
-                          log.record_id || log.document_id || "-"
-                        }}</strong>
-                      </div>
-                    </div>
+              <div class="reason-for-change audit-reason-box">
+                <strong style="color: var(--text-main)"
+                  >Mandatory GxP Reason for Change:</strong
+                >
+                <p style="margin: 4px 0 0 0; color: var(--semantic-color-text)">
+                  {{
+                    log.reason_for_change ||
+                    log.change_reason ||
+                    log.reasonForChange ||
+                    "GxP compliance state verified and recorded."
+                  }}
+                </p>
+              </div>
 
-                    <!-- Mandatory GxP Reason for Change -->
-                    <div
-                      class="reason-for-change"
-                      style="
-                        padding: 10px 12px;
-                        background: var(--semantic-color-info-bg);
-                        border-left: 4px solid var(--accent);
-                        border-radius: 4px;
-                      "
-                    >
-                      <strong style="color: var(--text-main)"
-                        >Mandatory GxP Reason for Change:</strong
-                      >
-                      <p
-                        style="
-                          margin: 4px 0 0 0;
-                          color: var(--semantic-color-text);
-                        "
-                      >
-                        {{
-                          log.reason_for_change ||
-                          log.change_reason ||
-                          log.reasonForChange ||
-                          "GxP compliance state verified and recorded."
-                        }}
-                      </p>
-                    </div>
-
-                    <!-- State Diff: old_value vs new_value -->
-                    <div
-                      style="
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 16px;
-                      "
-                    >
-                      <!-- Old Value -->
-                      <div
-                        class="old-value-diff"
-                        style="
-                          background: var(--semantic-color-surface);
-                          border: 1px solid var(--border);
-                          border-radius: 6px;
-                          padding: 10px 12px;
-                        "
-                      >
-                        <div
-                          style="
-                            font-weight: 600;
-                            color: var(--semantic-color-error);
-                            margin-bottom: 6px;
-                            display: flex;
-                            align-items: center;
-                            gap: 6px;
-                          "
-                        >
-                          <span
-                            ><ClinicalIcon name="alert-circle" :size="16"
-                          /></span>
-                          Previous State (old_value)
-                        </div>
-                        <pre
-                          style="
-                            margin: 0;
-                            font-size: var(--font-size-2xs);
-                            white-space: pre-wrap;
-                            word-break: break-all;
-                            color: var(--semantic-color-text-secondary);
-                            background: var(--semantic-color-surface-muted);
-                            padding: 8px;
-                            border-radius: 4px;
-                          "
-                          >{{
-                            formatDiffValue(log.old_value, log, "old")
-                          }}</pre>
-                      </div>
-
-                      <!-- New Value -->
-                      <div
-                        class="new-value-diff"
-                        style="
-                          background: var(--semantic-color-surface);
-                          border: 1px solid var(--border);
-                          border-radius: 6px;
-                          padding: 10px 12px;
-                        "
-                      >
-                        <div
-                          style="
-                            font-weight: 600;
-                            color: var(--semantic-color-success);
-                            margin-bottom: 6px;
-                            display: flex;
-                            align-items: center;
-                            gap: 6px;
-                          "
-                        >
-                          <span
-                            ><ClinicalIcon name="check-circle" :size="16"
-                          /></span>
-                          Committed State (new_value)
-                        </div>
-                        <pre
-                          style="
-                            margin: 0;
-                            font-size: var(--font-size-2xs);
-                            white-space: pre-wrap;
-                            word-break: break-all;
-                            color: var(--semantic-color-text-dark);
-                            background: var(--semantic-color-success-bg-soft);
-                            padding: 8px;
-                            border-radius: 4px;
-                          "
-                          >{{
-                            formatDiffValue(log.new_value, log, "new")
-                          }}</pre>
-                      </div>
-                    </div>
-
-                    <!-- Cryptographic SHA-256 Signature Hash -->
-                    <div
-                      class="sha256-hash"
-                      style="
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        background: var(--semantic-color-surface);
-                        padding: 8px 12px;
-                        border-radius: 6px;
-                        border: 1px dashed var(--border);
-                        font-size: var(--font-size-2xs);
-                      "
-                    >
-                      <div style="display: flex; align-items: center; gap: 8px">
-                        <span style="font-size: 14px"
-                          ><ClinicalIcon name="shield-check" :size="16"
-                        /></span>
-                        <span
-                          ><strong>Cryptographic SHA-256 Digest:</strong></span
-                        >
-                        <code
-                          class="hash-code"
-                          style="
-                            font-size: var(--font-size-2xs);
-                            color: var(--text-main);
-                            word-break: break-all;
-                          "
-                          >{{ getSha256Hash(log) }}</code
-                        >
-                      </div>
-                      <span
-                        class="badge status-approved"
-                        style="font-size: var(--font-size-2xs)"
-                        >SEAL VERIFIED</span
-                      >
-                    </div>
+              <div class="audit-diff-grid">
+                <div class="old-value-diff audit-diff-card">
+                  <div class="audit-diff-heading audit-diff-heading--old">
+                    <span><ClinicalIcon name="alert-circle" :size="16" /></span>
+                    Previous State (old_value)
                   </div>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
-      </div>
+                  <pre class="audit-diff-pre audit-diff-pre--old">{{
+                    formatDiffValue(log.old_value, log, "old")
+                  }}</pre>
+                </div>
+
+                <div class="new-value-diff audit-diff-card">
+                  <div class="audit-diff-heading audit-diff-heading--new">
+                    <span><ClinicalIcon name="check-circle" :size="16" /></span>
+                    Committed State (new_value)
+                  </div>
+                  <pre class="audit-diff-pre audit-diff-pre--new">{{
+                    formatDiffValue(log.new_value, log, "new")
+                  }}</pre>
+                </div>
+              </div>
+
+              <div class="sha256-hash audit-sha256-box">
+                <div class="audit-sha256-meta">
+                  <span style="font-size: 14px"
+                    ><ClinicalIcon name="shield-check" :size="16"
+                  /></span>
+                  <span><strong>Cryptographic SHA-256 Digest:</strong></span>
+                  <code class="hash-code">{{ getSha256Hash(log) }}</code>
+                </div>
+                <span
+                  class="badge status-approved"
+                  style="font-size: var(--font-size-2xs)"
+                  >SEAL VERIFIED</span
+                >
+              </div>
+            </div>
+          </div>
+        </template>
+        <template #pagination />
+      </ClinicalDataTable>
 
       <!-- Audit Pagination controls -->
       <div
@@ -1435,96 +1275,70 @@
         </div>
 
         <!-- Artifacts Table -->
-        <div style="overflow-x: auto">
-          <table
-            class="clinical-table"
-            style="width: 100%; border-collapse: collapse; font-size: 13px"
-          >
-            <thead>
-              <tr
-                style="
-                  background: var(--semantic-color-surface-muted);
-                  border-bottom: 1px solid var(--border);
-                  text-align: left;
-                "
-              >
-                <th style="padding: 10px">Expected Artifact Type</th>
-                <th style="padding: 10px">Scope</th>
-                <th style="padding: 10px">Compliance Status</th>
-                <th style="padding: 10px">Document ID</th>
-                <th style="padding: 10px">Ver.</th>
-                <th style="padding: 10px; text-align: right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="art in completenessResult.per_artifact_detail"
-                :key="art.artifact_type"
-                style="border-bottom: 1px solid var(--border)"
-              >
-                <td style="padding: 10px; font-weight: 500">
-                  {{ art.artifact_type }}
-                </td>
-                <td style="padding: 10px; text-transform: capitalize">
-                  {{ art.scope }}
-                </td>
-                <td style="padding: 10px">
-                  <span
-                    :class="getCompletenessBadgeClass(art.status)"
-                    style="font-size: var(--font-size-2xs)"
-                  >
-                    {{ art.status }}
-                  </span>
-                </td>
-                <td
-                  style="
-                    padding: 10px;
-                    font-family: var(--semantic-font-mono);
-                    font-size: var(--font-size-2xs);
-                  "
-                >
-                  {{ art.document_id || "-" }}
-                </td>
-                <td style="padding: 10px">
-                  {{
-                    art.version_index !== null &&
-                    art.version_index !== undefined
-                      ? "v" + art.version_index
-                      : "-"
-                  }}
-                </td>
-                <td style="padding: 10px; text-align: right">
-                  <button
-                    v-if="art.document_id"
-                    class="btn btn-secondary btn-preview-completeness-doc"
-                    style="
-                      padding: 3px 6px;
-                      font-size: var(--font-size-2xs);
-                      cursor: pointer;
-                    "
-                    @click="
-                      previewDocument({
-                        id: art.document_id,
-                        filename: art.artifact_type,
-                      })
-                    "
-                  >
-                    Preview Evidence
-                  </button>
-                  <span
-                    v-else
-                    style="
-                      color: var(--semantic-color-text-secondary);
-                      font-size: 12px;
-                      font-style: italic;
-                    "
-                    >Missing Document</span
-                  >
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <ClinicalDataTable
+          :columns="completenessColumns"
+          :data="completenessResult.per_artifact_detail || []"
+          row-key="artifact_type"
+          caption="Expected Document List Completeness Artifacts"
+          empty-message="No expected artifacts configured for this milestone."
+          sticky-header
+        >
+          <template #cell-artifact_type="{ row: art }">
+            <span style="font-weight: 500">{{ art.artifact_type }}</span>
+          </template>
+          <template #cell-scope="{ row: art }">
+            <span style="text-transform: capitalize">{{ art.scope }}</span>
+          </template>
+          <template #cell-status="{ row: art }">
+            <span
+              :class="getCompletenessBadgeClass(art.status)"
+              style="font-size: var(--font-size-2xs)"
+            >
+              {{ art.status }}
+            </span>
+          </template>
+          <template #cell-document_id="{ row: art }">
+            <span>{{ art.document_id || "-" }}</span>
+          </template>
+          <template #cell-version_index="{ row: art }">
+            <span data-tabular-nums="true">
+              {{
+                art.version_index !== null && art.version_index !== undefined
+                  ? "v" + art.version_index
+                  : "-"
+              }}
+            </span>
+          </template>
+          <template #cell-actions="{ row: art }">
+            <button
+              v-if="art.document_id"
+              type="button"
+              class="btn btn-secondary btn-preview-completeness-doc"
+              style="
+                padding: 3px 6px;
+                font-size: var(--font-size-2xs);
+                cursor: pointer;
+              "
+              @click="
+                previewDocument({
+                  id: art.document_id,
+                  filename: art.artifact_type,
+                })
+              "
+            >
+              Preview Evidence
+            </button>
+            <span
+              v-else
+              style="
+                color: var(--semantic-color-text-secondary);
+                font-size: 12px;
+                font-style: italic;
+              "
+              >Missing Document</span
+            >
+          </template>
+        </ClinicalDataTable>
       </div>
     </div>
 
@@ -1540,7 +1354,7 @@
 </template>
 
 <script setup>
-import { ClinicalIcon } from "ui";
+import { ClinicalDataTable, ClinicalIcon } from "ui";
 import { ref, reactive, computed, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { auditorService } from "../api/auditor";
@@ -1747,6 +1561,128 @@ async function exportRegulatoryBinder() {
 }
 
 // --- 3. eTMF Document Directory & Preview State ---
+const documentColumns = [
+  {
+    key: "id",
+    label: "ID",
+    sticky: "left",
+    cardRole: "identifier",
+    mono: true,
+  },
+  {
+    key: "filename",
+    label: "Filename",
+    sortable: true,
+    cardRole: "title",
+  },
+  {
+    key: "zone_section",
+    label: "TMF Zone/Sec",
+  },
+  {
+    key: "artifact_type",
+    label: "Artifact Type",
+    sortable: true,
+  },
+  {
+    key: "status",
+    label: "Status",
+    sortable: true,
+    cardRole: "status",
+  },
+  {
+    key: "version_index",
+    label: "Ver.",
+    sortable: true,
+    mono: true,
+  },
+  {
+    key: "actions",
+    label: "Actions",
+    align: "right",
+    sticky: "right",
+    cardRole: "actions",
+  },
+];
+
+const auditLogColumns = [
+  {
+    key: "timestamp",
+    label: "UTC Timestamp",
+    sticky: "left",
+    cardRole: "identifier",
+    mono: true,
+    sortable: true,
+  },
+  {
+    key: "user_id",
+    label: "Actor ID",
+    cardRole: "title",
+    sortable: true,
+  },
+  {
+    key: "entity_type",
+    label: "Entity Type",
+    sortable: true,
+  },
+  {
+    key: "action",
+    label: "Action",
+    cardRole: "status",
+    sortable: true,
+  },
+  {
+    key: "details",
+    label: "Operation Details",
+    fullWidth: true,
+  },
+  {
+    key: "inspection",
+    label: "Inspection",
+    align: "right",
+    sticky: "right",
+    cardRole: "actions",
+  },
+];
+
+const completenessColumns = [
+  {
+    key: "artifact_type",
+    label: "Expected Artifact Type",
+    sticky: "left",
+    cardRole: "identifier",
+    sortable: true,
+  },
+  {
+    key: "scope",
+    label: "Scope",
+    sortable: true,
+  },
+  {
+    key: "status",
+    label: "Compliance Status",
+    cardRole: "status",
+    sortable: true,
+  },
+  {
+    key: "document_id",
+    label: "Document ID",
+    mono: true,
+  },
+  {
+    key: "version_index",
+    label: "Ver.",
+    mono: true,
+  },
+  {
+    key: "actions",
+    label: "Actions",
+    align: "right",
+    sticky: "right",
+    cardRole: "actions",
+  },
+];
+
 const documents = ref([]);
 const documentsLoading = ref(false);
 const previewDoc = ref(null);
@@ -2183,9 +2119,137 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.clinical-table th,
-.clinical-table td {
+#section-audit,
+#section-audit > .card,
+#section-audit .grid-2-responsive > .card {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.audit-span-full {
+  grid-column: 1 / -1;
+}
+.audit-manifest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+.audit-doc-id {
+  display: inline-block;
+  font-family: var(--semantic-font-mono);
+  font-size: var(--font-size-2xs);
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+.audit-timestamp-cell {
+  font-family: var(--semantic-font-mono);
+  font-size: var(--font-size-2xs);
+  white-space: nowrap;
+  color: var(--semantic-color-text-secondary);
+}
+.audit-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+:deep(.audit-row-expanded) {
+  background: var(--semantic-color-info-bg);
+}
+.audit-details-card-panel {
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--semantic-color-surface-muted);
+}
+.audit-details-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 12px;
+}
+.audit-details-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
   border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.audit-reason-box {
+  padding: 10px 12px;
+  background: var(--semantic-color-info-bg);
+  border-left: 4px solid var(--accent);
+  border-radius: 4px;
+}
+.audit-diff-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+.audit-diff-card {
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  min-width: 0;
+}
+.audit-diff-heading {
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.audit-diff-heading--old {
+  color: var(--semantic-color-error);
+}
+.audit-diff-heading--new {
+  color: var(--semantic-color-success);
+}
+.audit-diff-pre {
+  margin: 0;
+  font-size: var(--font-size-2xs);
+  white-space: pre-wrap;
+  word-break: break-all;
+  padding: 8px;
+  border-radius: 4px;
+}
+.audit-diff-pre--old {
+  color: var(--semantic-color-text-secondary);
+  background: var(--semantic-color-surface-muted);
+}
+.audit-diff-pre--new {
+  color: var(--semantic-color-text-dark);
+  background: var(--semantic-color-success-bg-soft);
+}
+.audit-sha256-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--semantic-color-surface);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px dashed var(--border);
+  font-size: var(--font-size-2xs);
+}
+.audit-sha256-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.hash-code {
+  font-size: var(--font-size-2xs);
+  color: var(--text-main);
+  word-break: break-all;
 }
 .audit-filter-bar {
   display: flex;
@@ -2219,9 +2283,6 @@ onMounted(() => {
   border: 1px solid var(--border);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-}
-.clinical-table tr:hover {
-  background-color: var(--semantic-color-surface-muted);
 }
 .watermark-overlay {
   background-image: var(--semantic-watermark-auditor-pattern);
