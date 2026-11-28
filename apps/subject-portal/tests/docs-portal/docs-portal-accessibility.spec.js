@@ -193,11 +193,46 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
       docIndexHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
       (m) => m[1]
     );
-    const dataRowCount = tbodyBlocks.reduce(
+    const shardRowCount = tbodyBlocks.reduce(
       (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
       0
     );
-    expect(dataRowCount).toBeGreaterThanOrEqual(715);
+    expect(shardRowCount).toBeGreaterThanOrEqual(28);
+
+    const shardRelPaths = new Set();
+    for (const tbody of tbodyBlocks) {
+      for (const hrefMatch of tbody.matchAll(/href="\.\/([^"#?]+)"/gi)) {
+        const rel = hrefMatch[1].endsWith("/")
+          ? `${hrefMatch[1]}index.html`
+          : hrefMatch[1];
+        if (!rel.endsWith("TEMPLATE.html")) {
+          shardRelPaths.add(rel);
+        }
+      }
+    }
+    expect(shardRelPaths.size).toBeGreaterThanOrEqual(27);
+
+    let indexedEntryCount = 0;
+    for (const shardRelPath of shardRelPaths) {
+      const shardFullPath = path.join(docsDistDir, shardRelPath);
+      expect(fs.existsSync(shardFullPath)).toBe(true);
+      const shardHtml = fs.readFileSync(shardFullPath, "utf8");
+      const vpDoc =
+        shardHtml.match(
+          /<div[^>]*class="[^"]*vp-doc[^"]*"[^>]*>([\s\S]*?)<\/main>/i
+        )?.[1] ?? shardHtml;
+      const shardTbodies = Array.from(
+        vpDoc.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
+        (m) => m[1]
+      );
+      const trCount = shardTbodies.reduce(
+        (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
+        0
+      );
+      const liCount = (vpDoc.match(/<li(?:\s|>)/gi) || []).length;
+      indexedEntryCount += trCount + liCount;
+    }
+    expect(indexedEntryCount).toBeGreaterThanOrEqual(715);
   });
 
   test("navbar items and portal layout render without clipping, overlap, or horizontal scroll across 375px–1920px viewports", async ({

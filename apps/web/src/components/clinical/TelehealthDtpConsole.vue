@@ -1031,14 +1031,6 @@ const isLoading = ref(false);
 const isReconciliationDrawerOpen = ref(false);
 const activeTab = ref("telehealth");
 
-const { politeMessage: telehealthPoliteMessage } = useStatusAnnouncer({
-  statusSource: computed(() =>
-    isLoading.value
-      ? "Refreshing telehealth sessions and DTP logistics..."
-      : `DCT logistics (${activeTab.value}): ${sessions.value.length} telehealth visits, ${shipments.value.length} courier shipments, ${visits.value.length} home nurse visits.`
-  ),
-});
-
 const metrics = reactive({
   total_telehealth_sessions: 2,
   active_video_rooms: 1,
@@ -1136,6 +1128,14 @@ const visits = ref([
     sync_status: "SYNCHRONIZED",
   },
 ]);
+
+const { politeMessage: telehealthPoliteMessage } = useStatusAnnouncer({
+  statusSource: computed(() =>
+    isLoading.value
+      ? "Refreshing telehealth sessions and DTP logistics..."
+      : `DCT logistics (${activeTab.value}): ${sessions.value.length} telehealth visits, ${shipments.value.length} courier shipments, ${visits.value.length} home nurse visits.`
+  ),
+});
 
 const activeRoomSession = ref(null);
 const currentRoomToken = ref("");
