@@ -1,5 +1,5 @@
 import { reactive, readonly } from "vue";
-import { registerEntityPeekHandler } from "ui";
+import { hasActiveModalFocusTrap, registerEntityPeekHandler } from "ui";
 
 export interface PeekItem {
   nodeRef: string;
@@ -9,6 +9,7 @@ export interface PeekItem {
 const state = reactive({
   open: false,
   docked: false,
+  openedOverModal: false,
   current: null as PeekItem | null,
   history: [] as PeekItem[],
 });
@@ -19,6 +20,9 @@ export function openEntityPeekDrawer(item: PeekItem) {
   if (!item?.nodeRef || item.nodeRef.startsWith("masked:")) {
     return;
   }
+  if (!state.open) {
+    state.openedOverModal = hasActiveModalFocusTrap();
+  }
   if (state.current && state.current.nodeRef !== item.nodeRef) {
     state.history = [...state.history.slice(-7), state.current];
   }
@@ -28,6 +32,7 @@ export function openEntityPeekDrawer(item: PeekItem) {
 
 export function closeEntityPeekDrawer() {
   state.open = false;
+  state.openedOverModal = false;
 }
 
 export function stepBackEntityPeekDrawer() {
