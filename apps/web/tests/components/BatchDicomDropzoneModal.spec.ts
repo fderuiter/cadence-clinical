@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import BatchDicomDropzoneModal from "../../src/components/imaging/BatchDicomDropzoneModal.vue";
 
 describe("BatchDicomDropzoneModal.vue", () => {
@@ -270,8 +270,91 @@ describe("BatchDicomDropzoneModal.vue", () => {
     const wrapper = mountModal({ isOpen: true });
 
     const closeBtn = wrapper.find(".btn-close");
+    expect(closeBtn.find("svg").exists()).toBe(true);
+    expect(closeBtn.text()).toBe("");
     await closeBtn.trigger("click");
 
     expect(wrapper.emitted("close")).toBeTruthy();
+  });
+
+  it("keeps modal open on Escape and disables close actions while batch DICOM upload is in progress", async () => {
+    let resolveUpload: ((res: Response) => void) | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveUpload = resolve;
+          })
+      )
+    );
+
+    const wrapper = mount(BatchDicomDropzoneModal, {
+      props: { isOpen: true },
+      attachTo: document.body,
+      global: {
+        stubs: {
+          Teleport: true,
+        },
+      },
+    });
+
+    try {
+      const dcmFile = new File(["dicom content"], "slice_1.dcm", {
+        type: "application/dicom",
+      });
+      const fileInput = wrapper.find("input[accept*='.dcm']");
+      Object.defineProperty(fileInput.element, "files", {
+        value: [dcmFile],
+        writable: true,
+      });
+      await fileInput.trigger("change");
+
+      const startBtn = wrapper.find(".modal-footer button.btn-primary");
+      await startBtn.trigger("click");
+      await wrapper.vm.$nextTick();
+
+      const closeBtn = wrapper.find(".btn-close");
+      expect(closeBtn.attributes("disabled")).toBeDefined();
+
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Escape",
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+      await wrapper.vm.$nextTick();
+      expect(wrapper.emitted("close")).toBeFalsy();
+
+      expect(resolveUpload).toBeTypeOf("function");
+      resolveUpload?.({
+        ok: true,
+        json: async () => ({
+          studyEnvelopeId: "env_1",
+          certificateId: "CERT-1",
+          anonymizedStudyUid: "1.2.3",
+          ingestedSliceCount: 1,
+          skippedNonDicomCount: 0,
+        }),
+      } as Response);
+      await flushPromises();
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".btn-close").attributes("disabled")).toBeUndefined();
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Escape",
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+      await wrapper.vm.$nextTick();
+      expect(wrapper.emitted("close")).toBeTruthy();
+    } finally {
+      vi.unstubAllGlobals();
+      wrapper.unmount();
+    }
   });
 });

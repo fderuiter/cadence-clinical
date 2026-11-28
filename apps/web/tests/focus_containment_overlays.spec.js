@@ -719,4 +719,111 @@ describe("Centralized Focus Containment & Reactive Inert Primitives", () => {
     expect(wrapper.vm.showBulkSignModal).toBe(false);
     expect(document.activeElement).toBe(signTriggerBtn.element);
   });
+
+  it("dismisses only ShareDrawer ClinicalPopover suggestions on Tab or single Escape and configures fallbackFocus across all 14 row-mutating dialogs", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const ShareDrawer = (
+      await import("../src/components/fileshare/ShareDrawer.vue")
+    ).default;
+
+    const mountContainer = document.createElement("div");
+    document.body.appendChild(mountContainer);
+
+    const wrapper = trackWrapper(
+      mount(ShareDrawer, {
+        props: {
+          isOpen: true,
+          files: [{ id: "file-1", filename: "protocol.pdf" }],
+        },
+        attachTo: mountContainer,
+        global: { plugins: [pinia, router] },
+      })
+    );
+    await nextTick();
+    await nextTick();
+
+    const userInput = wrapper.find("#share-user-input");
+    userInput.element.focus();
+    await userInput.trigger("focus");
+    await nextTick();
+
+    expect(wrapper.find(".suggestions-dropdown").exists()).toBe(true);
+
+    // Single Escape dismisses ONLY .suggestions-dropdown while ShareDrawer stays open
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await nextTick();
+    await nextTick();
+    expect(wrapper.find(".suggestions-dropdown").exists()).toBe(false);
+    expect(wrapper.emitted("close")).toBeFalsy();
+
+    // Re-open suggestions and Tab/focus outside input + popover -> closes suggestions only
+    await userInput.trigger("focus");
+    await nextTick();
+    expect(wrapper.find(".suggestions-dropdown").exists()).toBe(true);
+
+    const reasonTextarea = wrapper.find("textarea");
+    reasonTextarea.element.focus();
+    await nextTick();
+    expect(wrapper.find(".suggestions-dropdown").exists()).toBe(false);
+    expect(wrapper.emitted("close")).toBeFalsy();
+
+    // Verify all 14 row-mutating dialogs configure explicit fallbackFocus
+    const webSrc = path.resolve(import.meta.dirname, "../src");
+    const codingSrc = fs.readFileSync(
+      path.join(webSrc, "components/CodingQueueTable.vue"),
+      "utf8"
+    );
+    expect(
+      (codingSrc.match(/fallbackFocus:\s*"#btn-refresh-coding-queue"/g) || [])
+        .length
+    ).toBe(4);
+
+    const deviceSrc = fs.readFileSync(
+      path.join(webSrc, "components/clinical/DeviceInvestigationConsole.vue"),
+      "utf8"
+    );
+    expect(
+      (deviceSrc.match(/fallbackFocus:\s*"#btn-refresh-device-hub"/g) || [])
+        .length
+    ).toBe(4);
+
+    const labSrc = fs.readFileSync(
+      path.join(webSrc, "components/clinical/LabGovernanceConsole.vue"),
+      "utf8"
+    );
+    expect(
+      (
+        labSrc.match(
+          /fallbackFocus:\s*"#(btn-lab-ingest-feed|tab-lab-toxicity-queue|btn-lab-bulk-import)"/g
+        ) || []
+      ).length
+    ).toBe(3);
+
+    const amendmentViewSrc = fs.readFileSync(
+      path.join(webSrc, "views/AmendmentDiffView.vue"),
+      "utf8"
+    );
+    expect(amendmentViewSrc).toContain(
+      'fallback-focus="#btn-open-amendment-governance"'
+    );
+
+    const protocolVersionsSrc = fs.readFileSync(
+      path.join(webSrc, "components/canvas/ProtocolVersionsSection.vue"),
+      "utf8"
+    );
+    expect(
+      (
+        protocolVersionsSrc.match(
+          /:fallback-focus="resolveVersionFallbackFocus"/g
+        ) || []
+      ).length
+    ).toBe(2);
+  });
 });

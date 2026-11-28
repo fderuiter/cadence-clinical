@@ -116,7 +116,7 @@ function handleConfirm() {
 
 .btn-signout-stay,
 .btn-signout-confirm {
-  min-height: 44px;
+  min-height: var(--touch-target-min, 44px);
   padding: 10px 16px;
   border-radius: 6px;
   font-size: 0.9rem;

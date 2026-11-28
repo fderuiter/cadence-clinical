@@ -1,114 +1,113 @@
 <template>
-  <div
+  <ClinicalModal
     id="portal-sign-modal"
-    ref="modalRef"
-    class="modal-overlay"
-    style="display: none"
-    role="dialog"
-    :aria-modal="ui.signatureModalOpen ? 'true' : undefined"
-    :aria-hidden="!ui.signatureModalOpen ? 'true' : undefined"
-    :inert="!ui.signatureModalOpen || undefined"
+    keep-mounted
+    :open="ui.signatureModalOpen"
+    :teleport="false"
+    :close-on-backdrop="false"
+    :show-close="false"
+    :show-footer="false"
     aria-labelledby="portal-modal-title"
-    tabindex="-1"
+    title="Confirm and Sign"
+    :restore-focus="resolveSignatureRestoreFocus"
+    body-class="portal-modal-form-shell"
+    @close="closeSignatureModal"
   >
-    <div class="modal">
-      <form id="sign-modal-form" @submit.prevent>
-        <div id="portal-modal-title" class="modal-header">Confirm and Sign</div>
-        <div class="modal-body">
-          <p id="sign-modal-instructions">
-            {{ modalInstructionText }}
-          </p>
-          <!-- Accessible modal live error region -->
-          <div
-            id="modal-error-banner"
-            style="
-              display: none;
-              padding: 8px;
-              border-radius: 4px;
-              background-color: var(--semantic-color-error-bg);
-              color: var(--semantic-color-error);
-              margin-bottom: 12px;
-              font-size: 13px;
-              font-weight: 600;
-            "
-            role="status"
-            aria-live="polite"
-          />
+    <form id="sign-modal-form" @submit.prevent>
+      <div class="modal-body">
+        <p id="sign-modal-instructions">
+          {{ modalInstructionText }}
+        </p>
+        <!-- Accessible modal live error region -->
+        <div
+          id="modal-error-banner"
+          style="
+            display: none;
+            padding: 8px;
+            border-radius: 4px;
+            background-color: var(--semantic-color-error-bg);
+            color: var(--semantic-color-error);
+            margin-bottom: 12px;
+            font-size: 13px;
+            font-weight: 600;
+          "
+          role="status"
+          aria-live="polite"
+        />
 
-          <div class="form-group mb-12">
-            <label for="sign-reason">Reason for Signing</label>
-            <select id="sign-reason" @change="onReasonChange">
-              <option value="Initial Questionnaire Completion">
-                Initial Questionnaire Completion
-              </option>
-              <option value="Correction of previous entry">
-                Correction of previous entry
-              </option>
-              <option value="Requested update by study coordinator">
-                Requested update by study coordinator
-              </option>
-              <option value="Acknowledge important reminder">
-                Acknowledge important reminder
-              </option>
-              <option value="Other">Other (specify below)</option>
-            </select>
-          </div>
-          <div class="form-group mb-12">
-            <label id="sign-reason-custom-label" for="sign-reason-custom">
-              {{
-                isOtherReason
-                  ? "Additional Note (Required)"
-                  : "Additional Note (Optional)"
-              }}
-            </label>
-            <textarea
-              id="sign-reason-custom"
-              :required="isOtherReason || undefined"
-              :aria-required="isOtherReason ? 'true' : undefined"
-              placeholder="Add a brief note if you selected 'Other'..."
-            />
-          </div>
-          <div class="form-group mb-12">
-            <label for="sign-username">Participant ID</label>
-            <input
-              id="sign-username"
-              type="text"
-              autocomplete="username"
-              placeholder="Enter your participant ID..."
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label id="sign-password-label" for="sign-password">{{
-              credentialLabel
-            }}</label>
-            <input
-              id="sign-password"
-              v-bind="credentialInputAttrs"
-              :placeholder="credentialPlaceholder"
-              required
-            />
-          </div>
+        <div class="form-group mb-12">
+          <label for="sign-reason">Reason for Signing</label>
+          <select id="sign-reason" @change="onReasonChange">
+            <option value="Initial Questionnaire Completion">
+              Initial Questionnaire Completion
+            </option>
+            <option value="Correction of previous entry">
+              Correction of previous entry
+            </option>
+            <option value="Requested update by study coordinator">
+              Requested update by study coordinator
+            </option>
+            <option value="Acknowledge important reminder">
+              Acknowledge important reminder
+            </option>
+            <option value="Other">Other (specify below)</option>
+          </select>
         </div>
-        <div class="modal-footer">
-          <button id="btn-modal-cancel" type="button" class="btn btn-secondary">
-            Cancel
-          </button>
-          <button id="btn-modal-sign" type="submit" class="btn btn-primary">
-            Sign and Confirm
-          </button>
+        <div class="form-group mb-12">
+          <label id="sign-reason-custom-label" for="sign-reason-custom">
+            {{
+              isOtherReason
+                ? "Additional Note (Required)"
+                : "Additional Note (Optional)"
+            }}
+          </label>
+          <textarea
+            id="sign-reason-custom"
+            :required="isOtherReason || undefined"
+            :aria-required="isOtherReason ? 'true' : undefined"
+            placeholder="Add a brief note if you selected 'Other'..."
+          />
         </div>
-      </form>
-    </div>
-  </div>
+        <div class="form-group mb-12">
+          <label for="sign-username">Participant ID</label>
+          <input
+            id="sign-username"
+            type="text"
+            autocomplete="username"
+            placeholder="Enter your participant ID..."
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label id="sign-password-label" for="sign-password">{{
+            credentialLabel
+          }}</label>
+          <input
+            id="sign-password"
+            v-bind="credentialInputAttrs"
+            :placeholder="credentialPlaceholder"
+            required
+          />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-modal-cancel" type="button" class="btn btn-secondary">
+          Cancel
+        </button>
+        <button id="btn-modal-sign" type="submit" class="btn btn-primary">
+          Sign and Confirm
+        </button>
+      </div>
+    </form>
+  </ClinicalModal>
 </template>
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import {
+  ClinicalModal,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
   requiresCustomSignatureReason,
-  useFocusTrap,
 } from "ui";
 
 import { isAuthenticatedSession } from "../api/client.js";
@@ -128,7 +127,6 @@ const OFFLINE_SECURITY_PIN_INPUT_ATTRS = Object.freeze({
   spellcheck: "false",
 });
 
-const modalRef = ref(null);
 const selectedReason = ref("Initial Questionnaire Completion");
 const isBrowserOnline = ref(checkOnline());
 const sessionStore = useSessionStore();
@@ -199,13 +197,14 @@ function onReasonChange(event) {
   selectedReason.value = event?.target?.value || "";
 }
 
-useFocusTrap(modalRef, {
-  isOpen: () => ui.signatureModalOpen,
-  onEscape: closeSignatureModal,
-  restoreFocus: () => {
-    const target = state.initiatingButton || state.previouslyFocusedElement;
-    state.initiatingButton = null;
-    return target;
-  },
-});
+function resolveSignatureRestoreFocus() {
+  if (state.pendingSignatureRestoreTarget !== undefined) {
+    const target = state.pendingSignatureRestoreTarget;
+    state.pendingSignatureRestoreTarget = undefined;
+    return target || false;
+  }
+  const target = state.initiatingButton || state.previouslyFocusedElement;
+  state.initiatingButton = null;
+  return target;
+}
 </script>

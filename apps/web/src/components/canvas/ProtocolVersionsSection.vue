@@ -927,6 +927,7 @@
       :action-url="protocolVersionApproveAction(approvingVersion.ref)"
       :semantic-action="PROTOCOL_APPROVE_SEMANTIC_ACTION"
       :on-sign="approveProtocolWithToken"
+      :fallback-focus="resolveVersionFallbackFocus"
       @cancel="approvingVersion = null"
       @success="handleApprovalSigned"
     />
@@ -941,6 +942,7 @@
       :action-url="protocolVersionWithdrawAction(withdrawingVersion.ref)"
       :semantic-action="PROTOCOL_WITHDRAW_SEMANTIC_ACTION"
       :on-sign="withdrawProtocolWithToken"
+      :fallback-focus="resolveVersionFallbackFocus"
       @cancel="withdrawingVersion = null"
       @success="handleWithdrawalSigned"
     />
@@ -986,6 +988,19 @@ import {
   type InspectorVerbRequest,
 } from "../../stores/studyCanvas";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
+
+function resolveVersionFallbackFocus() {
+  if (typeof document === "undefined") return null;
+  return (
+    document.querySelector<HTMLElement>(
+      "#protocol-versions-section .row-select[aria-pressed='true']"
+    ) ||
+    document.getElementById("btn-open-fork-amendment") ||
+    document.querySelector<HTMLElement>(
+      "#protocol-versions-section .row-select"
+    )
+  );
+}
 import KernelExplanation from "./KernelExplanation.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 import ProtocolImportPanel from "./ProtocolImportPanel.vue";

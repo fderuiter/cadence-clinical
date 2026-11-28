@@ -4,6 +4,7 @@
     :is-open="isOpen"
     :teleport="false"
     :dismissible="!busy"
+    :fallback-focus="fallbackFocus"
     size="sm"
     backdrop-class="signature-capture-backdrop"
     dialog-class="modal signature-capture-dialog"
@@ -115,6 +116,7 @@ export const SHARED_SIGNATURE_MODAL_PROPS = {
   semanticAction: { type: String, default: "" },
   onSign: { type: Function, default: null },
   reasons: { type: Array, default: null },
+  fallbackFocus: { type: [String, Object, Function], default: null },
 };
 </script>
 
@@ -546,6 +548,6 @@ button:focus-visible {
 }
 
 :deep(.signature-capture-backdrop) {
-  z-index: 10010;
+  z-index: 10010; /* deid-ignore: z-index stacking layer, not PHI */
 }
 </style>

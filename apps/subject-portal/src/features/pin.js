@@ -4,7 +4,6 @@ import {
   decryptAESGCM,
   deriveKeyFromPIN,
   encryptAESGCM,
-  useFocusTrap,
   useSignOutGuard,
 } from "ui";
 import { nextTick } from "vue";
@@ -298,9 +297,11 @@ export function cancelPINReset() {
   state.pinUnlock.confirmingReset = false;
   state.pinUnlock.error = "";
   nextTick(() => {
-    const targetId = state.pinUnlock.isLockedOut
-      ? "btn-pin-unlock-reset"
-      : "unlock-pin";
+    const maxAttempts = state.pinUnlock.maxAttempts || MAX_PIN_UNLOCK_ATTEMPTS;
+    const lockedOut =
+      Boolean(state.pinUnlock.isLockedOut) ||
+      (state.pinUnlock.failedAttempts || 0) >= maxAttempts;
+    const targetId = lockedOut ? "btn-pin-unlock-reset" : "unlock-pin";
     const el = document.getElementById(targetId);
     if (el) el.focus();
   });
@@ -378,7 +379,7 @@ export async function confirmPINReset() {
   });
 }
 
-export function usePinModalGuard(modalRef, { isOpen, initialFocus }) {
+export function usePinModalGuard() {
   const {
     isConfirmOpen: isSignOutConfirmOpen,
     requestSignOut,
@@ -390,13 +391,16 @@ export function usePinModalGuard(modalRef, { isOpen, initialFocus }) {
     onConfirmSignOut: () => logout({ confirmed: true }),
   });
 
-  useFocusTrap(modalRef, {
-    isOpen: () => Boolean(isOpen()) && !isSignOutConfirmOpen.value,
-    escapeDeactivates: false,
-    initialFocus,
-  });
-
-  function handleSignOut() {
+  function handleSignOut(event) {
+    const triggerEl = event?.currentTarget;
+    if (
+      triggerEl &&
+      typeof triggerEl.focus === "function" &&
+      typeof document !== "undefined" &&
+      document.activeElement !== triggerEl
+    ) {
+      triggerEl.focus();
+    }
     return requestSignOut();
   }
 

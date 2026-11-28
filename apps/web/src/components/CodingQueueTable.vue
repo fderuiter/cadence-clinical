@@ -1182,6 +1182,7 @@ const batchModalRef = ref(null);
 
 useFocusTrap(approveClusterModalRef, {
   isOpen: () => isApproveClusterModalOpen.value,
+  fallbackFocus: "#btn-refresh-coding-queue",
   onEscape: () => {
     isApproveClusterModalOpen.value = false;
   },
@@ -1189,6 +1190,7 @@ useFocusTrap(approveClusterModalRef, {
 
 useFocusTrap(batchClusterModalRef, {
   isOpen: () => isBatchClusterModalOpen.value,
+  fallbackFocus: "#btn-refresh-coding-queue",
   onEscape: () => {
     isBatchClusterModalOpen.value = false;
   },
@@ -1196,6 +1198,7 @@ useFocusTrap(batchClusterModalRef, {
 
 useFocusTrap(queryModalRef, {
   isOpen: () => isQueryModalOpen.value,
+  fallbackFocus: "#btn-refresh-coding-queue",
   onEscape: () => {
     isQueryModalOpen.value = false;
   },
@@ -1203,6 +1206,7 @@ useFocusTrap(queryModalRef, {
 
 useFocusTrap(batchModalRef, {
   isOpen: () => isBatchModalOpen.value,
+  fallbackFocus: "#btn-refresh-coding-queue",
   onEscape: () => {
     isBatchModalOpen.value = false;
   },

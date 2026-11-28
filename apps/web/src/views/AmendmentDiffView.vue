@@ -18,6 +18,7 @@
     </template>
     <template #extra-controls>
       <button
+        id="btn-open-amendment-governance"
         type="button"
         class="btn btn-secondary"
         data-testid="open-amendment-governance-modal"
@@ -37,6 +38,7 @@
       <ClinicalModal
         v-model="isGovernanceModalOpen"
         :teleport="false"
+        fallback-focus="#btn-open-amendment-governance"
         title="21 CFR Part 11 Protocol Amendment Governance"
         :show-footer="false"
       >

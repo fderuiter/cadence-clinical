@@ -1,7 +1,9 @@
 import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   computeFloatingPosition,
+  didFocusExitElements,
   getVisualViewportBounds,
+  isTargetWithinElements,
   observeVisualViewport,
 } from "ui";
 
@@ -231,6 +233,37 @@ export function useHeaderMenuCoordination({
     mobileMenuStyle.value = {};
   }
 
+  function getSecondaryElements() {
+    return [
+      secondaryMenuWrapperRef,
+      secondaryMenuToggleRef,
+      secondaryMenuPanelRef,
+      () =>
+        typeof document !== "undefined"
+          ? document.getElementById("btn-header-actions-menu")
+          : null,
+      () =>
+        typeof document !== "undefined"
+          ? document.getElementById("header-secondary-menu")
+          : null,
+    ];
+  }
+
+  function getMobileElements() {
+    return [
+      mobileMenuToggleRef,
+      mobileMenuPanelRef,
+      () =>
+        typeof document !== "undefined"
+          ? document.getElementById("btn-mobile-menu-toggle")
+          : null,
+      () =>
+        typeof document !== "undefined"
+          ? document.getElementById("mobile-nav-menu")
+          : null,
+    ];
+  }
+
   function toggleMobileMenu() {
     const nextOpen = !isMobileMenuOpen.value;
     if (nextOpen && isSecondaryMenuOpen.value) {
@@ -238,6 +271,15 @@ export function useHeaderMenuCoordination({
       secondaryMenuStyle.value = {};
     }
     isMobileMenuOpen.value = nextOpen;
+    if (nextOpen && typeof document !== "undefined") {
+      const activeEl = document.activeElement;
+      if (!isTargetWithinElements(activeEl, getMobileElements())) {
+        const toggleEl =
+          mobileMenuToggleRef.value ||
+          document.getElementById("btn-mobile-menu-toggle");
+        toggleEl?.focus?.();
+      }
+    }
   }
 
   function toggleSecondaryMenu() {
@@ -247,6 +289,15 @@ export function useHeaderMenuCoordination({
       mobileMenuStyle.value = {};
     }
     isSecondaryMenuOpen.value = nextOpen;
+    if (nextOpen && typeof document !== "undefined") {
+      const activeEl = document.activeElement;
+      if (!isTargetWithinElements(activeEl, getSecondaryElements())) {
+        const toggleEl =
+          secondaryMenuToggleRef.value ||
+          document.getElementById("btn-header-actions-menu");
+        toggleEl?.focus?.();
+      }
+    }
   }
 
   function handleDocumentPointerDown(event) {
@@ -254,32 +305,27 @@ export function useHeaderMenuCoordination({
     if (!target) return;
 
     if (isSecondaryMenuOpen.value) {
-      const wrapperEl = secondaryMenuWrapperRef.value;
-      const panelEl = secondaryMenuPanelRef.value;
-      const insideSecondary =
-        (wrapperEl && wrapperEl.contains(target)) ||
-        (panelEl && panelEl.contains(target));
-      if (!insideSecondary) {
+      if (!isTargetWithinElements(target, getSecondaryElements())) {
         closeSecondaryMenu();
       }
     }
 
     if (isMobileMenuOpen.value) {
-      const toggleEl =
-        mobileMenuToggleRef.value ||
-        (typeof document !== "undefined"
-          ? document.getElementById("btn-mobile-menu-toggle")
-          : null);
-      const panelEl =
-        mobileMenuPanelRef.value ||
-        (typeof document !== "undefined"
-          ? document.getElementById("mobile-nav-menu")
-          : null);
-      const insideMobile =
-        (toggleEl && toggleEl.contains(target)) ||
-        (panelEl && panelEl.contains(target));
-      if (!insideMobile) {
+      if (!isTargetWithinElements(target, getMobileElements())) {
         closeMobileMenu();
+      }
+    }
+  }
+
+  function handleDocumentFocusChange(event) {
+    if (isSecondaryMenuOpen.value) {
+      if (didFocusExitElements(event, getSecondaryElements())) {
+        closeSecondaryMenu({ restoreFocus: false });
+      }
+    }
+    if (isMobileMenuOpen.value) {
+      if (didFocusExitElements(event, getMobileElements())) {
+        closeMobileMenu({ restoreFocus: false });
       }
     }
   }
@@ -291,13 +337,23 @@ export function useHeaderMenuCoordination({
     if (hasBlockingModalOverlay()) {
       return false;
     }
+    const activeEl =
+      typeof document !== "undefined" ? document.activeElement : null;
     event?.preventDefault?.();
     if (isSecondaryMenuOpen.value) {
-      closeSecondaryMenu({ restoreFocus: true });
+      const focusInsideSecondary = isTargetWithinElements(
+        activeEl,
+        getSecondaryElements()
+      );
+      closeSecondaryMenu({ restoreFocus: focusInsideSecondary });
       return true;
     }
     if (isMobileMenuOpen.value) {
-      closeMobileMenu({ restoreFocus: true });
+      const focusInsideMobile = isTargetWithinElements(
+        activeEl,
+        getMobileElements()
+      );
+      closeMobileMenu({ restoreFocus: focusInsideMobile });
       return true;
     }
     return false;
@@ -322,6 +378,8 @@ export function useHeaderMenuCoordination({
   onMounted(() => {
     if (typeof document !== "undefined") {
       document.addEventListener("pointerdown", handleDocumentPointerDown);
+      document.addEventListener("focusout", handleDocumentFocusChange);
+      document.addEventListener("focusin", handleDocumentFocusChange);
     }
   });
 
@@ -329,6 +387,8 @@ export function useHeaderMenuCoordination({
     stopViewportTracking();
     if (typeof document !== "undefined") {
       document.removeEventListener("pointerdown", handleDocumentPointerDown);
+      document.removeEventListener("focusout", handleDocumentFocusChange);
+      document.removeEventListener("focusin", handleDocumentFocusChange);
     }
   });
 

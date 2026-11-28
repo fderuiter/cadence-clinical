@@ -23,7 +23,7 @@
             type="text"
             role="combobox"
             aria-autocomplete="list"
-            aria-controls="canvas-palette-list"
+            :aria-controls="results.length ? 'canvas-palette-list' : undefined"
             :aria-expanded="results.length > 0"
             :aria-busy="isSearching ? 'true' : 'false'"
             :aria-activedescendant="

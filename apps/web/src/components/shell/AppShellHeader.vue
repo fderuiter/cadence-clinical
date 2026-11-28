@@ -402,6 +402,14 @@ const {
 });
 
 function runMenuAction(kind, payload) {
+  if (isSecondaryMenuOpen.value) {
+    const toggleBtn =
+      secondaryMenuToggleRef.value ||
+      (typeof document !== "undefined"
+        ? document.getElementById("btn-header-actions-menu")
+        : null);
+    toggleBtn?.focus?.();
+  }
   closeSecondaryMenu();
   emit("action", kind, payload);
 }

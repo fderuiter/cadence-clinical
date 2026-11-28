@@ -178,10 +178,9 @@ export function openSignatureModal(actionType = "epro") {
   }
 }
 
-function canSynchronouslyRestoreTarget(el) {
+function canRestoreAfterModalUninert(el) {
   if (!el || typeof el.focus !== "function") return false;
   if (el.isConnected === false || el.disabled) return false;
-  if (el.closest?.("[inert]")) return false;
   if (el.closest?.(".portal-view:not(.active)")) return false;
   let current = el;
   while (current && current.nodeType === 1) {
@@ -191,12 +190,21 @@ function canSynchronouslyRestoreTarget(el) {
   return true;
 }
 
+function canSynchronouslyRestoreTarget(el) {
+  if (!canRestoreAfterModalUninert(el)) return false;
+  if (el.closest?.("[inert]")) return false;
+  return true;
+}
+
 export function closeSignatureModal() {
   detachSignatureModalTrap();
   // Credential hygiene: clear PIN / password from DOM immediately on cancel or Escape
   const passwordEl = document.getElementById("sign-password");
   if (passwordEl) passwordEl.value = "";
   const modalEl = document.getElementById("portal-sign-modal");
+  const isClinicalModal = Boolean(
+    modalEl?.classList?.contains("clinical-modal-dialog")
+  );
   if (modalEl) {
     modalEl.style.display = "none";
     if (
@@ -214,13 +222,42 @@ export function closeSignatureModal() {
   const fallbackPrevTarget = state.previouslyFocusedElement;
   state.initiatingButton = null;
 
-  if (canSynchronouslyRestoreTarget(initiatingTarget)) {
-    initiatingTarget.focus();
-    return;
-  }
-  if (canSynchronouslyRestoreTarget(fallbackPrevTarget)) {
-    fallbackPrevTarget.focus();
-    return;
+  if (isClinicalModal) {
+    const candidate = canRestoreAfterModalUninert(initiatingTarget)
+      ? initiatingTarget
+      : canRestoreAfterModalUninert(fallbackPrevTarget)
+        ? fallbackPrevTarget
+        : null;
+    state.pendingSignatureRestoreTarget = candidate;
+    if (candidate) {
+      let ancestor = candidate;
+      while (ancestor && ancestor.nodeType === 1) {
+        if (
+          typeof HTMLElement !== "undefined" &&
+          "inert" in HTMLElement.prototype &&
+          ancestor.inert
+        ) {
+          ancestor.inert = false;
+        }
+        if (ancestor.hasAttribute?.("inert")) {
+          ancestor.removeAttribute("inert");
+          ancestor.removeAttribute("aria-hidden");
+        }
+        ancestor = ancestor.parentElement;
+      }
+      candidate.focus();
+      return;
+    }
+  } else {
+    state.pendingSignatureRestoreTarget = null;
+    if (canSynchronouslyRestoreTarget(initiatingTarget)) {
+      initiatingTarget.focus();
+      return;
+    }
+    if (canSynchronouslyRestoreTarget(fallbackPrevTarget)) {
+      fallbackPrevTarget.focus();
+      return;
+    }
   }
 
   void handoffFocus([

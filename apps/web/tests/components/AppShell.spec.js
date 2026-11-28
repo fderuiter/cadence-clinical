@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { nextTick } from "vue";
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createRouter, createWebHistory } from "vue-router";
 import AppShell from "../../src/components/AppShell.vue";
@@ -794,6 +794,86 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
       expect(wrapper.find("#mobile-nav-menu").classes()).not.toContain(
         "is-open"
       );
+
+      // Outside focusout into <main> dismisses #header-secondary-menu and #mobile-nav-menu without stealing focus
+      const mainBtn = document.createElement("button");
+      mainBtn.id = "zoom-studies";
+      mainBtn.type = "button";
+      document.getElementById("main-content").appendChild(mainBtn);
+
+      await secondaryToggle.trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#header-secondary-menu").classes()).toContain(
+        "is-open"
+      );
+      mainBtn.focus();
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#header-secondary-menu").classes()).not.toContain(
+        "is-open"
+      );
+      expect(document.activeElement).toBe(mainBtn);
+
+      await mobileToggle.trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#mobile-nav-menu").classes()).toContain("is-open");
+      mainBtn.focus();
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#mobile-nav-menu").classes()).not.toContain(
+        "is-open"
+      );
+      expect(document.activeElement).toBe(mainBtn);
+
+      // Escape pressed while focus is on <main> keeps focus on <main> instead of stealing focus to toggle
+      await secondaryToggle.trigger("click");
+      await wrapper.vm.$nextTick();
+      // Move activeElement to main without firing focusin (simulating programmatic focus in main)
+      document.removeEventListener("focusin", () => {});
+      const mainLandmark = document.getElementById("main-content");
+      Object.defineProperty(document, "activeElement", {
+        configurable: true,
+        get: () => mainBtn,
+      });
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", cancelable: true })
+      );
+      await wrapper.vm.$nextTick();
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#header-secondary-menu").classes()).not.toContain(
+        "is-open"
+      );
+      delete document.activeElement;
+      mainBtn.focus();
+      expect(document.activeElement).toBe(mainBtn);
+      mainLandmark.removeChild(mainBtn);
+
+      // Opening SignOutConfirmModal from #header-secondary-menu moves focus to #btn-header-actions-menu before closing menu
+      const draftKey = "cadence_user:tenant_1:user_1:ecrf_draft:visit_1";
+      localStorage.setItem(draftKey, JSON.stringify({ dirty: true }));
+      try {
+        await secondaryToggle.trigger("click");
+        await wrapper.vm.$nextTick();
+        await wrapper.find("#btn-logout").trigger("click");
+        await flushPromises();
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find("#header-secondary-menu").classes()).not.toContain(
+          "is-open"
+        );
+        expect(
+          document.getElementById("shell-signout-confirm-modal")
+        ).toBeTruthy();
+        window.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "Escape",
+            bubbles: true,
+            cancelable: true,
+          })
+        );
+        await flushPromises();
+        await wrapper.vm.$nextTick();
+        expect(document.activeElement).toBe(secondaryToggle.element);
+      } finally {
+        localStorage.removeItem(draftKey);
+      }
     } finally {
       wrapper.unmount();
       Object.defineProperty(window, "innerWidth", {

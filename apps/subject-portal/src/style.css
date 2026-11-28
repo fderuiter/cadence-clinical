@@ -733,6 +733,39 @@ h4 {
   text-align: center;
 }
 
+.clinical-modal-dialog .modal-close-btn {
+  min-width: var(--touch-target-min, 48px);
+  min-height: var(--touch-target-min, 48px);
+}
+
+.clinical-modal-dialog > .modal-body.portal-modal-form-shell {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.clinical-modal-dialog > .modal-body.portal-modal-form-shell > form,
+.clinical-modal-dialog
+  > .modal-body.portal-modal-form-shell
+  > #pin-reset-confirmation {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.clinical-modal-dialog .modal.portal-embedded-modal-form {
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  overflow: visible;
+  animation: none;
+}
+
 @keyframes modal-anim {
   from {
     transform: scale(0.95);
@@ -825,6 +858,18 @@ h4 {
 
   .modal-body {
     overflow-y: visible;
+  }
+
+  .clinical-modal-dialog > .modal-body.portal-modal-form-shell {
+    display: block;
+    overflow-y: visible;
+  }
+
+  .clinical-modal-dialog > .modal-body.portal-modal-form-shell > form,
+  .clinical-modal-dialog
+    > .modal-body.portal-modal-form-shell
+    > #pin-reset-confirmation {
+    display: block;
   }
 }
 

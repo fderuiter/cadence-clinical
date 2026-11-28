@@ -979,4 +979,29 @@ describe("CommandPaletteOverlay.vue - Unified Global Command Palette", () => {
       });
     }
   });
+
+  it("omits aria-controls on #canvas-palette-input when zero search results match", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Designer"];
+
+    const wrapper = mount(CommandPaletteOverlay, {
+      props: { isOpen: true },
+      global: { plugins: [pinia, router] },
+    });
+    await flushPromises();
+
+    const input = body.find("#canvas-palette-input");
+    expect(body.find("#canvas-palette-list").exists()).toBe(true);
+    expect(input.attributes("aria-controls")).toBe("canvas-palette-list");
+
+    await input.setValue("zzzz nonexistent");
+    await flushPromises();
+
+    expect(body.find("#canvas-palette-list").exists()).toBe(false);
+    expect(input.attributes("aria-controls")).toBeUndefined();
+    expect(input.attributes("aria-expanded")).toBe("false");
+
+    wrapper.unmount();
+  });
 });
