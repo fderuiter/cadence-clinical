@@ -630,8 +630,7 @@ describe("⌘K palette kernel search (ADR-2484)", () => {
     expect(kernelApi.search).toHaveBeenCalledTimes(1);
     expect(kernelApi.search).toHaveBeenCalledWith({
       text: "onc",
-      kinds: ["study"],
-      limit: 5,
+      limit: 24,
     });
     const options = body.findAll("#canvas-palette-list [role=option]");
     const study = options.find((o) => o.text().includes("Oncology 401"));
@@ -678,7 +677,7 @@ describe("⌘K palette kernel search (ADR-2484)", () => {
     expect(kernelApi.search.mock.calls[0][0].text).toBe("onc");
   });
 
-  it("says when studies can't be searched, and still offers opening by code", async () => {
+  it("says when studies can't be searched without synthesizing an Open study fallback", async () => {
     vi.mocked(kernelApi.search).mockRejectedValue(
       new ApiError("Your sign-in's tenant is not an active kernel tenant.", 403)
     );
@@ -692,6 +691,6 @@ describe("⌘K palette kernel search (ADR-2484)", () => {
     const groups = body
       .findAll("#canvas-palette-list [role=option]")
       .map((o) => o.find(".palette-group").text());
-    expect(groups).toContain("Open study");
+    expect(groups).not.toContain("Open study");
   });
 });

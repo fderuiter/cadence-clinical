@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,9 +13,15 @@ using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Persistence.Search;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
+using Cadence.Kernel.Validation;
+using Cadence.Modules.Execution.Infrastructure;
+using Cadence.Modules.Intelligence.Tools;
+using Cadence.Modules.Intelligence.Tools.Kernel;
 using Cadence.Testing;
 
 using FluentAssertions;
+
+using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
@@ -142,14 +149,105 @@ public sealed class KernelSearchTests
     /// <summary>The store refuses a source it does not know and returns nothing for no sources, without querying.</summary>
     [Fact(DisplayName = "Store_RefusesUnknownSources_AndReturnsNothingForNone")]
     [KernelRule("K-ID-8")]
+    [KernelRule("K-IDN-1")]
     public async Task StoreRefusesUnknownSourcesAndReturnsNothingForNone()
     {
         var store = new KernelSearchStore(null!);
         var ct = TestContext.Current.CancellationToken;
 
-        await FluentActions.Awaiting(() => store.QueryAsync(TenantId.New(), new SearchPlan("x:*", "x", ["studies", "enrollments"], 10), ct))
-            .Should().ThrowAsync<ArgumentException>().WithMessage("*enrollments*");
+        await FluentActions.Awaiting(() => store.QueryAsync(TenantId.New(), new SearchPlan("x:*", "x", ["studies", "people"], 10), ct))
+            .Should().ThrowAsync<ArgumentException>().WithMessage("*people*");
         (await store.QueryAsync(TenantId.New(), new SearchPlan("x:*", "x", [], 10), ct)).Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Built-in kernel sources plus Execution's contributor cover all 18 indexed clinical and governance NodeRef kinds
+    /// without ever indexing direct participant identity rows (<c>people</c>).
+    /// </summary>
+    [Fact(DisplayName = "Sources_CoverAll18IndexedNodeKinds_WithoutPeople")]
+    [KernelRule("K-IDN-1")]
+    public void SourcesCoverAll18IndexedNodeKindsWithoutPeople()
+    {
+        var store = new KernelSearchStore(null!);
+        var kinds = store.Sources.Select(s => s.Kind)
+            .Concat(ExecutionSearchSql.Sources.Select(_ => NodeKinds.FormQuery))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        kinds.Should().BeEquivalentTo(
+            NodeKinds.Organization,
+            NodeKinds.Site,
+            NodeKinds.Study,
+            NodeKinds.StudySite,
+            NodeKinds.Enrollment,
+            NodeKinds.ProtocolVersion,
+            NodeKinds.CollectionInstance,
+            NodeKinds.Observation,
+            NodeKinds.FormQuery,
+            NodeKinds.ValidationFinding,
+            NodeKinds.Qualification,
+            NodeKinds.Artifact,
+            NodeKinds.Proposal,
+            NodeKinds.Concept,
+            NodeKinds.CodeSystem,
+            NodeKinds.CodeSystemVersion,
+            NodeKinds.StandardVersion,
+            NodeKinds.LibraryItem);
+        store.Sources.Select(s => s.Kind).Should().NotContain(NodeKinds.Person);
+        store.Sources.Select(s => s.Name).Should().NotContain("people");
+    }
+
+    /// <summary>
+    /// <see cref="KernelSearch"/> fans out to registered <see cref="IKernelSearchContributor"/> implementations when
+    /// their kind matches, deduplicates hits by <c>(Kind, Id)</c> keeping the highest-ranked version, and respects <c>Limit</c>.
+    /// </summary>
+    [Fact(DisplayName = "Search_FansOutToContributors_AndMergesByRank")]
+    public async Task SearchFansOutToContributorsAndMergesByRank()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var queryId = FormQueryId.New();
+        var studyId = StudyId.New();
+        var store = new CannedStore(
+            [new("studies", NodeKinds.Study)],
+            [new SearchHit(NodeRef.For(studyId, 1), "CADENCE-101 Oncology", "CADENCE-101", null, false, 0.4)]);
+        var contributor = new RecordingContributor(
+            [new("execution_form_queries", NodeKinds.FormQuery), new("execution_form_query_messages", NodeKinds.FormQuery)],
+            [
+                new SearchHit(NodeRef.For(queryId, 1), "Query on vital_sbp (Open)", "QRY-10101010", "CADENCE-101 · SITE-101 · Open", false, 0.3),
+                new SearchHit(NodeRef.For(queryId, 2), "Confirm systolic BP reading", "QRY-10101010", "CADENCE-101 · SITE-101 · Open", true, 0.9),
+            ]);
+
+        var search = new KernelSearch(store, new Probe(permit: true), [contributor]);
+        var allHits = await search.SearchAsync(Tenant, new SearchRequest("QRY-10101010", Limit: 10), ct);
+        var queryOnly = await search.SearchAsync(Tenant, new SearchRequest("systolic", [NodeKinds.FormQuery], Limit: 5), ct);
+
+        allHits.Should().HaveCount(2);
+        allHits[0].Ref.Should().Be(NodeRef.For(queryId, 2));
+        allHits[0].ExactCode.Should().BeTrue();
+        allHits[1].Ref.Should().Be(NodeRef.For(studyId, 1));
+        queryOnly.Should().ContainSingle().Which.Ref.Kind.Should().Be(NodeKinds.FormQuery);
+        contributor.LastQuery!.Sources.Should().Equal("execution_form_queries", "execution_form_query_messages");
+    }
+
+    private sealed class CannedStore(IReadOnlyList<SearchSourceInfo> sources, IReadOnlyList<SearchHit> hits) : IKernelSearchStore
+    {
+        public IReadOnlyList<SearchSourceInfo> Sources { get; } = sources;
+
+        public Task<IReadOnlyList<SearchHit>> QueryAsync(TenantId tenant, SearchPlan plan, CancellationToken cancellationToken) =>
+            Task.FromResult(hits);
+    }
+
+    private sealed class RecordingContributor(IReadOnlyList<SearchContributorSource> sources, IReadOnlyList<SearchHit> hits) : IKernelSearchContributor
+    {
+        public IReadOnlyList<SearchContributorSource> Sources { get; } = sources;
+
+        public SearchContributorQuery? LastQuery { get; private set; }
+
+        public Task<IReadOnlyList<SearchHit>> QueryAsync(TenantId tenant, SearchContributorQuery query, CancellationToken cancellationToken)
+        {
+            LastQuery = query;
+            return Task.FromResult(hits);
+        }
     }
 
     private sealed class RecordingStore : IKernelSearchStore

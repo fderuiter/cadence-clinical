@@ -3,6 +3,7 @@ using System;
 using Cadence.Database.Signatures;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Search;
 using Cadence.Modules.Execution.Application;
 using Cadence.Modules.Execution.Endpoints;
 using Cadence.Modules.Execution.Infrastructure;
@@ -85,6 +86,7 @@ public static class ExecutionModule
             .AddDbContext<ExecutionSignatureTokenDbContext>(options => options.UseNpgsql(connectionString))
             .AddCadenceDurableSigTokenStore<ExecutionSignatureTokenDbContext>();
 
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IKernelSearchContributor, ExecutionSearchContributor>());
         services.TryAddSingleton<IFormQueryAgingDigestAlertDispatcher, InMemoryFormQueryAgingDigestAlertDispatcher>();
         services.TryAddSingleton<FormQueryEscalationOptions>();
         services.TryAddSingleton<FormQueryEscalationHostedService>();

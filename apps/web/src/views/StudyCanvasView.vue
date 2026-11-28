@@ -1095,7 +1095,6 @@ import {
   watch,
 } from "vue";
 import {
-  isNavigationFailure,
   useRoute,
   useRouter,
   type LocationQueryRaw,
@@ -1144,8 +1143,8 @@ import {
   canVerifySource,
 } from "../canvas/authority";
 import {
+  executePaletteTarget,
   promoteParticipantInspectorNode,
-  readInstantiatedClinicalScope,
   syncInstantiatedClinicalScope,
   type PaletteTarget,
 } from "../canvas/palette";
@@ -2633,108 +2632,31 @@ function openParticipantsForSite(siteCode: string) {
 
 async function goToPaletteTarget(target: PaletteTarget) {
   paletteOpen.value = false;
-  const targetStudy = (target.studyCode || studyCode.value).trim();
-  const isCrossStudy = Boolean(
-    studyCode.value && targetStudy && targetStudy !== studyCode.value
-  );
-  const previousScope = isCrossStudy ? readInstantiatedClinicalScope() : null;
-  if (isCrossStudy) {
-    syncInstantiatedClinicalScope({
-      activeStudyId: targetStudy,
-      activeSiteId: "",
-      activeSubjectId: "",
-    });
-  }
-  const restorePreviousScope = () => {
-    if (previousScope) {
-      syncInstantiatedClinicalScope({
-        activeStudyId: previousScope.activeStudyId ?? "",
-        activeSiteId: previousScope.activeSiteId ?? "",
-        activeSubjectId: previousScope.activeSubjectId ?? "",
-      });
-    }
-  };
-  if (target.ask) {
-    // Ask keeps the view and its selection within the same study, and opens Assist with the question.
-    const failure = await router.push({
-      name: "study",
-      params: { studyCode: targetStudy },
-      query: isCrossStudy
-        ? { ask: target.ask }
-        : { ...route.query, ask: target.ask },
-    });
-    if (isNavigationFailure(failure)) {
-      restorePreviousScope();
-      return;
-    }
-    await canvas.requestInspectorFocus({
-      nodeRef: null,
-      scrollIntoView: true,
-    });
-    return;
-  }
-  if (target.participant) {
-    if (!isCrossStudy) {
-      canvas.rememberParticipants([target.participant]);
-    }
-    const nodeText = participantNodeRef(target.participant);
-    const activeSite = siteFilter.value || zoomSite.value;
-    const compatibleSite =
-      !isCrossStudy &&
-      activeSite &&
-      (!target.participant.site_id || target.participant.site_id === activeSite)
-        ? activeSite
-        : undefined;
-    const failure = await router.push(
-      studyLocation(
-        {
-          stage: target.stage,
-          section: target.section,
-          site: compatibleSite,
-          node: nodeText,
-        },
-        targetStudy
-      )
-    );
-    if (isNavigationFailure(failure)) {
-      restorePreviousScope();
-      return;
-    }
-    if (targetStudy && targetStudy !== canvas.studyCode) {
-      canvas.openStudy(targetStudy);
-    }
+  if (target.participant && !target.studyCode) {
     canvas.rememberParticipants([target.participant]);
-    await canvas.requestInspectorFocus({
-      nodeRef: nodeText,
-      scrollIntoView: true,
-    });
-    return;
   }
-  if (isCrossStudy) {
-    const failure = await router.push(
-      studyLocation(
-        {
-          stage: target.stage,
-          section: target.section,
-        },
-        targetStudy
-      )
-    );
-    if (isNavigationFailure(failure)) {
-      restorePreviousScope();
-      return;
-    }
-    return;
-  }
-  await router.push(
-    scopedStudyLocation(
-      {
-        stage: target.stage,
-        section: target.section,
-      },
-      targetStudy
-    )
-  );
+  await executePaletteTarget(target, {
+    router,
+    currentRouteName: route.name,
+    currentQuery: route.query,
+    activeStudyCode: studyCode.value,
+    workspaceScope: {
+      studyCode: studyCode.value,
+      siteId: siteFilter.value || zoomSite.value,
+      explicitSiteId: siteFilter.value,
+      recordParticipantParam: single(route.query.participant).trim(),
+      inspectorNodeParam: single(route.query.node).trim(),
+    },
+    onFocusInspector: async (nodeRef) => {
+      if (target.participant) {
+        canvas.rememberParticipants([target.participant]);
+      }
+      await canvas.requestInspectorFocus({
+        nodeRef: nodeRef ?? null,
+        scrollIntoView: true,
+      });
+    },
+  });
 }
 
 function openTypedStudy() {
@@ -2782,15 +2704,14 @@ watch(callerAuthKey, (next, prev) => {
 
 watch(
   [studyCode, siteFilter, () => canvas.studyCode],
-  ([code, site, openCanvasCode], prev) => {
-    const prevSite = prev?.[1] ?? "";
+  ([code, site, openCanvasCode]) => {
     if (code && !authStore.isLoggingOut && !authStore.sessionExpired) {
       if (openCanvasCode !== code) {
         canvas.openStudy(code);
       }
       syncWorkspaceScope({
         studyId: code,
-        ...(site || prevSite ? { siteId: site } : {}),
+        siteId: site,
       });
     }
   },

@@ -17,6 +17,12 @@
         aria-label="Go to or open anything in this study"
       >
         <div class="palette-header">
+          <ClinicalIcon
+            name="search"
+            :size="16"
+            class="palette-search-icon"
+            aria-hidden="true"
+          />
           <input
             id="canvas-palette-input"
             v-model="query"
@@ -32,8 +38,8 @@
             autocomplete="off"
             :placeholder="
               studyCode
-                ? 'Stage, section, participant, workflow or study code'
-                : 'Study code or workflow, e.g. CADENCE-101'
+                ? 'Search sites, participants, forms, queries, findings, or stages'
+                : 'Search studies, sites, participants, forms, queries, or workflows'
             "
             aria-label="Search"
             @keydown="onKeydown"
@@ -48,9 +54,30 @@
             <ClinicalIcon name="x" :size="18" />
           </button>
         </div>
+        <div
+          v-if="query.trim().length > 0 && filterChips.length > 1"
+          id="canvas-palette-filters"
+          class="palette-filters"
+          role="toolbar"
+          aria-label="Filter results by category"
+        >
+          <button
+            v-for="chip in filterChips"
+            :key="chip.id"
+            :data-category="chip.id"
+            type="button"
+            class="palette-filter-chip"
+            :class="{ active: selectedCategory === chip.id }"
+            :aria-pressed="selectedCategory === chip.id ? 'true' : 'false'"
+            @click="selectCategory(chip.id)"
+          >
+            <span>{{ chip.label }}</span>
+            <span class="palette-filter-count">({{ chip.count }})</span>
+          </button>
+        </div>
         <div class="palette-body">
           <ul
-            v-if="results.length"
+            v-if="results.length || isSearching"
             id="canvas-palette-list"
             class="palette-list"
             role="listbox"
@@ -72,10 +99,30 @@
               @mouseenter="active = index"
               @focus="active = index"
             >
-              <span class="palette-group">{{ item.group }}</span>
-              <span class="palette-label">{{ item.label }}</span>
-              <span v-if="item.detail" class="palette-detail">{{
-                item.detail
+              <span
+                class="palette-group"
+                :class="`palette-group--${item.category || 'navigation'}`"
+                >{{ item.group }}</span
+              >
+              <div class="palette-item-main">
+                <span class="palette-label">
+                  <template v-if="item.code && item.titleRest">
+                    <span class="palette-code">{{ item.code }}</span>
+                    <span> · {{ item.titleRest }}</span>
+                  </template>
+                  <span
+                    v-else-if="item.code === item.label"
+                    class="palette-code"
+                    >{{ item.label }}</span
+                  >
+                  <template v-else>{{ item.label }}</template>
+                </span>
+                <span v-if="item.detail" class="palette-detail">{{
+                  item.detail
+                }}</span>
+              </div>
+              <span v-if="item.actionHint" class="palette-action-hint">{{
+                item.actionHint
               }}</span>
             </li>
           </ul>
@@ -87,8 +134,8 @@
           >
             {{
               query.trim()
-                ? "Nothing matches across studies, lifecycle stages, or authorized workflows."
-                : "Type a study code or choose a workflow destination."
+                ? "Nothing matches across authorized studies, sites, clinical records, or workflows."
+                : "Type a study, site, participant, form, or query code, or choose a workflow destination."
             }}
           </p>
           <p
@@ -107,11 +154,16 @@
           >
             {{ displaySubjectNote }}
           </p>
-          <p class="palette-footnote">
-            Studies are found by code or title among those visible to your
-            account. Available actions for a selected participant are under Act
-            in the inspector.
-          </p>
+          <div class="palette-footer palette-footnote">
+            <span class="palette-shortcuts">
+              <kbd class="palette-kbd">Up/Down</kbd> Navigate ·
+              <kbd class="palette-kbd">Enter</kbd> Open scoped view ·
+              <kbd class="palette-kbd">Esc</kbd> Close
+            </span>
+            <span class="palette-scope-caption">
+              Authorized across visible studies and sites
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -136,20 +188,43 @@ import {
 } from "../../stores/studyCanvas";
 import { isDemoBuild } from "../../utils/demoMode";
 
-/**
- * The unified global ⌘K command palette (docs/ux/CLINICAL_CANVAS.md §2.5):
- * combines kernel study search (ADR-2484, ADR-2540), opening a study by code,
- * lifecycle navigation (study home, stages, sections, loaded and server-searched
- * participants, and Assist Ask when AI assistance is enabled), and authorized UX-1
- * workflow destinations and workspace controls.
- */
+type PaletteCategory =
+  | "all"
+  | "studies"
+  | "sites"
+  | "participants"
+  | "forms_queries"
+  | "findings"
+  | "proposals"
+  | "governance"
+  | "navigation";
+
 interface PaletteItem {
   key: string;
   group: string;
   label: string;
+  code?: string | null;
+  titleRest?: string;
   detail?: string;
+  actionHint?: string;
+  category?: Exclude<PaletteCategory, "all">;
+  exactCode?: boolean;
   target: PaletteTarget;
 }
+
+const CATEGORY_DEFS: ReadonlyArray<{
+  id: Exclude<PaletteCategory, "all">;
+  label: string;
+}> = [
+  { id: "studies", label: "Studies" },
+  { id: "sites", label: "Sites" },
+  { id: "participants", label: "Participants" },
+  { id: "forms_queries", label: "Forms & Queries" },
+  { id: "findings", label: "Findings" },
+  { id: "proposals", label: "Proposals" },
+  { id: "governance", label: "Governance" },
+  { id: "navigation", label: "Workspaces" },
+];
 
 const props = withDefaults(
   defineProps<{
@@ -183,15 +258,16 @@ useFocusTrap(dialogRef, {
 
 const query = ref("");
 const active = ref(0);
+const selectedCategory = ref<PaletteCategory>("all");
 
-// Execution accepts any non-blank study code up to 255 characters, compared exactly.
 const MAX_STUDY_CODE = 255;
 const MAX_RESULTS = 30;
 const DEMO_MAX_RESULTS = 80;
 const maxResults = computed(() =>
   isDemoBuild() ? DEMO_MAX_RESULTS : MAX_RESULTS
 );
-const MAX_KERNEL_HITS = 5;
+const MAX_KERNEL_HITS = 24;
+const REMOTE_SUBJECT_LIMIT = 5;
 const MIN_SEARCH_LENGTH = 2;
 const SEARCH_DELAY_MS = 250;
 const MIN_ASK_WORDS = 3;
@@ -252,7 +328,7 @@ async function searchKernel(text: string, study: string, request: number) {
       .listSubjects({
         studyId: study,
         q: text,
-        limit: MAX_KERNEL_HITS,
+        limit: REMOTE_SUBJECT_LIMIT,
       })
       .then((page) => {
         if (request !== latestSearch) return;
@@ -275,11 +351,10 @@ async function searchKernel(text: string, study: string, request: number) {
   try {
     const hits = await kernelApi.search({
       text,
-      kinds: ["study"],
       limit: MAX_KERNEL_HITS,
     });
     if (request !== latestSearch) return;
-    kernelHits.value = hits;
+    kernelHits.value = Array.isArray(hits) ? hits : [];
     kernelNote.value = "";
   } catch (e) {
     if (request !== latestSearch) return;
@@ -366,18 +441,391 @@ const allParticipants = computed<SubjectSummary[]>(() => {
   return Array.from(byId.values());
 });
 
-// A study hit opens the study it names by its code; one without a code has nowhere to open.
-const studyHits = computed<PaletteItem[]>(() =>
-  kernelHits.value
-    .filter((hit) => hit.code && hit.code !== props.studyCode)
-    .map((hit) => ({
-      key: `kernel:${hit.ref}`,
-      group: "Study",
-      label: hit.code as string,
-      detail: hit.title,
-      target: { studyCode: hit.code as string },
-    }))
-);
+function splitCodePrefix(
+  code: string | null | undefined,
+  title: string
+): { code: string | null; titleRest: string; label: string } {
+  const cleanCode = code?.trim() || null;
+  const cleanTitle = title.trim();
+  if (!cleanCode) {
+    return { code: null, titleRest: "", label: cleanTitle };
+  }
+  const prefix = `${cleanCode} · `;
+  if (cleanTitle.startsWith(prefix)) {
+    const rest = cleanTitle.slice(prefix.length).trim();
+    return { code: cleanCode, titleRest: rest, label: cleanTitle };
+  }
+  if (cleanTitle.toLowerCase() === cleanCode.toLowerCase()) {
+    return { code: cleanCode, titleRest: "", label: cleanCode };
+  }
+  return {
+    code: cleanCode,
+    titleRest: cleanTitle,
+    label: `${cleanCode} · ${cleanTitle}`,
+  };
+}
+
+function mapKernelHitToPaletteItem(hit: KernelSearchHit): PaletteItem | null {
+  const ref = hit.ref;
+  const code = hit.code?.trim() || null;
+  const title = hit.title?.trim() || ref;
+  const detail = hit.detail?.trim() || undefined;
+  const exactCode = Boolean(hit.exact_code);
+
+  switch (hit.kind) {
+    case "study": {
+      if (!code) return null;
+      return {
+        key: `kernel:${ref}`,
+        group: "Study",
+        label: code,
+        code,
+        detail: title,
+        actionHint: "Open study",
+        category: "studies",
+        exactCode,
+        target: { studyCode: code },
+      };
+    }
+    case "study_site": {
+      const formatted = splitCodePrefix(code, title);
+      return {
+        key: `kernel:${ref}`,
+        group: "Study Site",
+        label: formatted.label,
+        code: formatted.code,
+        titleRest: formatted.titleRest,
+        detail,
+        actionHint: "Site activation",
+        category: "sites",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: "study_site",
+          nodeCode: code,
+        },
+      };
+    }
+    case "site": {
+      const formatted = splitCodePrefix(code, title);
+      return {
+        key: `kernel:${ref}`,
+        group: "Site",
+        label: formatted.label,
+        code: formatted.code,
+        titleRest: formatted.titleRest,
+        detail,
+        actionHint: "Open site",
+        category: "sites",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: "site",
+          nodeCode: code,
+        },
+      };
+    }
+    case "enrollment": {
+      const subjectLabel = code || title;
+      return {
+        key: `kernel:${ref}`,
+        group: "Participant",
+        label: subjectLabel,
+        code: code || subjectLabel,
+        detail: detail || title,
+        actionHint: "Open casebook",
+        category: "participants",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: "enrollment",
+          nodeCode: code,
+        },
+      };
+    }
+    case "collection_instance":
+      return {
+        key: `kernel:${ref}`,
+        group: "Form",
+        label: title,
+        detail,
+        actionHint: "Open eCRF",
+        category: "forms_queries",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: "collection_instance",
+          nodeCode: code,
+        },
+      };
+    case "observation": {
+      const formatted = splitCodePrefix(code, title);
+      return {
+        key: `kernel:${ref}`,
+        group: "Observation",
+        label: formatted.label,
+        code: formatted.code,
+        titleRest: formatted.titleRest,
+        detail,
+        actionHint: "Open observation",
+        category: "forms_queries",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: "observation",
+          nodeCode: code,
+        },
+      };
+    }
+    case "form_query": {
+      const formatted = splitCodePrefix(code, title);
+      return {
+        key: `kernel:${ref}`,
+        group: "Query",
+        label: formatted.label,
+        code: formatted.code,
+        titleRest: formatted.titleRest,
+        detail,
+        actionHint: "Open query",
+        category: "forms_queries",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: "form_query",
+          nodeCode: code,
+        },
+      };
+    }
+    case "validation_finding": {
+      const formatted = splitCodePrefix(code, title);
+      return {
+        key: `kernel:${ref}`,
+        group: "Finding",
+        label: formatted.label,
+        code: formatted.code,
+        titleRest: formatted.titleRest,
+        detail,
+        actionHint: "Open finding",
+        category: "findings",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: "validation_finding",
+          nodeCode: code,
+        },
+      };
+    }
+    case "proposal":
+      return {
+        key: `kernel:${ref}`,
+        group: "Proposal",
+        label: title,
+        code,
+        detail,
+        actionHint: "Review proposal",
+        category: "proposals",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: "proposal",
+          nodeCode: code,
+        },
+      };
+    case "protocol_version": {
+      const formatted = splitCodePrefix(code, title);
+      return {
+        key: `kernel:${ref}`,
+        group: "Protocol",
+        label: formatted.label,
+        code: formatted.code,
+        titleRest: formatted.titleRest,
+        detail,
+        actionHint: "Protocol versions",
+        category: "governance",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: "protocol_version",
+          nodeCode: code,
+        },
+      };
+    }
+    case "qualification": {
+      const formatted = splitCodePrefix(code, title);
+      return {
+        key: `kernel:${ref}`,
+        group: "Qualification",
+        label: formatted.label,
+        code: formatted.code,
+        titleRest: formatted.titleRest,
+        detail,
+        actionHint: "Open training",
+        category: "governance",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: "qualification",
+          nodeCode: code,
+        },
+      };
+    }
+    case "artifact":
+      return {
+        key: `kernel:${ref}`,
+        group: "Document",
+        label: title,
+        code,
+        detail,
+        actionHint: "Open document",
+        category: "governance",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: "artifact",
+          nodeCode: code,
+        },
+      };
+    case "organization": {
+      const formatted = splitCodePrefix(code, title);
+      return {
+        key: `kernel:${ref}`,
+        group: "Organization",
+        label: formatted.label,
+        code: formatted.code,
+        titleRest: formatted.titleRest,
+        detail,
+        actionHint: "Inspect",
+        category: "governance",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: "organization",
+          nodeCode: code,
+        },
+      };
+    }
+    case "concept": {
+      const formatted = splitCodePrefix(code, title);
+      return {
+        key: `kernel:${ref}`,
+        group: "Concept",
+        label: formatted.label,
+        code: formatted.code,
+        titleRest: formatted.titleRest,
+        detail,
+        actionHint: "Knowledge",
+        category: "governance",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: "concept",
+          nodeCode: code,
+        },
+      };
+    }
+    case "code_system":
+    case "code_system_version": {
+      const formatted = splitCodePrefix(code, title);
+      return {
+        key: `kernel:${ref}`,
+        group: "Terminology",
+        label: formatted.label,
+        code: formatted.code,
+        titleRest: formatted.titleRest,
+        detail,
+        actionHint: "Knowledge",
+        category: "governance",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: hit.kind,
+          nodeCode: code,
+        },
+      };
+    }
+    case "standard_version":
+      return {
+        key: `kernel:${ref}`,
+        group: "Standard",
+        label: title,
+        code,
+        detail,
+        actionHint: "Knowledge",
+        category: "governance",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: "standard_version",
+          nodeCode: code,
+        },
+      };
+    case "library_item": {
+      const formatted = splitCodePrefix(code, title);
+      return {
+        key: `kernel:${ref}`,
+        group: "Library",
+        label: formatted.label,
+        code: formatted.code,
+        titleRest: formatted.titleRest,
+        detail,
+        actionHint: "Knowledge",
+        category: "governance",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: "library_item",
+          nodeCode: code,
+        },
+      };
+    }
+    default:
+      return {
+        key: `kernel:${ref}`,
+        group: hit.kind.replace(/_/g, " "),
+        label: code ? `${code} · ${title}` : title,
+        code,
+        detail,
+        actionHint: "Inspect",
+        category: "governance",
+        exactCode,
+        target: {
+          nodeRef: ref,
+          nodeKind: hit.kind,
+          nodeCode: code,
+        },
+      };
+  }
+}
+
+const entityHits = computed<PaletteItem[]>(() => {
+  const inStudyEnrollmentRefs = new Set<string>();
+  const inStudySubjectCodes = new Set<string>();
+  for (const p of allParticipants.value) {
+    const pRef = participantNodeRef(p);
+    if (pRef) inStudyEnrollmentRefs.add(pRef.split("@")[0].toLowerCase());
+    if (p.subject_id) inStudySubjectCodes.add(p.subject_id.toLowerCase());
+  }
+
+  const mapped: PaletteItem[] = [];
+  for (const hit of kernelHits.value) {
+    if (hit.kind === "enrollment") {
+      const unversioned = hit.ref.split("@")[0].toLowerCase();
+      if (inStudyEnrollmentRefs.has(unversioned)) continue;
+      if (
+        props.studyCode &&
+        hit.code &&
+        inStudySubjectCodes.has(hit.code.toLowerCase()) &&
+        (!hit.detail ||
+          hit.detail.toUpperCase().includes(props.studyCode.toUpperCase()))
+      ) {
+        continue;
+      }
+    }
+    const item = mapKernelHitToPaletteItem(hit);
+    if (item) mapped.push(item);
+  }
+  return mapped;
+});
 
 const items = computed<PaletteItem[]>(() => {
   const list: PaletteItem[] = [];
@@ -387,6 +835,7 @@ const items = computed<PaletteItem[]>(() => {
       key: "home",
       group: "Study",
       label: `${study} home`,
+      category: "studies",
       target: { studyCode: study },
     });
     for (const stage of STAGES) {
@@ -395,6 +844,7 @@ const items = computed<PaletteItem[]>(() => {
         group: "Stage",
         label: stage.label,
         detail: stage.scope,
+        category: "navigation",
         target: { studyCode: study, stage: stage.id },
       });
       for (const section of stage.sections) {
@@ -403,13 +853,17 @@ const items = computed<PaletteItem[]>(() => {
           group: stage.label,
           label: section.label,
           detail: section.description,
+          category: "navigation",
           target: { studyCode: study, stage: stage.id, section: section.id },
         });
       }
     }
   }
   for (const wsItem of props.workspaceItems) {
-    list.push(wsItem);
+    list.push({
+      ...wsItem,
+      category: "navigation",
+    });
   }
   if (study) {
     for (const participant of allParticipants.value) {
@@ -417,16 +871,20 @@ const items = computed<PaletteItem[]>(() => {
         key: participantNodeRef(participant) || `participant:${participant.id}`,
         group: "Participant",
         label: participant.subject_id,
+        code: participant.subject_id,
         detail: [
           participantStateLabel(participant.status),
+          study,
           participant.site_id ? `Site ${participant.site_id}` : "",
         ]
           .filter(Boolean)
           .join(" · "),
+        actionHint: "Open casebook",
+        category: "participants",
         target: {
           studyCode: study,
           stage: "conduct",
-          section: "participants",
+          ...(participant.site_id ? { site: participant.site_id } : {}),
           participant,
         },
       });
@@ -435,7 +893,7 @@ const items = computed<PaletteItem[]>(() => {
   return list;
 });
 
-const results = computed<PaletteItem[]>(() => {
+const unfilteredResults = computed<PaletteItem[]>(() => {
   const text = query.value.trim();
   const needle = text.toLowerCase();
   const matches = needle
@@ -445,7 +903,15 @@ const results = computed<PaletteItem[]>(() => {
           .includes(needle)
       )
     : items.value;
-  const shown = [...matches.slice(0, maxResults.value), ...studyHits.value];
+
+  const exactEntities = entityHits.value.filter((item) => item.exactCode);
+  const nonExactEntities = entityHits.value.filter((item) => !item.exactCode);
+  const shown = [
+    ...exactEntities,
+    ...matches.slice(0, maxResults.value),
+    ...nonExactEntities,
+  ];
+
   // A sentence is a question for Assist, which answers by reading or proposing, never by writing (ADR-2635).
   if (
     aiEnabled.value &&
@@ -457,29 +923,58 @@ const results = computed<PaletteItem[]>(() => {
       group: "Ask AI",
       label: text,
       detail: "Opens Assist. Nothing changes until a person decides.",
+      category: "navigation",
       target: { studyCode: props.studyCode, ask: text },
-    });
-  }
-  const matchesParticipantCode = allParticipants.value.some(
-    (participant) => participant.subject_id.toLowerCase() === needle
-  );
-  if (
-    text &&
-    !/\s/.test(text) &&
-    text.length <= MAX_STUDY_CODE &&
-    text !== props.studyCode &&
-    !matchesParticipantCode &&
-    !studyHits.value.some((item) => item.target.studyCode === text)
-  ) {
-    shown.push({
-      key: `open:${text}`,
-      group: "Open study",
-      label: text,
-      target: { studyCode: text },
     });
   }
   return shown;
 });
+
+const filterChips = computed(() => {
+  const list = unfilteredResults.value;
+  if (!list.length) return [];
+  const counts = new Map<Exclude<PaletteCategory, "all">, number>();
+  for (const item of list) {
+    const cat = item.category || "navigation";
+    counts.set(cat, (counts.get(cat) || 0) + 1);
+  }
+  const populated = CATEGORY_DEFS.filter(
+    (def) => (counts.get(def.id) || 0) > 0
+  ).map((def) => ({
+    id: def.id as PaletteCategory,
+    label: def.label,
+    count: counts.get(def.id) || 0,
+  }));
+  if (populated.length === 0) return [];
+  return [
+    { id: "all" as PaletteCategory, label: "All", count: list.length },
+    ...populated,
+  ];
+});
+
+watch(unfilteredResults, (nextList) => {
+  if (selectedCategory.value === "all") return;
+  const stillHasMatches = nextList.some(
+    (item) => (item.category || "navigation") === selectedCategory.value
+  );
+  if (!stillHasMatches) {
+    selectedCategory.value = "all";
+  }
+});
+
+const results = computed<PaletteItem[]>(() => {
+  if (selectedCategory.value === "all") {
+    return unfilteredResults.value;
+  }
+  return unfilteredResults.value.filter(
+    (item) => (item.category || "navigation") === selectedCategory.value
+  );
+});
+
+function selectCategory(category: PaletteCategory) {
+  selectedCategory.value = category;
+  active.value = 0;
+}
 
 let lastEvaluatedQuery = "";
 
@@ -551,20 +1046,21 @@ function onKeydown(event: KeyboardEvent) {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 12vh 16px 16px;
+  padding: 10vh 16px 16px;
   box-sizing: border-box;
   background: var(--semantic-color-backdrop);
+  backdrop-filter: blur(1.5px);
 }
 
 .palette {
   display: flex;
   flex-direction: column;
-  width: min(640px, 100%);
+  width: min(680px, 100%);
   max-height: calc(100dvh - 24px);
   box-sizing: border-box;
   background: var(--semantic-color-surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: var(--shadow-xl);
   overflow: hidden;
 }
@@ -572,10 +1068,15 @@ function onKeydown(event: KeyboardEvent) {
 .palette-header {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding-right: 6px;
+  gap: 8px;
+  padding: 0 8px 0 16px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+}
+
+.palette-search-icon {
+  flex-shrink: 0;
+  color: var(--neutral-dark);
 }
 
 .palette-header input {
@@ -583,7 +1084,7 @@ function onKeydown(event: KeyboardEvent) {
   min-width: 0;
   width: 100%;
   box-sizing: border-box;
-  padding: 14px 16px;
+  padding: 14px 4px;
   border: 0;
   font-size: max(1rem, 16px);
   background: transparent;
@@ -614,6 +1115,49 @@ function onKeydown(event: KeyboardEvent) {
   color: var(--semantic-color-text);
 }
 
+.palette-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--semantic-color-surface-header);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.palette-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--semantic-color-border-control);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.palette-filter-chip:not(:disabled):not(.active):hover {
+  background: var(--accent-bg);
+}
+
+.palette-filter-chip.active,
+.palette-filter-chip.active:not(:disabled):hover {
+  background: var(--semantic-color-interactive-primary);
+  border-color: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-text-on-primary);
+  font-weight: 600;
+}
+
+.palette-filter-count {
+  font-variant-numeric: tabular-nums;
+}
+
 .palette-body {
   display: flex;
   flex-direction: column;
@@ -626,7 +1170,7 @@ function onKeydown(event: KeyboardEvent) {
 .palette-list {
   list-style: none;
   margin: 0;
-  padding: 6px;
+  padding: 0;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -634,34 +1178,71 @@ function onKeydown(event: KeyboardEvent) {
 
 .palette-item {
   display: grid;
-  grid-template-columns: 7rem 1fr;
-  gap: 2px 12px;
-  padding: 8px 10px;
-  border-radius: 6px;
+  grid-template-columns: 6.75rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 16px;
+  border-left: 3px solid transparent;
+  border-bottom: 1px solid var(--border);
   cursor: pointer;
+}
+
+.palette-item:last-child {
+  border-bottom: 0;
 }
 
 .palette-item.active {
   background: var(--accent-bg);
+  border-left-color: var(--semantic-color-interactive-primary);
 }
 
 .palette-group {
-  grid-row: span 2;
   color: var(--neutral-dark);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
+.palette-item.active .palette-group {
+  color: var(--semantic-color-interactive-primary);
+}
+
+.palette-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .palette-label {
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--semantic-color-text);
   overflow-wrap: anywhere;
+}
+
+.palette-code {
+  font-family: var(--font-mono);
+  font-weight: 600;
 }
 
 .palette-detail {
   color: var(--neutral-dark);
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   overflow-wrap: anywhere;
+}
+
+.palette-action-hint {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--neutral-dark);
+  white-space: nowrap;
+}
+
+.palette-item.active .palette-action-hint {
+  color: var(--semantic-color-interactive-primary);
+  font-weight: 600;
 }
 
 .palette-empty,
@@ -676,6 +1257,31 @@ function onKeydown(event: KeyboardEvent) {
   border-top: 1px solid var(--border);
 }
 
+.palette-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--semantic-color-surface-header);
+  color: var(--neutral-dark);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.palette-kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 4px;
+  background: var(--semantic-color-surface);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
+  color: var(--semantic-color-text);
+}
+
 @media (max-width: 639px) {
   .palette-backdrop {
     padding: 12px;
@@ -686,8 +1292,8 @@ function onKeydown(event: KeyboardEvent) {
     gap: 2px;
   }
 
-  .palette-group {
-    grid-row: auto;
+  .palette-action-hint {
+    justify-self: start;
   }
 }
 

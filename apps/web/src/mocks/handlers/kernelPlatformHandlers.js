@@ -132,7 +132,14 @@ export function createKernelPlatformHandlers(store) {
       const q = url.searchParams.get("q") || "";
       const kinds = url.searchParams.getAll("kind");
       const limit = url.searchParams.get("limit") || "25";
-      return HttpResponse.json(store.searchKernel({ q, kinds, limit }));
+      return HttpResponse.json(
+        store.searchKernel({
+          q,
+          kinds,
+          limit,
+          caller: resolveDemoCaller(request),
+        })
+      );
     }),
     http.get("*/api/v1/kernel/enrollments/lookup", ({ request }) => {
       const url = new URL(request.url);

@@ -97,6 +97,54 @@ public sealed class AgentToolTests
     }
 
     [Fact]
+    [KernelRule("K-AI-6")]
+    public async Task Search_ExposesAll18IndexedKinds_AndOmitsRestrictedOrBlindedFindings()
+    {
+        var visibleFinding = new Cadence.Kernel.Validation.ValidationFindingId(Guid.Parse("01920000-0000-7000-8000-0000000000e1"));
+        var hiddenTargetFinding = new Cadence.Kernel.Validation.ValidationFindingId(Guid.Parse("01920000-0000-7000-8000-0000000000e2"));
+        var blindedVariableFinding = new Cadence.Kernel.Validation.ValidationFindingId(Guid.Parse("01920000-0000-7000-8000-0000000000e3"));
+        world.Visibility.Hide(IntelligenceWorld.Requester, IntelligenceWorld.HiddenSite);
+        world.Visibility.Hide(IntelligenceWorld.Requester, NodeRef.For(blindedVariableFinding), MaskReason.Blinded);
+
+        var services = world.Services(sc =>
+        {
+            sc.AddSingleton<Cadence.Kernel.Search.IKernelSearch>(new CannedSearch([
+                new(NodeRef.For(visibleFinding), "Potassium high", "LB-001", "CADENCE-101 · LB · Error", false, 0.9),
+                new(NodeRef.For(hiddenTargetFinding), "Hidden site finding", "LB-002", "CADENCE-101 · LB · Error", false, 0.8),
+                new(NodeRef.For(blindedVariableFinding), "Arm mismatch", "EX-001", "CADENCE-101 · DM · Error", false, 0.7),
+            ]));
+            sc.AddSingleton<Cadence.Kernel.Validation.IValidationFindings>(new CannedFindings([
+                MakeFinding(visibleFinding, IntelligenceWorld.Site, "K"),
+                MakeFinding(hiddenTargetFinding, IntelligenceWorld.HiddenSite, "K"),
+                MakeFinding(blindedVariableFinding, IntelligenceWorld.Site, "treatment_arm"),
+            ]));
+        });
+
+        var session = IntelligenceWorld.Open(services, KernelToolNames.SearchKernel);
+        var aiFn = session.AsAIFunctions().Single();
+        var kindsDescription = aiFn.JsonSchema.GetProperty("properties").GetProperty("kinds").GetProperty("description").GetString()!;
+        foreach (var kind in new[]
+        {
+            NodeKinds.Organization, NodeKinds.Site, NodeKinds.Study, NodeKinds.StudySite,
+            NodeKinds.Enrollment, NodeKinds.ProtocolVersion, NodeKinds.CollectionInstance, NodeKinds.Observation,
+            NodeKinds.FormQuery, NodeKinds.ValidationFinding, NodeKinds.Qualification, NodeKinds.Artifact,
+            NodeKinds.Proposal, NodeKinds.Concept, NodeKinds.CodeSystem, NodeKinds.CodeSystemVersion,
+            NodeKinds.StandardVersion, NodeKinds.LibraryItem,
+        })
+        {
+            kindsDescription.Should().Contain(kind);
+        }
+
+        var result = await CallAsync(session, KernelToolNames.SearchKernel, new { text = "finding", kinds = new[] { NodeKinds.ValidationFinding } });
+        var hits = result.GetProperty("data").GetProperty("hits").EnumerateArray().Select(h => h.GetProperty("ref").GetString()).ToList();
+
+        hits.Should().Equal(NodeRef.For(visibleFinding).ToString());
+        session.ReadSet.HasRead(NodeRef.For(visibleFinding)).Should().BeTrue();
+        session.ReadSet.HasRead(NodeRef.For(hiddenTargetFinding)).Should().BeFalse();
+        session.ReadSet.HasRead(NodeRef.For(blindedVariableFinding)).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task ListChildren_MasksHiddenChildrenInPlace_AndRefusesAHiddenParent()
     {
         world.Visibility.Hide(IntelligenceWorld.Agent, IntelligenceWorld.HiddenSite);
@@ -361,5 +409,58 @@ public sealed class AgentToolTests
                 [],
                 [])));
         }
+    }
+
+    private static Cadence.Kernel.Validation.ValidationFindingView MakeFinding(
+        Cadence.Kernel.Validation.ValidationFindingId id,
+        NodeRef targetNode,
+        string variable)
+    {
+        var run = Cadence.Kernel.Validation.ValidationRunId.New();
+        return new Cadence.Kernel.Validation.ValidationFindingView(
+            id,
+            new StudyId(IntelligenceWorld.Study.Id),
+            Cadence.Kernel.Validation.ValidationStage.Collection,
+            "core-pack",
+            Cadence.Kernel.Standards.LibraryItemId.New(),
+            "LB-001",
+            1,
+            Cadence.Kernel.Validation.ValidationSeverity.Error,
+            new Cadence.Kernel.Validation.FindingTarget(Cadence.Kernel.Validation.FindingTargetKind.Observation, "LB", targetNode.ToString(), variable),
+            "Finding message",
+            "Within range",
+            [],
+            null,
+            null,
+            null,
+            Cadence.Kernel.Validation.FindingStatus.Open,
+            run,
+            run,
+            null,
+            null,
+            null);
+    }
+
+    private sealed class CannedSearch(System.Collections.Generic.IReadOnlyList<Cadence.Kernel.Search.SearchHit> hits) : Cadence.Kernel.Search.IKernelSearch
+    {
+        public Task<System.Collections.Generic.IReadOnlyList<Cadence.Kernel.Search.SearchHit>> SearchAsync(
+            TenantId tenant, Cadence.Kernel.Search.SearchRequest request, System.Threading.CancellationToken cancellationToken) =>
+            Task.FromResult(hits);
+    }
+
+    private sealed class CannedFindings(System.Collections.Generic.IReadOnlyList<Cadence.Kernel.Validation.ValidationFindingView> items)
+        : Cadence.Kernel.Validation.IValidationFindings
+    {
+        public Task<Cadence.Kernel.Validation.ValidationFindingView?> FindAsync(
+            TenantId tenant, Cadence.Kernel.Validation.ValidationFindingId finding, System.Threading.CancellationToken cancellationToken) =>
+            Task.FromResult(items.FirstOrDefault(f => f.Id == finding));
+
+        public Task<Cadence.Kernel.Validation.FindingPage> ListAsync(
+            TenantId tenant, Cadence.Kernel.Validation.FindingQuery query, System.Threading.CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<Cadence.Kernel.Validation.ValidationRunSummary?> FindRunAsync(
+            TenantId tenant, Cadence.Kernel.Validation.ValidationRunId run, System.Threading.CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 }

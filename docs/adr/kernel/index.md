@@ -7,3 +7,5 @@ Active Architectural Decision Records for **0. Clinical Kernel (K001–K037)**.
 - Entries below use `# ADR-KERNEL-YYYYMMDD-<slug>: <title>` and are sorted alphabetically by filename.
 
 ## Decisions
+
+- [ADR-KERNEL-20261128-index-clinical-entities-across-kernel-and-module-search-contributors-and-route-noderef-scopes: Index clinical entities across kernel and module search contributors and route NodeRef scopes](2026-11-28-index-clinical-entities-across-kernel-and-module-search-contributors-and-route-noderef-scopes.md) (2026-11-28)

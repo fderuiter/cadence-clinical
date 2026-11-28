@@ -227,9 +227,8 @@ describe("Clinical Canvas canonical enrollment:<uuid> NodeRefs", () => {
 
     expect(router.currentRoute.value.query).toEqual({
       stage: "conduct",
-      section: "participants",
       site: "SITE-101",
-      node: ENROLLMENT_REF,
+      participant: ENROLLMENT_REF,
     });
   });
 

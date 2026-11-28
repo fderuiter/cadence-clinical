@@ -5117,4 +5117,100 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
       )
     ).toBe(false);
   });
+
+  test("Command palette indexes clinical entities with category chips, passes WCAG 2.2 AA, omits broken Open study links, and routes NodeRef scopes to participant casebooks", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    // 1. Non-study route (/studies) finds cross-study participants
+    await gotoHashRoute(page, "/studies");
+    await expect(page.locator("#btn-open-palette")).toBeVisible();
+    await page.locator("#btn-open-palette").click();
+    const paletteInput = page.locator("#canvas-palette-input");
+    await expect(paletteInput).toBeVisible();
+    await paletteInput.fill("SUBJ-101-001");
+    await expect(
+      page
+        .locator("#canvas-palette-list [role='option']")
+        .filter({ hasText: "SUBJ-101-001" })
+        .first()
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    // 2. Study workspace (/studies/CADENCE-101) probes clinical entity kinds without broken Open study links
+    await gotoHashRoute(page, "/studies/CADENCE-101");
+    await expect(page.locator("#btn-open-palette")).toBeVisible();
+    await page.locator("#btn-open-palette").click();
+    await expect(paletteInput).toBeVisible();
+
+    for (const probe of ["SITE-101", "Vital", "QRY", "DEV-2026"]) {
+      await paletteInput.fill(probe);
+      await expect(
+        page.locator("#canvas-palette-list [role='option']").first()
+      ).toBeVisible();
+      await expect(
+        page
+          .locator("#canvas-palette-list [role='option'] .palette-group")
+          .filter({ hasText: "Open study" })
+      ).toHaveCount(0);
+    }
+
+    // Verify category filter chips and WCAG 2.2 AA with results and chips visible
+    await paletteInput.fill("SITE-101");
+    const filterGroup = page.locator("#canvas-palette-filters");
+    await expect(filterGroup).toBeVisible();
+    await expectNoWcagViolations(
+      page,
+      "Command palette clinical entity hits and category filter chips (light)"
+    );
+
+    const sitesChip = filterGroup.locator("button[data-category='sites']");
+    await expect(sitesChip).toBeVisible();
+    await sitesChip.click();
+    await expect(sitesChip).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      page.locator("#canvas-palette-list [role='option']").first()
+    ).toBeVisible();
+
+    await page.evaluate(() => {
+      document.documentElement.setAttribute("data-theme", "dark");
+    });
+    await expectNoWcagViolations(
+      page,
+      "Command palette clinical entity hits and category filter chips (dark)"
+    );
+    await page.evaluate(() => {
+      document.documentElement.setAttribute("data-theme", "light");
+    });
+
+    // Non-matching probe shows empty state without synthesizing Open study link
+    await paletteInput.fill("ZZZ-NO-MATCH-999");
+    await expect(page.locator("#canvas-palette-empty")).toBeVisible();
+    await expect(
+      page.locator("#canvas-palette-list [role='option']")
+    ).toHaveCount(0);
+    await page.keyboard.press("Escape");
+
+    // 3. Selecting SUBJ-102-001 from /ctms?studyId=CADENCE-101&siteId=SITE-101 routes to participant casebook at SITE-102
+    await gotoHashRoute(page, "/ctms?studyId=CADENCE-101&siteId=SITE-101");
+    await expect(page.locator("#btn-open-palette")).toBeVisible();
+    await page.locator("#btn-open-palette").click();
+    await expect(paletteInput).toBeVisible();
+    await paletteInput.fill("SUBJ-102-001");
+    const subjOption = page
+      .locator("#canvas-palette-list [role='option']")
+      .filter({ hasText: "SUBJ-102-001" })
+      .first();
+    await expect(subjOption).toBeVisible();
+    await subjOption.click();
+
+    await expect
+      .poll(() => page.url())
+      .toMatch(
+        /#\/studies\/CADENCE-101\?.*stage=conduct.*site=SITE-102.*participant=enrollment(?::|%3A)/
+      );
+    await expect(page.locator("body")).toContainText("SUBJ-102-001");
+    await expect(page.locator("body")).toContainText("SITE-102");
+  });
 });

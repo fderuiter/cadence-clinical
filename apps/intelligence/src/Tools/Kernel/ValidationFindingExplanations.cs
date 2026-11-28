@@ -37,57 +37,87 @@ internal sealed class ValidationFindingExplanations(IServiceProvider services) :
             return null;
         }
 
-        if (services.GetService<IAgentVisibility>() is { } visibility)
+        if (services.GetService<IAgentVisibility>() is { } visibility
+            && !await IsFindingVisibleAsync(principal, finding, services, visibility, cancellationToken).ConfigureAwait(false))
         {
-            var nodesToCheck = new List<NodeRef>
-            {
-                NodeRef.For(finding.Study),
-                NodeRef.For(finding.Id),
-            };
-            if (finding.Target.Node is { } targetNode)
-            {
-                nodesToCheck.Add(targetNode);
-            }
-
-            if (finding.Target.Kind == FindingTargetKind.DatasetRecord
-                && Guid.TryParse(finding.Target.Key, out var formGuid)
-                && services.GetService<ICollectionInstanceRecords>() is { } forms
-                && await forms.FindAsync(principal.Tenant, CollectionInstanceId.FromGuid(formGuid), cancellationToken).ConfigureAwait(false) is { } form)
-            {
-                nodesToCheck.Add(NodeRef.For(form.EnrollmentId));
-                nodesToCheck.AddRange(form.Values
-                    .Where(value => ReferencesItem(finding, form.CollectionSpecId, value.ItemId))
-                    .Select(value => NodeRef.For(value.ObservationId)));
-            }
-
-            var masks = await visibility.MaskAsync(principal, nodesToCheck.Distinct().ToList(), cancellationToken).ConfigureAwait(false);
-            if (masks.Count > 0)
-            {
-                return null;
-            }
+            return null;
         }
 
         return finding.Explain();
     }
 
-    private static bool ReferencesItem(ValidationFindingView finding, string specId, string itemId)
+    internal static async Task<bool> IsFindingVisibleAsync(
+        AgentPrincipal principal,
+        ValidationFindingView finding,
+        IServiceProvider? services,
+        IAgentVisibility visibility,
+        CancellationToken cancellationToken)
     {
-        if (MatchesVariable(finding.Target.Variable, specId, itemId))
+        var nodesToCheck = new List<NodeRef>
+        {
+            NodeRef.For(finding.Study),
+            NodeRef.For(finding.Id),
+        };
+        if (finding.Target.Node is { } targetNode)
+        {
+            nodesToCheck.Add(targetNode);
+        }
+
+        if (finding.Target.Kind == FindingTargetKind.DatasetRecord
+            && Guid.TryParse(finding.Target.Key, out var formGuid)
+            && services?.GetService<ICollectionInstanceRecords>() is { } forms
+            && await forms.FindAsync(principal.Tenant, CollectionInstanceId.FromGuid(formGuid), cancellationToken).ConfigureAwait(false) is { } form)
+        {
+            nodesToCheck.Add(NodeRef.For(form.EnrollmentId));
+            var studyForms = await forms.ListForStudyAsync(principal.Tenant, finding.Study, cancellationToken).ConfigureAwait(false);
+            var siblingForms = studyForms.Where(f => f.EnrollmentId == form.EnrollmentId).ToList();
+            IReadOnlyList<CollectionInstanceRecord> formsToInspect = siblingForms.Count > 0 ? siblingForms : [form];
+            var matchedObservations = new List<NodeRef>();
+            foreach (var candidateForm in formsToInspect)
+            {
+                foreach (var value in candidateForm.Values.Where(v => ReferencesItem(finding, form.CollectionSpecId, candidateForm.CollectionSpecId, v.ItemId)))
+                {
+                    matchedObservations.Add(NodeRef.For(value.ObservationId));
+                }
+            }
+
+            if (matchedObservations.Count == 0 && BlindedTreatmentClassifier.MatchesMarkers(form.CollectionSpecId))
+            {
+                matchedObservations.AddRange(form.Values.Select(v => NodeRef.For(v.ObservationId)));
+            }
+
+            nodesToCheck.AddRange(matchedObservations);
+        }
+
+        var masks = await visibility.MaskAsync(principal, nodesToCheck.Distinct().ToList(), cancellationToken).ConfigureAwait(false);
+        return masks.Count == 0;
+    }
+
+    private static bool ReferencesItem(ValidationFindingView finding, string defaultSpecId, string candidateSpecId, string itemId)
+    {
+        if (MatchesVariable(finding.Target.Variable, defaultSpecId, candidateSpecId, itemId))
         {
             return true;
         }
 
-        return finding.Observed.Any(o => MatchesVariable(o.Variable, specId, itemId));
+        return finding.Observed.Any(o => MatchesVariable(o.Variable, defaultSpecId, candidateSpecId, itemId));
     }
 
-    private static bool MatchesVariable(string? variable, string specId, string itemId)
+    private static bool MatchesVariable(string? variable, string defaultSpecId, string candidateSpecId, string itemId)
     {
         if (string.IsNullOrWhiteSpace(variable))
         {
             return false;
         }
 
+        var dot = variable.IndexOf('.', StringComparison.Ordinal);
+        if (dot > 0 && dot < variable.Length - 1)
+        {
+            return string.Equals(variable[..dot], candidateSpecId, StringComparison.Ordinal)
+                && string.Equals(variable[(dot + 1)..], itemId, StringComparison.Ordinal);
+        }
+
         return string.Equals(variable, itemId, StringComparison.Ordinal)
-            || string.Equals(variable, $"{specId}.{itemId}", StringComparison.Ordinal);
+            && (string.Equals(candidateSpecId, defaultSpecId, StringComparison.Ordinal) || !string.IsNullOrEmpty(candidateSpecId));
     }
 }

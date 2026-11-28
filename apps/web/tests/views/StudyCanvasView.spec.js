@@ -684,8 +684,8 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
 
       expect(router.currentRoute.value.query).toEqual({
         stage: "conduct",
-        section: "participants",
-        node: `participant:${IDS[2]}`,
+        site: "017",
+        participant: `participant:${IDS[2]}`,
       });
       expect(body.find("#canvas-palette").exists()).toBe(false);
       expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0003");
@@ -738,8 +738,8 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
 
       expect(router.currentRoute.value.query).toEqual({
         stage: "conduct",
-        section: "participants",
-        node: "participant:0192f3c4-5e6a-7b8c-9d0e-000000000205",
+        site: "017",
+        participant: "participant:0192f3c4-5e6a-7b8c-9d0e-000000000205",
       });
       expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0205");
     });
@@ -777,21 +777,56 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       }
     });
 
-    it("opens another study by the code typed, exactly as typed", async () => {
+    it("opens an indexed study hit and clears stale activeSiteId and currentSiteId when mounting without a site parameter", async () => {
+      const { useClinicalScopeStore } =
+        await import("../../src/stores/clinicalScope");
+      const { useEtmfStore } = await import("../../src/stores/etmf");
+      const { syncWorkspaceScope } =
+        await import("../../src/stores/workspaceScope");
+
+      const clinicalScope = useClinicalScopeStore();
+      const etmfStore = useEtmfStore();
+      syncWorkspaceScope({ studyId: "CAD-101", siteId: "SITE-101" });
+      expect(clinicalScope.activeSiteId).toBe("SITE-101");
+      expect(etmfStore.currentSiteId).toBe("SITE-101");
+
+      // Mounting StudyCanvasView without a site query parameter clears stale site scope
       await open("/studies/CAD-101");
-      await wrapper.find("#btn-open-palette").trigger("click");
+      expect(clinicalScope.activeSiteId).toBe("");
+      expect(etmfStore.currentSiteId).toBe("");
 
-      await body.find("#canvas-palette-input").setValue("onc-401");
-      const open401 = body
-        .findAll("#canvas-palette-list [role=option]")
-        .find((o) => o.text().includes("Open study"));
-      await open401.trigger("click");
-      await flushPromises();
+      vi.useFakeTimers();
+      try {
+        vi.mocked(kernelApi.search).mockResolvedValue([
+          {
+            ref: "study:0192f3c4-5e6a-7b8c-9d0e-000000000401@1",
+            kind: "study",
+            title: "Oncology 401",
+            code: "onc-401",
+            detail: null,
+            exact_code: true,
+            rank: 1,
+          },
+        ]);
+        await wrapper.find("#btn-open-palette").trigger("click");
+        await body.find("#canvas-palette-input").setValue("onc-401");
+        await vi.advanceTimersByTimeAsync(300);
+        await flushPromises();
 
-      expect(router.currentRoute.value.fullPath).toBe("/studies/onc-401");
-      expect(executionApi.getSubjectCounts).toHaveBeenCalledWith({
-        studyId: "onc-401",
-      });
+        const studyOption = body
+          .findAll("#canvas-palette-list [role=option]")
+          .find((o) => o.text().includes("onc-401"));
+        expect(studyOption).toBeTruthy();
+        await studyOption.trigger("click");
+        await flushPromises();
+
+        expect(router.currentRoute.value.fullPath).toBe("/studies/onc-401");
+        expect(executionApi.getSubjectCounts).toHaveBeenCalledWith({
+          studyId: "onc-401",
+        });
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
