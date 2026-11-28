@@ -8,6 +8,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Modules;
 using Cadence.Telemetry;
 using Cadence.Testing;
 
@@ -353,5 +354,127 @@ public class TelemetryUnitTests
         using var app = builder.Build();
         app.Services.GetService<TracerProvider>().Should().NotBeNull();
         app.Services.GetService<MeterProvider>().Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task OpenApiDocuments_FromTrustedProxy_RewriteServersForServiceKernelAndModuleContracts()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Environment.EnvironmentName = Environments.Development;
+        builder.WebHost.UseTestServer();
+        builder.Configuration[CadenceHttpHardening.TrustedProxiesKey] = "10.0.0.0/8";
+        builder.AddCadenceWebDefaults();
+        builder.Services.AddCadenceOpenApiDocument("kernel", includeUngrouped: true);
+        builder.Services.AddCadenceModule("sample_module", typeof(TelemetryUnitTests).Assembly);
+
+        using var app = builder.Build();
+        app.UseCadenceWebDefaults();
+        app.MapGet("/api/v1/service/status", () => Results.Ok());
+        app.MapGroup("/api/v1/kernel").WithGroupName("kernel").MapGet("/status", () => Results.Ok());
+        app.MapGroup("/api/v1/sample").WithGroupName("sample_module").MapGet("/status", () => Results.Ok());
+
+        await app.StartAsync(TestContext.Current.CancellationToken);
+        var server = app.GetTestServer();
+
+        foreach (string documentPath in new[] { "/openapi/v1.json", "/openapi/kernel.json", "/openapi/sample_module.json" })
+        {
+            var context = await server.SendAsync(http =>
+            {
+                http.Connection.RemoteIpAddress = IPAddress.Parse("10.20.30.40");
+                http.Request.Method = HttpMethods.Get;
+                http.Request.Scheme = "http";
+                http.Request.Host = new HostString("internal-host:8080");
+                http.Request.Path = documentPath;
+                http.Request.Headers["X-Forwarded-Proto"] = "https";
+                http.Request.Headers["X-Forwarded-Host"] = "api.example.org";
+                http.Request.Headers["X-Forwarded-Prefix"] = "/edge";
+            }, TestContext.Current.CancellationToken);
+
+            context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
+            using var doc = await JsonDocument.ParseAsync(context.Response.Body, cancellationToken: TestContext.Current.CancellationToken);
+            var urls = doc.RootElement.GetProperty("servers").EnumerateArray().Select(s => s.GetProperty("url").GetString()).ToList();
+            urls.Should().Equal("https://api.example.org/edge");
+        }
+
+        await app.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task OpenApiDocuments_FromUntrustedSender_IgnoreSpoofedForwardedHostAndPrefix()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Environment.EnvironmentName = Environments.Development;
+        builder.WebHost.UseTestServer();
+        builder.Configuration[CadenceHttpHardening.TrustedProxiesKey] = "10.0.0.0/8";
+        builder.AddCadenceWebDefaults();
+        builder.Services.AddCadenceModule("sample_module", typeof(TelemetryUnitTests).Assembly);
+
+        using var app = builder.Build();
+        app.UseCadenceWebDefaults();
+        app.MapGet("/api/v1/service/status", () => Results.Ok());
+        app.MapGroup("/api/v1/sample").WithGroupName("sample_module").MapGet("/status", () => Results.Ok());
+
+        await app.StartAsync(TestContext.Current.CancellationToken);
+        var server = app.GetTestServer();
+
+        foreach (string documentPath in new[] { "/openapi/v1.json", "/openapi/sample_module.json" })
+        {
+            var context = await server.SendAsync(http =>
+            {
+                http.Connection.RemoteIpAddress = IPAddress.Parse("198.51.100.77");
+                http.Request.Method = HttpMethods.Get;
+                http.Request.Scheme = "http";
+                http.Request.Host = new HostString("service.internal:8080");
+                http.Request.Path = documentPath;
+                http.Request.Headers["X-Forwarded-Proto"] = "https";
+                http.Request.Headers["X-Forwarded-Host"] = "spoofed.example.org";
+                http.Request.Headers["X-Forwarded-Prefix"] = "/spoofed";
+            }, TestContext.Current.CancellationToken);
+
+            context.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
+            using var doc = await JsonDocument.ParseAsync(context.Response.Body, cancellationToken: TestContext.Current.CancellationToken);
+            var urls = doc.RootElement.GetProperty("servers").EnumerateArray().Select(s => s.GetProperty("url").GetString()).ToList();
+            urls.Should().Equal("http://service.internal:8080");
+        }
+
+        await app.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Theory]
+    [InlineData(null, "/")]
+    [InlineData("/", "/")]
+    [InlineData("https://api.example.org/", "https://api.example.org")]
+    public async Task OpenApiDocuments_DuringOfflineBareLocalhostExport_EmitConfiguredOriginOrRelativeRoot(
+        string? configuredOrigin,
+        string expectedUrl)
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Environment.EnvironmentName = Environments.Development;
+        builder.WebHost.UseTestServer();
+        if (configuredOrigin is not null)
+        {
+            builder.Configuration[CadenceHttpHardening.OpenApiPublicOriginKey] = configuredOrigin;
+        }
+
+        builder.AddCadenceWebDefaults();
+        builder.Services.AddCadenceModule("sample_module", typeof(TelemetryUnitTests).Assembly);
+
+        using var app = builder.Build();
+        app.UseCadenceWebDefaults();
+        app.MapGet("/api/v1/service/status", () => Results.Ok());
+        app.MapGroup("/api/v1/sample").WithGroupName("sample_module").MapGet("/status", () => Results.Ok());
+
+        await app.StartAsync(TestContext.Current.CancellationToken);
+        using var client = app.GetTestClient();
+
+        foreach (string documentPath in new[] { "/openapi/v1.json", "/openapi/sample_module.json" })
+        {
+            using var doc = JsonDocument.Parse(
+                await client.GetStringAsync(documentPath, TestContext.Current.CancellationToken));
+            var urls = doc.RootElement.GetProperty("servers").EnumerateArray().Select(s => s.GetProperty("url").GetString()).ToList();
+            urls.Should().Equal(expectedUrl);
+        }
+
+        await app.StopAsync(TestContext.Current.CancellationToken);
     }
 }

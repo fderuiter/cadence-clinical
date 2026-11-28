@@ -98,6 +98,7 @@ internal sealed class KernelAuthorityStore(
                 FROM kernel.observations AS o_blind
                 WHERE o_blind.tenant_id = @tenant
                   AND o_blind.study_id = {studyIdExpr}
+                  AND o_blind.value ->> 'type' = 'missing'
                   AND o_blind.value::text ILIKE '%Masked%'
             )
             OR EXISTS (
@@ -116,6 +117,19 @@ internal sealed class KernelAuthorityStore(
                       )
                   )
             )
+        )
+        """;
+
+    private static string StudyBlindedCteSql(string sourceRelation, string studyColumnSql) => $"""
+        study_blinded AS MATERIALIZED (
+            SELECT
+                ds.study_id,
+                {StudyMayHaveBlindedEvidenceSql("ds.study_id")} AS may_be_blinded
+            FROM (
+                SELECT DISTINCT src.{studyColumnSql} AS study_id
+                FROM {sourceRelation} AS src
+                WHERE src.{studyColumnSql} IS NOT NULL
+            ) AS ds
         )
         """;
 
@@ -141,28 +155,40 @@ internal sealed class KernelAuthorityStore(
         """;
 
     private static readonly string FormQueryPathsSql = $"""
-        SELECT DISTINCT ON (le.to_id)
-            le.to_id AS "Id",
-            study.sponsor_id AS "OrganizationId",
-            ss.study_id AS "StudyId",
-            site.country AS "Country",
-            ss.id AS "StudySiteId",
-            {StudyMayHaveBlindedEvidenceSql("ss.study_id")} AS "MayBeBlinded"
-        FROM kernel.lineage_edges AS le
-        JOIN kernel.enrollments AS e
-            ON e.tenant_id = le.tenant_id AND e.id = le.from_id
-        JOIN kernel.study_sites AS ss
-            ON ss.tenant_id = e.tenant_id AND ss.id = e.study_site_id
-        JOIN kernel.studies AS study
-            ON study.tenant_id = ss.tenant_id AND study.id = ss.study_id
-        JOIN kernel.sites AS site
-            ON site.tenant_id = ss.tenant_id AND site.id = ss.site_id
-        WHERE le.tenant_id = @tenant
-          AND le.to_kind = 'form_query'
-          AND le.to_id = ANY(@ids)
-          AND le.from_kind = 'enrollment'
-          AND le.kind = 'GovernedBy'
-        ORDER BY le.to_id, le.recorded_at DESC, le.id DESC
+        WITH path_rows AS MATERIALIZED (
+            SELECT DISTINCT ON (le.to_id)
+                le.to_id AS "Id",
+                study.sponsor_id AS "OrganizationId",
+                ss.study_id AS "StudyId",
+                site.country AS "Country",
+                ss.id AS "StudySiteId"
+            FROM kernel.lineage_edges AS le
+            JOIN kernel.enrollments AS e
+                ON e.tenant_id = le.tenant_id AND e.id = le.from_id
+            JOIN kernel.study_sites AS ss
+                ON ss.tenant_id = e.tenant_id AND ss.id = e.study_site_id
+            JOIN kernel.studies AS study
+                ON study.tenant_id = ss.tenant_id AND study.id = ss.study_id
+            JOIN kernel.sites AS site
+                ON site.tenant_id = ss.tenant_id AND site.id = ss.site_id
+            WHERE le.tenant_id = @tenant
+              AND le.to_kind = 'form_query'
+              AND le.to_id = ANY(@ids)
+              AND le.from_kind = 'enrollment'
+              AND le.kind = 'GovernedBy'
+            ORDER BY le.to_id, le.recorded_at DESC, le.id DESC
+        ),
+        {StudyBlindedCteSql("path_rows", "\"StudyId\"")}
+        SELECT
+            r."Id",
+            r."OrganizationId",
+            r."StudyId",
+            r."Country",
+            r."StudySiteId",
+            COALESCE(sb.may_be_blinded, FALSE) AS "MayBeBlinded"
+        FROM path_rows AS r
+        LEFT JOIN study_blinded AS sb
+            ON sb.study_id = r."StudyId"
         """;
 
     private const string GrantPathsSql = """
@@ -286,55 +312,79 @@ internal sealed class KernelAuthorityStore(
         """;
 
     private static readonly string ObservationPathsSql = $"""
+        WITH path_rows AS MATERIALIZED (
+            SELECT
+                o.id AS "Id",
+                s.sponsor_id AS "OrganizationId",
+                o.study_id AS "StudyId",
+                ss_site.country AS "Country",
+                ss.id AS "StudySiteId"
+            FROM kernel.observations AS o
+            JOIN kernel.enrollments AS e
+                ON e.tenant_id = o.tenant_id AND e.id = o.enrollment_id
+            JOIN kernel.studies AS s
+                ON s.tenant_id = o.tenant_id AND s.id = o.study_id
+            JOIN kernel.study_sites AS ss
+                ON ss.tenant_id = e.tenant_id AND ss.id = e.study_site_id
+            JOIN kernel.sites AS ss_site
+                ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
+            WHERE o.tenant_id = @tenant AND o.id = ANY(@ids)
+        ),
+        {StudyBlindedCteSql("path_rows", "\"StudyId\"")}
         SELECT
-            o.id AS "Id",
-            s.sponsor_id AS "OrganizationId",
-            o.study_id AS "StudyId",
-            ss_site.country AS "Country",
-            ss.id AS "StudySiteId",
-            {StudyMayHaveBlindedEvidenceSql("o.study_id")} AS "MayBeBlinded"
-        FROM kernel.observations AS o
-        JOIN kernel.enrollments AS e
-            ON e.tenant_id = o.tenant_id AND e.id = o.enrollment_id
-        JOIN kernel.studies AS s
-            ON s.tenant_id = o.tenant_id AND s.id = o.study_id
-        JOIN kernel.study_sites AS ss
-            ON ss.tenant_id = e.tenant_id AND ss.id = e.study_site_id
-        JOIN kernel.sites AS ss_site
-            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
-        WHERE o.tenant_id = @tenant AND o.id = ANY(@ids)
+            r."Id",
+            r."OrganizationId",
+            r."StudyId",
+            r."Country",
+            r."StudySiteId",
+            COALESCE(sb.may_be_blinded, FALSE) AS "MayBeBlinded"
+        FROM path_rows AS r
+        LEFT JOIN study_blinded AS sb
+            ON sb.study_id = r."StudyId"
         """;
 
     private static readonly string AssertionPathsSql = $"""
+        WITH path_rows AS MATERIALIZED (
+            SELECT
+                a.id AS "Id",
+                s.sponsor_id AS "OrganizationId",
+                s.id AS "StudyId",
+                ss_site.country AS "Country",
+                ss.id AS "StudySiteId"
+            FROM kernel.assertions AS a
+            JOIN kernel.studies AS s
+                ON s.tenant_id = a.tenant_id AND s.id = a.study_id
+            LEFT JOIN kernel.assertions AS pa
+                ON a.enrollment_id IS NULL
+               AND (a.target_kind = 'assertion' OR a.retracts_id IS NOT NULL)
+               AND pa.tenant_id = a.tenant_id
+               AND pa.id = COALESCE(a.retracts_id, CASE WHEN a.target_kind = 'assertion' THEN a.target_id END)
+            LEFT JOIN kernel.enrollments AS e
+                ON COALESCE(a.enrollment_id, pa.enrollment_id) IS NOT NULL
+               AND e.tenant_id = a.tenant_id
+               AND e.id = COALESCE(a.enrollment_id, pa.enrollment_id)
+            LEFT JOIN kernel.study_sites AS ss
+                ON ss.tenant_id = a.tenant_id
+               AND ss.study_id = a.study_id
+               AND ss.id = COALESCE(
+                   e.study_site_id,
+                   CASE WHEN a.target_kind = 'study_site' THEN a.target_id END,
+                   CASE WHEN pa.target_kind = 'study_site' THEN pa.target_id END)
+            LEFT JOIN kernel.sites AS ss_site
+                ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
+            WHERE a.tenant_id = @tenant AND a.id = ANY(@ids)
+        ),
+        {StudyBlindedCteSql("path_rows", "\"StudyId\"")}
         SELECT
-            a.id AS "Id",
-            s.sponsor_id AS "OrganizationId",
-            s.id AS "StudyId",
-            ss_site.country AS "Country",
-            ss.id AS "StudySiteId",
-            {StudyMayHaveBlindedEvidenceSql("s.id")} AS "MayBeBlinded"
-        FROM kernel.assertions AS a
-        JOIN kernel.studies AS s
-            ON s.tenant_id = a.tenant_id AND s.id = a.study_id
-        LEFT JOIN kernel.assertions AS pa
-            ON a.enrollment_id IS NULL
-           AND (a.target_kind = 'assertion' OR a.retracts_id IS NOT NULL)
-           AND pa.tenant_id = a.tenant_id
-           AND pa.id = COALESCE(a.retracts_id, CASE WHEN a.target_kind = 'assertion' THEN a.target_id END)
-        LEFT JOIN kernel.enrollments AS e
-            ON COALESCE(a.enrollment_id, pa.enrollment_id) IS NOT NULL
-           AND e.tenant_id = a.tenant_id
-           AND e.id = COALESCE(a.enrollment_id, pa.enrollment_id)
-        LEFT JOIN kernel.study_sites AS ss
-            ON ss.tenant_id = a.tenant_id
-           AND ss.study_id = a.study_id
-           AND ss.id = COALESCE(
-               e.study_site_id,
-               CASE WHEN a.target_kind = 'study_site' THEN a.target_id END,
-               CASE WHEN pa.target_kind = 'study_site' THEN pa.target_id END)
-        LEFT JOIN kernel.sites AS ss_site
-            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
-        WHERE a.tenant_id = @tenant AND a.id = ANY(@ids)
+            r."Id",
+            r."OrganizationId",
+            r."StudyId",
+            r."Country",
+            r."StudySiteId",
+            COALESCE(sb.may_be_blinded, FALSE) AS "MayBeBlinded"
+        FROM path_rows AS r
+        LEFT JOIN study_blinded AS sb
+            ON sb.study_id = r."StudyId"
         """;
 
     // SqlQueryRaw passes SQL through string.Format, so regex quantifiers double their braces ({{n}} -> {n} in SQL).
@@ -431,7 +481,7 @@ internal sealed class KernelAuthorityStore(
             WHERE d.tenant_id = @tenant AND d.finding_id = ANY(@ids)
             ORDER BY d.finding_id, d.run_id DESC
         ),
-        finding_base AS (
+        finding_base AS MATERIALIZED (
             SELECT * FROM detected
             UNION ALL
             SELECT
@@ -447,7 +497,8 @@ internal sealed class KernelAuthorityStore(
             WHERE vf.tenant_id = @tenant
               AND vf.id = ANY(@ids)
               AND NOT EXISTS (SELECT 1 FROM detected AS d WHERE d.finding_id = vf.id)
-        )
+        ),
+        {StudyBlindedCteSql("finding_base", "study_id")}
         SELECT
             d.finding_id AS "Id",
             s.sponsor_id AS "OrganizationId",
@@ -455,7 +506,7 @@ internal sealed class KernelAuthorityStore(
             ss_site.country AS "Country",
             ss.id AS "StudySiteId",
             (
-                {StudyMayHaveBlindedEvidenceSql("s.id")}
+                COALESCE(sb.may_be_blinded, FALSE)
                 OR EXISTS (
                     SELECT 1
                     FROM kernel.validation_detections AS vd_blind
@@ -471,6 +522,8 @@ internal sealed class KernelAuthorityStore(
         FROM finding_base AS d
         JOIN kernel.studies AS s
             ON s.tenant_id = d.tenant_id AND s.id = d.study_id
+        LEFT JOIN study_blinded AS sb
+            ON sb.study_id = s.id
         {FindingTargetSiteJoinsSql}
         LEFT JOIN kernel.study_sites AS ss
             ON ss.tenant_id = d.tenant_id

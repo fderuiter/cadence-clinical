@@ -1,0 +1,22 @@
+# Opt-in TLS edge override for docker/docker-compose.yml.
+# Usage:
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.tls.yml up -d
+# Place TLS certificate files at docker/nginx/certs/tls.crt and docker/nginx/certs/tls.key
+# (or override CADENCE_TLS_CERT_DIR) before starting.
+
+services:
+  front-proxy:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/tls/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${CADENCE_TLS_CERT_DIR:-./nginx/certs}:/etc/nginx/certs:ro
+
+  gateway:
+    environment:
+      CADENCE_ALLOWED_HOSTS: ${CADENCE_ALLOWED_HOSTS:-}
+      CADENCE_OPENAPI_PUBLIC_ORIGIN: ${CADENCE_OPENAPI_PUBLIC_ORIGIN:-}
+      CADENCE_HTTPS_REDIRECT_ENABLED: ${CADENCE_HTTPS_REDIRECT_ENABLED:-true}
+      CADENCE_HTTPS_PORT: ${CADENCE_HTTPS_PORT:-443}

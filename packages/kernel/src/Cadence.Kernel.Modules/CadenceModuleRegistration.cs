@@ -2,9 +2,13 @@ using System;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi;
 
 namespace Cadence.Kernel.Modules;
 
@@ -74,14 +78,45 @@ public static partial class CadenceModuleServiceCollectionExtensions
         services.AddSingleton(new CadenceModuleRegistration(name, commandAssembly, documentName));
         if (services.Any(d => d.ServiceType == typeof(IHostEnvironment)))
         {
+            services.AddHttpContextAccessor();
             services.AddRoutingCore();
             services.AddOpenApi(documentName, options =>
             {
                 options.ShouldInclude = description => string.Equals(description.GroupName, documentName, StringComparison.Ordinal);
+                options.AddDocumentTransformer((document, context, _) =>
+                {
+                    var request = context.ApplicationServices.GetService<IHttpContextAccessor>()?.HttpContext?.Request;
+                    string? fallbackOrigin = context.ApplicationServices.GetService<IConfiguration>()?["CADENCE_OPENAPI_PUBLIC_ORIGIN"];
+                    document.Servers = [new OpenApiServer { Url = ResolveModuleOpenApiServer(request, fallbackOrigin) }];
+                    return Task.CompletedTask;
+                });
             });
         }
 
         return services;
+    }
+
+    private static string ResolveModuleOpenApiServer(HttpRequest? request, string? fallbackOrigin)
+    {
+        bool isOfflineDefault = request is null
+            || !request.Host.HasValue
+            || (string.Equals(request.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(request.Host.Value, "localhost", StringComparison.OrdinalIgnoreCase)
+                && !request.PathBase.HasValue);
+
+        if (isOfflineDefault)
+        {
+            if (string.IsNullOrWhiteSpace(fallbackOrigin))
+            {
+                return "/";
+            }
+
+            string trimmed = fallbackOrigin.Trim();
+            return trimmed == "/" ? "/" : trimmed.TrimEnd('/');
+        }
+
+        string basePath = request!.PathBase.HasValue ? request.PathBase.Value!.TrimEnd('/') : string.Empty;
+        return $"{request.Scheme}://{request.Host.Value}{basePath}";
     }
 
     [GeneratedRegex("^[a-z][a-z0-9_]{0,47}$", RegexOptions.CultureInvariant)]

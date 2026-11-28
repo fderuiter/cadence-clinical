@@ -189,6 +189,11 @@ public static class OpenApiSyncService
             }
         }
 
+        foreach (string serviceName in newlyExported.Keys)
+        {
+            specFiles.Add($"{serviceName}_openapi.json");
+        }
+
         var orderedFiles = specFiles
             .Where(f => !f.Equals("cdisc_openapi.json", StringComparison.OrdinalIgnoreCase))
             .OrderBy(f => f, StringComparer.Ordinal)
@@ -260,25 +265,43 @@ public static class OpenApiSyncService
                 ["description"] = "Unified microservices API contract for Cadence Clinical Platform.\nEnforces OIDC/Keycloak authentication, RFC 7807 problem details, and ISO 14155:2020 regulatory compliance.",
                 ["version"] = "1.0.0-PROD"
             },
-            ["servers"] = new JsonArray
-            {
-                new JsonObject
-                {
-                    ["url"] = "https://api.ccrsoft.com/api/v1",
-                    ["description"] = "Production API Gateway"
-                },
-                new JsonObject
-                {
-                    ["url"] = "http://localhost:8000/api/v1",
-                    ["description"] = "Local Dev Gateway Proxy"
-                }
-            },
+            ["servers"] = BuildAggregatedServers(),
             ["paths"] = aggregatedPaths,
             ["components"] = new JsonObject
             {
                 ["schemas"] = aggregatedSchemas
             }
         };
+    }
+
+    private static JsonArray BuildAggregatedServers()
+    {
+        string? configuredOrigin = Environment.GetEnvironmentVariable("CADENCE_OPENAPI_PUBLIC_ORIGIN");
+        if (!string.IsNullOrWhiteSpace(configuredOrigin) && configuredOrigin.Trim() != "/")
+        {
+            return
+            [
+                new JsonObject
+                {
+                    ["url"] = configuredOrigin.Trim().TrimEnd('/'),
+                    ["description"] = "Configured Public API Gateway"
+                }
+            ];
+        }
+
+        return
+        [
+            new JsonObject
+            {
+                ["url"] = "https://api.ccrsoft.com",
+                ["description"] = "Production API Gateway"
+            },
+            new JsonObject
+            {
+                ["url"] = "http://localhost:8000",
+                ["description"] = "Local Dev Gateway Proxy"
+            }
+        ];
     }
 
     private static IEnumerable<string> StaleSpecs(string exportedDir, string committedDir)

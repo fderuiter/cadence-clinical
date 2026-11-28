@@ -7,11 +7,11 @@
   },
   "servers": [
     {
-      "url": "https://api.ccrsoft.com/api/v1",
+      "url": "https://api.ccrsoft.com",
       "description": "Production API Gateway"
     },
     {
-      "url": "http://localhost:8000/api/v1",
+      "url": "http://localhost:8000",
       "description": "Local Dev Gateway Proxy"
     }
   ],
