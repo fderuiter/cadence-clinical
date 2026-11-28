@@ -7,13 +7,18 @@ import {
   type Router,
 } from "vue-router";
 import type { SubjectSummary } from "../api/executionApi";
+import type { KernelZoomStep } from "../api/kernelApi";
 import { formatNodeRef, parseNodeRef, tryNodeRef } from "./nodeRef";
 import {
   isScreenAvailable,
   listDemoCatalogModules,
 } from "../router/availability.js";
 import { ROLE_ALIASES } from "../stores/auth.js";
-import { getSyncedStudyScope } from "../stores/studyScopeBridge";
+import {
+  clearActiveStudyScope,
+  getSyncedStudyScope,
+  syncActiveStudyScope,
+} from "../stores/studyScopeBridge";
 import { isDemoBuild } from "../utils/demoMode.js";
 
 function hasRequiredRole(
@@ -71,10 +76,41 @@ export function syncInstantiatedClinicalScope(next: {
       }
     | undefined;
   const scopeState = stateRoot?.clinicalScope;
-  if (!scopeState) return;
-  scopeState.activeStudyId = next.activeStudyId;
-  scopeState.activeSiteId = next.activeSiteId;
-  scopeState.activeSubjectId = next.activeSubjectId;
+  if (scopeState) {
+    scopeState.activeStudyId = next.activeStudyId;
+    scopeState.activeSiteId = next.activeSiteId;
+    scopeState.activeSubjectId = next.activeSubjectId;
+  }
+  const pinia = getActivePinia() as
+    | (ReturnType<typeof getActivePinia> & {
+        _s?: Map<
+          string,
+          {
+            activeStudyId?: string;
+            activeSiteId?: string;
+            activeSubjectId?: string;
+            currentStudyId?: string;
+            currentSiteId?: string;
+          }
+        >;
+      })
+    | undefined;
+  const clinicalInstance = pinia?._s?.get("clinical");
+  if (clinicalInstance) {
+    clinicalInstance.activeStudyId = next.activeStudyId;
+    clinicalInstance.activeSiteId = next.activeSiteId;
+    clinicalInstance.activeSubjectId = next.activeSubjectId;
+  }
+  const etmfInstance = pinia?._s?.get("etmf");
+  if (etmfInstance) {
+    etmfInstance.currentStudyId = next.activeStudyId;
+    etmfInstance.currentSiteId = next.activeSiteId;
+  }
+  if (next.activeStudyId) {
+    syncActiveStudyScope(next.activeStudyId, pinia);
+  } else {
+    clearActiveStudyScope();
+  }
 }
 
 export type PaletteWorkspaceAction =
@@ -88,7 +124,19 @@ export interface PaletteTarget {
   studyCode?: string;
   stage?: string;
   section?: string;
+  site?: string;
   participant?: SubjectSummary;
+  participantRef?: string;
+  subject?: string;
+  form?: string;
+  observation?: string;
+  proposal?: string;
+  /** Canonical NodeRef when opening an indexed kernel or module entity hit. */
+  nodeRef?: string;
+  /** NodeKind of `nodeRef` (e.g. `study_site`, `enrollment`, `collection_instance`, `form_query`). */
+  nodeKind?: string;
+  /** Optional natural code of the hit. */
+  nodeCode?: string | null;
   /** A question for the inspector's Assist pane (ADR-2635). */
   ask?: string;
   /** Authorized workflow or orientation route path. */
@@ -246,6 +294,7 @@ export interface ScopedStudyLocationOptions {
   section?: string;
   site?: string;
   participant?: string;
+  subject?: string;
   node?: string;
   form?: string;
   item?: string;
@@ -302,23 +351,30 @@ export function buildScopedStudyLocation(
   if (options.section) query.section = options.section;
 
   if (options.targetParticipant) {
-    if (!isCrossStudy) {
-      const activeSite =
-        cleanQueryString(options.site) ||
-        cleanQueryString(currentScope?.explicitSiteId) ||
-        cleanQueryString(currentScope?.siteId);
-      const participantSite = cleanQueryString(
-        options.targetParticipant.site_id
-      );
-      if (activeSite && (!participantSite || participantSite === activeSite)) {
-        query.site = activeSite;
-      }
+    const participantSite = cleanQueryString(options.targetParticipant.site_id);
+    const explicitSite = cleanQueryString(options.site);
+    const fallbackActiveSite = !isCrossStudy
+      ? cleanQueryString(currentScope?.explicitSiteId) ||
+        cleanQueryString(currentScope?.siteId)
+      : "";
+    const effectiveSite = explicitSite || participantSite || fallbackActiveSite;
+    if (effectiveSite) {
+      query.site = effectiveSite;
     }
     const participantNode = canonicalParticipantNodeFromSummary(
       options.targetParticipant
     );
-    if (participantNode) {
-      query.node = formatNodeRef(participantNode);
+    if (options.section) {
+      if (participantNode) {
+        query.node = formatNodeRef(participantNode);
+      }
+    } else {
+      if (!query.stage) {
+        query.stage = "conduct";
+      }
+      if (participantNode) {
+        query.participant = formatNodeRef(participantNode);
+      }
     }
   } else if (!isCrossStudy) {
     const site =
@@ -359,6 +415,7 @@ export function buildScopedStudyLocation(
     if (options.node) query.node = cleanQueryString(options.node);
   }
 
+  if (options.subject) query.subject = options.subject;
   if (options.form) query.form = options.form;
   if (options.item) query.item = options.item;
   if (options.observation) query.observation = options.observation;
@@ -1098,6 +1155,53 @@ export function buildWorkspacePaletteItems(options: {
   return items;
 }
 
+function unpinNodeRefString(raw: string | null | undefined): string {
+  const clean = cleanQueryString(raw);
+  if (!clean) return "";
+  const parsed = parseNodeRef(clean);
+  if (parsed) {
+    return formatNodeRef({ kind: parsed.kind, id: parsed.id });
+  }
+  return clean.split("@")[0]?.trim() || "";
+}
+
+async function tryFetchZoomPath(
+  nodeRef: string | undefined
+): Promise<KernelZoomStep[] | null> {
+  const clean = cleanQueryString(nodeRef);
+  if (!clean) {
+    return null;
+  }
+  try {
+    const { kernelApi } = await import("../api/kernelApi");
+    if (typeof kernelApi.getZoomPath !== "function") {
+      return null;
+    }
+    const steps = await kernelApi.getZoomPath(clean);
+    return Array.isArray(steps) ? steps : null;
+  } catch {
+    return null;
+  }
+}
+
+function syncWorkspaceStoresNonBlocking(options: {
+  studyId: string;
+  siteId: string;
+}): void {
+  const current = readInstantiatedClinicalScope();
+  syncInstantiatedClinicalScope({
+    activeStudyId: options.studyId,
+    activeSiteId: options.siteId,
+    activeSubjectId:
+      current?.activeStudyId === options.studyId
+        ? (current?.activeSubjectId ?? "")
+        : "",
+  });
+  void import("../stores/workspaceScope").then(({ syncWorkspaceScope }) => {
+    syncWorkspaceScope(options);
+  });
+}
+
 export async function executePaletteTarget(
   target: PaletteTarget,
   context: {
@@ -1121,12 +1225,6 @@ export async function executePaletteTarget(
   const priorStudyCode = cleanQueryString(
     context.workspaceScope?.studyCode ?? context.activeStudyCode
   );
-  const studyCode = cleanQueryString(target.studyCode) || priorStudyCode;
-  if (!studyCode) {
-    await context.router.push({ name: "study" });
-    return;
-  }
-  const isCrossStudy = Boolean(priorStudyCode && studyCode !== priorStudyCode);
   const effectiveScope: Partial<WorkspaceScopeSnapshot> =
     context.workspaceScope ??
     resolveActiveWorkspaceScope(
@@ -1139,8 +1237,315 @@ export async function executePaletteTarget(
       },
       null
     );
-  const previousScope = isCrossStudy ? readInstantiatedClinicalScope() : null;
-  if (isCrossStudy) {
+
+  if (target.nodeRef) {
+    const steps = await tryFetchZoomPath(target.nodeRef);
+    const stepOf = (level: string) =>
+      steps?.find((step) => step.level === level && !step.mask);
+    const zoomStudyCode = cleanQueryString(stepOf("study")?.label);
+    const zoomSiteCode = cleanQueryString(stepOf("study_site")?.label);
+    const zoomDirectorySiteCode = cleanQueryString(stepOf("site")?.label);
+    const zoomEnrollmentStep = stepOf("enrollment");
+    const zoomEnrollmentRef = unpinNodeRefString(zoomEnrollmentStep?.ref);
+    const zoomSubjectCode = cleanQueryString(zoomEnrollmentStep?.label);
+    const zoomCollectionRef = unpinNodeRefString(
+      stepOf("collection_instance")?.ref
+    );
+    const zoomObservationRef = unpinNodeRefString(stepOf("observation")?.ref);
+    const unpinnedTargetRef = unpinNodeRefString(target.nodeRef);
+    const kind =
+      cleanQueryString(target.nodeKind) ||
+      parseNodeRef(unpinnedTargetRef)?.kind ||
+      "";
+
+    const resolvedStudy =
+      zoomStudyCode || cleanQueryString(target.studyCode) || priorStudyCode;
+    const resolvedSite =
+      zoomSiteCode ||
+      cleanQueryString(target.site) ||
+      (kind === "site" || kind === "study_site"
+        ? zoomDirectorySiteCode || cleanQueryString(target.nodeCode)
+        : "");
+
+    const pushScopedStudy = async (
+      study: string,
+      site: string,
+      query: Record<string, string>,
+      inspectorRef?: string | null
+    ) => {
+      const failure = await context.router.push({
+        name: "study",
+        params: { studyCode: study },
+        query,
+      });
+      if (isNavigationFailure(failure)) {
+        return;
+      }
+      syncWorkspaceStoresNonBlocking({ studyId: study, siteId: site });
+      if (inspectorRef !== undefined) {
+        await context.onFocusInspector?.(inspectorRef);
+      }
+    };
+
+    if (kind === "study") {
+      const studyTarget =
+        zoomStudyCode ||
+        cleanQueryString(target.studyCode) ||
+        cleanQueryString(target.nodeCode);
+      if (studyTarget) {
+        await pushScopedStudy(studyTarget, "", {});
+      } else {
+        await context.router.push({ name: "study" });
+      }
+      return;
+    }
+
+    if (kind === "study_site" || kind === "site") {
+      if (resolvedStudy) {
+        const query: Record<string, string> =
+          kind === "study_site"
+            ? { stage: "start", section: "site-activation" }
+            : { stage: "conduct", section: "sites" };
+        if (resolvedSite) query.site = resolvedSite;
+        if (unpinnedTargetRef) query.node = unpinnedTargetRef;
+        await pushScopedStudy(
+          resolvedStudy,
+          resolvedSite,
+          query,
+          unpinnedTargetRef || null
+        );
+      } else {
+        await context.router.push({
+          name: "study",
+          query: resolvedSite ? { site: resolvedSite } : {},
+        });
+      }
+      return;
+    }
+
+    if (kind === "enrollment") {
+      if (resolvedStudy) {
+        const participantParam = zoomEnrollmentRef || unpinnedTargetRef;
+        const query: Record<string, string> = { stage: "conduct" };
+        if (resolvedSite) query.site = resolvedSite;
+        if (participantParam) query.participant = participantParam;
+        await pushScopedStudy(
+          resolvedStudy,
+          resolvedSite,
+          query,
+          participantParam || null
+        );
+      } else {
+        await context.router.push({ name: "study" });
+      }
+      return;
+    }
+
+    if (kind === "collection_instance") {
+      if (resolvedStudy) {
+        const formParam = unpinnedTargetRef || zoomCollectionRef;
+        const query: Record<string, string> = { stage: "conduct" };
+        if (resolvedSite) query.site = resolvedSite;
+        if (zoomEnrollmentRef) query.participant = zoomEnrollmentRef;
+        if (formParam) query.form = formParam;
+        await pushScopedStudy(resolvedStudy, resolvedSite, query);
+      } else {
+        await context.router.push({ name: "study" });
+      }
+      return;
+    }
+
+    if (kind === "observation") {
+      if (resolvedStudy) {
+        const obsParam = unpinnedTargetRef || zoomObservationRef;
+        const query: Record<string, string> = { stage: "conduct" };
+        if (resolvedSite) query.site = resolvedSite;
+        if (zoomEnrollmentRef) query.participant = zoomEnrollmentRef;
+        if (zoomCollectionRef) query.form = zoomCollectionRef;
+        if (obsParam) query.observation = obsParam;
+        await pushScopedStudy(resolvedStudy, resolvedSite, query);
+      } else {
+        await context.router.push({ name: "study" });
+      }
+      return;
+    }
+
+    if (kind === "form_query") {
+      if (resolvedStudy) {
+        const query: Record<string, string> = {
+          stage: "data",
+          section: "queries",
+        };
+        if (resolvedSite) query.site = resolvedSite;
+        if (zoomSubjectCode) query.subject = zoomSubjectCode;
+        if (unpinnedTargetRef) query.node = unpinnedTargetRef;
+        await pushScopedStudy(
+          resolvedStudy,
+          resolvedSite,
+          query,
+          unpinnedTargetRef || null
+        );
+      } else {
+        await context.router.push({ name: "study" });
+      }
+      return;
+    }
+
+    if (kind === "validation_finding") {
+      if (resolvedStudy) {
+        const query: Record<string, string> = {
+          stage: "data",
+          section: "validation",
+        };
+        if (resolvedSite) query.site = resolvedSite;
+        if (unpinnedTargetRef) query.node = unpinnedTargetRef;
+        await pushScopedStudy(
+          resolvedStudy,
+          resolvedSite,
+          query,
+          unpinnedTargetRef || null
+        );
+      } else {
+        await context.router.push({ name: "study" });
+      }
+      return;
+    }
+
+    if (kind === "proposal") {
+      if (resolvedStudy) {
+        const query: Record<string, string> = {};
+        if (resolvedSite) query.site = resolvedSite;
+        if (unpinnedTargetRef) query.proposal = unpinnedTargetRef;
+        await pushScopedStudy(resolvedStudy, resolvedSite, query);
+      } else {
+        await context.router.push({ name: "study" });
+      }
+      return;
+    }
+
+    if (kind === "protocol_version") {
+      if (resolvedStudy) {
+        const query: Record<string, string> = {
+          stage: "design",
+          section: "protocol-versions",
+        };
+        if (unpinnedTargetRef) query.node = unpinnedTargetRef;
+        await pushScopedStudy(
+          resolvedStudy,
+          "",
+          query,
+          unpinnedTargetRef || null
+        );
+      } else {
+        await context.router.push({ name: "study" });
+      }
+      return;
+    }
+
+    if (kind === "artifact") {
+      if (resolvedStudy) {
+        const query: Record<string, string> = {
+          stage: "start",
+          section: "documents",
+        };
+        if (resolvedSite) query.site = resolvedSite;
+        if (unpinnedTargetRef) query.node = unpinnedTargetRef;
+        await pushScopedStudy(
+          resolvedStudy,
+          resolvedSite,
+          query,
+          unpinnedTargetRef || null
+        );
+      } else if (isScreenAvailable("etmf")) {
+        await context.router.push("/etmf");
+      } else {
+        await context.router.push({ name: "study" });
+      }
+      return;
+    }
+
+    if (kind === "qualification") {
+      if (resolvedStudy) {
+        const query: Record<string, string> = {
+          stage: "start",
+          section: "training",
+        };
+        if (unpinnedTargetRef) query.node = unpinnedTargetRef;
+        await pushScopedStudy(
+          resolvedStudy,
+          "",
+          query,
+          unpinnedTargetRef || null
+        );
+      } else if (isScreenAvailable("training")) {
+        await context.router.push("/training");
+      } else {
+        await context.router.push({ name: "study" });
+      }
+      return;
+    }
+
+    if (
+      kind === "concept" ||
+      kind === "code_system" ||
+      kind === "code_system_version" ||
+      kind === "standard_version" ||
+      kind === "library_item"
+    ) {
+      if (resolvedStudy && context.currentRouteName === "study") {
+        const query: Record<string, string> = {};
+        if (unpinnedTargetRef) query.node = unpinnedTargetRef;
+        await pushScopedStudy(
+          resolvedStudy,
+          resolvedSite,
+          query,
+          unpinnedTargetRef || null
+        );
+      } else if (isScreenAvailable("knowledge")) {
+        await context.router.push(
+          buildScopedWorkflowPath(
+            "/knowledge",
+            resolvedStudy ? { studyCode: resolvedStudy } : {}
+          )
+        );
+      } else if (resolvedStudy) {
+        const query: Record<string, string> = {};
+        if (unpinnedTargetRef) query.node = unpinnedTargetRef;
+        await pushScopedStudy(
+          resolvedStudy,
+          resolvedSite,
+          query,
+          unpinnedTargetRef || null
+        );
+      } else {
+        await context.router.push({ name: "study" });
+      }
+      return;
+    }
+
+    if (resolvedStudy) {
+      const query: Record<string, string> = {};
+      if (resolvedSite) query.site = resolvedSite;
+      if (unpinnedTargetRef) query.node = unpinnedTargetRef;
+      await pushScopedStudy(
+        resolvedStudy,
+        resolvedSite,
+        query,
+        unpinnedTargetRef || null
+      );
+      return;
+    }
+  }
+
+  const studyCode = cleanQueryString(target.studyCode) || priorStudyCode;
+  if (!studyCode) {
+    await context.router.push({ name: "study" });
+    return;
+  }
+  const isCrossStudy = Boolean(priorStudyCode && studyCode !== priorStudyCode);
+  const onStudyRoute = context.currentRouteName === "study";
+  const previousScope = readInstantiatedClinicalScope();
+  if (isCrossStudy && onStudyRoute) {
     syncInstantiatedClinicalScope({
       activeStudyId: studyCode,
       activeSiteId: "",
@@ -1158,9 +1563,7 @@ export async function executePaletteTarget(
   };
   if (target.ask) {
     const baseQuery =
-      !isCrossStudy &&
-      context.currentRouteName === "study" &&
-      context.currentQuery
+      !isCrossStudy && onStudyRoute && context.currentQuery
         ? { ...context.currentQuery }
         : {};
     const failure = await context.router.push({
@@ -1169,12 +1572,39 @@ export async function executePaletteTarget(
       query: { ...baseQuery, ask: target.ask },
     });
     if (isNavigationFailure(failure)) {
-      restorePreviousScope();
+      if (onStudyRoute) restorePreviousScope();
       return;
+    }
+    if (isCrossStudy && !onStudyRoute) {
+      syncInstantiatedClinicalScope({
+        activeStudyId: studyCode,
+        activeSiteId: "",
+        activeSubjectId: "",
+      });
     }
     await context.onFocusInspector?.(null);
     return;
   }
+
+  let resolvedParticipantTarget = target.participant ?? null;
+  if (
+    resolvedParticipantTarget?.enrollment_ref &&
+    !resolvedParticipantTarget.site_id
+  ) {
+    const steps = await tryFetchZoomPath(
+      resolvedParticipantTarget.enrollment_ref
+    );
+    const zoomSite = cleanQueryString(
+      steps?.find((s) => s.level === "study_site" && !s.mask)?.label
+    );
+    if (zoomSite) {
+      resolvedParticipantTarget = {
+        ...resolvedParticipantTarget,
+        site_id: zoomSite,
+      };
+    }
+  }
+
   const scopedWithStudy: Partial<WorkspaceScopeSnapshot> = {
     ...effectiveScope,
     studyCode: priorStudyCode || effectiveScope.studyCode || "",
@@ -1184,16 +1614,56 @@ export async function executePaletteTarget(
     {
       stage: target.stage,
       section: target.section,
-      targetParticipant: target.participant ?? null,
+      site: target.site,
+      participant: target.participantRef,
+      subject: target.subject,
+      form: target.form,
+      observation: target.observation,
+      proposal: target.proposal,
+      targetParticipant: resolvedParticipantTarget,
     },
     scopedWithStudy
   );
+  const applyTargetScope = () => {
+    if (
+      resolvedParticipantTarget ||
+      target.site !== undefined ||
+      target.participantRef !== undefined
+    ) {
+      syncWorkspaceStoresNonBlocking({
+        studyId: studyCode,
+        siteId: location.query.site ?? "",
+      });
+    } else if (isCrossStudy) {
+      syncInstantiatedClinicalScope({
+        activeStudyId: studyCode,
+        activeSiteId: "",
+        activeSubjectId: "",
+      });
+    } else if (location.query.site !== undefined) {
+      syncInstantiatedClinicalScope({
+        activeStudyId: studyCode,
+        activeSiteId: location.query.site,
+        activeSubjectId: previousScope?.activeSubjectId ?? "",
+      });
+    }
+  };
+  if (onStudyRoute) {
+    applyTargetScope();
+  }
   const failure = await context.router.push(location);
   if (isNavigationFailure(failure)) {
-    restorePreviousScope();
+    if (onStudyRoute) {
+      restorePreviousScope();
+    }
     return;
   }
-  if (target.participant) {
-    await context.onFocusInspector?.(location.query.node ?? null);
+  if (!onStudyRoute) {
+    applyTargetScope();
+  }
+  if (resolvedParticipantTarget || target.participantRef) {
+    await context.onFocusInspector?.(
+      location.query.participant ?? location.query.node ?? null
+    );
   }
 }

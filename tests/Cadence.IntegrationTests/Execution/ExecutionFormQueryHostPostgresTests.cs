@@ -142,6 +142,220 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
     }
 
     /// <summary>
+    /// End-to-end kernel search with <c>ExecutionSearchContributor</c>: verifies GIN index creation and <c>EXPLAIN</c>
+    /// index scans on <c>execution.form_queries</c> and <c>execution.form_query_messages</c>, cross-tenant RLS isolation,
+    /// and non-confirming site/blinding/finding visibility filtering across enrollments, observations, form queries,
+    /// and validation findings.
+    /// </summary>
+    [Fact(DisplayName = "HostKernelSearch_IndexesFormQueriesWithGinPlans_AndEnforcesVisibility")]
+    [KernelRule("K-ID-2")]
+    [KernelRule("K-ID-8")]
+    [KernelRule("K-AUTH-4")]
+    public async Task HostKernelSearchIndexesFormQueriesWithGinPlansAndEnforcesVisibility()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        const string unblindedPharm = "pharm.unblinded@execution-queries.test";
+
+        await using (var adminDb = fixture.CreateAdminContext())
+        {
+            var execIndexes = await adminDb.Database
+                .SqlQueryRaw<string>("SELECT indexname AS \"Value\" FROM pg_indexes WHERE schemaname = 'execution' AND indexname LIKE 'ix_%_search'")
+                .ToListAsync(ct);
+            execIndexes.Should().BeEquivalentTo(
+                Cadence.Modules.Execution.Infrastructure.ExecutionSearchSql.Sources.Select(s => s.IndexName).Distinct());
+
+            var conn = adminDb.Database.GetDbConnection();
+            await conn.OpenAsync(ct);
+            await using (var off = conn.CreateCommand())
+            {
+                off.CommandText = "SET enable_seqscan = off";
+                await off.ExecuteNonQueryAsync(ct);
+            }
+
+            foreach (var source in Cadence.Modules.Execution.Infrastructure.ExecutionSearchSql.Sources)
+            {
+                await using var explain = conn.CreateCommand();
+                explain.CommandText = $"""
+                    EXPLAIN SELECT {source.QueryId}
+                    FROM {source.From}
+                    WHERE {source.Document} @@ to_tsquery('simple'::regconfig, 'x:*')
+                    """;
+                var plan = new StringBuilder();
+                await using var reader = await explain.ExecuteReaderAsync(ct);
+                while (await reader.ReadAsync(ct))
+                {
+                    plan.AppendLine(reader.GetString(0));
+                }
+
+                plan.ToString().Should().Contain(source.IndexName, $"Execution source {source.Name} should use its GIN index");
+            }
+        }
+
+        var world = await SeedBlindedMultiSiteWorldAsync(ct);
+        var otherWorld = await SeedBlindedMultiSiteWorldAsync(ct);
+
+        using var crc = Client(world.Code, Crc);
+        using var monitor = Client(world.Code, Monitor);
+        using var pharm = Client(world.Code, unblindedPharm);
+        using var stranger = Client(world.Code, Stranger);
+        using var otherPharm = Client(otherWorld.Code, unblindedPharm);
+
+        var openQuery = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{world.FormA:D}/queries", "Verify vital sign", new
+        {
+            observation_id = world.SystolicObservationA,
+            revision = 1,
+            text = "Confirm systolic reading cuff7742",
+        }, HttpStatusCode.Created, ct);
+
+        var blindedQuery = await SendAsync<FormQueryResponse>(pharm, HttpMethod.Post, $"/{world.FormA:D}/queries", "Verify randomized kit", new
+        {
+            observation_id = world.BlindedArmObservationA,
+            revision = 1,
+            text = "Confirm randomized kit allocation kit9981",
+        }, HttpStatusCode.Created, ct);
+
+        await RelayOutboxAsync(world.Tenant, ct);
+
+        var pack = await _scenario.Protocol.OkAsync(
+            new Cadence.Kernel.Standards.DraftLibraryItem(
+                world.Tenant,
+                Cadence.Kernel.Standards.LibraryItemId.New(),
+                Cadence.Kernel.Standards.LibraryItemKind.RulePack,
+                "search-vis-pack",
+                "Search visibility pack",
+                Cadence.Rules.Packs.RulePackJson.ToJson(Cadence.TestSupport.Kernel.Rules.SampleRulePacks.Sample()),
+                [],
+                KernelProtocolScenario.Key(),
+                "Drafted"),
+            ct);
+        var packAttestation = await _scenario.Protocol.OkAsync(
+            new Attest(
+                world.Tenant,
+                AttestationId.New(),
+                Cadence.Kernel.Trust.AttestationMeaning.Approved,
+                new Cadence.Kernel.Trust.AttestationTarget(NodeKinds.LibraryItem, pack.Id.Value, pack.ContentHash),
+                _scenario.Tick(),
+                "pwd+otp",
+                KernelProtocolScenario.Key(),
+                "Approved"),
+            ct);
+        await _scenario.Protocol.OkAsync(
+            new Cadence.Kernel.Standards.ApproveLibraryItem(
+                world.Tenant,
+                pack.Id,
+                packAttestation,
+                KernelProtocolScenario.Key(),
+                "Released"),
+            ct);
+        var runAt = _scenario.Tick();
+        await _scenario.Protocol.OkAsync(
+            new Cadence.Kernel.Validation.RecordValidationRun(
+                world.Tenant,
+                Cadence.Kernel.Validation.ValidationRunId.New(),
+                world.Study,
+                Cadence.Kernel.Validation.ValidationStage.Collection,
+                [pack.Id],
+                new DateOnly(2026, 10, 20),
+                null,
+                null,
+                null,
+                [],
+                [SpecId],
+                runAt.AddSeconds(-1),
+                runAt,
+                [
+                    new Cadence.Kernel.Validation.ValidationDetection(
+                        "search-vis-pack",
+                        "DEV-2026-SITEA",
+                        1,
+                        Cadence.Kernel.Validation.ValidationSeverity.Error,
+                        new Cadence.Kernel.Validation.FindingTarget(
+                            Cadence.Kernel.Validation.FindingTargetKind.Observation,
+                            SpecId,
+                            NodeRef.For(ObservationId.FromGuid(world.SystolicObservationA)).ToString(),
+                            Systolic),
+                        "Site A systolic deviation fnd7701.",
+                        null,
+                        [new Cadence.Kernel.Validation.ObservedVariable(Systolic, "128")]),
+                    new Cadence.Kernel.Validation.ValidationDetection(
+                        "search-vis-pack",
+                        "DEV-2026-SITEB",
+                        1,
+                        Cadence.Kernel.Validation.ValidationSeverity.Error,
+                        new Cadence.Kernel.Validation.FindingTarget(
+                            Cadence.Kernel.Validation.FindingTargetKind.DesignElement,
+                            SpecId,
+                            NodeRef.For(world.SiteB).ToString(),
+                            Systolic),
+                        "Site B enrollment deviation fnd7701.",
+                        null,
+                        []),
+                    new Cadence.Kernel.Validation.ValidationDetection(
+                        "search-vis-pack",
+                        "DEV-2026-BLIND",
+                        1,
+                        Cadence.Kernel.Validation.ValidationSeverity.Error,
+                        new Cadence.Kernel.Validation.FindingTarget(
+                            Cadence.Kernel.Validation.FindingTargetKind.DatasetRecord,
+                            SpecId,
+                            world.FormA.ToString("D"),
+                            world.BlindedItemId),
+                        "Blinded arm discrepancy fnd7701.",
+                        null,
+                        [new Cadence.Kernel.Validation.ObservedVariable(world.BlindedItemId, "ACTIVE_DRUG_200MG")]),
+                ],
+                KernelProtocolScenario.Key(),
+                "Recorded"),
+            ct);
+
+        static async Task<JsonElement[]> SearchHitsAsync(HttpClient client, string q, CancellationToken token)
+        {
+            using var res = await client.GetAsync(new Uri($"/api/v1/kernel/search?q={Uri.EscapeDataString(q)}&limit=50", UriKind.Relative), token);
+            var body = await res.Content.ReadAsStringAsync(token);
+            res.StatusCode.Should().Be(HttpStatusCode.OK, body);
+            using var doc = JsonDocument.Parse(body);
+            return [.. doc.RootElement.EnumerateArray().Select(e => e.Clone())];
+        }
+
+        var openQueryCode = $"QRY-{openQuery.QueryId.ToString("N")[^8..].ToUpperInvariant()}";
+        var pharmByQryCode = await SearchHitsAsync(pharm, openQueryCode, ct);
+        pharmByQryCode.Should().ContainSingle(h =>
+            h.GetProperty("kind").GetString() == NodeKinds.FormQuery
+            && h.GetProperty("exact_code").GetBoolean());
+
+        var otherTenantByCode = await SearchHitsAsync(otherPharm, openQueryCode, ct);
+        otherTenantByCode.Should().BeEmpty("RLS isolates execution.form_queries across tenants");
+
+        (await SearchHitsAsync(crc, "SUBJ-A1", ct)).Should().ContainSingle(h => h.GetProperty("kind").GetString() == NodeKinds.Enrollment);
+        (await SearchHitsAsync(crc, "SUBJ-B1", ct)).Should().BeEmpty();
+        (await SearchHitsAsync(monitor, "SUBJ-B1", ct)).Should().ContainSingle(h => h.GetProperty("kind").GetString() == NodeKinds.Enrollment);
+        (await SearchHitsAsync(stranger, "SUBJ-A1", ct)).Should().BeEmpty();
+
+        (await SearchHitsAsync(pharm, "ACTIVE_DRUG_200MG", ct)).Should().Contain(h => h.GetProperty("kind").GetString() == NodeKinds.Observation);
+        (await SearchHitsAsync(monitor, "ACTIVE_DRUG_200MG", ct)).Should().BeEmpty();
+        (await SearchHitsAsync(crc, "ACTIVE_DRUG_200MG", ct)).Should().BeEmpty();
+
+        (await SearchHitsAsync(pharm, "kit9981", ct)).Should().ContainSingle(h =>
+            h.GetProperty("kind").GetString() == NodeKinds.FormQuery
+            && h.GetProperty("ref").GetString()!.StartsWith($"form_query:{blindedQuery.QueryId:D}", StringComparison.Ordinal));
+        (await SearchHitsAsync(monitor, "kit9981", ct)).Should().BeEmpty();
+        (await SearchHitsAsync(crc, "kit9981", ct)).Should().BeEmpty();
+        (await SearchHitsAsync(crc, "cuff7742", ct)).Should().ContainSingle(h => h.GetProperty("kind").GetString() == NodeKinds.FormQuery);
+
+        var pharmFindings = await SearchHitsAsync(pharm, "fnd7701", ct);
+        pharmFindings.Select(h => h.GetProperty("code").GetString()).Should().BeEquivalentTo("DEV-2026-SITEA", "DEV-2026-SITEB", "DEV-2026-BLIND");
+
+        var monitorFindings = await SearchHitsAsync(monitor, "fnd7701", ct);
+        monitorFindings.Select(h => h.GetProperty("code").GetString()).Should().BeEquivalentTo("DEV-2026-SITEA", "DEV-2026-SITEB");
+
+        var crcFindings = await SearchHitsAsync(crc, "fnd7701", ct);
+        crcFindings.Select(h => h.GetProperty("code").GetString()).Should().Equal("DEV-2026-SITEA");
+
+        (await SearchHitsAsync(stranger, "fnd7701", ct)).Should().BeEmpty();
+    }
+
+    /// <summary>
     /// Each role keeps to its grants: the coordinator may answer but neither raise nor close (403), and a caller with no
     /// grant at the study site can neither list the form's queries nor the enrollment's (403) nor answer one (403).
     /// </summary>

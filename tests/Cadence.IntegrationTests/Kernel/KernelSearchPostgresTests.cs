@@ -174,10 +174,14 @@ public sealed class KernelSearchPostgresTests(KernelPostgresFixture fixture) : I
             await off.ExecuteNonQueryAsync(ct);
         }
 
-        foreach (var source in KernelSearchStore.BuiltInSources.DistinctBy(s => s.Table))
+        foreach (var source in KernelSearchStore.BuiltInSources)
         {
             await using var explain = connection.CreateCommand();
-            explain.CommandText = $"EXPLAIN SELECT 1 FROM kernel.{source.Table} t WHERE {source.Document} @@ to_tsquery('simple'::regconfig, 'x:*')";
+            explain.CommandText = $"""
+                EXPLAIN SELECT {source.Id}
+                FROM {source.From}
+                WHERE {source.Document} @@ to_tsquery('simple'::regconfig, 'x:*')
+                """;
             var plan = new System.Text.StringBuilder();
             await using var reader = await explain.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
@@ -185,8 +189,138 @@ public sealed class KernelSearchPostgresTests(KernelPostgresFixture fixture) : I
                 plan.AppendLine(reader.GetString(0));
             }
 
-            plan.ToString().Should().Contain(source.IndexName, $"the {source.Name} query should use its index");
+            plan.ToString().Should().Contain(source.IndexName, $"the {source.Name} union arm should use its GIN index");
         }
+    }
+
+    /// <summary>
+    /// All nine clinical entity kinds added to <see cref="KernelSearchStore"/> (<c>study_site</c>, <c>enrollment</c>,
+    /// <c>protocol_version</c>, <c>collection_instance</c>, <c>observation</c>, <c>validation_finding</c>,
+    /// <c>qualification</c>, <c>artifact</c>, <c>proposal</c>) are searchable by code, title, and hyphenated prefixes.
+    /// </summary>
+    [Fact(DisplayName = "Search_FindsAllClinicalEntityKinds_PinnedToVersion")]
+    [KernelRule("K-ID-8")]
+    public async Task SearchFindsAllClinicalEntityKindsPinnedToVersion()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var world = await new KernelSignedTargetsScenario(fixture).CreateAsync(ct);
+        var tenant = world.Tenant;
+
+        var trainingBytes = System.Text.Encoding.UTF8.GetBytes("DEV-2026-014 deviation evidence");
+        var devArtifactId = ArtifactId.New();
+        var devArtifactVersion = ArtifactVersionId.New();
+        await Send(
+            new RegisterArtifact(
+                tenant,
+                devArtifactId,
+                devArtifactVersion,
+                Cadence.Kernel.Evidence.ArtifactKind.TrainingRecord,
+                world.Study,
+                "DEV-2026-014 Protocol Deviation Report",
+                new Cadence.Kernel.Evidence.ArtifactContent(
+                    Cadence.Kernel.Trust.ContentHash.OfBytes(trainingBytes),
+                    trainingBytes.Length,
+                    "application/pdf",
+                    "blob://deviations/dev-2026-014.pdf"),
+                Key(),
+                Reason),
+            ct);
+
+        var qualification = await Send(
+            new RecordQualification(
+                tenant,
+                QualificationId.New(),
+                Actor.Person("crc@search.test"),
+                QualificationKind.Training,
+                "gcp_ich_e6r3",
+                null,
+                devArtifactVersion,
+                fixture.Clock.UtcNow,
+                null,
+                Key(),
+                Reason),
+            ct);
+
+        var runAt = fixture.Clock.UtcNow;
+        await Send(
+            new Cadence.Kernel.Validation.RecordValidationRun(
+                tenant,
+                Cadence.Kernel.Validation.ValidationRunId.New(),
+                world.Study,
+                Cadence.Kernel.Validation.ValidationStage.Collection,
+                [world.LibraryItem],
+                new DateOnly(2026, 10, 2),
+                null,
+                null,
+                null,
+                [],
+                ["VITALS"],
+                runAt.AddSeconds(-1),
+                runAt,
+                [
+                    new Cadence.Kernel.Validation.ValidationDetection(
+                        "signed-targets-pack",
+                        "DEV-2026-01",
+                        1,
+                        Cadence.Kernel.Validation.ValidationSeverity.Error,
+                        new Cadence.Kernel.Validation.FindingTarget(
+                            Cadence.Kernel.Validation.FindingTargetKind.Observation,
+                            "VITALS",
+                            NodeRef.For(world.FormObservation).ToString(),
+                            "systolic"),
+                        "Systolic out of protocol window DEV-2026-01.",
+                        null,
+                        [new Cadence.Kernel.Validation.ObservedVariable("systolic", "188")]),
+                ],
+                Key(),
+                Reason),
+            ct);
+
+        string siteCode;
+        string subjectCode;
+        string collectionSpecId;
+        string proposalIntent;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var siteId = await db.StudySites.AsNoTracking().Where(ss => ss.Id == world.StudySite).Select(ss => ss.SiteId).SingleAsync(ct);
+            siteCode = await db.Sites.AsNoTracking().Where(s => s.Id == siteId).Select(s => s.SiteCode).SingleAsync(ct);
+            subjectCode = (await db.Enrollments.AsNoTracking().Where(e => e.Id == world.Enrollment).Select(e => e.SubjectCode).SingleAsync(ct)).Value;
+            collectionSpecId = await db.CollectionInstances.AsNoTracking().Where(ci => ci.Id == world.CollectionInstance).Select(ci => ci.CollectionSpecId).SingleAsync(ct);
+            proposalIntent = await db.Proposals.AsNoTracking().Where(p => p.Id == world.Proposal).Select(p => p.Intent).SingleAsync(ct);
+        }
+
+        var search = Search();
+
+        var studySiteHits = await search.SearchAsync(tenant, new SearchRequest(siteCode, [NodeKinds.StudySite]), ct);
+        studySiteHits.Should().Contain(h => h.Ref.Kind == NodeKinds.StudySite && h.Ref.Id == world.StudySite.Value && h.ExactCode);
+
+        var enrollmentHits = await search.SearchAsync(tenant, new SearchRequest(subjectCode, [NodeKinds.Enrollment]), ct);
+        enrollmentHits.Should().ContainSingle(h => h.Ref.Kind == NodeKinds.Enrollment && h.Ref.Id == world.Enrollment.Value && h.ExactCode);
+
+        var protocolHits = await search.SearchAsync(tenant, new SearchRequest("v1", [NodeKinds.ProtocolVersion]), ct);
+        protocolHits.Should().Contain(h => h.Ref.Kind == NodeKinds.ProtocolVersion && h.Ref.Id == world.ProtocolVersion.Value && h.ExactCode);
+
+        var formHits = await search.SearchAsync(tenant, new SearchRequest(collectionSpecId, [NodeKinds.CollectionInstance]), ct);
+        formHits.Should().Contain(h => h.Ref.Kind == NodeKinds.CollectionInstance && h.Ref.Id == world.CollectionInstance.Value);
+
+        var obsHits = await search.SearchAsync(tenant, new SearchRequest("systolic", [NodeKinds.Observation]), ct);
+        obsHits.Should().Contain(h => h.Ref.Kind == NodeKinds.Observation && h.Ref.Id == world.FormObservation.Value);
+
+        var devHits = await search.SearchAsync(tenant, new SearchRequest("DEV-2026", Limit: SearchRequest.MaxLimit), ct);
+        devHits.Select(h => h.Ref.Kind).Should().Contain([NodeKinds.ValidationFinding, NodeKinds.Artifact]);
+        devHits.Should().Contain(h => h.Ref.Kind == NodeKinds.Artifact && h.Ref.Id == devArtifactId.Value);
+        devHits.Should().Contain(h => h.Ref.Kind == NodeKinds.ValidationFinding && h.Ref.Version == null);
+
+        var decidedFindingHits = await search.SearchAsync(tenant, new SearchRequest("reversible cuff", [NodeKinds.ValidationFinding]), ct);
+        decidedFindingHits.Should().Contain(h => h.Ref.Kind == NodeKinds.ValidationFinding && h.Ref.Id == world.ValidationFinding.Value && h.Ref.Version >= 1);
+
+        var qualHits = await search.SearchAsync(tenant, new SearchRequest("gcp ich", [NodeKinds.Qualification]), ct);
+        qualHits.Should().ContainSingle(h => h.Ref.Kind == NodeKinds.Qualification && h.Ref.Id == qualification.QualificationId.Value);
+
+        var firstWord = KernelSearch.Terms(proposalIntent)[0];
+        var proposalHits = await search.SearchAsync(tenant, new SearchRequest(firstWord, [NodeKinds.Proposal]), ct);
+        proposalHits.Should().Contain(h => h.Ref.Kind == NodeKinds.Proposal && h.Ref.Id == world.Proposal.Value);
     }
 
     /// <summary>

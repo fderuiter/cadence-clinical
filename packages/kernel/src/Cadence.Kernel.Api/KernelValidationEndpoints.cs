@@ -1118,6 +1118,57 @@ public static class KernelValidationEndpoints
         return visible.Count > 0;
     }
 
+    internal static async Task<IReadOnlySet<ValidationFindingId>> FilterVisibleFindingIdsAsync(
+        TenantId tenant,
+        IReadOnlyCollection<ValidationFindingId> findingIds,
+        IValidationFindings findings,
+        IServiceProvider services,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        CancellationToken cancellationToken)
+    {
+        var loaded = new List<ValidationFindingView>(findingIds.Count);
+        foreach (var findingId in findingIds)
+        {
+            if (await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false) is { } view)
+            {
+                loaded.Add(view);
+            }
+        }
+
+        if (loaded.Count == 0)
+        {
+            return new HashSet<ValidationFindingId>();
+        }
+
+        var studyNodes = loaded.Select(f => NodeRef.For(f.Study)).Distinct().ToList();
+        var studyMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, studyNodes, cancellationToken).ConfigureAwait(false);
+
+        var permitted = new HashSet<ValidationFindingId>();
+        foreach (var group in loaded.GroupBy(f => f.Study))
+        {
+            if (studyMasks.For(NodeRef.For(group.Key)) is not null)
+            {
+                continue;
+            }
+
+            var visibleInStudy = await FilterVisibleFindingsAsync(
+                tenant,
+                group.Key,
+                [.. group],
+                services,
+                visibility,
+                actor,
+                cancellationToken).ConfigureAwait(false);
+            foreach (var visible in visibleInStudy)
+            {
+                permitted.Add(visible.Id);
+            }
+        }
+
+        return permitted;
+    }
+
     private static async Task<(ValidationFindingView? Existing, ProblemHttpResult? Problem)> AuthorizeDecisionVisibilityAsync(
         TenantId tenant,
         ValidationFindingId findingId,

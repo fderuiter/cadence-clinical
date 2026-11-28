@@ -804,9 +804,16 @@ capability.
 Search queries the source tables with PostgreSQL full-text search (`simple` configuration, prefix words) through a
 tenant-bound context, so RLS applies. A row whose code equals the search text (ignoring case) always matches, even
 when the parser indexes the code differently from the search words: `CADENCE-101` is indexed as `cadence` and `-101`,
-which the words `cadence` and `101` never reach (#5487). To make a new table searchable, add a `KernelSearchSource` to
-`KernelSearchStore.BuiltInSources` (code and title columns of alias `t`) and a migration calling
-`KernelSearchSql.CreateIndexes`. `SearchExpressionsUseTheIndexes` fails if the query cannot use the index.
+which the words `cadence` and `101` never reach (#5487). Built-in kernel sources cover 17 `NodeKinds` (`organization`,
+`site`, `study`, `study_site`, `enrollment`, `protocol_version`, `collection_instance`, `observation`,
+`validation_finding`, `qualification`, `artifact`, `proposal`, `concept`, `code_system`, `code_system_version`,
+`standard_version`, `library_item`) while keeping `IdentityVault` and `people` rows out of scope (`K-IDN-1`).
+Application modules contribute schema-isolated kinds (such as `form_query` from `Cadence.Modules.Execution` over
+`execution.form_queries` and `execution.form_query_messages`) by registering an `IKernelSearchContributor`
+(`Cadence.Kernel.Search`, `K-XS-1`/`K-XS-2`). Both `GET /api/v1/kernel/search` and `SearchKernelTool` filter hits
+through `INodeVisibility` and `KernelValidationEndpoints.IsFindingVisibleAsync` (`K-AUTH-4`). To make a new kernel
+table searchable, add a `KernelSearchSource` to `KernelSearchStore.BuiltInSources` and a migration calling
+`KernelSearchSql.CreateIndexes`; `SearchExpressionsUseTheIndexes` fails if the query cannot use its GIN index.
 
 ## Lineage (ADR-2471)
 

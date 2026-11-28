@@ -40,16 +40,21 @@ public interface IKernelSearchStore
 
 /// <summary>
 /// Turns what the user typed into a safe prefix query, picks the sources the actor may search, and asks the store
-/// (ADR-2484). The search text never reaches SQL as text: words are reduced to letters and digits and passed as a
-/// parameter.
+/// and any registered <see cref="IKernelSearchContributor"/> modules (ADR-2484). The search text never reaches SQL
+/// as text: words are reduced to letters and digits and passed as a parameter.
 /// </summary>
-public sealed partial class KernelSearch(IKernelSearchStore store, IAuthorizationProbe probe) : IKernelSearch
+public sealed partial class KernelSearch(
+    IKernelSearchStore store,
+    IAuthorizationProbe probe,
+    IEnumerable<IKernelSearchContributor>? contributors = null) : IKernelSearch
 {
     /// <summary>At most this many words are matched; the rest are ignored.</summary>
     public const int MaxTerms = 8;
 
     /// <summary>Longest search text compared with codes.</summary>
     public const int MaxTextLength = 200;
+
+    private readonly IReadOnlyList<IKernelSearchContributor> _contributors = contributors is null ? [] : [.. contributors];
 
     public async Task<IReadOnlyList<SearchHit>> SearchAsync(TenantId tenant, SearchRequest request, CancellationToken cancellationToken)
     {
@@ -93,13 +98,72 @@ public sealed partial class KernelSearch(IKernelSearchStore store, IAuthorizatio
             sources.Add(source.Name);
         }
 
-        if (sources.Count == 0)
+        var activeContributors = new List<(IKernelSearchContributor Contributor, List<string> Sources)>();
+        foreach (var contributor in _contributors)
+        {
+            var contributorSources = new List<string>();
+            foreach (var source in contributor.Sources)
+            {
+                if (request.Kinds is { Count: > 0 } kinds && !kinds.Contains(source.Kind))
+                {
+                    continue;
+                }
+
+                if (source.RequiredCapability is { } capability
+                    && !(await probe.CanIAsync(tenant, capability, NodeRef.For(tenant), cancellationToken).ConfigureAwait(false)).Permitted)
+                {
+                    continue;
+                }
+
+                contributorSources.Add(source.Name);
+            }
+
+            if (contributorSources.Count > 0)
+            {
+                activeContributors.Add((contributor, contributorSources));
+            }
+        }
+
+        if (sources.Count == 0 && activeContributors.Count == 0)
         {
             return [];
         }
 
-        var plan = new SearchPlan(string.Join(" & ", terms.Select(t => t + ":*")), text, sources, request.Limit);
-        return await store.QueryAsync(tenant, plan, cancellationToken).ConfigureAwait(false);
+        var prefixQuery = string.Join(" & ", terms.Select(t => t + ":*"));
+        if (activeContributors.Count == 0)
+        {
+            var storeOnlyPlan = new SearchPlan(prefixQuery, text, sources, request.Limit);
+            return await store.QueryAsync(tenant, storeOnlyPlan, cancellationToken).ConfigureAwait(false);
+        }
+
+        var merged = new List<SearchHit>();
+        if (sources.Count > 0)
+        {
+            var plan = new SearchPlan(prefixQuery, text, sources, request.Limit);
+            merged.AddRange(await store.QueryAsync(tenant, plan, cancellationToken).ConfigureAwait(false));
+        }
+
+        foreach (var (contributor, contributorSources) in activeContributors)
+        {
+            var contributorQuery = new SearchContributorQuery(prefixQuery, text, contributorSources, request.Limit);
+            merged.AddRange(await contributor.QueryAsync(tenant, contributorQuery, cancellationToken).ConfigureAwait(false));
+        }
+
+        return
+        [
+            .. merged
+                .GroupBy(h => (h.Ref.Kind, h.Ref.Id))
+                .Select(g => g
+                    .OrderByDescending(h => h.ExactCode)
+                    .ThenByDescending(h => h.Rank)
+                    .ThenByDescending(h => h.Ref.Version ?? 0L)
+                    .First())
+                .OrderByDescending(h => h.ExactCode)
+                .ThenByDescending(h => h.Rank)
+                .ThenBy(h => h.Title, StringComparer.Ordinal)
+                .ThenBy(h => h.Ref.Id)
+                .Take(request.Limit),
+        ];
     }
 
     /// <summary>The distinct lower-case words of <paramref name="text"/> (letters and digits only), at most <see cref="MaxTerms"/>.</summary>

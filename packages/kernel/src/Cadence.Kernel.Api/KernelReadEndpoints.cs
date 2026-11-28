@@ -474,8 +474,29 @@ public static class KernelReadEndpoints
 
         // A hit matched the caller's text, so a masked one would confirm the hidden object exists: it is left out.
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, hits.Select(h => h.Ref), cancellationToken).ConfigureAwait(false);
+        var unmasked = hits.Where(h => masks.For(h.Ref) is null).ToList();
+
+        var findingIds = unmasked
+            .Where(h => h.Ref.Kind == NodeKinds.ValidationFinding)
+            .Select(h => ValidationFindingId.FromGuid(h.Ref.Id))
+            .Distinct()
+            .ToList();
+        if (findingIds.Count > 0
+            && KernelValidationEndpoints.ResolveActiveValidationFindings(context.RequestServices) is { } findings)
+        {
+            var visibleFindings = await KernelValidationEndpoints.FilterVisibleFindingIdsAsync(
+                tenant,
+                findingIds,
+                findings,
+                context.RequestServices,
+                visibility,
+                actor,
+                cancellationToken).ConfigureAwait(false);
+            unmasked = [.. unmasked.Where(h => h.Ref.Kind != NodeKinds.ValidationFinding || visibleFindings.Contains(ValidationFindingId.FromGuid(h.Ref.Id)))];
+        }
+
         return TypedResults.Ok<IReadOnlyList<KernelSearchHitResponse>>(
-            [.. hits.Where(h => masks.For(h.Ref) is null).Select(KernelSearchHitResponse.From)]);
+            [.. unmasked.Select(KernelSearchHitResponse.From)]);
     }
 
     internal static async Task<Results<Ok<KernelEnrollmentLookupResponse>, ProblemHttpResult>> LookupEnrollmentAsync(

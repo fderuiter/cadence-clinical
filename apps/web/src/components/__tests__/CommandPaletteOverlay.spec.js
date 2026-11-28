@@ -70,7 +70,7 @@ describe("Global Command Palette Shell Integration", () => {
     wrapper.unmount();
   });
 
-  it("keeps Open study and static destinations usable when kernelApi.search fails", async () => {
+  it("keeps static destinations usable without synthesizing Open study when kernelApi.search fails", async () => {
     vi.useFakeTimers();
     const searchSpy = vi
       .spyOn(kernelApi, "search")
@@ -85,17 +85,21 @@ describe("Global Command Palette Shell Integration", () => {
       global: { plugins: [pinia, router] },
     });
 
-    await body.find("#canvas-palette-input").setValue("CAD-404");
+    await body.find("#canvas-palette-input").setValue("Studies");
     vi.advanceTimersByTime(250);
     await flushPromises();
 
     expect(body.find("#canvas-palette-kernel-note").text()).toContain(
       "Studies can't be searched right now"
     );
+    const options = body.findAll("#canvas-palette [role='option']");
+    expect(
+      options.some((o) => o.find(".palette-group").text() === "Open study")
+    ).toBe(false);
     expect(body.find("#canvas-palette .palette-group").text()).toBe(
-      "Open study"
+      "Workspace"
     );
-    expect(body.find("#canvas-palette .palette-label").text()).toBe("CAD-404");
+    expect(body.find("#canvas-palette .palette-label").text()).toBe("Studies");
 
     searchSpy.mockRestore();
     vi.useRealTimers();

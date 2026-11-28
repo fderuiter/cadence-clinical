@@ -29,6 +29,8 @@ const router = createRouter({
     { path: "/ecrf", name: "ecrf", component: DummyView },
     { path: "/ctms", name: "ctms", component: DummyView },
     { path: "/ssu", name: "ssu", component: DummyView },
+    { path: "/tickets", name: "tickets", component: DummyView },
+    { path: "/knowledge", name: "knowledge", component: DummyView },
   ],
 });
 
@@ -309,8 +311,8 @@ describe("CommandPaletteOverlay.vue - Unified Global Command Palette", () => {
         params: { studyCode: "CAD-101" },
         query: {
           stage: "conduct",
-          section: "participants",
-          node: "participant:0192f3c4-5e6a-7b8c-9d0e-000000000205",
+          site: "017",
+          participant: "participant:0192f3c4-5e6a-7b8c-9d0e-000000000205",
         },
       });
     } finally {
@@ -977,6 +979,289 @@ describe("CommandPaletteOverlay.vue - Unified Global Command Palette", () => {
         writable: true,
         value: originalVisualViewport,
       });
+    }
+  });
+
+  it("indexes all 18 NodeKinds in MSW searchKernel and enforces site and blinding visibility", async () => {
+    const { createWebDemoStore } = await import("../../src/mocks/demoStore.js");
+    const demoStore = createWebDemoStore();
+    const allHits = demoStore.searchKernel({ q: "", limit: 200 });
+    const returnedKinds = new Set(allHits.map((h) => h.kind));
+    const expectedKinds = [
+      "organization",
+      "site",
+      "study",
+      "study_site",
+      "enrollment",
+      "protocol_version",
+      "collection_instance",
+      "observation",
+      "form_query",
+      "validation_finding",
+      "qualification",
+      "artifact",
+      "proposal",
+      "concept",
+      "code_system",
+      "code_system_version",
+      "standard_version",
+      "library_item",
+    ];
+    for (const kind of expectedKinds) {
+      expect(returnedKinds.has(kind)).toBe(true);
+    }
+
+    const site101Caller = {
+      roles: ["crc"],
+      permittedSites: ["SITE-101"],
+      blinded: true,
+    };
+    expect(
+      demoStore.searchKernel({
+        q: "SUBJ-102-001",
+        limit: 25,
+        caller: site101Caller,
+      })
+    ).toHaveLength(0);
+    expect(
+      demoStore.searchKernel({
+        q: "ACTIVE_DRUG_200MG",
+        limit: 25,
+        caller: site101Caller,
+      })
+    ).toHaveLength(0);
+
+    const unblindedCaller = {
+      roles: ["unblinded_statistician"],
+      permittedSites: ["SITE-101", "SITE-102"],
+      blinded: false,
+    };
+    const unblindedHits = demoStore.searchKernel({
+      q: "ACTIVE_DRUG_200MG",
+      limit: 25,
+      caller: unblindedCaller,
+    });
+    expect(unblindedHits.map((h) => h.kind)).toEqual(
+      expect.arrayContaining([
+        "observation",
+        "form_query",
+        "validation_finding",
+      ])
+    );
+  });
+
+  it("returns clinical entity hits or empty state without synthesizing Open study links, supports category chips, keeps active study searchable, and finds cross-study participants", async () => {
+    vi.useFakeTimers();
+    const { createWebDemoStore } = await import("../../src/mocks/demoStore.js");
+    const demoStore = createWebDemoStore();
+    const searchSpy = vi
+      .spyOn(kernelApi, "search")
+      .mockImplementation(async ({ text, kinds, limit }) =>
+        demoStore.searchKernel({ q: text, kinds, limit })
+      );
+    const zoomSpy = vi
+      .spyOn(kernelApi, "getZoomPath")
+      .mockImplementation(async (ref) => demoStore.getZoomPath(ref));
+    const listSpy = vi
+      .spyOn(executionApi, "listSubjects")
+      .mockResolvedValue({ items: [], total: 0, limit: 200, offset: 0 });
+    const detailSpy = vi
+      .spyOn(executionApi, "getSubjectDetail")
+      .mockRejectedValue(
+        Object.assign(new Error("Not found"), { status: 404 })
+      );
+
+    try {
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.rawRoles = ["Data Manager"];
+
+      for (const nonStudyPath of ["/studies", "/tickets", "/knowledge"]) {
+        await router.push(nonStudyPath);
+        const globalWrapper = mount(CommandPaletteOverlay, {
+          props: { isOpen: true },
+          global: { plugins: [pinia, router] },
+        });
+        const input = body.find("#canvas-palette-input");
+        await input.setValue("SUBJ-101-001");
+        vi.advanceTimersByTime(300);
+        await flushPromises();
+
+        const options = body.findAll("#canvas-palette [role='option']");
+        expect(
+          options.some(
+            (o) =>
+              o.find(".palette-group").text() === "Participant" &&
+              o.text().includes("SUBJ-101-001")
+          )
+        ).toBe(true);
+        globalWrapper.unmount();
+      }
+
+      const canvasStore = useStudyCanvasStore();
+      canvasStore.openStudy("CADENCE-101");
+      await router.push("/studies/CADENCE-101");
+
+      const studyWrapper = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+      const studyInput = body.find("#canvas-palette-input");
+
+      await studyInput.setValue("CADENCE-101");
+      vi.advanceTimersByTime(300);
+      await flushPromises();
+      let options = body.findAll("#canvas-palette [role='option']");
+      expect(
+        options.some(
+          (o) =>
+            o.find(".palette-group").text() === "Study" &&
+            o.find(".palette-label").text() === "CADENCE-101"
+        )
+      ).toBe(true);
+
+      await studyInput.setValue("SUBJ-1001");
+      vi.advanceTimersByTime(300);
+      await flushPromises();
+      options = body.findAll("#canvas-palette [role='option']");
+      expect(
+        options.some(
+          (o) =>
+            o.find(".palette-group").text() === "Participant" &&
+            o.text().includes("SUBJ-1001")
+        )
+      ).toBe(true);
+
+      for (const probe of [
+        "SITE-101",
+        "SITE-102",
+        "Vital",
+        "Systolic",
+        "QRY",
+        "DEV-2026",
+      ]) {
+        await studyInput.setValue(probe);
+        vi.advanceTimersByTime(300);
+        await flushPromises();
+        options = body.findAll("#canvas-palette [role='option']");
+        expect(options.length).toBeGreaterThan(0);
+        expect(
+          options.some((o) => o.find(".palette-group").text() === "Open study")
+        ).toBe(false);
+      }
+
+      await studyInput.setValue("SITE-101");
+      vi.advanceTimersByTime(300);
+      await flushPromises();
+      const sitesChip = body.find(
+        "#canvas-palette-filters button[data-category='sites']"
+      );
+      expect(sitesChip.exists()).toBe(true);
+      await sitesChip.trigger("click");
+      options = body.findAll("#canvas-palette [role='option']");
+      expect(options.length).toBeGreaterThan(0);
+      expect(
+        options.every((o) =>
+          ["Study Site", "Site"].includes(o.find(".palette-group").text())
+        )
+      ).toBe(true);
+
+      await studyInput.setValue("ZZZ-NONEXISTENT-999");
+      vi.advanceTimersByTime(300);
+      await flushPromises();
+      expect(body.find("#canvas-palette-empty").exists()).toBe(true);
+      expect(body.findAll("#canvas-palette [role='option']")).toHaveLength(0);
+
+      studyWrapper.unmount();
+    } finally {
+      searchSpy.mockRestore();
+      zoomSpy.mockRestore();
+      listSpy.mockRestore();
+      detailSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("selecting SUBJ-102-001 from /ctms?studyId=CADENCE-101&siteId=SITE-101 opens participant casebook at SITE-102 and updates clinicalScope and etmf stores", async () => {
+    vi.useFakeTimers();
+    const { createWebDemoStore } = await import("../../src/mocks/demoStore.js");
+    const { useClinicalScopeStore } =
+      await import("../../src/stores/clinicalScope");
+    const { useEtmfStore } = await import("../../src/stores/etmf");
+    const { syncWorkspaceScope } =
+      await import("../../src/stores/workspaceScope");
+
+    const demoStore = createWebDemoStore();
+    const searchSpy = vi
+      .spyOn(kernelApi, "search")
+      .mockImplementation(async ({ text, kinds, limit }) =>
+        demoStore.searchKernel({ q: text, kinds, limit })
+      );
+    const zoomSpy = vi
+      .spyOn(kernelApi, "getZoomPath")
+      .mockImplementation(async (ref) => demoStore.getZoomPath(ref));
+    const listSpy = vi
+      .spyOn(executionApi, "listSubjects")
+      .mockResolvedValue({ items: [], total: 0, limit: 200, offset: 0 });
+    const pushSpy = vi.spyOn(router, "push");
+
+    try {
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.rawRoles = ["CRA"];
+
+      const clinicalScope = useClinicalScopeStore();
+      const etmfStore = useEtmfStore();
+      syncWorkspaceScope({ studyId: "CADENCE-101", siteId: "SITE-101" });
+      await router.push("/ctms?studyId=CADENCE-101&siteId=SITE-101");
+
+      expect(clinicalScope.activeSiteId).toBe("SITE-101");
+      expect(etmfStore.currentSiteId).toBe("SITE-101");
+
+      const wrapper = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      const input = body.find("#canvas-palette-input");
+      await input.setValue("SUBJ-102-001");
+      vi.advanceTimersByTime(300);
+      await flushPromises();
+
+      const subjHit = body
+        .findAll("#canvas-palette [role='option']")
+        .find((o) => o.text().includes("SUBJ-102-001"));
+      expect(subjHit).toBeTruthy();
+      await subjHit.trigger("click");
+      await flushPromises();
+
+      const expectedSubj = demoStore.searchKernel({
+        q: "SUBJ-102-001",
+        kinds: ["enrollment"],
+      })[0];
+      const expectedRef = expectedSubj.ref.split("@")[0];
+
+      expect(pushSpy).toHaveBeenLastCalledWith({
+        name: "study",
+        params: { studyCode: "CADENCE-101" },
+        query: {
+          stage: "conduct",
+          site: "SITE-102",
+          participant: expectedRef,
+        },
+      });
+      expect(clinicalScope.activeStudyId).toBe("CADENCE-101");
+      expect(clinicalScope.activeSiteId).toBe("SITE-102");
+      expect(etmfStore.currentStudyId).toBe("CADENCE-101");
+      expect(etmfStore.currentSiteId).toBe("SITE-102");
+
+      wrapper.unmount();
+    } finally {
+      searchSpy.mockRestore();
+      zoomSpy.mockRestore();
+      listSpy.mockRestore();
+      vi.useRealTimers();
     }
   });
 });
