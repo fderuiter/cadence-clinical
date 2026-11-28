@@ -68,7 +68,7 @@ issuer never asks for the Keycloak admin):
 
 - the MinIO root user and password, and the Keycloak admin user and password;
 - `gateway-secret`, passed to every service as `GATEWAY_SECRET` (at least 32 characters);
-- `audit-log-secret-key`, passed to every database-backed service as `AUDIT_LOG_SECRET_KEY`;
+- `audit-log-secret-key`, passed to every backend service as `AUDIT_LOG_SECRET_KEY` (at least 16 characters; every host calling `AddCadenceSecurity` refuses to start without it);
 - `demographics-encryption-key`, passed to execution as `DemographicsEncryption__KeyBase64` (base64 AES key of
   16, 24 or 32 bytes; execution refuses to start without one, ADR-2490);
 - `randomization-allocation-key`, passed to execution as `RANDOMIZATION_ALLOCATION_KEY` (base64 of 32 bytes, a

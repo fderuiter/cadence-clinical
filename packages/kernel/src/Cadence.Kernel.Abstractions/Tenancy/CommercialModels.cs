@@ -189,8 +189,23 @@ public static class CommercialOperators
 }
 
 /// <summary>Signing configuration for cryptographic commercial quote tokens.</summary>
-/// <param name="SigningSecret">Shared HMAC secret used to verify issued <see cref="SubscriptionQuoteToken"/> values.</param>
-public sealed record CommercialQuoteOptions(string? SigningSecret);
+public sealed record CommercialQuoteOptions
+{
+    /// <summary>Initializes an empty <see cref="CommercialQuoteOptions"/> instance for options binding.</summary>
+    public CommercialQuoteOptions()
+    {
+    }
+
+    /// <summary>Initializes <see cref="CommercialQuoteOptions"/> with an explicit <paramref name="signingSecret"/>.</summary>
+    /// <param name="signingSecret">Shared HMAC secret used to verify issued <see cref="SubscriptionQuoteToken"/> values.</param>
+    public CommercialQuoteOptions(string? signingSecret) => SigningSecret = signingSecret;
+
+    /// <summary>Shared HMAC secret used to verify issued <see cref="SubscriptionQuoteToken"/> values.</summary>
+    public string? SigningSecret { get; set; }
+
+    /// <inheritdoc />
+    public override string ToString() => nameof(CommercialQuoteOptions);
+}
 
 /// <summary>Verified claims extracted from a valid <see cref="SubscriptionQuoteToken"/>.</summary>
 public sealed record VerifiedSubscriptionQuote(
@@ -210,7 +225,8 @@ public static class SubscriptionQuoteToken
     /// <summary>Version prefix for signed commercial quote tokens.</summary>
     public const string Prefix = "qtk1";
 
-    private const int MinSecretLength = 16;
+    /// <summary>Minimum trimmed character length required for a commercial quote signing secret.</summary>
+    public const int MinSecretLength = 16;
     private const string KeyDomainPrefix = "cadence-commercial-quote-v1:";
 
     /// <summary>Issues a signed commercial quote token bound to <paramref name="tenantId"/>, <paramref name="tier"/>, and <paramref name="scoping"/>.</summary>

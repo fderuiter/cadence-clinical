@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -38,11 +39,29 @@ public sealed class StartupValidationFactory<TEntryPoint>(Action<IWebHostBuilder
         IServiceProvider services = Services;
         try
         {
-            services.GetService<IStartupValidator>()?.Validate();
+            foreach (var startupValidator in services.GetServices<IStartupValidator>())
+            {
+                startupValidator.Validate();
+            }
+
             return null;
         }
-        catch (Exception ex) when (ex is OptionsValidationException or AggregateException)
+        catch (OptionsValidationException ex)
         {
+            return ex;
+        }
+        catch (AggregateException ex)
+        {
+            var inner = ex.Flatten().InnerExceptions;
+            if (inner.Count > 0 && inner.All(static item => item is OptionsValidationException))
+            {
+                var optionExceptions = inner.Cast<OptionsValidationException>().ToArray();
+                return new OptionsValidationException(
+                    optionExceptions[0].OptionsName,
+                    optionExceptions[0].OptionsType,
+                    optionExceptions.SelectMany(static item => item.Failures));
+            }
+
             return ex;
         }
     }

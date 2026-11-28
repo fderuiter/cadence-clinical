@@ -132,9 +132,9 @@ else
 
 // Product services, from the service topology manifest (#5315). Each one listens on the host port docker compose
 // publishes it on, so the gateway's Development defaults, the web apps and docs/LOCAL_DEV_ENVIRONMENT.md hold for both.
-// Every service verifies gateway-signed identity with GATEWAY_SECRET and refuses to start without it. Services backed
-// by PostgreSQL get ConnectionStrings__cadence from the database reference and apply their own migrations on start, as
-// in docker compose.
+// Every service verifies gateway-signed identity with GATEWAY_SECRET and validates AUDIT_LOG_SECRET_KEY at startup.
+// Services backed by PostgreSQL get ConnectionStrings__cadence from the database reference and apply their own migrations
+// on start, as in docker compose.
 var routes = new List<(string Variable, IResourceBuilder<ProjectResource> Service)>();
 
 IResourceBuilder<ProjectResource> Service(IResourceBuilder<ProjectResource> project)
@@ -143,12 +143,12 @@ IResourceBuilder<ProjectResource> Service(IResourceBuilder<ProjectResource> proj
     project
         .WithHttpEndpoint(port: service.Port, name: "http")
         .WithHttpHealthCheck("/healthz/ready")
-        .WithEnvironment("GATEWAY_SECRET", gatewaySecret);
+        .WithEnvironment("GATEWAY_SECRET", gatewaySecret)
+        .WithEnvironment("AUDIT_LOG_SECRET_KEY", auditLogSecretKey);
 
     if (service.Database)
     {
         useDatabase(project
-            .WithEnvironment("AUDIT_LOG_SECRET_KEY", auditLogSecretKey)
             .WithEnvironment("Database__MigrateOnStartup", "true"));
     }
 

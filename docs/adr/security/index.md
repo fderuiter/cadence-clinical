@@ -7,3 +7,5 @@ Active Architectural Decision Records for **2. API Gateway, Security & Identity*
 - Entries below use `# ADR-SECURITY-YYYYMMDD-<slug>: <title>` and are sorted alphabetically by filename.
 
 ## Decisions
+
+- [ADR-SECURITY-20261128-validate-signing-options-at-host-startup: Validate signing options at host startup](2026-11-28-validate-signing-options-at-host-startup.md) (2026-11-28)

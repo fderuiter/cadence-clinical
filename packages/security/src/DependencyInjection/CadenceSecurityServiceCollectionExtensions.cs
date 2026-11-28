@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Security.DependencyInjection;
 
@@ -24,7 +25,8 @@ public class CadenceSecurityOptions
 
     /// <summary>
     /// GxP audit-trail HMAC key. When left unset it is read from the <c>AUDIT_LOG_SECRET_KEY</c> configuration
-    /// key; there is no default, so resolving <see cref="AuditDigestEngine"/> without one throws.
+    /// key or environment variable. There is no default: the host fails at startup unless a trimmed secret of at least
+    /// <see cref="AuditSecretKey.MinimumSecretLength"/> characters is configured.
     /// </summary>
     public string? AuditLogSecretKey { get; set; }
 }
@@ -40,18 +42,35 @@ public static class CadenceSecurityServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddCadenceSecurity(this IServiceCollection services, Action<CadenceSecurityOptions>? configure = null)
     {
-        var options = new CadenceSecurityOptions();
-        configure?.Invoke(options);
+        var callbackOptions = new CadenceSecurityOptions();
+        configure?.Invoke(callbackOptions);
 
         services.AddHttpContextAccessor();
-        services.AddSingleton(options);
+
+        services.AddOptions<CadenceSecurityOptions>()
+            .Configure<IServiceProvider>((secOptions, sp) =>
+            {
+                var configuration = sp.GetService<IConfiguration>();
+                secOptions.GatewaySecret ??= callbackOptions.GatewaySecret
+                    ?? configuration?[GatewaySecretConfigurationKey];
+                secOptions.AuditLogSecretKey ??= callbackOptions.AuditLogSecretKey
+                    ?? configuration?[AuditSecretKey.EnvironmentVariable]
+                    ?? AuditSecretKey.ReadEnvironmentVariable();
+            })
+            .Validate(
+                secOptions => !string.IsNullOrWhiteSpace(secOptions.AuditLogSecretKey)
+                    && secOptions.AuditLogSecretKey.Trim().Length >= AuditSecretKey.MinimumSecretLength,
+                $"{AuditSecretKey.EnvironmentVariable} must be set to a secret of at least {AuditSecretKey.MinimumSecretLength} characters.")
+            .ValidateOnStart();
+
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<CadenceSecurityOptions>>().Value);
 
         services.AddAuthentication(GatewayAuthenticationHandler.SchemeName)
             .AddScheme<GatewayAuthenticationOptions, GatewayAuthenticationHandler>(GatewayAuthenticationHandler.SchemeName, null);
 
         services.AddOptions<GatewayAuthenticationOptions>(GatewayAuthenticationHandler.SchemeName)
             .Configure<IServiceProvider>((authOptions, sp) =>
-                authOptions.GatewaySecret ??= options.GatewaySecret ?? sp.GetService<IConfiguration>()?[GatewaySecretConfigurationKey])
+                authOptions.GatewaySecret ??= callbackOptions.GatewaySecret ?? sp.GetService<IConfiguration>()?[GatewaySecretConfigurationKey])
             .Validate(
                 authOptions => authOptions.GatewaySecret is { Length: >= GatewayAuthenticationOptions.MinimumSecretLength },
                 $"{GatewaySecretConfigurationKey} must be set to a secret of at least {GatewayAuthenticationOptions.MinimumSecretLength} characters.")
@@ -69,7 +88,7 @@ public static class CadenceSecurityServiceCollectionExtensions
         services.AddSingleton<IAuditLogWriter, InMemoryAuditStore>();
         services.AddSingleton(sp => new AuditDigestEngine(
             sp.GetRequiredService<IAuditLogWriter>(),
-            options.AuditLogSecretKey ?? sp.GetService<IConfiguration>()?[AuditSecretKey.EnvironmentVariable],
+            sp.GetRequiredService<IOptions<CadenceSecurityOptions>>().Value.AuditLogSecretKey,
             sp.GetService<IClock>()));
 
         // Authorization Handlers

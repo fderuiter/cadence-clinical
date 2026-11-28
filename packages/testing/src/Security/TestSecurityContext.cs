@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Time;
+using Cadence.Security.Audit;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 
@@ -25,6 +26,9 @@ public static class TestSecurityContext
 {
     /// <summary>Test-only gateway secret; long enough to pass the host's startup validation.</summary>
     public const string GatewaySecret = "cadence-test-gateway-secret-0123456789abcdef"; // pragma: allowlist secret
+
+    /// <summary>Test-only audit-trail HMAC secret; long enough to pass <c>AddCadenceSecurity</c> startup validation.</summary>
+    public const string AuditLogSecretKey = "cadence-test-audit-log-secret-0123456789abcdef"; // pragma: allowlist secret
 
     /// <summary>Test-only execution demographics key (32 zero bytes); a valid AES-256 key for startup validation.</summary>
     public const string DemographicsKeyBase64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="; // pragma: allowlist secret
@@ -220,9 +224,11 @@ public static class SignedClientExtensions
         where TEntryPoint : class =>
         factory.CreateDefaultClient(new TestSecurityContext.GatewaySigningHandler(identity ?? TestSecurityContext.DefaultIdentity));
 
-    /// <summary>Supplies the test gateway secret so the host's startup validation passes.</summary>
+    /// <summary>Supplies the test gateway and audit-log secrets so the host's startup validation passes.</summary>
     public static IWebHostBuilder UseTestGatewaySecret(this IWebHostBuilder builder) =>
-        builder.UseSetting("GATEWAY_SECRET", TestSecurityContext.GatewaySecret);
+        builder
+            .UseSetting("GATEWAY_SECRET", TestSecurityContext.GatewaySecret)
+            .UseSetting(AuditSecretKey.EnvironmentVariable, TestSecurityContext.AuditLogSecretKey);
 
     /// <summary>Supplies the test demographics encryption key so the execution host's startup validation passes.</summary>
     public static IWebHostBuilder UseTestDemographicsKey(this IWebHostBuilder builder) =>
