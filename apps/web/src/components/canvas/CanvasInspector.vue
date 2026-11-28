@@ -157,12 +157,14 @@
         <InspectorSimulatePanel
           v-else-if="currentVerb === 'simulate' && kernelRef"
           :study-code="studyCode"
+          :kernel-ref="kernelRef"
           :protocol-version="protocolVersion"
           :has-participant="Boolean(participant)"
           :simulation-result="simulationResult"
           :simulation-loading="simulationLoading"
           :simulation-error="simulationError"
           @retry="runSimulation"
+          @run-candidate="runCandidateSimulation"
           @explain="openExplain()"
         />
 
@@ -295,18 +297,24 @@
 <script setup lang="ts">
 import { formatCommandTitle } from "../../canvas/nodeResolver";
 import { isDemoBuild } from "../../utils/demoMode";
+import { defineLazyOverlay } from "../../utils/lazyOverlay";
 import AssistPanel from "../ai/AssistPanel.vue";
 import CanvasErrorAlert from "./CanvasErrorAlert.vue";
 import InspectorParticipantDetails from "./InspectorParticipantDetails.vue";
 import InspectorRecordDetails from "./InspectorRecordDetails.vue";
-import InspectorSimulatePanel from "./InspectorSimulatePanel.vue";
 import KernelActPanel from "./KernelActPanel.vue";
 import KernelExplanation from "./KernelExplanation.vue";
-import KernelLineagePanel from "./KernelLineagePanel.vue";
 import {
   useCanvasInspectorController,
   type CanvasInspectorProps,
 } from "./useCanvasInspectorController";
+
+const InspectorSimulatePanel = defineLazyOverlay(
+  () => import("./InspectorSimulatePanel.vue")
+);
+const KernelLineagePanel = defineLazyOverlay(
+  () => import("./KernelLineagePanel.vue")
+);
 
 const props = defineProps<CanvasInspectorProps>();
 
@@ -338,6 +346,7 @@ const {
   openExplain,
   openProtocolVersionExplain,
   openVerb,
+  runCandidateSimulation,
   runSimulation,
   shownVerb,
   shownVerbNote,

@@ -1503,6 +1503,9 @@ export interface components {
        */
       reconsent_participant_count: number | string;
       hidden?: null | components["schemas"]["Kernel_HiddenObjects"];
+      protocol_elements?: null | {
+        [key: string]: string;
+      };
     };
     Kernel_KernelApplyLockRequest: {
       study_ref: string;
@@ -1717,6 +1720,7 @@ export interface components {
       instance_type: null | string;
       change: string;
       properties: string[];
+      protocol_element?: null | string;
     };
     Kernel_KernelEngineVersionResponse: {
       name: string;
@@ -1819,6 +1823,8 @@ export interface components {
       /** Format: date */
       window_end: string;
       window_status: string;
+      protocol_element?: null | string;
+      epoch_protocol_element?: null | string;
     };
     Kernel_KernelExplainFindingRequest: {
       explanation: string;
@@ -2034,6 +2040,7 @@ export interface components {
       json_pointer_path: string;
       description: string;
       recommendation: null | string;
+      protocol_element?: null | string;
     };
     Kernel_KernelNextActionResponse: {
       description: string;
@@ -2108,6 +2115,7 @@ export interface components {
       window_start: string;
       /** Format: date */
       window_end: string;
+      protocol_element?: null | string;
     };
     Kernel_KernelParticipantScheduleShiftResponse: {
       activity_id: string;
@@ -2118,6 +2126,7 @@ export interface components {
       after:
         | null
         | components["schemas"]["Kernel_KernelParticipantPlannedVisitResponse"];
+      protocol_element?: null | string;
     };
     Kernel_KernelParticipantSimulationImpactResponse: {
       enrollment: string;
@@ -2139,6 +2148,8 @@ export interface components {
       window_before: number | string;
       /** Format: int32 */
       window_after: number | string;
+      protocol_element?: null | string;
+      epoch_protocol_element?: null | string;
     };
     Kernel_KernelPostureScopingResponse: {
       study_phase: string;
@@ -2231,6 +2242,9 @@ export interface components {
       summary_of_changes: string;
       impacted_elements: string[];
       transition_policy: string;
+      protocol_elements?: null | {
+        [key: string]: string;
+      };
     };
     Kernel_KernelProtocolApprovalReadinessResponse: {
       protocol_version_ref: string;
@@ -2269,6 +2283,8 @@ export interface components {
       required: boolean;
       value_kind: null | string;
       unit: null | string;
+      protocol_element?: null | string;
+      concept_ref?: null | string;
     };
     Kernel_KernelProtocolFormSummaryResponse: {
       id: string;
@@ -2282,6 +2298,8 @@ export interface components {
       items: components["schemas"]["Kernel_KernelProtocolFormItemResponse"][];
       /** @default false */
       repeating: boolean;
+      protocol_element?: null | string;
+      form_version_snapshot?: null | string;
     };
     Kernel_KernelProtocolImportNoteResponse: {
       source: string;
@@ -2405,6 +2423,7 @@ export interface components {
       change: string;
       before: null | components["schemas"]["Kernel_KernelPlannedVisitResponse"];
       after: null | components["schemas"]["Kernel_KernelPlannedVisitResponse"];
+      protocol_element?: null | string;
     };
     Kernel_KernelScheduleOfActivitiesResponse: {
       version: string;
@@ -2504,6 +2523,9 @@ export interface components {
       undeclared: string[];
       changes_schedule: boolean;
       changes_eligibility: boolean;
+      protocol_elements?: null | {
+        [key: string]: string;
+      };
     };
     Kernel_KernelSoaColumnResponse: {
       activity_id: string;
@@ -2519,6 +2541,7 @@ export interface components {
       footnotes: (number | string)[];
       /** @default false */
       repeating: boolean;
+      protocol_element?: null | string;
     };
     Kernel_KernelSoaDirectiveResponse: {
       kind: string;
@@ -2533,6 +2556,10 @@ export interface components {
       frequency_after: null | number | string;
       collected_at_added: null | string[];
       collected_at_removed: null | string[];
+      protocol_element?: null | string;
+      protocol_elements?: null | {
+        [key: string]: string;
+      };
     };
     Kernel_KernelSoaEpochResponse: {
       epoch_id: string;
@@ -2543,6 +2570,7 @@ export interface components {
       first_column: number | string;
       /** Format: int32 */
       column_count: number | string;
+      protocol_element?: null | string;
     };
     Kernel_KernelSoaFootnoteResponse: {
       /** Format: int32 */
@@ -2561,6 +2589,11 @@ export interface components {
       footnotes: (number | string)[];
       /** @default false */
       repeating: boolean;
+      protocol_element?: null | string;
+      form_version_snapshot?: null | string;
+      item_protocol_elements?: null | {
+        [key: string]: string;
+      };
     };
     Kernel_KernelSoaVisitResponse: {
       epoch_id: string;

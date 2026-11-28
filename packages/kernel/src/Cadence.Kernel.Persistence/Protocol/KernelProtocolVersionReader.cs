@@ -1,12 +1,16 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Protocol;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
+using Cadence.Kernel.References;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -63,6 +67,78 @@ internal sealed class KernelProtocolVersionReader(KernelTenantDbContextFactory c
             .Where(v => v.TenantId == tenant && v.Id == version)
             .Select(v => v.Amendment)
             .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyDictionary<string, NodeRef>> GetFormVersionSnapshotsAsync(
+        TenantId tenant,
+        ProtocolVersionId version,
+        CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        var snapshots = await db.FormVersionSnapshots.AsNoTracking()
+            .Where(s => s.TenantId == tenant && s.ProtocolVersionId == version)
+            .Select(s => new { s.FormId, s.StudyId, s.Id, s.VersionIndex })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var result = new Dictionary<string, NodeRef>(snapshots.Count + 1, StringComparer.Ordinal);
+        foreach (var snapshot in snapshots)
+        {
+            var nodeRef = NodeRef.For(snapshot.Id, snapshot.VersionIndex);
+            result[snapshot.FormId] = nodeRef;
+            if (string.Equals(snapshot.FormId, snapshot.StudyId.Value.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                result.TryAdd("*", nodeRef);
+            }
+        }
+
+        return result;
+    }
+
+    public async Task<IReadOnlyDictionary<string, NodeRef>> GetGovernedProtocolElementsAsync(
+        TenantId tenant,
+        ProtocolVersionId version,
+        bool includeApprovedAncestorWhenUnapproved,
+        CancellationToken cancellationToken)
+    {
+        var candidates = await ProtocolElementLineage.ResolveApprovedChainElementsAsync(
+            this,
+            tenant,
+            version,
+            includeApprovedAncestorWhenUnapproved,
+            cancellationToken).ConfigureAwait(false);
+        if (candidates.Count == 0)
+        {
+            return candidates;
+        }
+
+        await using var db = contexts.Create(tenant);
+        var candidateGuids = candidates.Values.Select(n => n.Id).Distinct().ToList();
+        var governedGuids = await db.LineageEdges.AsNoTracking()
+            .Where(e => e.TenantId == tenant
+                && e.ToKind == NodeKinds.ProtocolElement
+                && candidateGuids.Contains(e.ToId)
+                && e.FromKind == NodeKinds.ProtocolVersion
+                && e.Kind == LineageEdgeKind.GovernedBy)
+            .Select(e => e.ToId)
+            .Distinct()
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (governedGuids.Count == 0)
+        {
+            return new Dictionary<string, NodeRef>(StringComparer.Ordinal);
+        }
+
+        var governedSet = governedGuids.ToHashSet();
+        var filtered = new Dictionary<string, NodeRef>(governedSet.Count, StringComparer.Ordinal);
+        foreach (var (elementId, nodeRef) in candidates)
+        {
+            if (governedSet.Contains(nodeRef.Id))
+            {
+                filtered[elementId] = nodeRef;
+            }
+        }
+
+        return filtered;
     }
 
     public async Task<IReadOnlyDictionary<ProtocolVersionId, ProtocolDesign>> GetDesignsForStudyAsync(

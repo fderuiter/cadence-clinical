@@ -1,8 +1,11 @@
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Protocol.Design;
+using Cadence.Kernel.References;
 
 namespace Cadence.Kernel.Protocol;
 
@@ -14,6 +17,9 @@ namespace Cadence.Kernel.Protocol;
 /// </summary>
 public interface IProtocolVersionReader
 {
+    private static readonly IReadOnlyDictionary<string, NodeRef> EmptyNodeRefs =
+        new ReadOnlyDictionary<string, NodeRef>(new Dictionary<string, NodeRef>(StringComparer.Ordinal));
+
     /// <summary>The study's protocol versions, newest (highest number) first; empty when the study has none.</summary>
     Task<IReadOnlyList<ProtocolVersionSummary>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken);
 
@@ -72,6 +78,28 @@ public interface IProtocolVersionReader
     /// </summary>
     Task<ProtocolAmendment?> GetAmendmentAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
         Task.FromResult<ProtocolAmendment?>(null);
+
+    /// <summary>
+    /// Immutable <c>form_version_snapshot</c> NodeRefs bound to <paramref name="version"/> on approval (ADR-2809),
+    /// keyed by <c>FormId</c> (<see cref="CollectionSpec.Id"/>); empty when no snapshots exist for the version.
+    /// </summary>
+    Task<IReadOnlyDictionary<string, NodeRef>> GetFormVersionSnapshotsAsync(
+        TenantId tenant,
+        ProtocolVersionId version,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(EmptyNodeRefs);
+
+    /// <summary>
+    /// Governed <c>protocol_element</c> NodeRefs (ADR-2474, ADR-2481) keyed by design element id for
+    /// <paramref name="version"/> when approved, or for its nearest approved ancestor when
+    /// <paramref name="includeApprovedAncestorWhenUnapproved"/> is true; empty when no approved governing lineage exists.
+    /// </summary>
+    Task<IReadOnlyDictionary<string, NodeRef>> GetGovernedProtocolElementsAsync(
+        TenantId tenant,
+        ProtocolVersionId version,
+        bool includeApprovedAncestorWhenUnapproved,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(EmptyNodeRefs);
 }
 
 /// <summary>A protocol version without its content.</summary>

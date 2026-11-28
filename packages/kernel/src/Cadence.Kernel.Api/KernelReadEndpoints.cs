@@ -689,10 +689,16 @@ public static class KernelReadEndpoints
 
         if (design is not null && versionSummary is not null)
         {
+            var governedElements = await versionReader
+                .GetGovernedProtocolElementsAsync(tenant, governing.ProtocolVersionId, includeApprovedAncestorWhenUnapproved: false, cancellationToken)
+                .ConfigureAwait(false);
+            var formSnapshots = await versionReader
+                .GetFormVersionSnapshotsAsync(tenant, governing.ProtocolVersionId, cancellationToken)
+                .ConfigureAwait(false);
             var matrix = ScheduleOfActivities.Compile(design);
-            scheduleResponse = KernelScheduleOfActivitiesResponse.From(versionSummary, matrix);
+            scheduleResponse = KernelScheduleOfActivitiesResponse.From(versionSummary, matrix, governedElements, formSnapshots);
             var expected = ExpectedSchedule.Compute(design, referenceDate, effectiveAsOf);
-            expectedVisitResponses = [.. expected.Select(KernelExpectedVisitResponse.From)];
+            expectedVisitResponses = [.. expected.Select(v => KernelExpectedVisitResponse.From(v, governedElements))];
         }
 
         return TypedResults.Ok(new KernelEnrollmentScheduleResponse(
@@ -836,9 +842,27 @@ public static class KernelReadEndpoints
             return KernelProblems.NotVisible($"You can't see this protocol version ({mask}), so its Schedule of Activities is not shown.");
         }
 
-        return await reader.GetScheduleOfActivitiesAsync(tenant, id, cancellationToken).ConfigureAwait(false) is { } matrix
-            ? TypedResults.Ok(KernelScheduleOfActivitiesResponse.From(version, matrix))
-            : KernelProblems.BadRequest("Not a typed design", $"{node} holds content that is not a typed protocol design, so it has no Schedule of Activities.");
+        if (await reader.GetScheduleOfActivitiesAsync(tenant, id, cancellationToken).ConfigureAwait(false) is not { } matrix)
+        {
+            return KernelProblems.BadRequest("Not a typed design", $"{node} holds content that is not a typed protocol design, so it has no Schedule of Activities.");
+        }
+
+        var includeApprovedAncestor = false;
+        if (version.Status != ProtocolVersionStatus.Approved && version.ParentVersionId is { } parentId)
+        {
+            var parentNode = NodeRef.For(parentId);
+            var parentMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [parentNode], cancellationToken).ConfigureAwait(false);
+            includeApprovedAncestor = parentMasks.For(parentNode) is null;
+        }
+
+        var governedElements = await reader
+            .GetGovernedProtocolElementsAsync(tenant, id, includeApprovedAncestor, cancellationToken)
+            .ConfigureAwait(false);
+        var formSnapshots = await reader
+            .GetFormVersionSnapshotsAsync(tenant, id, cancellationToken)
+            .ConfigureAwait(false);
+
+        return TypedResults.Ok(KernelScheduleOfActivitiesResponse.From(version, matrix, governedElements, formSnapshots));
     }
 
     /// <summary>

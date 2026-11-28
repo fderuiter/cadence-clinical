@@ -461,6 +461,14 @@
             @select="selectVersion"
           />
 
+          <ScheduleOfActivitiesSection
+            v-else-if="section?.id === 'schedule-of-activities'"
+            :key="`soa-${studyCode}`"
+            :study-code="studyCode"
+            :selected-ref="selectedVersionText"
+            @select-node="selectSoaNode"
+          />
+
           <SiteActivationPanel
             v-else-if="section?.id === 'site-activation'"
             :key="studyCode"
@@ -591,7 +599,7 @@
                 >
               </li>
             </ul>
-            <p id="stage-empty" class="stage-empty">
+            <p v-if="!stage.complete" id="stage-empty" class="stage-empty">
               {{
                 stage.sections.length
                   ? `The rest of ${stage.label} arrives as its services are built.`
@@ -1045,6 +1053,9 @@ const ParticipantsSection = defineLazyOverlay(
 );
 const ProtocolVersionsSection = defineLazyOverlay(
   () => import("../components/canvas/ProtocolVersionsSection.vue")
+);
+const ScheduleOfActivitiesSection = defineLazyOverlay(
+  () => import("../components/canvas/ScheduleOfActivitiesSection.vue")
 );
 const SitesSection = defineLazyOverlay(
   () => import("../components/canvas/SitesSection.vue")
@@ -2572,6 +2583,26 @@ async function selectVersion(
   });
 }
 
+async function selectSoaNode(nodeRef: string) {
+  if (!nodeRef || !parseNodeRef(nodeRef)) return;
+  await router.push(
+    scopedStudyLocation({
+      stage: "design",
+      section: "schedule-of-activities",
+      node: nodeRef,
+    })
+  );
+  await nextTick();
+  if (parseNodeRef(nodeRef)?.kind === "protocol_version") {
+    await activeVersionLoadPromise;
+  }
+  await nextTick();
+  await canvas.requestInspectorFocus({
+    nodeRef,
+    scrollIntoView: true,
+  });
+}
+
 function applyParticipantFilter(filter: {
   status: string;
   siteId: string;
@@ -3164,6 +3195,7 @@ watch(
 const SECTION_HEADING_TARGETS: Record<string, string[]> = {
   participants: ["#participants-title"],
   "protocol-versions": ["#protocol-versions-title"],
+  "schedule-of-activities": ["#schedule-of-activities-title"],
   sites: ["#sites-section-title", "#study-sites-title"],
   "site-activation": ["#site-activation-title"],
   "startup-greenlight": ["#ctms-greenlight-title"],

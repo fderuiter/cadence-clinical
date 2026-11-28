@@ -5,6 +5,7 @@ export const CRF_ECRF_CANVAS_RAW_MODAL_OVERLAY_ALLOWLIST = [];
 
 export const CRF_ECRF_CANVAS_EXEMPT_2D_MATRICES = [
   "components/canvas/ParticipantFormsPanel.vue",
+  "components/canvas/ScheduleOfActivitiesSection.vue",
   "components/crf/widgets/RepeatingLogGridWidget.vue",
 ];
 

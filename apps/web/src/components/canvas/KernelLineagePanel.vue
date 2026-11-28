@@ -71,114 +71,7 @@
     </template>
 
     <template v-else-if="verb === 'impact' && dependents">
-      <template v-if="amendment">
-        <p
-          v-if="!amendment.changed_elements.length"
-          id="kernel-amendment-unchanged"
-          class="lineage-note"
-          role="status"
-        >
-          No protocol elements were changed in this amendment.
-        </p>
-        <ul v-else id="kernel-amendment-changes" class="lineage-list">
-          <li
-            v-for="change in amendment.changed_elements"
-            :key="change.element_id"
-            class="amendment-change"
-            :data-change="change.change"
-          >
-            <span class="amendment-change-kind">{{ change.change }}</span>
-            {{ change.instance_type ? words(change.instance_type) : "element" }}
-            <code>{{ change.element_id }}</code>
-            <span
-              v-if="change.properties.length"
-              class="lineage-note amendment-properties"
-            >
-              ({{ change.properties.map(formatFieldPath).join(", ") }})
-            </span>
-          </li>
-        </ul>
-        <div
-          v-if="amendment.schedule"
-          id="kernel-amendment-schedule"
-          class="amendment-schedule"
-        >
-          <h4 class="lineage-subheading">Schedule and eligibility preview</h4>
-          <p id="kernel-amendment-schedule-flags" class="lineage-note">
-            {{
-              amendment.schedule.changes_schedule
-                ? "Changes on-study visit schedule"
-                : "On-study visit schedule unchanged"
-            }}
-            ·
-            {{
-              amendment.schedule.changes_eligibility
-                ? "Changes entry eligibility"
-                : "Entry eligibility unchanged"
-            }}
-          </p>
-          <ul
-            v-if="amendment.schedule.directives.length"
-            id="kernel-amendment-directives"
-            class="lineage-list"
-          >
-            <li
-              v-for="(directive, dIdx) in amendment.schedule.directives"
-              :key="`${directive.kind}-${directive.element_id}-${dIdx}`"
-              class="amendment-change"
-              :data-directive-kind="directive.kind"
-            >
-              <span class="amendment-change-kind">{{
-                formatCommandTitle(directive.kind)
-              }}</span>
-              <code>{{ directive.element_id }}</code>
-              <span
-                v-if="formatDirectiveDetail(directive)"
-                class="lineage-note amendment-properties numeric"
-              >
-                ({{ formatDirectiveDetail(directive) }})
-              </span>
-              <span
-                v-if="
-                  directive.impacted_concepts &&
-                  directive.impacted_concepts.length
-                "
-                class="amendment-concepts"
-              >
-                <NodeRefChip
-                  v-for="conceptRef in directive.impacted_concepts"
-                  :key="conceptRef"
-                  :node-ref="conceptRef"
-                />
-              </span>
-            </li>
-          </ul>
-          <p v-else id="kernel-amendment-directives-empty" class="lineage-note">
-            No schedule or eligibility directives recorded.
-          </p>
-          <p
-            v-if="
-              amendment.schedule.undeclared &&
-              amendment.schedule.undeclared.length
-            "
-            id="kernel-amendment-undeclared"
-            class="amendment-undeclared"
-            role="status"
-          >
-            Undeclared impacted elements:
-            <template
-              v-for="(elementId, uIdx) in amendment.schedule.undeclared"
-              :key="elementId"
-            >
-              <template v-if="uIdx > 0">, </template>
-              <code>{{ elementId }}</code>
-            </template>
-          </p>
-        </div>
-        <h4 class="lineage-subheading">
-          What depends on the version it amends
-        </h4>
-      </template>
+      <KernelAmendmentImpactSummary v-if="amendment" :amendment="amendment" />
       <p v-if="!dependents.groups.length" class="lineage-note" role="status">
         No downstream records depend on this item.
       </p>
@@ -231,17 +124,16 @@ import {
   type KernelDependents,
   type KernelLineage,
   type KernelLineageNode,
-  type KernelSoaDirective,
-  type KernelSoaVisit,
 } from "../../api/kernelApi";
+import { parseNodeRef } from "../../canvas/nodeRef";
 import {
   ensureNodesResolved,
-  formatCommandTitle,
-  formatFieldPath,
   formatMaskedNode,
+  seedNodeSummary,
 } from "../../canvas/nodeResolver";
-import NodeRefChip from "./NodeRefChip.vue";
 import CanvasErrorAlert from "./CanvasErrorAlert.vue";
+import KernelAmendmentImpactSummary from "./KernelAmendmentImpactSummary.vue";
+import NodeRefChip from "./NodeRefChip.vue";
 
 /**
  * The Trace and Impact verbs (docs/ux/CLINICAL_CANVAS.md §4, ADR-2540): upstream lineage or downstream dependents
@@ -284,49 +176,40 @@ function edgeNode(handle: string): KernelLineageNode | null {
   return nodes.value.get(handle) ?? null;
 }
 
-function formatSoaVisit(visit: KernelSoaVisit): string {
-  const dayLabel =
-    visit.study_day !== null && visit.study_day !== undefined
-      ? `Day ${visit.study_day}`
-      : "Event-driven";
-  const windowLabel =
-    visit.window_before || visit.window_after
-      ? ` (-${visit.window_before}/+${visit.window_after}d)`
-      : "";
-  const locationLabel = visit.locations?.length
-    ? `, ${visit.locations.join("/")}`
-    : "";
-  return `${dayLabel}${windowLabel} in ${visit.epoch_id}${locationLabel}`;
-}
-
-function formatDirectiveDetail(directive: KernelSoaDirective): string {
-  if (directive.before && directive.after) {
-    return `${formatSoaVisit(directive.before)} -> ${formatSoaVisit(directive.after)}`;
-  }
-  if (directive.after) {
-    return formatSoaVisit(directive.after);
-  }
-  if (directive.before) {
-    return `was ${formatSoaVisit(directive.before)}`;
-  }
-  if (
-    directive.frequency_before !== null &&
-    directive.frequency_before !== undefined &&
-    directive.frequency_after !== null &&
-    directive.frequency_after !== undefined
-  ) {
-    const parts = [
-      `${directive.frequency_before} -> ${directive.frequency_after} visits`,
-    ];
-    if (directive.collected_at_added?.length) {
-      parts.push(`+${directive.collected_at_added.join(", ")}`);
+function warmAmendmentElementRefs(result: KernelAmendmentImpact): string[] {
+  const refs: string[] = [];
+  for (const change of result.changed_elements ?? []) {
+    if (change.protocol_element && parseNodeRef(change.protocol_element)) {
+      seedNodeSummary(change.protocol_element, {
+        kind: "protocol_element",
+        title: change.element_id,
+      });
+      refs.push(change.protocol_element);
     }
-    if (directive.collected_at_removed?.length) {
-      parts.push(`-${directive.collected_at_removed.join(", ")}`);
-    }
-    return parts.join("; ");
   }
-  return "";
+  for (const directive of result.schedule?.directives ?? []) {
+    if (
+      directive.protocol_element &&
+      parseNodeRef(directive.protocol_element)
+    ) {
+      seedNodeSummary(directive.protocol_element, {
+        kind: "protocol_element",
+        title: directive.element_id,
+      });
+      refs.push(directive.protocol_element);
+    }
+  }
+  const mapEntries = [
+    ...Object.entries(result.protocol_elements ?? {}),
+    ...Object.entries(result.schedule?.protocol_elements ?? {}),
+  ];
+  for (const [elementId, ref] of mapEntries) {
+    if (ref && parseNodeRef(ref)) {
+      seedNodeSummary(ref, { kind: "protocol_element", title: elementId });
+      refs.push(ref);
+    }
+  }
+  return refs;
 }
 
 let latest = 0;
@@ -360,6 +243,7 @@ async function load() {
           ...(result.schedule?.directives.flatMap(
             (d) => d.impacted_concepts ?? []
           ) ?? []),
+          ...warmAmendmentElementRefs(result),
         ]);
       }
     } else {

@@ -11,6 +11,7 @@ using Cadence.Kernel.Application.Protocol;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Simulation;
@@ -288,7 +289,37 @@ public static class KernelSimulationEndpoints
             return KernelErrorEndpoints.Problem(result.Error!);
         }
 
-        return TypedResults.Ok(KernelSimulationResponse.From(result.Value!));
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null;
+        var simulation = result.Value!;
+        if (simulation.Candidate.Kind == CandidateKind.ProtocolVersion
+            && context.RequestServices.GetService<IProtocolVersionReader>() is { } versionReader)
+        {
+            ProtocolVersionId? lookupVersionId = null;
+            if (simulation.Candidate.Version is { Kind: NodeKinds.ProtocolVersion } candidateVersionNode)
+            {
+                lookupVersionId = ProtocolVersionId.FromGuid(candidateVersionNode.Id);
+            }
+            else if (simulation.Candidate.BaseVersion is { Kind: NodeKinds.ProtocolVersion } baseVersionNode)
+            {
+                lookupVersionId = ProtocolVersionId.FromGuid(baseVersionNode.Id);
+            }
+
+            if (lookupVersionId is { } targetVersionId)
+            {
+                var includeAncestor = true;
+                if (simulation.Candidate.BaseVersion is { Kind: NodeKinds.ProtocolVersion } baseRef)
+                {
+                    var baseMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [baseRef], cancellationToken).ConfigureAwait(false);
+                    includeAncestor = baseMasks.For(baseRef) is null;
+                }
+
+                governedElements = await versionReader
+                    .GetGovernedProtocolElementsAsync(tenant, targetVersionId, includeAncestor, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        return TypedResults.Ok(KernelSimulationResponse.From(simulation, governedElements));
     }
 
     internal static async Task<Results<Created<KernelArtifactResponse>, ProblemHttpResult>> SaveSimulationReportAsync(
@@ -496,7 +527,7 @@ public static class KernelSimulationEndpoints
 
         var findings = MatrixGapAnalyzer.Analyze(read.Design!);
         return TypedResults.Ok<IReadOnlyList<KernelMatrixGapFindingResponse>>(
-            [.. findings.Select(KernelMatrixGapFindingResponse.From)]);
+            [.. findings.Select(g => KernelMatrixGapFindingResponse.From(g))]);
     }
 
     private static bool TryParseOptionalLibraryItem(

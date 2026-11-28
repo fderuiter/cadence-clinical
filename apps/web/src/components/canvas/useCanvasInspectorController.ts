@@ -188,13 +188,17 @@ export function useCanvasInspectorController(
       : "impact";
   });
 
-  const canSimulate = computed(() =>
-    Boolean(
-      !props.participant &&
+  const canSimulate = computed(() => {
+    if (props.participant) return false;
+    if (
       props.protocolVersion?.ref &&
       parseNodeRef(props.protocolVersion.ref)?.kind === "protocol_version"
-    )
-  );
+    ) {
+      return true;
+    }
+    const activeKind = parseNodeRef(kernelRef.value)?.kind;
+    return activeKind === "protocol_version" || activeKind === "library_item";
+  });
 
   const verbs = computed<Verb[]>(() => [
     {
@@ -219,7 +223,7 @@ export function useCanvasInspectorController(
       id: "simulate",
       label: "Simulate",
       live: canSimulate.value,
-      note: "Participant simulation isn't available in this workspace yet; select a protocol version to check its schedule.",
+      note: "Participant simulation isn't available in this workspace yet; select a protocol version, mapping specification, or rule pack to simulate.",
     },
     {
       id: "act",
@@ -252,8 +256,12 @@ export function useCanvasInspectorController(
     simulationLoading,
     simulationError,
     runSimulation,
+    runCandidateSimulation,
     resetSimulation,
-  } = useInspectorSimulation(canSimulate, kernelRef);
+  } = useInspectorSimulation(canSimulate, kernelRef, {
+    studyCode: () => props.studyCode,
+    studyRef: () => props.protocolVersion?.study ?? null,
+  });
 
   watch(currentVerb, (verb) => {
     if (
@@ -453,6 +461,7 @@ export function useCanvasInspectorController(
     simulationLoading,
     simulationError,
     runSimulation,
+    runCandidateSimulation,
     choose,
     explainCommand,
     openVerb,

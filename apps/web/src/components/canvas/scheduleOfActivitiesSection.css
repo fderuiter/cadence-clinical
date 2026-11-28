@@ -1,0 +1,267 @@
+.soa-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.soa-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.soa-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.soa-status,
+.soa-status-text {
+  margin: 4px 0 0;
+  font-size: 0.875rem;
+  color: var(--neutral-dark);
+}
+
+.soa-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.soa-toolbar-label,
+.soa-meta-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--neutral-dark);
+}
+
+.soa-version-select {
+  min-height: 36px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  font-size: 1rem;
+}
+
+.soa-status-pill,
+.soa-badge-repeating,
+.soa-footnote-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--neutral-light);
+  border: 1px solid var(--border);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.soa-parent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.soa-hash-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.78rem;
+  color: var(--neutral-dark);
+}
+
+.soa-hash-bar code,
+.soa-code,
+.soa-concept-code {
+  font-family: var(--semantic-font-mono);
+}
+
+.numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+.soa-matrix-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--semantic-color-surface);
+}
+
+.soa-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.85rem;
+}
+
+.soa-table th,
+.soa-table td {
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  padding: 6px 8px;
+  vertical-align: middle;
+}
+
+.soa-sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--semantic-color-surface);
+  min-width: 240px;
+  max-width: 320px;
+  text-align: left;
+}
+
+.soa-corner-th {
+  z-index: 3;
+  background: var(--neutral-light);
+  font-weight: 600;
+}
+
+.soa-epoch-th {
+  background: var(--neutral-light);
+  text-align: center;
+  font-weight: 600;
+}
+
+.soa-epoch-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.soa-visit-th {
+  min-width: 124px;
+  background: var(--semantic-color-surface);
+  vertical-align: top;
+}
+
+.soa-visit-btn,
+.soa-row-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.soa-visit-btn:hover:not(:disabled),
+.soa-row-btn:hover:not(:disabled) {
+  background: var(--neutral-light);
+}
+
+.soa-visit-name,
+.soa-row-title {
+  font-weight: 600;
+}
+
+.soa-visit-window,
+.soa-visit-locations,
+.soa-row-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.76rem;
+  color: var(--neutral-dark);
+  font-weight: 400;
+}
+
+.soa-row-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.soa-row-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.soa-cell {
+  text-align: center;
+  padding: 2px;
+}
+
+.soa-cell--scheduled {
+  background: var(--semantic-color-success-bg-soft);
+}
+
+.soa-cell-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.soa-cell-btn.is-scheduled {
+  color: var(--semantic-color-success);
+}
+
+.soa-cell-dash {
+  opacity: 0.45;
+}
+
+.soa-footnotes {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.soa-footnotes-title {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+}
+
+.soa-footnotes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+}
+
+.soa-footnote-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.soa-footnote-num {
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .soa-matrix-wrapper {
+    display: none;
+  }
+}
+
+@media (pointer: coarse), (max-width: 767px) {
+  .soa-version-select {
+    min-height: 44px;
+  }
+}

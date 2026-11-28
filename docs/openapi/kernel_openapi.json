@@ -9849,6 +9849,15 @@
                 "$ref": "#/components/schemas/Kernel_HiddenObjects"
               }
             ]
+          },
+          "protocol_elements": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         }
       },
@@ -10772,6 +10781,12 @@
             "items": {
               "type": "string"
             }
+          },
+          "protocol_element": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -11175,6 +11190,18 @@
           },
           "window_status": {
             "type": "string"
+          },
+          "protocol_element": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "epoch_protocol_element": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -12139,6 +12166,12 @@
               "null",
               "string"
             ]
+          },
+          "protocol_element": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -12470,6 +12503,12 @@
           "window_end": {
             "type": "string",
             "format": "date"
+          },
+          "protocol_element": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -12506,6 +12545,12 @@
               {
                 "$ref": "#/components/schemas/Kernel_KernelParticipantPlannedVisitResponse"
               }
+            ]
+          },
+          "protocol_element": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }
@@ -12596,6 +12641,18 @@
               "string"
             ],
             "format": "int32"
+          },
+          "protocol_element": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "epoch_protocol_element": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -13056,6 +13113,15 @@
           },
           "transition_policy": {
             "type": "string"
+          },
+          "protocol_elements": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         }
       },
@@ -13232,6 +13298,18 @@
               "null",
               "string"
             ]
+          },
+          "protocol_element": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "concept_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -13285,6 +13363,18 @@
           "repeating": {
             "type": "boolean",
             "default": false
+          },
+          "protocol_element": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_version_snapshot": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -13849,6 +13939,12 @@
                 "$ref": "#/components/schemas/Kernel_KernelPlannedVisitResponse"
               }
             ]
+          },
+          "protocol_element": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -14272,6 +14368,15 @@
           },
           "changes_eligibility": {
             "type": "boolean"
+          },
+          "protocol_elements": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         }
       },
@@ -14342,6 +14447,12 @@
           "repeating": {
             "type": "boolean",
             "default": false
+          },
+          "protocol_element": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -14433,6 +14544,21 @@
             "items": {
               "type": "string"
             }
+          },
+          "protocol_element": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "protocol_elements": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         }
       },
@@ -14475,6 +14601,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "protocol_element": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -14565,6 +14697,27 @@
           "repeating": {
             "type": "boolean",
             "default": false
+          },
+          "protocol_element": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_version_snapshot": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "item_protocol_elements": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         }
       },

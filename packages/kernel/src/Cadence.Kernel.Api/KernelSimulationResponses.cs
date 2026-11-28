@@ -59,6 +59,8 @@ public sealed record KernelEngineVersionResponse(string Name, string Version)
 /// <param name="StudyDay">The planned study day.</param>
 /// <param name="WindowBefore">Days allowed before the planned day.</param>
 /// <param name="WindowAfter">Days allowed after the planned day.</param>
+/// <param name="ProtocolElement">Optional pinned <c>protocol_element</c> NodeRef for <paramref name="ActivityId"/> when governed.</param>
+/// <param name="EpochProtocolElement">Optional pinned <c>protocol_element</c> NodeRef for <paramref name="EpochId"/> when governed.</param>
 public sealed record KernelPlannedVisitResponse(
     string ActivityId,
     string Name,
@@ -66,9 +68,13 @@ public sealed record KernelPlannedVisitResponse(
     int EpochOrder,
     int StudyDay,
     int WindowBefore,
-    int WindowAfter)
+    int WindowAfter,
+    string? ProtocolElement = null,
+    string? EpochProtocolElement = null)
 {
-    internal static KernelPlannedVisitResponse? From(PlannedVisit? visit) =>
+    internal static KernelPlannedVisitResponse? From(
+        PlannedVisit? visit,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null) =>
         visit is null
             ? null
             : new(
@@ -78,7 +84,9 @@ public sealed record KernelPlannedVisitResponse(
                 visit.EpochOrder,
                 visit.StudyDay,
                 visit.WindowBefore,
-                visit.WindowAfter);
+                visit.WindowAfter,
+                KernelElementNodeRefs.Resolve(governedElements, visit.ActivityId),
+                KernelElementNodeRefs.Resolve(governedElements, visit.EpochId));
 }
 
 /// <summary>A timed planned activity whose expected schedule differs between the base and candidate (K-TIME-7).</summary>
@@ -86,18 +94,23 @@ public sealed record KernelPlannedVisitResponse(
 /// <param name="Change"><c>Added</c>, <c>Removed</c>, or <c>Changed</c>.</param>
 /// <param name="Before">Its planned visit in the base, or null when added.</param>
 /// <param name="After">Its planned visit in the candidate, or null when removed.</param>
+/// <param name="ProtocolElement">Optional pinned <c>protocol_element</c> NodeRef when governed by an approved protocol version.</param>
 public sealed record KernelScheduleChangeResponse(
     string ActivityId,
     string Change,
     KernelPlannedVisitResponse? Before,
-    KernelPlannedVisitResponse? After)
+    KernelPlannedVisitResponse? After,
+    string? ProtocolElement = null)
 {
-    internal static KernelScheduleChangeResponse From(ScheduleChange change) =>
+    internal static KernelScheduleChangeResponse From(
+        ScheduleChange change,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null) =>
         new(
             change.ActivityId,
             change.Change.ToString(),
-            KernelPlannedVisitResponse.From(change.Before),
-            KernelPlannedVisitResponse.From(change.After));
+            KernelPlannedVisitResponse.From(change.Before, governedElements),
+            KernelPlannedVisitResponse.From(change.After, governedElements),
+            KernelElementNodeRefs.Resolve(governedElements, change.ActivityId));
 }
 
 /// <summary>A simulation section withheld from the caller, and why (K-SIM-4, ADR-2471).</summary>
@@ -116,22 +129,27 @@ public sealed record KernelMaskedPartResponse(string Part, string Reason)
 /// <param name="JsonPointerPath">The JSON Pointer path to the element or property in the protocol design.</param>
 /// <param name="Description">Human-readable description of the defect or gap.</param>
 /// <param name="Recommendation">Actionable guidance on how to resolve the gap.</param>
+/// <param name="ProtocolElement">Optional pinned <c>protocol_element</c> NodeRef for <paramref name="ElementId"/> when governed.</param>
 public sealed record KernelMatrixGapFindingResponse(
     string ElementId,
     string Kind,
     string Severity,
     string JsonPointerPath,
     string Description,
-    string? Recommendation)
+    string? Recommendation,
+    string? ProtocolElement = null)
 {
-    internal static KernelMatrixGapFindingResponse From(MatrixGapFinding finding) =>
+    internal static KernelMatrixGapFindingResponse From(
+        MatrixGapFinding finding,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null) =>
         new(
             finding.ElementId,
             finding.Kind.ToString(),
             finding.Severity.ToString(),
             finding.JsonPointerPath,
             finding.Description,
-            finding.Recommendation);
+            finding.Recommendation,
+            KernelElementNodeRefs.Resolve(governedElements, finding.ElementId));
 }
 
 /// <summary>Signals whether restricted sites, enrollments, or blinded facts were omitted from simulation counts (ADR-2590).</summary>
@@ -148,12 +166,20 @@ public sealed record KernelParticipantPlannedVisitResponse(
     string VisitId,
     DateOnly TargetDate,
     DateOnly WindowStart,
-    DateOnly WindowEnd)
+    DateOnly WindowEnd,
+    string? ProtocolElement = null)
 {
-    internal static KernelParticipantPlannedVisitResponse? From(ParticipantPlannedVisit? visit) =>
+    internal static KernelParticipantPlannedVisitResponse? From(
+        ParticipantPlannedVisit? visit,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null) =>
         visit is null
             ? null
-            : new(visit.VisitId, visit.TargetDate, visit.WindowStart, visit.WindowEnd);
+            : new(
+                visit.VisitId,
+                visit.TargetDate,
+                visit.WindowStart,
+                visit.WindowEnd,
+                KernelElementNodeRefs.Resolve(governedElements, visit.VisitId));
 }
 
 /// <summary>A calendar-anchored schedule shift for one participant (K-TIME-7).</summary>
@@ -161,14 +187,18 @@ public sealed record KernelParticipantScheduleShiftResponse(
     string ActivityId,
     string Change,
     KernelParticipantPlannedVisitResponse? Before,
-    KernelParticipantPlannedVisitResponse? After)
+    KernelParticipantPlannedVisitResponse? After,
+    string? ProtocolElement = null)
 {
-    internal static KernelParticipantScheduleShiftResponse From(ParticipantScheduleShift shift) =>
+    internal static KernelParticipantScheduleShiftResponse From(
+        ParticipantScheduleShift shift,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null) =>
         new(
             shift.ActivityId,
             shift.Change.ToString(),
-            KernelParticipantPlannedVisitResponse.From(shift.Before),
-            KernelParticipantPlannedVisitResponse.From(shift.After));
+            KernelParticipantPlannedVisitResponse.From(shift.Before, governedElements),
+            KernelParticipantPlannedVisitResponse.From(shift.After, governedElements),
+            KernelElementNodeRefs.Resolve(governedElements, shift.ActivityId));
 }
 
 /// <summary>Per-participant operational impact summary (K-TIME-7, K-IDN-1).</summary>
@@ -180,14 +210,16 @@ public sealed record KernelParticipantSimulationImpactResponse(
     bool RequiresReconsent,
     IReadOnlyList<KernelParticipantScheduleShiftResponse> ScheduleShifts)
 {
-    internal static KernelParticipantSimulationImpactResponse From(ParticipantSimulationImpact impact) =>
+    internal static KernelParticipantSimulationImpactResponse From(
+        ParticipantSimulationImpact impact,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null) =>
         new(
             impact.Enrollment.ToString(),
             impact.SubjectCode,
             impact.Status.ToString(),
             impact.Cohort.ToString(),
             impact.RequiresReconsent,
-            [.. impact.ScheduleShifts.Select(KernelParticipantScheduleShiftResponse.From)]);
+            [.. impact.ScheduleShifts.Select(s => KernelParticipantScheduleShiftResponse.From(s, governedElements))]);
 }
 
 /// <summary>Operational site and participant impact counts within the reader's visible scope (CLINICAL_CANVAS §4.2, ADR-2590).</summary>
@@ -200,14 +232,16 @@ public sealed record KernelOperationalImpactResponse(
     IReadOnlyList<KernelParticipantSimulationImpactResponse> ParticipantImpacts,
     KernelHiddenObjectsResponse Hidden)
 {
-    internal static KernelOperationalImpactResponse From(OperationalImpactSummary impact) =>
+    internal static KernelOperationalImpactResponse From(
+        OperationalImpactSummary impact,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null) =>
         new(
             impact.ActiveSiteCount,
             impact.PendingSiteCount,
             impact.TotalParticipantCount,
             impact.AffectedParticipantCount,
             impact.ReconsentParticipantCount,
-            [.. impact.ParticipantImpacts.Select(KernelParticipantSimulationImpactResponse.From)],
+            [.. impact.ParticipantImpacts.Select(p => KernelParticipantSimulationImpactResponse.From(p, governedElements))],
             KernelHiddenObjectsResponse.From(impact.Hidden));
 }
 
@@ -306,7 +340,9 @@ public sealed record KernelSimulationResponse(
     IReadOnlyList<KernelProjectionDatasetChangeResponse>? ProjectionChanges = null,
     KernelValidationDeltaResponse? ValidationDelta = null)
 {
-    internal static KernelSimulationResponse From(SimulationResult result) =>
+    internal static KernelSimulationResponse From(
+        SimulationResult result,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null) =>
         new(
             result.Scope.ToString(),
             KernelSimulationAsOfResponse.From(result.AsOf),
@@ -314,13 +350,18 @@ public sealed record KernelSimulationResponse(
             [.. result.EngineVersions.Select(KernelEngineVersionResponse.From)],
             result.InputHash,
             result.ResultHash,
-            [.. result.StructuralDiff.Select(c => new KernelElementChangeResponse(c.ElementId, c.InstanceType, c.Change.ToString(), c.Properties))],
-            [.. result.ScheduleChanges.Select(KernelScheduleChangeResponse.From)],
+            [.. result.StructuralDiff.Select(c => new KernelElementChangeResponse(
+                c.ElementId,
+                c.InstanceType,
+                c.Change.ToString(),
+                c.Properties,
+                KernelElementNodeRefs.Resolve(governedElements, c.ElementId)))],
+            [.. result.ScheduleChanges.Select(sc => KernelScheduleChangeResponse.From(sc, governedElements))],
             [.. result.Masked.Select(KernelMaskedPartResponse.From)],
             result.Dependents is { } dependents ? KernelDependentsResponse.From(dependents) : null,
-            [.. (result.MatrixGaps ?? []).Select(KernelMatrixGapFindingResponse.From)],
+            [.. (result.MatrixGaps ?? []).Select(g => KernelMatrixGapFindingResponse.From(g, governedElements))],
             result.IsEmpty,
-            result.OperationalImpact is { } operational ? KernelOperationalImpactResponse.From(operational) : null,
+            result.OperationalImpact is { } operational ? KernelOperationalImpactResponse.From(operational, governedElements) : null,
             result.ProjectionChanges is { } projections ? [.. projections.Select(KernelProjectionDatasetChangeResponse.From)] : null,
             result.ValidationDelta is { } validation ? KernelValidationDeltaResponse.From(validation) : null);
 

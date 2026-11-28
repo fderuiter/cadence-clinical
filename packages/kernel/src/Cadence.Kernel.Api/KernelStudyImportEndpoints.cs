@@ -883,8 +883,29 @@ public static class KernelStudyImportEndpoints
             design,
             context.RequestServices.GetService<IConceptRegistry>(),
             cancellationToken).ConfigureAwait(false);
+        var includeApprovedAncestor = false;
+        if (version.Status != ProtocolVersionStatus.Approved && version.ParentVersionId is { } parentVersionId)
+        {
+            var parentNode = NodeRef.For(parentVersionId);
+            var parentMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [parentNode], cancellationToken).ConfigureAwait(false);
+            includeApprovedAncestor = parentMasks.For(parentNode) is null;
+        }
 
-        return TypedResults.Ok(KernelProtocolDraftSummaryResponse.From(version, design, labels, amendment: amendment));
+        var governedElements = await reader
+            .GetGovernedProtocolElementsAsync(tenant, versionId, includeApprovedAncestor, cancellationToken)
+            .ConfigureAwait(false);
+        var formSnapshots = await reader
+            .GetFormVersionSnapshotsAsync(tenant, versionId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return TypedResults.Ok(KernelProtocolDraftSummaryResponse.From(
+            version,
+            design,
+            labels,
+            amendment: amendment,
+            governedElements: governedElements,
+            formSnapshots: formSnapshots,
+            amendmentElements: governedElements));
     }
 
     internal static async Task<Results<Created<KernelProtocolDraftSummaryResponse>, Ok<KernelProtocolDraftSummaryResponse>, ProblemHttpResult>> ImportProtocolDraftAsync(
@@ -1343,12 +1364,27 @@ public static class KernelStudyImportEndpoints
             concepts,
             stagedLabelsByRef,
             cancellationToken).ConfigureAwait(false);
+        IReadOnlyDictionary<string, NodeRef>? importedGovernedElements = null;
+        if (persistedSummary.ParentVersionId is { } importedParentId)
+        {
+            var parentNode = NodeRef.For(importedParentId);
+            var parentMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [parentNode], cancellationToken).ConfigureAwait(false);
+            if (parentMasks.For(parentNode) is null)
+            {
+                importedGovernedElements = await versionReader
+                    .GetGovernedProtocolElementsAsync(tenant, persistedSummary.Id, includeApprovedAncestorWhenUnapproved: true, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+
         var responseBody = KernelProtocolDraftSummaryResponse.From(
             persistedSummary,
             effectiveDesign,
             conceptLabels,
             draftedRulePack,
-            effectiveAmendment);
+            effectiveAmendment,
+            governedElements: importedGovernedElements,
+            amendmentElements: importedGovernedElements);
 
         return plan.CreatedNewVersion
             ? TypedResults.Created(
