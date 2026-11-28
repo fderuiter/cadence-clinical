@@ -55,6 +55,14 @@
       </button>
     </div>
 
+    <ClinicalLiveRegion
+      id="mdr-workspace-status"
+      persistent-id
+      variant="strip"
+      :polite-message="mdrPoliteStatus"
+      style="margin-bottom: 16px"
+    />
+
     <!-- TAB 1: INTERACTIVE SOA WORKSPACE -->
     <div v-if="activeTab === 'soa'">
       <!-- Real-time Synthesis Summary Metrics Dashboard Card (Appears upon USDM Synthesis) -->
@@ -1833,7 +1841,13 @@ import { useErrorPresenter } from "../composables/useErrorPresenter";
 import ClinicalSoAMatrix from "../components/clinical/ClinicalSoAMatrix.vue";
 import ClinicalGanttVisualizer from "../components/clinical/ClinicalGanttVisualizer.vue";
 import { terminologyClient } from "../api/terminologyClient.js";
-import { debounce, useFocusTrap, ClinicalIcon } from "ui";
+import {
+  debounce,
+  useFocusTrap,
+  ClinicalIcon,
+  ClinicalLiveRegion,
+  useStatusAnnouncer,
+} from "ui";
 import ReasonModal from "../components/ReasonModal.vue";
 import CrfAuthoringCanvas from "../components/crf/CrfAuthoringCanvas.vue";
 import { useDesignerStore } from "../stores/designer.js";
@@ -1921,6 +1935,17 @@ const conceptForm = reactive({
 
 const armSuggestions = ref([]);
 const encSuggestions = ref([]);
+
+const { politeMessage: mdrPoliteStatus } = useStatusAnnouncer({
+  debounceMs: 120,
+  initialPolite: `MDR workspace: ${activeTab.value.toUpperCase()} view active`,
+  statusSource: () =>
+    activeTab.value === "mdr"
+      ? searchingConcepts.value
+        ? "Searching NCI concept registry..."
+        : `NCI concept registry: ${conceptResults.value.length} matching concepts`
+      : `MDR workspace: ${activeTab.value.toUpperCase()} view active`,
+});
 
 // Difference calculation against baseline
 const differences = computed(() => {

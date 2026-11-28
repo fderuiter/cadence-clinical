@@ -94,6 +94,17 @@
       </div>
     </div>
 
+    <ClinicalLiveRegion
+      id="notifications-live-status"
+      persistent-id
+      variant="strip"
+      :tone="store.error ? 'error' : 'neutral'"
+      :politeness="store.error ? 'assertive' : 'polite'"
+      :polite-message="notifPoliteStatus"
+      :assertive-message="notifAssertiveError"
+      style="margin-bottom: 16px"
+    />
+
     <!-- Status Banners -->
     <!-- Loading State -->
     <div
@@ -361,21 +372,15 @@
       </p>
 
       <!-- Inline Modal Error Banner -->
-      <div
-        v-if="modalError"
+      <ClinicalLiveRegion
         id="modal-error"
-        style="
-          background-color: var(--error-bg);
-          border: 1px solid var(--error);
-          color: var(--error);
-          padding: 8px;
-          border-radius: 4px;
-          margin-bottom: 12px;
-          font-size: 0.85rem;
-        "
-      >
-        {{ modalError }}
-      </div>
+        variant="banner"
+        politeness="assertive"
+        tone="error"
+        :active="Boolean(modalError)"
+        :assertive-message="modalError || ''"
+        style="margin-bottom: 12px; font-size: 0.85rem"
+      />
 
       <div class="form-group" style="margin-bottom: 12px">
         <label
@@ -455,12 +460,33 @@
 
 <script setup>
 import { onMounted, ref, computed } from "vue";
-import { ClinicalModal, ClinicalIcon } from "ui";
+import {
+  ClinicalModal,
+  ClinicalIcon,
+  ClinicalLiveRegion,
+  useStatusAnnouncer,
+} from "ui";
 import { useRouter } from "vue-router";
 import { useNotificationsStore } from "../stores/notifications";
 
 const store = useNotificationsStore();
 const router = useRouter();
+
+const {
+  politeMessage: notifPoliteStatus,
+  assertiveMessage: notifAssertiveError,
+} = useStatusAnnouncer({
+  debounceMs: 100,
+  initialPolite: `Showing ${store.notifications.length} notifications`,
+  statusSource: () =>
+    store.loading
+      ? "Loading notifications..."
+      : `Showing ${store.notifications.length} ${store.notifications.length === 1 ? "notification" : "notifications"}`,
+  errorSource: () =>
+    store.errorStatus === 403
+      ? "Access denied (403 Forbidden)."
+      : store.error || "",
+});
 
 const getDeepLink = (notif) => {
   const category = (notif.category || "").toUpperCase();

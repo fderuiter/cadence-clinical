@@ -75,17 +75,19 @@
         </div>
       </form>
 
-      <p
-        v-if="slaOutcome"
+      <ClinicalLiveRegion
         id="study-queries-sla-outcome"
-        data-testid="study-queries-sla-outcome"
-        class="study-queries-sla-outcome"
-        :class="{ 'study-queries-sla-outcome--error': slaOutcome.error }"
-        :role="slaOutcome.error ? 'alert' : 'status'"
-        aria-live="polite"
-      >
-        {{ slaOutcome.message }}
-      </p>
+        test-id="study-queries-sla-outcome"
+        variant="inline"
+        :active="Boolean(slaOutcome)"
+        :politeness="slaOutcome?.error ? 'assertive' : 'polite'"
+        :tone="slaOutcome?.error ? 'error' : 'success'"
+        :live-class="[
+          'study-queries-sla-outcome',
+          { 'study-queries-sla-outcome--error': Boolean(slaOutcome?.error) },
+        ]"
+        :message="slaOutcome?.message || ''"
+      />
 
       <div class="study-queries-filters" data-testid="study-queries-filters">
         <label for="study-queries-status">Status</label>
@@ -219,6 +221,27 @@
           Clear filters
         </button>
       </div>
+      <ClinicalLiveRegion
+        id="study-queries-filter-status"
+        test-id="study-queries-filter-status"
+        variant="strip"
+        :tone="hasActiveFilter ? 'info' : 'neutral'"
+        :active="
+          Boolean(studyId && !studyLoading && !studyError && !queries.loadError)
+        "
+        :polite-message="queryFilterPoliteMessage"
+      >
+        <span class="tabular-nums">{{ queryFilterSummaryText }}</span>
+        <template v-if="hasActiveFilter" #actions>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            @click="clearFilters"
+          >
+            Reset filters
+          </button>
+        </template>
+      </ClinicalLiveRegion>
     </header>
 
     <section
@@ -466,7 +489,12 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
-import { ClinicalDataTable, handoffFocus } from "ui";
+import {
+  ClinicalDataTable,
+  ClinicalLiveRegion,
+  handoffFocus,
+  useStatusAnnouncer,
+} from "ui";
 import { ApiError } from "../../api/client";
 import {
   describeQueryError,
@@ -742,6 +770,30 @@ const hasActiveFilter = computed(() =>
     changedFilter.value
   )
 );
+
+const queryFilterSummaryText = computed(() => {
+  if (studyLoading.value) {
+    return `Looking up ${props.studyCode}...`;
+  }
+  if (queries.loading || queries.refreshing) {
+    return `Loading queries for ${props.studyCode}...`;
+  }
+  const count = queries.queries.length;
+  const noun = count === 1 ? "query" : "queries";
+  if (hasActiveFilter.value) {
+    return count === 0
+      ? "No queries match these filters."
+      : `Showing ${count} matching ${noun} in ${props.studyCode}`;
+  }
+  return count === 0
+    ? `No queries on visible enrollments in ${props.studyCode}.`
+    : `Showing ${count} ${noun} in ${props.studyCode}`;
+});
+
+const { politeMessage: queryFilterPoliteMessage } = useStatusAnnouncer({
+  debounceMs: 220,
+  statusSource: () => queryFilterSummaryText.value,
+});
 
 function formatOwnerLabel(role: string): string {
   return OWNER_LABELS[role] ?? role;

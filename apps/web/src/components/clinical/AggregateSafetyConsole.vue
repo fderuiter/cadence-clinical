@@ -85,6 +85,13 @@
       </div>
     </header>
 
+    <ClinicalLiveRegion
+      id="aggregate-safety-live-status"
+      variant="sr-only"
+      politeness="polite"
+      :message="aggregateSafetyPoliteMessage"
+    />
+
     <!-- Global Parameter Controls Drawer / Toolbar -->
     <div class="params-toolbar">
       <div class="param-field">
@@ -1362,7 +1369,13 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { ClinicalIconButton, useFocusTrap, ClinicalIcon } from "ui";
+import {
+  ClinicalIcon,
+  ClinicalIconButton,
+  ClinicalLiveRegion,
+  useFocusTrap,
+  useStatusAnnouncer,
+} from "ui";
 
 import { useToastStore } from "../../stores/toasts.js";
 import { ensureOk } from "../../utils/apiErrors.js";
@@ -1685,6 +1698,16 @@ const filteredSummaryRows = computed(() => {
     if (filterOnlyAesi.value && !row.is_aesi) return false;
     return true;
   });
+});
+
+const { politeMessage: aggregateSafetyPoliteMessage } = useStatusAnnouncer({
+  statusSource: computed(() => {
+    if (isCompiling.value)
+      return "Compiling aggregate safety report package...";
+    if (isCalculatingExposure.value)
+      return "Calculating patient-years of exposure...";
+    return `${reportType.value} safety workspace (${activeTab.value}): ${filteredSummaryRows.value.length} of ${summaryRows.value.length} MedDRA tabulations visible.`;
+  }),
 });
 
 // Methods

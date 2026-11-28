@@ -19,6 +19,13 @@
             {{ modalInstructionText }}
           </p>
           <!-- Accessible modal live error region -->
+          <ClinicalLiveRegion
+            id="sign-modal-live-alert"
+            variant="sr-only"
+            politeness="assertive"
+            tone="error"
+            persistent-id
+          />
           <div
             id="modal-error-banner"
             style="
@@ -31,8 +38,7 @@
               font-size: 13px;
               font-weight: 600;
             "
-            role="status"
-            aria-live="polite"
+            role="alert"
           />
 
           <div class="form-group mb-12">
@@ -106,6 +112,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import {
+  ClinicalLiveRegion,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
   requiresCustomSignatureReason,
   useFocusTrap,

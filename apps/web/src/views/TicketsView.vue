@@ -274,6 +274,34 @@
       />
     </div>
 
+    <ClinicalLiveRegion
+      id="tickets-live-status"
+      persistent-id
+      variant="strip"
+      :tone="ticketsErrorMessage ? 'error' : 'neutral'"
+      :politeness="ticketsErrorMessage ? 'assertive' : 'polite'"
+      :icon="
+        ticketsErrorMessage
+          ? 'alert-circle'
+          : isLoadingTickets || filteredTickets.length === 0
+            ? 'info'
+            : 'check-circle'
+      "
+      :polite-message="ticketsPoliteStatus"
+      :assertive-message="ticketsAssertiveError"
+      class="tickets-status-strip"
+    >
+      <template v-if="hasActiveTicketFilters" #actions>
+        <button
+          type="button"
+          class="btn btn-sm btn-secondary"
+          @click="resetTicketFilters"
+        >
+          Reset Filters
+        </button>
+      </template>
+    </ClinicalLiveRegion>
+
     <!-- Bulk Action Toolbar (Demo mode only) -->
     <div
       v-if="demoBuild && canMutateTicket && selectedTicketCount > 0"
@@ -461,6 +489,7 @@
         title="Clinical Issue & Operations Table"
         hide-header
         plain
+        :loading="isLoadingTickets"
         :columns="ticketTableColumns"
         :data="filteredTickets"
         row-key="id"
@@ -616,7 +645,9 @@ import {
   ClinicalDataTable,
   ClinicalIcon,
   ClinicalInput,
+  ClinicalLiveRegion,
   ClinicalTabs,
+  useStatusAnnouncer,
 } from "ui";
 import TicketDetailDrawer from "../components/tickets/TicketDetailDrawer.vue";
 import TicketCreateModal from "../components/tickets/TicketCreateModal.vue";
@@ -657,6 +688,8 @@ const toastStore = useToastStore();
 const initialRouteScope = readRouteScopeQuery(route);
 const hydratedScope = resolveHydratedWorkspaceScope(getEffectiveRoute());
 const tickets = ref([]);
+const isLoadingTickets = ref(false);
+const ticketsErrorMessage = ref("");
 const kpis = reactive({
   active_tickets: 0,
   sla_compliance_rate: demoBuild ? 96.4 : null,
@@ -1118,6 +1151,8 @@ const applyTicketScope = async () => {
 };
 
 const fetchTicketsFromApi = async () => {
+  isLoadingTickets.value = true;
+  ticketsErrorMessage.value = "";
   try {
     const query = {};
     const scopedStudy = filterStudyId.value.trim();
@@ -1133,8 +1168,11 @@ const fetchTicketsFromApi = async () => {
     }
   } catch (err) {
     if (!demoBuild) {
+      ticketsErrorMessage.value = "Could not load clinical issues.";
       toastStore.apiError("Loading tickets failed", err);
     }
+  } finally {
+    isLoadingTickets.value = false;
   }
 };
 
@@ -1267,6 +1305,50 @@ const getColumnTickets = (statuses) => {
   const statusArray = Array.isArray(statuses) ? statuses : [statuses];
   return filteredTickets.value.filter((t) => statusArray.includes(t.status));
 };
+
+const hasActiveTicketFilters = computed(() => {
+  return Boolean(
+    searchQuery.value.trim() ||
+    filterCategory.value !== "ALL" ||
+    filterSeverity.value !== "ALL" ||
+    filterStatus.value !== "ALL" ||
+    filterSubjectId.value.trim()
+  );
+});
+
+const resetTicketFilters = () => {
+  searchQuery.value = "";
+  filterCategory.value = "ALL";
+  filterSeverity.value = "ALL";
+  filterStatus.value = "ALL";
+  filterSubjectId.value = "";
+};
+
+const ticketsStatusSummary = computed(() => {
+  if (isLoadingTickets.value) {
+    return "Loading clinical issues...";
+  }
+  const matched = filteredTickets.value.length;
+  const total = tickets.value.length;
+  const q = searchQuery.value.trim();
+  if (q) {
+    return `Showing ${matched} of ${total} clinical issues matching '${q}'`;
+  }
+  if (hasActiveTicketFilters.value) {
+    return `Showing ${matched} of ${total} clinical issues`;
+  }
+  return `Showing ${matched} clinical ${matched === 1 ? "issue" : "issues"}`;
+});
+
+const {
+  politeMessage: ticketsPoliteStatus,
+  assertiveMessage: ticketsAssertiveError,
+} = useStatusAnnouncer({
+  debounceMs: 120,
+  initialPolite: ticketsStatusSummary.value,
+  statusSource: () => ticketsStatusSummary.value,
+  errorSource: () => ticketsErrorMessage.value,
+});
 
 // SLA utilities
 const getSlaIcon = (t) => {

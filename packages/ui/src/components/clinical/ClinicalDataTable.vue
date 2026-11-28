@@ -111,6 +111,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
   loadingMore: {
     type: Boolean,
     default: false,
@@ -256,6 +260,35 @@ const totalPages = computed(() => {
   return Math.ceil(count / effectivePageSize.value) || 1;
 });
 
+const isBusy = computed(() => Boolean(props.loading || props.loadingMore));
+
+const persistentStatusSummary = computed(() => {
+  const label = props.title || props.ariaLabel || "records";
+  if (isBusy.value) {
+    return `Loading ${label}...`;
+  }
+  const visibleCount = props.externalPagination
+    ? props.data.length
+    : sortedData.value.length;
+  if (visibleCount === 0 && displayTotalCount.value === 0) {
+    return props.emptyMessage;
+  }
+  if (props.externalPagination) {
+    if (typeof props.totalRecords === "number") {
+      return `Showing ${props.data.length} of ${props.totalRecords} records`;
+    }
+    const noun = props.data.length === 1 ? "record" : "records";
+    return props.hasMore
+      ? `Showing ${props.data.length} ${noun}, more available`
+      : `Showing ${props.data.length} ${noun}`;
+  }
+  if (totalPages.value > 1) {
+    return `Page ${currentPage.value} of ${totalPages.value}, ${sortedData.value.length} total records`;
+  }
+  const noun = sortedData.value.length === 1 ? "record" : "records";
+  return `Showing ${sortedData.value.length} ${noun}`;
+});
+
 watch(
   totalPages,
   (nextTotalPages) => {
@@ -381,12 +414,22 @@ const handleRowKeydown = (event, row, idx) => {
       {{ srOnlyHeadingText }}
     </span>
 
+    <span
+      class="clinical-table-live-summary sr-only"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      {{ persistentStatusSummary }}
+    </span>
+
     <div
       :class="['table-wrapper', 'focus-ring-inset', wrapperClass]"
       :data-testid="wrapperTestId || undefined"
       role="region"
       :aria-label="ariaLabel || undefined"
       :aria-labelledby="effectiveRegionLabelledBy"
+      :aria-busy="isBusy ? 'true' : undefined"
       tabindex="0"
     >
       <table
@@ -395,6 +438,7 @@ const handleRowKeydown = (event, row, idx) => {
         :data-testid="tableTestId || undefined"
         :aria-label="!labelledBy && ariaLabel ? ariaLabel : undefined"
         :aria-labelledby="effectiveTableLabelledBy"
+        :aria-busy="isBusy ? 'true' : undefined"
       >
         <caption class="sr-only">
           {{

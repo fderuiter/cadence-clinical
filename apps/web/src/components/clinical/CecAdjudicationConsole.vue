@@ -90,6 +90,13 @@
         </div>
       </div>
 
+      <ClinicalLiveRegion
+        id="cec-adjudication-live-status"
+        variant="sr-only"
+        politeness="polite"
+        :message="cecPoliteMessage"
+      />
+
       <!-- Executive Metric Strip -->
       <div class="metric-strip">
         <div class="metric-card">
@@ -1420,7 +1427,13 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { ClinicalModal, SEMANTIC_ACTIONS, ClinicalIcon } from "ui";
+import {
+  ClinicalIcon,
+  ClinicalLiveRegion,
+  ClinicalModal,
+  SEMANTIC_ACTIONS,
+  useStatusAnnouncer,
+} from "ui";
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 import { apiClient } from "../../api/apiClient";
@@ -1830,6 +1843,15 @@ const filteredDossiers = computed(() => {
     }
     return true;
   });
+});
+
+const { politeMessage: cecPoliteMessage } = useStatusAnnouncer({
+  statusSource: computed(() => {
+    const querySuffix = searchQuery.value.trim()
+      ? ` matching '${searchQuery.value.trim()}'`
+      : "";
+    return `CEC adjudication queue (${selectedStudyId.value}, ${filterStatus.value}): ${filteredDossiers.value.length} of ${dossiers.value.length} dossiers${querySuffix}.`;
+  }),
 });
 
 const activeDossier = computed(() => {

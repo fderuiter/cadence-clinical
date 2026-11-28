@@ -148,6 +148,14 @@
       </div>
     </div>
 
+    <ClinicalLiveRegion
+      id="imaging-console-status"
+      persistent-id
+      variant="strip"
+      :polite-message="imagingPoliteStatus"
+      style="margin-bottom: 12px"
+    />
+
     <!-- Main Workspace Split Layout -->
     <div class="imaging-workspace-grid">
       <!-- Left: Series Navigator -->
@@ -355,7 +363,7 @@
 </template>
 
 <script setup>
-import { ClinicalIcon } from "ui";
+import { ClinicalIcon, ClinicalLiveRegion, useStatusAnnouncer } from "ui";
 import { ref, computed, watch } from "vue";
 import DicomMprViewer from "../components/imaging/DicomMprViewer.vue";
 import OncologyCalipers from "../components/imaging/OncologyCalipers.vue";
@@ -372,6 +380,15 @@ const activeCaliperTool = ref("CALIPER_1D");
 const viewMode = ref("single"); // 'single' | 'dual'
 const timepointA = ref("BASELINE");
 const timepointB = ref("CYCLE_2_DAY_1");
+
+const { politeMessage: imagingPoliteStatus } = useStatusAnnouncer({
+  debounceMs: 100,
+  initialPolite: `Viewing ${selectedSubjectId.value} (${selectedTimepoint.value})`,
+  statusSource: () =>
+    viewMode.value === "dual"
+      ? `Dual comparison for ${selectedSubjectId.value}: ${timepointA.value} versus ${timepointB.value}`
+      : `Single viewport for ${selectedSubjectId.value}: ${selectedTimepoint.value}`,
+});
 
 const isViewportSynced = ref(true);
 const sharedSyncState = ref({

@@ -74,73 +74,97 @@
 
       <!-- Active Filters & Bulk Actions Ribbon -->
       <div class="hub-filter-ribbon">
-        <div class="active-filter-pills">
-          <span
-            v-if="fileshareStore.activeFilters.studyId"
-            class="filter-pill study-pill"
-          >
-            Study: <strong>{{ fileshareStore.activeFilters.studyId }}</strong>
-            <ClinicalIconButton
-              class="remove-pill-btn"
-              :label="`Remove study filter ${fileshareStore.activeFilters.studyId}`"
-              @click="clearFilter('studyId')"
-            >
-              ×
-            </ClinicalIconButton>
-          </span>
+        <ClinicalLiveRegion
+          id="documents-hub-status-strip"
+          persistent-id
+          variant="strip"
+          :tone="fileshareStore.error ? 'error' : 'neutral'"
+          :politeness="fileshareStore.error ? 'assertive' : 'polite'"
+          :icon="
+            fileshareStore.error
+              ? 'alert-circle'
+              : totalItems === 0
+                ? 'info'
+                : 'check-circle'
+          "
+          :polite-message="hubPoliteStatus"
+          :assertive-message="hubAssertiveError"
+          class="hub-status-strip"
+        >
+          <template v-if="hasFilterPills" #pills>
+            <div class="active-filter-pills">
+              <span
+                v-if="fileshareStore.activeFilters.studyId"
+                class="filter-pill study-pill"
+              >
+                Study:
+                <strong>{{ fileshareStore.activeFilters.studyId }}</strong>
+                <ClinicalIconButton
+                  class="remove-pill-btn"
+                  :label="`Remove study filter ${fileshareStore.activeFilters.studyId}`"
+                  @click="clearFilter('studyId')"
+                >
+                  ×
+                </ClinicalIconButton>
+              </span>
 
-          <span
-            v-if="fileshareStore.activeFilters.siteId"
-            class="filter-pill site-pill"
-          >
-            Site: <strong>{{ fileshareStore.activeFilters.siteId }}</strong>
-            <ClinicalIconButton
-              class="remove-pill-btn"
-              :label="`Remove site filter ${fileshareStore.activeFilters.siteId}`"
-              @click="clearFilter('siteId')"
-            >
-              ×
-            </ClinicalIconButton>
-          </span>
+              <span
+                v-if="fileshareStore.activeFilters.siteId"
+                class="filter-pill site-pill"
+              >
+                Site:
+                <strong>{{ fileshareStore.activeFilters.siteId }}</strong>
+                <ClinicalIconButton
+                  class="remove-pill-btn"
+                  :label="`Remove site filter ${fileshareStore.activeFilters.siteId}`"
+                  @click="clearFilter('siteId')"
+                >
+                  ×
+                </ClinicalIconButton>
+              </span>
 
-          <span
-            v-if="fileshareStore.activeFilters.zoneCode"
-            class="filter-pill zone-pill"
-          >
-            Zone: <strong>{{ fileshareStore.activeFilters.zoneCode }}</strong>
-            <ClinicalIconButton
-              class="remove-pill-btn"
-              :label="`Remove zone filter ${fileshareStore.activeFilters.zoneCode}`"
-              @click="clearFilter('zoneCode')"
-            >
-              ×
-            </ClinicalIconButton>
-          </span>
+              <span
+                v-if="fileshareStore.activeFilters.zoneCode"
+                class="filter-pill zone-pill"
+              >
+                Zone:
+                <strong>{{ fileshareStore.activeFilters.zoneCode }}</strong>
+                <ClinicalIconButton
+                  class="remove-pill-btn"
+                  :label="`Remove zone filter ${fileshareStore.activeFilters.zoneCode}`"
+                  @click="clearFilter('zoneCode')"
+                >
+                  ×
+                </ClinicalIconButton>
+              </span>
 
-          <span
-            v-if="fileshareStore.activeFilters.sectionCode"
-            class="filter-pill section-pill"
-          >
-            Section:
-            <strong>{{ fileshareStore.activeFilters.sectionCode }}</strong>
-            <ClinicalIconButton
-              class="remove-pill-btn"
-              :label="`Remove section filter ${fileshareStore.activeFilters.sectionCode}`"
-              @click="clearFilter('sectionCode')"
-            >
-              ×
-            </ClinicalIconButton>
-          </span>
+              <span
+                v-if="fileshareStore.activeFilters.sectionCode"
+                class="filter-pill section-pill"
+              >
+                Section:
+                <strong>{{ fileshareStore.activeFilters.sectionCode }}</strong>
+                <ClinicalIconButton
+                  class="remove-pill-btn"
+                  :label="`Remove section filter ${fileshareStore.activeFilters.sectionCode}`"
+                  @click="clearFilter('sectionCode')"
+                >
+                  ×
+                </ClinicalIconButton>
+              </span>
+            </div>
+          </template>
 
-          <button
-            v-if="hasActiveFilter"
-            type="button"
-            class="btn btn-sm btn-outline-secondary btn-reset-all"
-            @click="resetAllFilters"
-          >
-            Reset All Filters
-          </button>
-        </div>
+          <template v-if="hasActiveFilter" #actions>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary btn-reset-all"
+              @click="resetAllFilters"
+            >
+              Reset All Filters
+            </button>
+          </template>
+        </ClinicalLiveRegion>
 
         <!-- Bulk Selection Action Ribbon -->
         <div v-if="selectedFiles.length > 0" class="bulk-actions-toolbar">
@@ -171,6 +195,7 @@
         plain
         external-pagination
         external-sort
+        :loading="fileshareStore.isLoading"
         :initial-sort-key="sortField"
         :initial-sort-order="sortDirection"
         :columns="documentColumns"
@@ -426,6 +451,8 @@ import {
   ClinicalIcon,
   ClinicalIconButton,
   ClinicalInput,
+  ClinicalLiveRegion,
+  useStatusAnnouncer,
 } from "ui";
 import { useFileshareStore } from "../stores/fileshare";
 import DocumentsFolderTree from "../components/fileshare/DocumentsFolderTree.vue";
@@ -520,6 +547,11 @@ function resetAllFilters() {
   searchInput.value = "";
   currentPage.value = 1;
 }
+
+const hasFilterPills = computed(() => {
+  const f = fileshareStore.activeFilters;
+  return !!(f.studyId || f.siteId || f.zoneCode || f.sectionCode);
+});
 
 const hasActiveFilter = computed(() => {
   const f = fileshareStore.activeFilters;
@@ -618,6 +650,74 @@ const totalItems = computed(() => sortedDocuments.value.length);
 const totalPages = computed(() =>
   Math.max(1, Math.ceil(totalItems.value / itemsPerPage))
 );
+
+const scopedDocumentTotal = computed(() => {
+  const f = fileshareStore.activeFilters;
+  const allCount = fileshareStore.files.length;
+  if (
+    !f.studyId &&
+    !f.siteId &&
+    !f.zoneCode &&
+    !f.sectionCode &&
+    !f.folderCode
+  ) {
+    return allCount;
+  }
+  if (!f.searchQuery?.trim()) {
+    return allCount;
+  }
+  return fileshareStore.files.filter((file) => {
+    if (f.studyId && file.study_id !== f.studyId) return false;
+    if (f.siteId && file.site_id && file.site_id !== f.siteId) return false;
+    if (f.zoneCode && file.zone_code && file.zone_code !== f.zoneCode) {
+      return false;
+    }
+    if (
+      f.sectionCode &&
+      file.section_code &&
+      file.section_code !== f.sectionCode
+    ) {
+      return false;
+    }
+    if (f.folderCode && file.folder_code && file.folder_code !== f.folderCode) {
+      return false;
+    }
+    return true;
+  }).length;
+});
+
+const hubStatusSummary = computed(() => {
+  if (fileshareStore.isLoading) {
+    return "Loading clinical documents...";
+  }
+  const q = (fileshareStore.activeFilters.searchQuery || "").trim();
+  const matched = totalItems.value;
+  const baseline = scopedDocumentTotal.value;
+  if (q) {
+    return `Showing ${matched} of ${baseline} documents matching '${q}'`;
+  }
+  if (hasActiveFilter.value) {
+    return `Showing ${matched} of ${baseline} documents`;
+  }
+  return `Showing ${matched} ${matched === 1 ? "document" : "documents"}`;
+});
+
+const hubErrorSummary = computed(() => {
+  if (!fileshareStore.error) return "";
+  const detail =
+    fileshareStore.error?.message || String(fileshareStore.error || "");
+  return detail
+    ? `Could not load documents: ${detail}`
+    : "Could not load documents.";
+});
+
+const { politeMessage: hubPoliteStatus, assertiveMessage: hubAssertiveError } =
+  useStatusAnnouncer({
+    debounceMs: 120,
+    initialPolite: hubStatusSummary.value,
+    statusSource: () => hubStatusSummary.value,
+    errorSource: () => hubErrorSummary.value,
+  });
 
 const paginatedDocuments = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
@@ -862,10 +962,16 @@ async function handleDeleteFile(file) {
   justify-content: space-between;
   align-items: center;
   padding: 10px 24px;
-  background-color: var(--semantic-color-surface-muted);
+  background-color: var(--semantic-color-surface);
   border-bottom: 1px solid var(--border);
   min-height: 44px;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hub-status-strip {
+  flex: 1 1 360px;
+  font-weight: 600;
 }
 
 .active-filter-pills {
@@ -879,11 +985,13 @@ async function handleDeleteFile(file) {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 8px;
-  background-color: var(--semantic-color-primary-light);
-  color: var(--semantic-color-primary);
+  padding: 2px 8px;
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .remove-pill-btn {

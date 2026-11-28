@@ -59,24 +59,25 @@
     </button>
   </form>
 
-  <div
-    v-if="scopeGuidance"
-    :id="`${prefix}-scope-guidance`"
-    class="scope-guidance"
-    role="status"
-  >
-    {{ scopeGuidance }}
-  </div>
-  <p v-else-if="loadError" class="error-banner" role="status">
-    {{ loadError }}
-  </p>
-  <p v-else-if="idleMessage" class="muted-status" role="status">
-    {{ idleMessage }}
-  </p>
+  <ClinicalLiveRegion
+    :id="scopeGuidance ? `${prefix}-scope-guidance` : ''"
+    variant="inline"
+    :politeness="!scopeGuidance && loadError ? 'assertive' : 'polite'"
+    :tone="!scopeGuidance && loadError ? 'error' : 'neutral'"
+    :active="Boolean(scopeGuidance || loadError || idleMessage)"
+    :live-class="
+      scopeGuidance
+        ? 'scope-guidance'
+        : loadError
+          ? 'error-banner'
+          : 'muted-status'
+    "
+    :message="scopeGuidance || loadError || idleMessage || ''"
+  />
 </template>
 
 <script setup lang="ts">
-import { ClinicalInput } from "ui";
+import { ClinicalInput, ClinicalLiveRegion } from "ui";
 withDefaults(
   defineProps<{
     prefix: string;

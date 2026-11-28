@@ -138,20 +138,20 @@
       </ul>
     </div>
 
-    <p
-      v-if="outcome"
-      :data-testid="`${prefix}-outcome`"
-      :class="[
+    <ClinicalLiveRegion
+      :test-id="`${prefix}-outcome`"
+      variant="inline"
+      :active="Boolean(outcome)"
+      :politeness="outcome?.kind === 'ok' ? 'polite' : 'assertive'"
+      :tone="outcome?.kind === 'ok' ? 'success' : 'error'"
+      :live-class="[
         'scope-lock-outcome',
-        outcome.kind === 'ok'
+        outcome?.kind === 'ok'
           ? 'scope-lock-outcome--ok'
           : 'scope-lock-outcome--error',
       ]"
-      :role="outcome.kind === 'ok' ? 'status' : 'alert'"
-      aria-live="polite"
-    >
-      {{ outcome.message }}
-    </p>
+      :message="outcome?.message || ''"
+    />
 
     <SignatureCaptureModal
       v-if="modalOp"
@@ -164,6 +164,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { ClinicalLiveRegion } from "ui";
 import { type KernelLock, type KernelLockKind } from "../../api/kernelApi";
 import type {
   CoveringScopeLockItem,

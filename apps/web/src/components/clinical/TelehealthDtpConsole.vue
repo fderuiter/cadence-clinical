@@ -65,6 +65,13 @@
       </div>
     </header>
 
+    <ClinicalLiveRegion
+      id="telehealth-dtp-live-status"
+      variant="sr-only"
+      politeness="polite"
+      :message="telehealthPoliteMessage"
+    />
+
     <!-- Top KPI Metrics Banner -->
     <section class="metrics-grid" aria-label="DCT Overview Metrics">
       <div class="metric-card">
@@ -1006,8 +1013,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from "vue";
-import { ClinicalIconButton, useFocusTrap, ClinicalIcon } from "ui";
+import { computed, ref, reactive, onMounted } from "vue";
+import {
+  ClinicalIcon,
+  ClinicalIconButton,
+  ClinicalLiveRegion,
+  useFocusTrap,
+  useStatusAnnouncer,
+} from "ui";
 import { interopService } from "../../api/interop";
 import { useToastStore } from "../../stores/toasts";
 import { demoNowIso, demoRandomInt } from "../../utils/demoMode.js";
@@ -1017,6 +1030,14 @@ const toasts = useToastStore();
 const isLoading = ref(false);
 const isReconciliationDrawerOpen = ref(false);
 const activeTab = ref("telehealth");
+
+const { politeMessage: telehealthPoliteMessage } = useStatusAnnouncer({
+  statusSource: computed(() =>
+    isLoading.value
+      ? "Refreshing telehealth sessions and DTP logistics..."
+      : `DCT logistics (${activeTab.value}): ${sessions.value.length} telehealth visits, ${shipments.value.length} courier shipments, ${visits.value.length} home nurse visits.`
+  ),
+});
 
 const metrics = reactive({
   total_telehealth_sessions: 2,

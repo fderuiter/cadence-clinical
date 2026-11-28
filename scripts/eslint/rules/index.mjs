@@ -1,3 +1,8 @@
+import {
+  noConditionalStatusMountRule,
+  noConflictingLiveRegionRule,
+  noStatusRoleOnErrorsRule,
+} from "./live-region-semantics.mjs";
 import { noAriaLabelMismatchRule } from "./no-aria-label-mismatch.mjs";
 import { noCustomFontStackRule } from "./no-custom-font-stack.mjs";
 import { noEmojiGlyphsRule } from "./no-emoji-glyphs.mjs";
@@ -37,5 +42,8 @@ export const customVuePlugin = {
     "no-unguarded-button-state": noUnguardedButtonStateRule,
     "require-inline-focus-handoff": requireInlineFocusHandoffRule,
     "no-unscoped-navigation": noUnscopedNavigationRule,
+    "no-conflicting-live-region": noConflictingLiveRegionRule,
+    "no-status-role-on-errors": noStatusRoleOnErrorsRule,
+    "no-conditional-status-mount": noConditionalStatusMountRule,
   },
 };

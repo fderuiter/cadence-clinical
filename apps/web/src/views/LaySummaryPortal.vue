@@ -76,6 +76,14 @@
       </div>
     </div>
 
+    <ClinicalLiveRegion
+      id="lay-summary-live-status"
+      persistent-id
+      variant="strip"
+      :polite-message="laySummaryPoliteStatus"
+      style="margin-bottom: 14px"
+    />
+
     <!-- Navigation Tabs -->
     <div class="view-tabs-bar">
       <button
@@ -659,7 +667,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { ClinicalIconButton, ClinicalIcon } from "ui";
+import {
+  ClinicalIconButton,
+  ClinicalIcon,
+  ClinicalLiveRegion,
+  useStatusAnnouncer,
+} from "ui";
 import { useToastStore } from "../stores/toasts.js";
 import { ensureOk } from "../utils/apiErrors.js";
 import { isDemoBuild } from "../utils/demoMode.js";
@@ -719,6 +732,16 @@ const publishedSummariesCount = computed(
   () => summaries.value.filter((s) => s.status === "PUBLISHED").length
 );
 const totalReceiptsCount = computed(() => auditReceipts.value.length);
+
+const { politeMessage: laySummaryPoliteStatus } = useStatusAnnouncer({
+  debounceMs: 100,
+  initialPolite: `${publishedSummariesCount.value} published plain-language summaries`,
+  statusSource: () =>
+    isLoading.value
+      ? "Loading plain-language trial summaries..."
+      : publishSuccess.value ||
+        `${publishedSummariesCount.value} published plain-language summaries, ${totalReceiptsCount.value} confirmed receipts`,
+});
 const avgComprehensionScore = computed(() => {
   if (auditReceipts.value.length === 0) return 4.8;
   const sum = auditReceipts.value.reduce(

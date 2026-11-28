@@ -12,6 +12,8 @@ const portalSrcDir = path.join(repoRoot, "apps/subject-portal/src");
  * Intentionally staged shared UI primitives awaiting production rollout (ADR-2677).
  * Once adopted in apps/web/src or apps/subject-portal/src, entries must graduate out
  * of this allowlist so future regressions are caught automatically.
+ * Active live-region primitives (ClinicalLiveRegion, useStatusAnnouncer) are adopted
+ * across both apps/web/src and apps/subject-portal/src and must remain outside this set.
  */
 export const STAGED_UI_PRIMITIVES = new Set([
   "ClinicalExplanation",
@@ -428,6 +430,12 @@ describe("Shared UI Consumer Reachability Guard (ADR-2677)", () => {
       liveReport.staleStagedPrimitives,
       "Adopted primitives must be removed from STAGED_UI_PRIMITIVES"
     ).toEqual([]);
+    expect(STAGED_UI_PRIMITIVES.has("ClinicalLiveRegion")).toBe(false);
+    expect(STAGED_UI_PRIMITIVES.has("useStatusAnnouncer")).toBe(false);
+    expect(rootUi.ClinicalLiveRegion).toBeDefined();
+    expect(rootUi.useStatusAnnouncer).toBeTypeOf("function");
+    expect(strippedConsumerCorpus).toMatch(/\bClinicalLiveRegion\b/);
+    expect(strippedConsumerCorpus).toMatch(/\buseStatusAnnouncer\b/);
   });
 
   it("keeps retired ADR-2677 UI components, composables, builders, and signing helpers absent from root exports", () => {

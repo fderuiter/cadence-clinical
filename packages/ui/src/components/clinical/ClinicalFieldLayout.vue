@@ -81,13 +81,11 @@
 
     <!-- Validation Error -->
     <div
-      v-if="showError"
       :id="`validation-error-${id}`"
-      class="validation-error-msg"
-      role="status"
-      aria-live="polite"
+      :class="showError ? 'validation-error-msg' : 'sr-only'"
+      role="alert"
     >
-      {{ error }}
+      {{ showError ? error : "" }}
     </div>
 
     <!-- Query Panel -->

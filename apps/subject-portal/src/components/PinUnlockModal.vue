@@ -34,15 +34,15 @@
             Do you want to verify your session, flag locked local entries, and
             choose a new security PIN?
           </p>
-          <div
-            v-if="sessionStore.pinUnlock.error"
+          <ClinicalLiveRegion
             id="pin-reset-error"
-            class="error-state pin-error-msg"
-            role="status"
-            aria-live="polite"
-          >
-            {{ sessionStore.pinUnlock.error }}
-          </div>
+            variant="inline"
+            politeness="assertive"
+            tone="error"
+            :active="Boolean(sessionStore.pinUnlock.error)"
+            live-class="error-state pin-error-msg"
+            :message="sessionStore.pinUnlock.error || ''"
+          />
           <SiteContactLinks
             id="pin-reset-site-contacts"
             compact
@@ -107,23 +107,29 @@
             of 5) reached. Sign in again to reset your PIN, sign out, or contact
             your study coordinator below.
           </div>
-          <div
-            v-if="sessionStore.pinUnlock.error"
+          <ClinicalLiveRegion
             id="pin-unlock-error"
-            class="error-state pin-error-msg"
+            variant="inline"
+            politeness="assertive"
+            tone="error"
+            :active="Boolean(sessionStore.pinUnlock.error)"
+            live-class="error-state pin-error-msg"
+            :message="sessionStore.pinUnlock.error || ''"
+          />
+          <p
+            id="pin-attempts-remaining"
+            :class="
+              failedAttempts > 0 && !isLockedOut
+                ? 'pin-attempts-note'
+                : 'sr-only'
+            "
             role="status"
             aria-live="polite"
           >
-            {{ sessionStore.pinUnlock.error }}
-          </div>
-          <p
-            v-if="failedAttempts > 0 && !isLockedOut"
-            id="pin-attempts-remaining"
-            class="pin-attempts-note"
-            aria-live="polite"
-          >
-            Attempts remaining before unlock pause:
-            <strong>{{ remainingAttempts }}</strong> of {{ maxAttempts }}
+            <template v-if="failedAttempts > 0 && !isLockedOut">
+              Attempts remaining before unlock pause:
+              <strong>{{ remainingAttempts }}</strong> of {{ maxAttempts }}
+            </template>
           </p>
           <div class="form-group">
             <label for="unlock-pin">Security PIN</label>
@@ -193,7 +199,7 @@
 
 <script setup>
 import { computed, ref } from "vue";
-import { SignOutConfirmModal } from "ui";
+import { ClinicalLiveRegion, SignOutConfirmModal } from "ui";
 
 import {
   MAX_PIN_UNLOCK_ATTEMPTS,

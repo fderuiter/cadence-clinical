@@ -80,6 +80,9 @@ export default [
       "custom-vue/no-unguarded-button-state": "error",
       "custom-vue/require-inline-focus-handoff": "error",
       "custom-vue/no-unscoped-navigation": "error",
+      "custom-vue/no-conflicting-live-region": "error",
+      "custom-vue/no-status-role-on-errors": "error",
+      "custom-vue/no-conditional-status-mount": "error",
       "vue/max-attributes-per-line": "off",
       "vue/singleline-html-element-content-newline": "off",
       "vue/multiline-html-element-content-newline": "off",
@@ -251,6 +254,7 @@ export default [
       sourceType: "module",
       globals: { ...globals.browser },
     },
+    plugins: { "custom-vue": customVuePlugin },
     rules: {
       "no-alert": "error",
       "no-unused-vars": unusedVarsRuleConfig,
@@ -259,6 +263,9 @@ export default [
       "vuejs-accessibility/click-events-have-key-events": "error",
       "vuejs-accessibility/no-static-element-interactions": "error",
       "vuejs-accessibility/form-control-has-label": "error",
+      "custom-vue/no-conflicting-live-region": "error",
+      "custom-vue/no-status-role-on-errors": "error",
+      "custom-vue/no-conditional-status-mount": "error",
     },
     files: [
       "apps/**/*.js",
@@ -270,11 +277,15 @@ export default [
   },
   {
     languageOptions: { ecmaVersion: 2022, sourceType: "module" },
+    plugins: { "custom-vue": customVuePlugin },
     rules: {
       "vuejs-accessibility/label-has-for": labelHasForRuleConfig,
       "vuejs-accessibility/click-events-have-key-events": "error",
       "vuejs-accessibility/no-static-element-interactions": "error",
       "vuejs-accessibility/form-control-has-label": "error",
+      "custom-vue/no-conflicting-live-region": "error",
+      "custom-vue/no-status-role-on-errors": "error",
+      "custom-vue/no-conditional-status-mount": "error",
       "vue/html-self-closing": [
         "error",
         {

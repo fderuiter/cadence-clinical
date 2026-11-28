@@ -293,6 +293,35 @@
           </div>
         </div>
 
+        <!-- Persistent Filter & Loading Status Strip -->
+        <ClinicalLiveRegion
+          id="knowledge-filter-status"
+          persistent-id
+          variant="strip"
+          :tone="knowledgeErrorMessage ? 'error' : 'neutral'"
+          :politeness="knowledgeErrorMessage ? 'assertive' : 'polite'"
+          :icon="
+            knowledgeErrorMessage
+              ? 'alert-circle'
+              : loading || displayArticles.length === 0
+                ? 'info'
+                : 'check-circle'
+          "
+          :polite-message="knowledgePoliteStatus"
+          :assertive-message="knowledgeAssertiveError"
+          class="knowledge-status-strip"
+        >
+          <template v-if="hasActiveKnowledgeFilter" #actions>
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              @click="resetFilters"
+            >
+              Reset Filters
+            </button>
+          </template>
+        </ClinicalLiveRegion>
+
         <!-- Articles Stream -->
         <div v-if="loading" class="articles-loading-state">
           <div class="spinner" />
@@ -1126,8 +1155,10 @@ import { computed, onMounted, ref, watch } from "vue";
 import {
   ClinicalIcon,
   ClinicalIconButton,
+  ClinicalLiveRegion,
   ClinicalModal,
   ClinicalTabs,
+  useStatusAnnouncer,
 } from "ui";
 import {
   knowledgeService,
@@ -1150,6 +1181,7 @@ export default {
   components: {
     ClinicalIcon,
     ClinicalIconButton,
+    ClinicalLiveRegion,
     ClinicalModal,
     ClinicalTabs,
   },
@@ -1173,6 +1205,7 @@ export default {
     const activeStatusFilter = ref("ALL");
     const activeReaderTab = ref("content");
     const loading = ref(false);
+    const knowledgeErrorMessage = ref("");
     const scopeStudyId = ref(initialRouteScope.studyId);
     const scopeSiteId = ref(initialRouteScope.siteId);
     const scopeSubjectId = ref(initialRouteScope.subjectId);
@@ -2002,6 +2035,8 @@ export default {
           applySelectedArticle(displayArticles.value[0]);
         }
       } catch (err) {
+        knowledgeErrorMessage.value =
+          "Could not load the clinical SOP repository.";
         toastStore.apiError("Could not load the knowledge base", err);
       } finally {
         loading.value = false;
@@ -2077,6 +2112,41 @@ export default {
       }
     );
 
+    const hasActiveKnowledgeFilter = computed(() => {
+      return Boolean(
+        searchQuery.value.trim() ||
+        selectedTag.value ||
+        activeStatusFilter.value !== "ALL" ||
+        selectedCategoryId.value !== null
+      );
+    });
+
+    const knowledgeStatusSummary = computed(() => {
+      if (loading.value) {
+        return "Loading clinical SOP repository...";
+      }
+      const matched = displayArticles.value.length;
+      const total = filteredByPersonaArticles.value.length;
+      const q = searchQuery.value.trim();
+      if (q) {
+        return `Showing ${matched} of ${total} SOP articles matching '${q}'`;
+      }
+      if (hasActiveKnowledgeFilter.value) {
+        return `Showing ${matched} of ${total} SOP articles`;
+      }
+      return `Showing ${matched} SOP ${matched === 1 ? "article" : "articles"}`;
+    });
+
+    const {
+      politeMessage: knowledgePoliteStatus,
+      assertiveMessage: knowledgeAssertiveError,
+    } = useStatusAnnouncer({
+      debounceMs: 120,
+      initialPolite: knowledgeStatusSummary.value,
+      statusSource: () => knowledgeStatusSummary.value,
+      errorSource: () => knowledgeErrorMessage.value,
+    });
+
     onMounted(() => {
       loadInitialData();
     });
@@ -2133,6 +2203,10 @@ export default {
       availableTags,
       readerTabs,
       selectedArticleRenderedHtml,
+      hasActiveKnowledgeFilter,
+      knowledgeErrorMessage,
+      knowledgePoliteStatus,
+      knowledgeAssertiveError,
 
       // Methods
       getTagList,

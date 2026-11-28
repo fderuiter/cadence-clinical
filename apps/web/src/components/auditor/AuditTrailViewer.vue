@@ -141,6 +141,14 @@
       </div>
     </div>
 
+    <ClinicalLiveRegion
+      id="auditor-trail-status"
+      persistent-id
+      variant="strip"
+      :polite-message="auditorTrailPolite"
+      style="margin-bottom: 14px"
+    />
+
     <!-- Events Table -->
     <div class="card" style="padding: 0; overflow-x: auto">
       <table
@@ -254,9 +262,10 @@
 
 <script setup>
 import { ref, watch } from "vue";
+import { ClinicalLiveRegion, useStatusAnnouncer } from "ui";
 import { useAuditorStore } from "../../stores/auditor";
 
-defineProps({
+const props = defineProps({
   events: {
     type: Array,
     required: true,
@@ -264,6 +273,15 @@ defineProps({
 });
 
 const auditorStore = useAuditorStore();
+
+const { politeMessage: auditorTrailPolite } = useStatusAnnouncer({
+  debounceMs: 120,
+  initialPolite: `Showing ${props.events.length} inspection trail events`,
+  statusSource: () =>
+    auditorStore.loading
+      ? "Loading regulatory inspection events..."
+      : `Showing ${props.events.length} inspection trail ${props.events.length === 1 ? "event" : "events"}`,
+});
 
 const userIdInput = ref(auditorStore.filters.user);
 const actionInput = ref(auditorStore.filters.eventType);

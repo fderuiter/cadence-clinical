@@ -126,10 +126,15 @@ export function openSignatureModal(actionType = "epro") {
   const reasonSelect = document.getElementById("sign-reason");
   const modalHeader = document.getElementById("portal-modal-title");
   const errorBanner = document.getElementById("modal-error-banner");
+  const liveAlert = document.getElementById("sign-modal-live-alert");
   if (errorBanner) {
     errorBanner.style.display = "none";
-    errorBanner.setAttribute("role", "status");
-    errorBanner.setAttribute("aria-live", "polite");
+    errorBanner.textContent = "";
+    errorBanner.setAttribute("role", "alert");
+    errorBanner.removeAttribute("aria-live");
+  }
+  if (liveAlert) {
+    liveAlert.textContent = "";
   }
 
   if (normalizedAction === "consent") {
@@ -235,9 +240,13 @@ export function closeSignatureModal() {
 }
 
 function displayModalOrToastError(errorBanner, message) {
+  const liveAlert = document.getElementById("sign-modal-live-alert");
+  if (liveAlert) {
+    liveAlert.textContent = message;
+  }
   if (errorBanner) {
     errorBanner.setAttribute("role", "alert");
-    errorBanner.setAttribute("aria-live", "assertive");
+    errorBanner.removeAttribute("aria-live");
     errorBanner.textContent = message;
     errorBanner.style.display = "block";
   } else {
@@ -255,11 +264,16 @@ export async function verifyAndSubmitSignature() {
     .getElementById("sign-reason-custom")
     .value.trim();
   const errorBanner = document.getElementById("modal-error-banner");
+  const liveAlert = document.getElementById("sign-modal-live-alert");
 
   if (errorBanner) {
     errorBanner.style.display = "none";
-    errorBanner.setAttribute("role", "status");
-    errorBanner.setAttribute("aria-live", "polite");
+    errorBanner.textContent = "";
+    errorBanner.setAttribute("role", "alert");
+    errorBanner.removeAttribute("aria-live");
+  }
+  if (liveAlert) {
+    liveAlert.textContent = "";
   }
 
   if (!username || !password) {

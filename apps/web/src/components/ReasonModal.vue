@@ -44,20 +44,16 @@
     </div>
 
     <!-- Accessible Validation Feedback -->
-    <div
-      v-if="validationError"
+    <ClinicalLiveRegion
       :id="idPrefix + 'reason-error'"
-      class="validation-error-msg"
-      style="
-        color: var(--semantic-color-error);
-        margin-top: 8px;
-        font-weight: 600;
-      "
-      role="status"
-      aria-live="polite"
-    >
-      {{ validationError }}
-    </div>
+      variant="inline"
+      politeness="assertive"
+      tone="error"
+      :active="Boolean(validationError)"
+      live-class="validation-error-msg"
+      style="margin-top: 8px; font-weight: 600"
+      :message="validationError"
+    />
 
     <template #footer>
       <button
@@ -82,7 +78,7 @@
 
 <script setup>
 import { ref, watch } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalLiveRegion, ClinicalModal } from "ui";
 
 const props = defineProps({
   show: {

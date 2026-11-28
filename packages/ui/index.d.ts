@@ -265,6 +265,8 @@ export const EmptyState: DefineSlotsComponent<
     title?: string;
     message?: string;
     actionText?: string;
+    live?: boolean;
+    ariaLabel?: string;
   },
   {
     default?: (props: Record<string, never>) => any;
@@ -272,6 +274,76 @@ export const EmptyState: DefineSlotsComponent<
     action?: (props: Record<string, never>) => any;
   }
 >;
+
+export type ClinicalLiveRegionPoliteness = "polite" | "assertive";
+export type ClinicalLiveRegionVariant =
+  "strip" | "banner" | "inline" | "sr-only";
+export type ClinicalLiveRegionTone =
+  "neutral" | "info" | "success" | "warning" | "error";
+
+export const ClinicalLiveRegion: DefineSlotsComponent<
+  {
+    message?: string;
+    politeMessage?: string;
+    assertiveMessage?: string;
+    politeness?: ClinicalLiveRegionPoliteness | string;
+    variant?: ClinicalLiveRegionVariant | string;
+    tone?: ClinicalLiveRegionTone | string;
+    icon?: ClinicalIconName | "none" | (string & {});
+    active?: boolean;
+    atomic?: boolean;
+    tabularNums?: boolean;
+    id?: string;
+    testId?: string;
+    persistentId?: boolean;
+    liveClass?: string | any[] | Record<string, boolean>;
+    containerClass?: string | any[] | Record<string, boolean>;
+  },
+  {
+    default?: (props: Record<string, never>) => any;
+    pills?: (props: Record<string, never>) => any;
+    actions?: (props: Record<string, never>) => any;
+  }
+>;
+
+export type StatusAnnouncerSource =
+  | import("vue").Ref<string | null | undefined>
+  | import("vue").ComputedRef<string | null | undefined>
+  | (() => string | null | undefined)
+  | null;
+
+export interface StatusAnnouncerOptions {
+  debounceMs?: number;
+  reannounceDelayMs?: number;
+  initialPolite?: string;
+  initialAssertive?: string;
+  statusSource?: StatusAnnouncerSource;
+  errorSource?: StatusAnnouncerSource;
+  announceOnMount?: boolean;
+}
+
+export interface StatusAnnounceCallOptions {
+  politeness?: ClinicalLiveRegionPoliteness;
+  immediate?: boolean;
+  debounceMs?: number;
+}
+
+export function useStatusAnnouncer(options?: StatusAnnouncerOptions): {
+  politeMessage: import("vue").Ref<string>;
+  assertiveMessage: import("vue").Ref<string>;
+  announce: (message: string, options?: StatusAnnounceCallOptions) => void;
+  announcePolite: (
+    message: string,
+    options?: Omit<StatusAnnounceCallOptions, "politeness">
+  ) => void;
+  announceAssertive: (
+    message: string,
+    options?: Omit<StatusAnnounceCallOptions, "politeness">
+  ) => void;
+  clear: (channel?: ClinicalLiveRegionPoliteness) => void;
+  clearStatus: () => void;
+  clearAssertive: () => void;
+};
 
 export const ClinicalModal: DefineSlotsComponent<
   {
@@ -420,6 +492,7 @@ export const ClinicalDataTable: DefineSlotsComponent<
     page?: number | null;
     totalRecords?: number | null;
     hasMore?: boolean;
+    loading?: boolean;
     loadingMore?: boolean;
     loadMoreLabel?: string;
     loadMoreId?: string;

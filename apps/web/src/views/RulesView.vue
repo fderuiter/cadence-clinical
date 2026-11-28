@@ -78,6 +78,17 @@
         </button>
       </div>
 
+      <ClinicalLiveRegion
+        id="rules-live-status"
+        persistent-id
+        variant="strip"
+        :tone="codingStore.error ? 'error' : 'neutral'"
+        :politeness="codingStore.error ? 'assertive' : 'polite'"
+        :polite-message="rulesPoliteStatus"
+        :assertive-message="rulesAssertiveError"
+        style="margin-bottom: 14px"
+      />
+
       <!-- Tab 1: Rules Designer -->
       <div v-if="activeTab === 'rules'" class="grid-2-responsive">
         <!-- Active Ruleset List -->
@@ -806,6 +817,8 @@ import {
   canonicalSerialize,
   sha256,
   ClinicalIcon,
+  ClinicalLiveRegion,
+  useStatusAnnouncer,
 } from "ui";
 
 const rulesReasonOptions = [
@@ -1545,6 +1558,20 @@ watch(
     triggerPreview();
   }
 );
+
+const {
+  politeMessage: rulesPoliteStatus,
+  assertiveMessage: rulesAssertiveError,
+} = useStatusAnnouncer({
+  debounceMs: 100,
+  statusSource: () =>
+    activeTab.value === "queries"
+      ? `Showing ${filteredQueries.value.length} of ${dashboardQueries.value.length} queries (${queryFilterStatus.value})`
+      : loadingRules.value
+        ? "Loading study ruleset..."
+        : `Study ruleset ready (${activeRules.value.length} active rules)`,
+  errorSource: () => codingStore.error || "",
+});
 
 onMounted(async () => {
   if (hasEditAccess.value) {

@@ -11,19 +11,15 @@
     </div>
 
     <!-- Alert Banner for errors -->
-    <div
-      v-if="globalError"
-      class="card"
-      style="
-        border-left: 4px solid var(--error);
-        background: var(--semantic-color-error-bg-soft);
-        padding: 12px 16px;
-        margin-bottom: 20px;
-      "
-    >
-      <span style="color: var(--error); font-weight: 600"> Error:</span>
-      {{ globalError }}
-    </div>
+    <ClinicalLiveRegion
+      id="audit-global-error"
+      variant="banner"
+      politeness="assertive"
+      tone="error"
+      :active="Boolean(globalError)"
+      :assertive-message="globalError ? `Error: ${globalError}` : ''"
+      style="margin-bottom: 20px"
+    />
 
     <div class="grid-2-responsive">
       <!-- Card 1: GxP Cryptographic Integrity Seal Verification -->
@@ -869,6 +865,14 @@
         </div>
       </div>
 
+      <ClinicalLiveRegion
+        id="audit-ledger-status"
+        persistent-id
+        variant="strip"
+        :polite-message="auditPoliteStatus"
+        style="margin-bottom: 12px"
+      />
+
       <!-- Logs Table with Expandable Inspection Details -->
       <div style="overflow-x: auto">
         <table
@@ -1540,7 +1544,7 @@
 </template>
 
 <script setup>
-import { ClinicalIcon } from "ui";
+import { ClinicalIcon, ClinicalLiveRegion, useStatusAnnouncer } from "ui";
 import { ref, reactive, computed, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { auditorService } from "../api/auditor";
@@ -2170,6 +2174,14 @@ function getActionBadgeClass(action) {
   };
   return map[action] || "badge";
 }
+
+const { politeMessage: auditPoliteStatus } = useStatusAnnouncer({
+  debounceMs: 120,
+  statusSource: () =>
+    auditLoading.value
+      ? "Retrieving chronological ledger events..."
+      : `Showing ${auditLogs.value.length} of ${totalLogs.value} audit trail events`,
+});
 
 // Initial Loading
 onMounted(() => {
