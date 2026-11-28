@@ -61,37 +61,6 @@
         class="participant-governance"
         data-testid="participant-governance"
       >
-        <div
-          v-if="coveringParticipantLocks.length > 0"
-          class="participant-locks-banner"
-          data-testid="participant-locks-banner"
-          role="status"
-        >
-          <strong>{{
-            participantAssertionsLocked ? "Locked." : "Frozen."
-          }}</strong>
-          Values cannot be changed while a lock is in force.
-          <span data-testid="participant-lock-scope-note">
-            <template v-if="participantAssertionsLocked">
-              Source verifications, verification withdrawals, and query changes
-              are also blocked while a Locked assertion is in force.
-            </template>
-            <template v-else>
-              Source verification and queries remain available while Frozen.
-            </template>
-          </span>
-          <ul>
-            <li
-              v-for="(held, idx) in coveringParticipantLocks"
-              :key="held.ref ?? `covering-${idx}`"
-            >
-              {{ held.kind }} on {{ held.scope_ref }} by
-              {{ held.locked_by ?? "—" }} at {{ held.locked_at ?? "—" }}:
-              {{ held.reason_for_change ?? "—" }}
-            </li>
-          </ul>
-        </div>
-
         <ScopeLockControls
           :study-ref="studyRef"
           :scope-ref="`enrollment:${record.enrollmentId}`"
@@ -99,100 +68,151 @@
           :direct-locks="directEnrollmentLocks"
           :covering-locks="ancestorEnrollmentLocks"
           id-prefix="participant-lock"
+          :force-visible="
+            coveringParticipantLocks.length > 0 || Boolean(studyRef)
+          "
+          :show-export-action="Boolean(studyRef)"
+          export-action-id="btn-open-casebook-drawer"
+          export-action-test-id="btn-open-casebook-drawer"
+          export-action-label="Export casebook"
+          export-drawer-title="Export participant casebook"
+          :export-drawer-subtitle="participant.subject_id"
           @changed="refreshEnrollmentLocks"
-        />
-
-        <div
-          v-if="studyRef"
-          class="casebook-bar"
-          data-testid="participant-casebook-panel"
         >
-          <label for="participant-casebook-format" class="casebook-label">
-            Casebook format
-          </label>
-          <select
-            id="participant-casebook-format"
-            v-model="casebookFormat"
-            class="casebook-select"
-            :disabled="casebookBusy"
-          >
-            <option value="pdf">Certified PDF casebook (.pdf)</option>
-            <option value="html">Printable HTML casebook</option>
-            <option value="odm_xml">CDISC ODM v1.3.2 XML casebook</option>
-            <option value="json">Structured JSON casebook</option>
-          </select>
-          <label for="participant-casebook-valid-at" class="casebook-label">
-            Valid at
-          </label>
-          <input
-            id="participant-casebook-valid-at"
-            v-model="casebookValidAt"
-            type="text"
-            class="casebook-input"
-            autocomplete="off"
-            placeholder="ISO UTC (optional)"
-            :disabled="casebookBusy"
-          />
-          <label for="participant-casebook-known-at" class="casebook-label">
-            Known at
-          </label>
-          <input
-            id="participant-casebook-known-at"
-            v-model="casebookKnownAt"
-            type="text"
-            class="casebook-input"
-            autocomplete="off"
-            placeholder="ISO UTC (optional)"
-            :disabled="casebookBusy"
-          />
-          <button
-            id="btn-export-casebook"
-            type="button"
-            class="btn btn-secondary"
-            :disabled="casebookBusy"
-            @click="exportCasebook"
-          >
-            {{ casebookBusy ? "Exporting casebook…" : "Export casebook" }}
-          </button>
-          <ClinicalLiveRegion
-            test-id="participant-casebook-outcome"
-            variant="inline"
-            :active="Boolean(casebookOutcome)"
-            :politeness="
-              casebookOutcome?.kind === 'ok' ? 'polite' : 'assertive'
-            "
-            :tone="casebookOutcome?.kind === 'ok' ? 'success' : 'error'"
-            :live-class="[
-              'casebook-outcome',
-              casebookOutcome?.kind === 'ok'
-                ? 'casebook-outcome--ok'
-                : 'casebook-outcome--error',
-            ]"
-          >
-            <template v-if="casebookOutcome">
-              <span>{{ casebookOutcome.message }}</span>
-              <span
-                v-if="casebookOutcome.generatedAt"
-                class="casebook-generated-at"
-                data-testid="participant-casebook-generated-at"
-              >
-                Generated at {{ casebookOutcome.generatedAt }}
+          <template v-if="coveringParticipantLocks.length > 0" #banner-summary>
+            <span
+              class="participant-locks-inline"
+              data-testid="participant-locks-banner"
+              role="status"
+            >
+              <strong>{{
+                participantAssertionsLocked ? "Locked." : "Frozen."
+              }}</strong>
+              {{ compactCoveringLockSummary }}
+              <span data-testid="participant-lock-scope-note">
+                <template v-if="participantAssertionsLocked">
+                  Source verifications, verification withdrawals, and query
+                  changes are also blocked while a Locked assertion is in force.
+                </template>
+                <template v-else>
+                  Source verification and queries remain available while Frozen.
+                </template>
               </span>
-              <details
-                v-if="casebookOutcome.sha256"
-                class="casebook-digest-disclosure"
-              >
-                <summary>Verification digest</summary>
-                <code
-                  class="casebook-digest-code"
-                  data-testid="participant-casebook-sha256"
+            </span>
+          </template>
+
+          <template v-if="coveringParticipantLocks.length > 0" #held-locks>
+            <div class="participant-locks-drawer-section">
+              <h3 class="participant-drawer-heading">Active locks in force</h3>
+              <p class="participant-drawer-note">
+                Values cannot be changed while a lock is in force.
+              </p>
+              <ul class="participant-held-locks-list tabular-nums">
+                <li
+                  v-for="(held, idx) in coveringParticipantLocks"
+                  :key="held.ref ?? `covering-${idx}`"
                 >
-                  SHA-256: {{ casebookOutcome.sha256 }}
-                </code>
-              </details>
-            </template>
-          </ClinicalLiveRegion>
-        </div>
+                  {{ held.kind }} on {{ held.scope_ref }} by
+                  {{ held.locked_by ?? "—" }} at {{ held.locked_at ?? "—" }}:
+                  {{ held.reason_for_change ?? "—" }}
+                </li>
+              </ul>
+            </div>
+          </template>
+
+          <template v-if="studyRef" #export>
+            <div
+              class="casebook-drawer-panel"
+              data-testid="participant-casebook-panel"
+            >
+              <label for="participant-casebook-format" class="casebook-label">
+                Casebook format
+              </label>
+              <select
+                id="participant-casebook-format"
+                v-model="casebookFormat"
+                class="casebook-select"
+                :disabled="casebookBusy"
+              >
+                <option value="pdf">Certified PDF casebook (.pdf)</option>
+                <option value="html">Printable HTML casebook</option>
+                <option value="odm_xml">CDISC ODM v1.3.2 XML casebook</option>
+                <option value="json">Structured JSON casebook</option>
+              </select>
+              <label for="participant-casebook-valid-at" class="casebook-label">
+                Valid at
+              </label>
+              <input
+                id="participant-casebook-valid-at"
+                v-model="casebookValidAt"
+                type="text"
+                class="casebook-input"
+                autocomplete="off"
+                placeholder="ISO UTC (optional)"
+                :disabled="casebookBusy"
+              />
+              <label for="participant-casebook-known-at" class="casebook-label">
+                Known at
+              </label>
+              <input
+                id="participant-casebook-known-at"
+                v-model="casebookKnownAt"
+                type="text"
+                class="casebook-input"
+                autocomplete="off"
+                placeholder="ISO UTC (optional)"
+                :disabled="casebookBusy"
+              />
+              <button
+                id="btn-export-casebook"
+                type="button"
+                class="btn btn-primary casebook-submit-btn"
+                :disabled="casebookBusy"
+                @click="exportCasebook"
+              >
+                {{ casebookBusy ? "Exporting casebook…" : "Export casebook" }}
+              </button>
+              <ClinicalLiveRegion
+                test-id="participant-casebook-outcome"
+                variant="inline"
+                :active="Boolean(casebookOutcome)"
+                :politeness="
+                  casebookOutcome?.kind === 'ok' ? 'polite' : 'assertive'
+                "
+                :tone="casebookOutcome?.kind === 'ok' ? 'success' : 'error'"
+                :live-class="[
+                  'casebook-outcome',
+                  casebookOutcome?.kind === 'ok'
+                    ? 'casebook-outcome--ok'
+                    : 'casebook-outcome--error',
+                ]"
+              >
+                <template v-if="casebookOutcome">
+                  <span>{{ casebookOutcome.message }}</span>
+                  <span
+                    v-if="casebookOutcome.generatedAt"
+                    class="casebook-generated-at"
+                    data-testid="participant-casebook-generated-at"
+                  >
+                    Generated at {{ casebookOutcome.generatedAt }}
+                  </span>
+                  <details
+                    v-if="casebookOutcome.sha256"
+                    class="casebook-digest-disclosure"
+                  >
+                    <summary>Verification digest</summary>
+                    <code
+                      class="casebook-digest-code"
+                      data-testid="participant-casebook-sha256"
+                    >
+                      SHA-256: {{ casebookOutcome.sha256 }}
+                    </code>
+                  </details>
+                </template>
+              </ClinicalLiveRegion>
+            </div>
+          </template>
+        </ScopeLockControls>
       </div>
 
       <ParticipantFormsPanel
@@ -382,6 +402,15 @@ const participantAssertionsLocked = computed(() =>
   coveringParticipantLocks.value.some((l) => l.kind === "Locked")
 );
 
+const compactCoveringLockSummary = computed(() =>
+  coveringParticipantLocks.value
+    .map(
+      (held) =>
+        `${held.kind} on ${held.scope_ref} by ${held.locked_by ?? "—"}: ${held.reason_for_change ?? "—"}`
+    )
+    .join("; ")
+);
+
 const directEnrollmentLocks = computed<DirectScopeLockItem[]>(() =>
   toDirectScopeLocks(coveringParticipantLocks.value, enrollmentRef.value)
 );
@@ -567,32 +596,45 @@ async function exportCasebook() {
   max-width: 100%;
 }
 
-.participant-locks-banner {
-  background-color: var(--semantic-color-surface-header);
-  border: 1px solid var(--semantic-color-border);
-  border-radius: 6px;
-  padding: 8px 12px;
+.participant-locks-inline {
+  font-variant-numeric: tabular-nums;
+}
+
+.participant-locks-drawer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   font-size: 0.85rem;
   min-width: 0;
   max-width: 100%;
-  box-sizing: border-box;
   overflow-wrap: anywhere;
 }
 
-.participant-locks-banner ul {
-  margin: 6px 0 0;
-  padding-left: 18px;
+.participant-drawer-heading {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--semantic-color-text-dark);
 }
 
-.casebook-bar {
+.participant-drawer-note {
+  margin: 0;
+  color: var(--semantic-color-text-secondary);
+}
+
+.participant-held-locks-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border: 1px solid var(--semantic-color-border-muted);
-  border-radius: 6px;
-  background: var(--semantic-color-surface-muted);
+  flex-direction: column;
+  gap: 4px;
+}
+
+.casebook-drawer-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
@@ -606,23 +648,29 @@ async function exportCasebook() {
 
 .casebook-select,
 .casebook-input {
+  width: 100%;
   max-width: 100%;
   min-width: 0;
+  min-height: 44px;
   box-sizing: border-box;
-  padding: 6px 10px;
+  padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
-  border-radius: 4px;
-  font-size: 0.85rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
 }
 
 .casebook-input {
-  width: 11rem;
   font-variant-numeric: tabular-nums;
 }
 
-@media (pointer: coarse) {
+.casebook-submit-btn {
+  min-height: 44px;
+  align-self: flex-start;
+}
+
+@media (pointer: coarse), (max-width: 1024px) {
   .casebook-select,
   .casebook-input {
     min-height: 44px;

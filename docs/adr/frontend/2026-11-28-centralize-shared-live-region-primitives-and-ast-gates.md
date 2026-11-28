@@ -4,6 +4,7 @@
 - **Date:** 2026-11-28
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
+- **Requirements:** PRD-CRF-015, PRD-SYS-001
 
 ---
 

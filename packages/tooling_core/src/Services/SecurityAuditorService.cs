@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
+using Cadence.ToolingCore.Primitives;
 using Cadence.ToolingCore.Security;
 
 namespace Cadence.ToolingCore.Services;
@@ -15,7 +16,7 @@ public static class SecurityAuditorService
         bool preCommit = false,
         GitIndexReader? indexReader = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         Console.WriteLine("Executing hardcoded secret scanner and security audit...");
 
         if (files is { Length: 0 })
@@ -54,6 +55,4 @@ public static class SecurityAuditorService
             return 0;
         }
     }
-
-    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 }

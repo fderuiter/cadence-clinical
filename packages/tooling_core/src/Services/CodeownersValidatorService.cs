@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
+using Cadence.ToolingCore.Primitives;
+
 namespace Cadence.ToolingCore.Services;
 
 public static class CodeownersValidatorService
@@ -14,7 +16,7 @@ public static class CodeownersValidatorService
 
     public static int ValidateCodeowners(string? repoRoot = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         Console.WriteLine("Validating .github/CODEOWNERS file presence and configuration...");
 
         string codeownersPath = Path.Combine(repoRoot, ".github", "CODEOWNERS");
@@ -293,27 +295,5 @@ public static class CodeownersValidatorService
         }
 
         return relativePaths;
-    }
-
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln")))
-            {
-                return current;
-            }
-
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current)
-            {
-                break;
-            }
-
-            current = parent ?? "";
-        }
-
-        return Directory.GetCurrentDirectory();
     }
 }
