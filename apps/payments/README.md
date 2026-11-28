@@ -80,7 +80,8 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
   enforces positive amounts (`400`), IRB `AntiCoercionCap` (`422`), `AutoDisbursementThreshold` (`409`), and IRS `$600.00`
   `TaxableYtd` verified W-9 holds (`409`), deduplicates per wallet on `ParticipantTransaction.IdempotencyKey`, and records
   `ParticipantTransaction` stipend credits and `TaxableYtd` without inflating `LifetimeDisbursements`. Compiling with
-  `auto_approve` also needs `payments_invoice:approve`.
+  `auto_approve` also needs `payments_invoice:approve` and a single-use `payments.invoice.approve` `X-Sig-Token`
+  (`RequireElectronicSignatureWhen`), matching `POST /invoices/{id}/approve`.
 - **Identity in records.** Handlers take the actor from the signed principal (`CallerScope`): the `sub` claim as the
   user id and the signed role claims (canonical names, so "Grants Manager" is recorded as `finance_officer`, truncated to
   255 characters via `CallerScope.Roles(httpContext, 255)`) as `UserRoles`. Audit rows, `CreatedBy`, `ApprovedBy`, `ReviewedBy`,

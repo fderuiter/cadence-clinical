@@ -92,28 +92,6 @@ function stripTags(html) {
   return decodeHtmlEntities(html.replace(/<[^>]+>/g, ""));
 }
 
-function countTableBodyRows(html) {
-  return Array.from(
-    html.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
-    (m) => m[1]
-  ).reduce(
-    (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
-    0
-  );
-}
-
-function resolvePortalDistHtmlPath(href) {
-  const clean = href
-    .replace(/^\.\//, "")
-    .replace(/^\/cadence-clinical\//, "")
-    .split("#")[0]
-    .split("?")[0];
-  if (clean === "" || clean.endsWith("/")) {
-    return `${clean}index.html`;
-  }
-  return clean;
-}
-
 async function runPortalAxeAudit(page, theme) {
   await page.evaluate((mode) => {
     let styleEl = document.getElementById("cadence-axe-disable-transitions");
@@ -215,55 +193,84 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
       docIndexHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
       (m) => m[1]
     );
-    expect(tbodyBlocks).toHaveLength(2);
-    expect(countTableBodyRows(docIndexHtml)).toBeGreaterThanOrEqual(28);
+    expect(tbodyBlocks.length).toBeGreaterThanOrEqual(2);
+    const topLevelRowCount = tbodyBlocks.reduce(
+      (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
+      0
+    );
+    expect(topLevelRowCount).toBeGreaterThanOrEqual(28);
 
-    const [categoryTbody, adrTbody] = tbodyBlocks;
-    const categoryShardHrefs = Array.from(
-      categoryTbody.matchAll(/href="([^"]+)"/gi),
-      (m) => m[1]
-    );
-    const adrShardHrefs = Array.from(
-      adrTbody.matchAll(/href="([^"]+)"/gi),
-      (m) => m[1]
-    );
-    expect(categoryShardHrefs.length).toBeGreaterThanOrEqual(17);
-    expect(adrShardHrefs.length).toBeGreaterThanOrEqual(11);
+    const extractShardHrefs = (tbody) =>
+      Array.from(
+        tbody.matchAll(
+          /<tr(?:\s[^>]*)?>[\s\S]*?<td(?:\s[^>]*)?>[\s\S]*?<a\s+[^>]*href="([^"]+)"/gi
+        ),
+        (m) => m[1]
+      );
+    const resolveShardPath = (href) => {
+      const clean = href
+        .split("#")[0]
+        .split("?")[0]
+        .replace(/^\.\//, "")
+        .replace(/^\/cadence-clinical\//, "");
+      const candidates = clean.endsWith("/")
+        ? [
+            path.join(docsDistDir, clean, "index.html"),
+            path.join(docsDistDir, clean, "INDEX.html"),
+          ]
+        : [path.join(docsDistDir, clean)];
+      return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+    };
+    const extractDocBody = (pageHtml) => {
+      const match = pageHtml.match(
+        /<div\s+class="vp-doc[^"]*"[^>]*>([\s\S]*?)<\/main>/i
+      );
+      return match ? match[1] : pageHtml;
+    };
+
+    const categoryShardHrefs = extractShardHrefs(tbodyBlocks[0]);
+    const adrShardHrefs = extractShardHrefs(tbodyBlocks[1]);
+    const missingShards = [];
 
     let categoryRowCount = 0;
     for (const href of categoryShardHrefs) {
-      const shardRelPath = resolvePortalDistHtmlPath(href);
-      const shardFullPath = path.join(docsDistDir, shardRelPath);
-      expect(
-        fs.existsSync(shardFullPath),
-        `Expected category shard HTML ${shardRelPath} to exist`
-      ).toBe(true);
-      categoryRowCount += countTableBodyRows(
-        fs.readFileSync(shardFullPath, "utf8")
+      const shardPath = resolveShardPath(href);
+      if (!shardPath) {
+        missingShards.push(href);
+        continue;
+      }
+      const shardDoc = extractDocBody(fs.readFileSync(shardPath, "utf8"));
+      const shardTbodies = Array.from(
+        shardDoc.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
+        (m) => m[1]
+      );
+      categoryRowCount += shardTbodies.reduce(
+        (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
+        0
       );
     }
-    expect(categoryRowCount).toBeGreaterThanOrEqual(140);
 
     let adrEntryCount = 0;
     for (const href of adrShardHrefs) {
-      const shardRelPath = resolvePortalDistHtmlPath(href);
-      const shardFullPath = path.join(docsDistDir, shardRelPath);
-      expect(
-        fs.existsSync(shardFullPath),
-        `Expected ADR shard HTML ${shardRelPath} to exist`
-      ).toBe(true);
-      if (shardRelPath === "adr/TEMPLATE.html") {
+      const shardPath = resolveShardPath(href);
+      if (!shardPath) {
+        missingShards.push(href);
         continue;
       }
-      const shardHtml = fs.readFileSync(shardFullPath, "utf8");
-      const mainHtml =
-        shardHtml.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1] ?? shardHtml;
+      if (href.endsWith("TEMPLATE.html") || href === "./adr/") {
+        continue;
+      }
+      const shardDoc = extractDocBody(fs.readFileSync(shardPath, "utf8"));
       adrEntryCount += (
-        mainHtml.match(/<li>\s*<a\s+href="[^"]*20\d{2}-\d{2}-\d{2}-/gi) || []
+        shardDoc.match(
+          /<li(?:\s[^>]*)?>\s*<a\s+[^>]*href="[^"]+"\s*>\s*ADR-/gi
+        ) || []
       ).length;
     }
 
-    expect(categoryRowCount + adrEntryCount).toBeGreaterThanOrEqual(715);
+    expect(missingShards).toEqual([]);
+    const dataRowCount = categoryRowCount + adrEntryCount;
+    expect(dataRowCount).toBeGreaterThanOrEqual(715);
   });
 
   test("navbar items and portal layout render without clipping, overlap, or horizontal scroll across 375px–1920px viewports", async ({

@@ -380,8 +380,8 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
         }
 
         standaloneSignatureRoutesVerified.Should().Be(
-            27,
-            "all 27 mutating standalone ElectronicSignatureRequired clinical routes across ctms, econsent, execution, imaging, interop, knowledge, payments, safety, and tickets must be verified");
+            29,
+            "all 29 mutating standalone ElectronicSignatureRequired clinical routes across ctms, econsent, execution, imaging, interop, knowledge, payments, safety, and tickets must be verified");
         readExportSignatureRoutesFound.Should().Be(
             1,
             "ctms GET /api/v1/ctms/doa/sites/{site_id}/export-pdf is a safe-read inspection export preserved for expired tenants under PRD-SYS-053");
