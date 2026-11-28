@@ -313,6 +313,7 @@ export const ClinicalModal: DefineSlotsComponent<
     showHeader?: boolean;
     showClose?: boolean;
     showFooter?: boolean;
+    keepMounted?: boolean;
   },
   {
     default?: (props: Record<string, never>) => any;
@@ -612,6 +613,28 @@ export function computeFloatingPosition(
   options?: FloatingPositionInput
 ): FloatingPositionResult;
 
+export function isTargetWithinElements(
+  target: EventTarget | Node | null | undefined,
+  elements?: ReadonlyArray<
+    | import("vue").Ref<Element | null | undefined>
+    | (() => Element | null | undefined)
+    | Element
+    | null
+    | undefined
+  >
+): boolean;
+
+export function didFocusExitElements(
+  event: FocusEvent | null | undefined,
+  elements?: ReadonlyArray<
+    | import("vue").Ref<Element | null | undefined>
+    | (() => Element | null | undefined)
+    | Element
+    | null
+    | undefined
+  >
+): boolean;
+
 export function useFloatingPosition(
   anchorRef:
     | import("vue").Ref<Element | null | undefined>
@@ -664,7 +687,7 @@ export const ClinicalPopover: DefineSlotsComponent<
     align?: "start" | "center" | "end" | string;
     offset?: number;
     viewportMargin?: number;
-    preferredWidth?: number | null;
+    preferredWidth?: number | (() => number | null | undefined) | null;
     minHeight?: number;
     flip?: boolean;
     teleport?: boolean | string;
@@ -674,11 +697,14 @@ export const ClinicalPopover: DefineSlotsComponent<
     ariaLabelledby?: string;
     closeOnEscape?: boolean;
     closeOnOutsidePointer?: boolean;
+    closeOnFocusOut?: boolean;
     restoreFocusOnEscape?: boolean;
     hoverBridge?: boolean;
     popoverClass?: string | any[] | Record<string, boolean>;
     "onUpdate:modelValue"?: (value: boolean) => void;
-    onClose?: (payload: { reason: "escape" | "outside" | string }) => void;
+    onClose?: (payload: {
+      reason: "escape" | "outside" | "focusout" | string;
+    }) => void;
     onMouseenter?: (event: MouseEvent) => void;
     onMouseleave?: (event: MouseEvent) => void;
     onFocusin?: (event: FocusEvent) => void;

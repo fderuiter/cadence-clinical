@@ -36,6 +36,46 @@ function resolveElement(target) {
   return null;
 }
 
+export function isTargetWithinElements(target, elements = []) {
+  if (!target || !Array.isArray(elements)) return false;
+  for (const entry of elements) {
+    const el = resolveElement(entry);
+    if (!el) continue;
+    if (el === target) return true;
+    if (typeof el.contains === "function" && el.contains(target)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function didFocusExitElements(event, elements = []) {
+  if (!event || !Array.isArray(elements) || elements.length === 0) {
+    return false;
+  }
+  if (event.type === "focusin") {
+    const nextTarget = event.target;
+    if (!nextTarget) return false;
+    if (
+      typeof document !== "undefined" &&
+      (nextTarget === document ||
+        nextTarget === document.body ||
+        nextTarget === document.documentElement)
+    ) {
+      return false;
+    }
+    return !isTargetWithinElements(nextTarget, elements);
+  }
+  if (!isTargetWithinElements(event.target, elements)) {
+    return false;
+  }
+  const nextTarget = event.relatedTarget;
+  if (!nextTarget) {
+    return false;
+  }
+  return !isTargetWithinElements(nextTarget, elements);
+}
+
 export function useViewportMaxHeight(options = {}) {
   const {
     shortViewportThreshold = 520,

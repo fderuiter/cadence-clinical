@@ -1310,4 +1310,62 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     );
     expect(dom.doc.activeElement).toBe(heading);
   });
+
+  it("prioritizes snapshotted [aria-controls] controller and #main-content ahead of #btn-open-palette when triggers hide or unmount", async () => {
+    const header = dom.body.appendChild(new MockElement("header"));
+    const paletteBtn = header.appendChild(
+      new MockElement("button", { id: "btn-open-palette" })
+    );
+    const accountToggle = header.appendChild(
+      new MockElement("button", {
+        id: "btn-header-actions-menu",
+        "aria-controls": "header-secondary-menu",
+      })
+    );
+    const secondaryMenu = header.appendChild(
+      new MockElement("div", { id: "header-secondary-menu" })
+    );
+    const logoutBtn = secondaryMenu.appendChild(
+      new MockElement("button", { id: "btn-logout" })
+    );
+
+    const main = dom.body.appendChild(
+      new MockElement("main", { id: "main-content", tabindex: "-1" })
+    );
+    const rowBtn = main.appendChild(
+      new MockElement("button", { id: "btn-approve-row" })
+    );
+
+    const dialog = dom.body.appendChild(
+      new MockElement("div", { id: "confirm-dialog", tabindex: "-1" })
+    );
+    dialog.appendChild(new MockElement("button", { id: "dialog-confirm" }));
+
+    const isOpen = ref(false);
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      useFocusTrap(ref(dialog), { isOpen });
+    });
+
+    // 1. Trigger inside #header-secondary-menu collapses before close -> restores #btn-header-actions-menu, not #btn-open-palette
+    logoutBtn.focus();
+    secondaryMenu.style.display = "none";
+    isOpen.value = true;
+    await nextTick();
+    isOpen.value = false;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(accountToggle);
+    expect(dom.doc.activeElement).not.toBe(paletteBtn);
+
+    // 2. Row trigger inside #main-content unmounts before close -> restores #main-content ahead of #btn-open-palette
+    rowBtn.focus();
+    isOpen.value = true;
+    await nextTick();
+    main.removeChild(rowBtn);
+    isOpen.value = false;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(main);
+    expect(dom.doc.activeElement).not.toBe(paletteBtn);
+  });
 });

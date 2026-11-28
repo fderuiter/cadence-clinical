@@ -527,4 +527,62 @@ describe("Floating primitives, ClinicalPopover clamping, and ClinicalToastHost",
       expect(svg.children.length).toBeGreaterThan(0);
     }
   });
+
+  it("dismisses ClinicalPopover on outside focusout while preserving focus transitions inside anchor or popover", async () => {
+    mockViewport(1024, 768);
+    const isOpen = ref(true);
+    const closeEvents = [];
+    const anchorRef = ref(null);
+
+    const host = mountHost(
+      () => () =>
+        h("div", [
+          h(
+            "button",
+            { ref: anchorRef, id: "popover-anchor", type: "button" },
+            "Anchor"
+          ),
+          h(
+            ClinicalPopover,
+            {
+              modelValue: isOpen.value,
+              "onUpdate:modelValue": (val) => {
+                isOpen.value = val;
+              },
+              onClose: (payload) => closeEvents.push(payload),
+              anchor: () => anchorRef.value,
+              popoverClass: "focusout-test-popover",
+            },
+            {
+              default: () => [
+                h("button", { id: "popover-item-1", type: "button" }, "Item 1"),
+                h("button", { id: "popover-item-2", type: "button" }, "Item 2"),
+              ],
+            }
+          ),
+          h("button", { id: "outside-main-btn", type: "button" }, "Outside"),
+        ])
+    );
+    await nextTick();
+
+    const anchorBtn = host.querySelector("#popover-anchor");
+    const item1 = host.querySelector("#popover-item-1");
+    const item2 = host.querySelector("#popover-item-2");
+    const outsideBtn = host.querySelector("#outside-main-btn");
+
+    anchorBtn.focus();
+    item1.focus();
+    await nextTick();
+    expect(isOpen.value).toBe(true);
+
+    item2.focus();
+    await nextTick();
+    expect(isOpen.value).toBe(true);
+
+    outsideBtn.focus();
+    await nextTick();
+    expect(isOpen.value).toBe(false);
+    expect(closeEvents).toContainEqual({ reason: "focusout" });
+    expect(document.activeElement).toBe(outsideBtn);
+  });
 });

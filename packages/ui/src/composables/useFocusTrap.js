@@ -289,32 +289,135 @@ const findElementInSubtree = (root, predicate) => {
   return null;
 };
 
-const resolveVisibleRestoreFallback = (staleTarget) => {
+const isMainOrWorkspaceLandmark = (el) => {
+  if (!el) return false;
+  const id =
+    typeof el.getAttribute === "function" ? el.getAttribute("id") : el.id;
+  const role =
+    typeof el.getAttribute === "function" ? el.getAttribute("role") : null;
+  return (
+    id === "canvas-workspace" ||
+    id === "main-content" ||
+    el.tagName === "MAIN" ||
+    role === "main"
+  );
+};
+
+const ensureProgrammaticTabIndex = (el) => {
+  if (
+    el &&
+    typeof el.hasAttribute === "function" &&
+    !el.hasAttribute("tabindex") &&
+    typeof el.setAttribute === "function"
+  ) {
+    el.setAttribute("tabindex", "-1");
+  }
+  return el;
+};
+
+const captureTriggerSnapshot = (target) => {
+  if (!target || typeof document === "undefined") {
+    return null;
+  }
+  if (target === document.body || target === document.documentElement) {
+    return null;
+  }
+  const ancestorIds = [];
+  const ancestorLandmarks = [];
+  let cursor = target;
+  while (
+    cursor &&
+    cursor !== document.body &&
+    cursor !== document.documentElement
+  ) {
+    const id =
+      typeof cursor.getAttribute === "function"
+        ? cursor.getAttribute("id")
+        : cursor.id || null;
+    if (id && !ancestorIds.includes(id)) {
+      ancestorIds.push(id);
+    }
+    if (
+      isMainOrWorkspaceLandmark(cursor) &&
+      !ancestorLandmarks.includes(cursor)
+    ) {
+      ancestorLandmarks.push(cursor);
+    }
+    cursor = cursor.parentElement || null;
+  }
+  return {
+    target,
+    ancestorIds,
+    ancestorLandmarks,
+  };
+};
+
+const resolveVisibleRestoreFallback = (staleTarget, triggerSnapshot = null) => {
   if (typeof document === "undefined" || !document.body) return null;
 
-  // 1. If staleTarget lived inside a collapsed region with an ID (e.g. #mobile-nav-menu),
-  // prefer its visible controller button ([aria-controls="<id>"]).
+  // 1. If staleTarget lived inside a collapsed or unmounted region with an ID
+  // (e.g. #header-secondary-menu or #mobile-nav-menu), prefer its visible controller ([aria-controls="<id>"]).
+  const candidateIds = [];
   let ancestor = staleTarget || null;
-  while (ancestor && ancestor !== document.body) {
+  while (
+    ancestor &&
+    ancestor !== document.body &&
+    ancestor !== document.documentElement
+  ) {
     const ancestorId =
       typeof ancestor.getAttribute === "function"
         ? ancestor.getAttribute("id")
         : ancestor.id || null;
-    if (ancestorId) {
-      const controller = findElementInSubtree(
-        document.body,
-        (el) =>
-          typeof el.getAttribute === "function" &&
-          el.getAttribute("aria-controls") === ancestorId &&
-          typeof el.focus === "function" &&
-          !isElementInertOrHidden(el, null)
-      );
-      if (controller) return controller;
+    if (ancestorId && !candidateIds.includes(ancestorId)) {
+      candidateIds.push(ancestorId);
     }
     ancestor = ancestor.parentElement;
   }
+  for (const snapId of triggerSnapshot?.ancestorIds || []) {
+    if (snapId && !candidateIds.includes(snapId)) {
+      candidateIds.push(snapId);
+    }
+  }
 
-  // 2. Prefer visible shell navigation/palette triggers before falling back to main content.
+  for (const ancestorId of candidateIds) {
+    const controller = findElementInSubtree(
+      document.body,
+      (el) =>
+        typeof el.getAttribute === "function" &&
+        el.getAttribute("aria-controls") === ancestorId &&
+        typeof el.focus === "function" &&
+        !el.disabled &&
+        el.getAttribute?.("aria-disabled") !== "true" &&
+        !isElementInertOrHidden(el, null)
+    );
+    if (controller) return controller;
+  }
+
+  // 2. Prefer snapshotted or visible main/workspace landmarks (#canvas-workspace, #main-content, <main>, [role="main"])
+  // before falling back to shell header triggers (#btn-open-palette / #btn-mobile-menu-toggle).
+  for (const snapLandmark of triggerSnapshot?.ancestorLandmarks || []) {
+    if (
+      snapLandmark &&
+      typeof snapLandmark.focus === "function" &&
+      (typeof document.contains !== "function" ||
+        document.contains(snapLandmark)) &&
+      !isElementInertOrHidden(snapLandmark, null)
+    ) {
+      return ensureProgrammaticTabIndex(snapLandmark);
+    }
+  }
+
+  const mainLandmark = findElementInSubtree(document.body, (el) => {
+    if (typeof el.focus !== "function" || isElementInertOrHidden(el, null)) {
+      return false;
+    }
+    return isMainOrWorkspaceLandmark(el);
+  });
+  if (mainLandmark) {
+    return ensureProgrammaticTabIndex(mainLandmark);
+  }
+
+  // 3. Fall back to visible shell navigation/palette triggers when no main landmark is available.
   for (const fallbackId of ["btn-open-palette", "btn-mobile-menu-toggle"]) {
     const btn = findElementInSubtree(
       document.body,
@@ -325,28 +428,6 @@ const resolveVisibleRestoreFallback = (staleTarget) => {
         !isElementInertOrHidden(el, null)
     );
     if (btn) return btn;
-  }
-
-  // 3. Fall back to visible #main-content / <main> / [role="main"].
-  const mainLandmark = findElementInSubtree(document.body, (el) => {
-    if (typeof el.focus !== "function" || isElementInertOrHidden(el, null)) {
-      return false;
-    }
-    const id =
-      typeof el.getAttribute === "function" ? el.getAttribute("id") : el.id;
-    const role =
-      typeof el.getAttribute === "function" ? el.getAttribute("role") : null;
-    return id === "main-content" || el.tagName === "MAIN" || role === "main";
-  });
-  if (mainLandmark) {
-    if (
-      typeof mainLandmark.hasAttribute === "function" &&
-      !mainLandmark.hasAttribute("tabindex") &&
-      typeof mainLandmark.setAttribute === "function"
-    ) {
-      mainLandmark.setAttribute("tabindex", "-1");
-    }
-    return mainLandmark;
   }
 
   // 4. Last resort: first visible focusable element in document.body.
@@ -616,7 +697,9 @@ export function useFocusTrap(
 
   let candidateTrigger =
     typeof document !== "undefined" ? document.activeElement : null;
+  let candidateTriggerSnapshot = captureTriggerSnapshot(candidateTrigger);
   let previousActiveElement = null;
+  let previousTriggerSnapshot = null;
   let isActive = false;
   let detachmentObserver = null;
   let observedContainer = null;
@@ -823,8 +906,11 @@ export function useFocusTrap(
         (!container || !container.contains(currentActive))
       ) {
         previousActiveElement = currentActive;
+        previousTriggerSnapshot = captureTriggerSnapshot(currentActive);
       } else {
         previousActiveElement = candidateTrigger;
+        previousTriggerSnapshot =
+          candidateTriggerSnapshot || captureTriggerSnapshot(candidateTrigger);
       }
     }
 
@@ -915,7 +1001,11 @@ export function useFocusTrap(
     return null;
   };
 
-  const restoreFocusWithFallback = (capturedPrev, fallbackParentTrap) => {
+  const restoreFocusWithFallback = (
+    capturedPrev,
+    fallbackParentTrap,
+    capturedSnapshot = null
+  ) => {
     if (options.restoreFocus === false || typeof document === "undefined") {
       return false;
     }
@@ -943,7 +1033,10 @@ export function useFocusTrap(
     if (!activeParentTrap) {
       const staleTarget =
         resolveExternalFocusTarget(options.restoreFocus) || capturedPrev;
-      const visibleFallback = resolveVisibleRestoreFallback(staleTarget);
+      const visibleFallback = resolveVisibleRestoreFallback(
+        staleTarget,
+        capturedSnapshot
+      );
       if (visibleFallback && typeof visibleFallback.focus === "function") {
         visibleFallback.focus();
         if (document.activeElement === visibleFallback) {
@@ -975,14 +1068,20 @@ export function useFocusTrap(
     reconcileBackgroundInert();
 
     const capturedPrev = previousActiveElement;
+    const capturedSnapshot = previousTriggerSnapshot;
     const parentTrapSnapshot =
       activeTrapStack.length > 0
         ? activeTrapStack[activeTrapStack.length - 1]
         : null;
     previousActiveElement = null;
+    previousTriggerSnapshot = null;
 
     if (options.restoreFocus !== false && typeof document !== "undefined") {
-      restoreFocusWithFallback(capturedPrev, parentTrapSnapshot);
+      restoreFocusWithFallback(
+        capturedPrev,
+        parentTrapSnapshot,
+        capturedSnapshot
+      );
       nextTick(() => {
         if (isActive || typeof document === "undefined") return;
         const current = document.activeElement;
@@ -991,7 +1090,11 @@ export function useFocusTrap(
           current === document.body ||
           !isValidRestoreTarget(current);
         if (lostToBodyOrInvalid) {
-          restoreFocusWithFallback(capturedPrev, parentTrapSnapshot);
+          restoreFocusWithFallback(
+            capturedPrev,
+            parentTrapSnapshot,
+            capturedSnapshot
+          );
         }
       });
     }
@@ -1008,6 +1111,9 @@ export function useFocusTrap(
             document.activeElement !== document.body
           ) {
             candidateTrigger = document.activeElement;
+            candidateTriggerSnapshot = captureTriggerSnapshot(
+              document.activeElement
+            );
           }
         }
       },

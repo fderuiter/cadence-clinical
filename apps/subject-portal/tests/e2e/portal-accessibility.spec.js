@@ -1495,8 +1495,6 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       await page.locator("#btn-pin-unlock-reset").scrollIntoViewIfNeeded();
       await page.click("#btn-pin-unlock-reset");
       await expect(page.locator("#pin-reset-confirmation")).toBeVisible();
-      await page.keyboard.press("Escape");
-      await expect(pinUnlockModal).toBeVisible();
 
       const resetPrimarySelector = (await page
         .locator("#btn-pin-reset-confirm")
@@ -1519,8 +1517,9 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
         viewport.height
       );
 
-      await page.locator("#btn-pin-reset-cancel").scrollIntoViewIfNeeded();
-      await page.click("#btn-pin-reset-cancel");
+      // Pressing Escape inside #pin-reset-confirmation cancels reset back to #pin-unlock-form while keeping #portal-pin-unlock-modal open
+      await page.keyboard.press("Escape");
+      await expect(pinUnlockModal).toBeVisible();
       await expect(page.locator("#pin-unlock-form")).toBeVisible();
 
       await page.locator("#unlock-pin").scrollIntoViewIfNeeded();

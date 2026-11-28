@@ -26,6 +26,8 @@ import MediaPlayer from "./components/MediaPlayer.vue";
 import ModalErrorAlert from "./components/ModalErrorAlert.vue";
 import { useEscapeClose } from "./composables/useEscapeClose.js";
 import {
+  didFocusExitElements,
+  isTargetWithinElements,
   useFloatingPosition,
   useViewportMaxHeight,
 } from "./composables/useFloatingPosition.js";
@@ -108,6 +110,7 @@ export {
   computeFloatingPosition,
   cycleThemePreference,
   detectSystemDarkPreference,
+  didFocusExitElements,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
@@ -117,6 +120,7 @@ export {
   handoffRetryFocus,
   hasActiveModalFocusTrap,
   hasRegisteredUnsavedDrafts,
+  isTargetWithinElements,
   normalizeThemePreference,
   observeVisualViewport,
   readStoredThemePreference,

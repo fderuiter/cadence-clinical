@@ -45,7 +45,12 @@
               placeholder="e.g. SITE-101"
             />
           </div>
-          <button class="btn btn-secondary btn-sm" @click="refreshData">
+          <button
+            id="btn-refresh-device-hub"
+            type="button"
+            class="btn btn-secondary btn-sm"
+            @click="refreshData"
+          >
             Refresh Hub
           </button>
         </div>
@@ -1446,22 +1451,26 @@ function closeAdjudicateModal() {
 }
 
 useFocusTrap(dispenseModalRef, showDispenseModal, {
+  fallbackFocus: "#btn-refresh-device-hub",
   onEscape: () => {
     showDispenseModal.value = false;
   },
 });
 
 useFocusTrap(quarantineModalRef, showQuarantineModal, {
+  fallbackFocus: "#btn-refresh-device-hub",
   onEscape: () => {
     showQuarantineModal.value = false;
   },
 });
 
 useFocusTrap(releaseModalRef, showReleaseModal, {
+  fallbackFocus: "#btn-refresh-device-hub",
   onEscape: closeReleaseModal,
 });
 
 useFocusTrap(adjudicateModalRef, showAdjudicateModal, {
+  fallbackFocus: "#btn-refresh-device-hub",
   onEscape: closeAdjudicateModal,
 });
 

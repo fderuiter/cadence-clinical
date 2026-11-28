@@ -951,4 +951,38 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       expect(explicitFieldHtml).toContain('data-tabular-nums="true"');
     });
   });
+
+  describe("ClinicalModal", () => {
+    it("renders a 1.75px stroke vector close icon without text glyphs and supports keepMounted hidden state", async () => {
+      const openHtml = await renderToString(
+        createSSRApp(ClinicalModal, {
+          id: "test-clinical-modal",
+          open: true,
+          teleport: false,
+          ariaLabelledby: "test-modal-heading",
+          title: "Confirm Clinical Action",
+        })
+      );
+      expect(openHtml).toContain('<h2 id="test-modal-heading"');
+      expect(openHtml).toContain("Confirm Clinical Action</h2>");
+      expect(openHtml).toContain('stroke-width="1.75"');
+      expect(openHtml).not.toContain("✕");
+      expect(openHtml).not.toContain("&times;");
+
+      const closedKeepMountedHtml = await renderToString(
+        createSSRApp(ClinicalModal, {
+          id: "test-keep-mounted-modal",
+          open: false,
+          keepMounted: true,
+          teleport: false,
+          ariaLabelledby: "keep-mounted-heading",
+          title: "Persistent Modal",
+        })
+      );
+      expect(closedKeepMountedHtml).toContain('id="test-keep-mounted-modal"');
+      expect(closedKeepMountedHtml).toContain("is-closed");
+      expect(closedKeepMountedHtml).toContain("display:none");
+      expect(closedKeepMountedHtml).toContain('aria-hidden="true"');
+    });
+  });
 });

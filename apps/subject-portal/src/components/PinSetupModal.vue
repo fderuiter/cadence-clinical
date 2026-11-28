@@ -1,111 +1,105 @@
 <template>
-  <div
-    v-if="sessionStore.pinSetup.isOpen"
+  <ClinicalModal
     id="portal-pin-setup-modal"
-    ref="modalRef"
-    class="modal-overlay"
-    role="dialog"
-    aria-modal="true"
+    :open="sessionStore.pinSetup.isOpen"
+    :teleport="false"
+    :dismissible="false"
+    :close-on-backdrop="false"
+    :show-close="false"
+    :show-footer="false"
     aria-labelledby="pin-setup-title"
-    tabindex="-1"
+    title="Configure Security PIN"
+    initial-focus="#setup-pin"
+    body-class="portal-modal-form-shell"
   >
-    <div class="modal">
-      <form id="pin-setup-form" @submit.prevent="handlePINSetupSubmit">
-        <div id="pin-setup-title" class="modal-header">
-          Configure Security PIN
+    <form id="pin-setup-form" @submit.prevent="handlePINSetupSubmit">
+      <div class="modal-body">
+        <p>
+          Choose a numeric security PIN to keep your saved survey answers
+          private on this device, even when you are offline.
+        </p>
+        <div
+          v-if="sessionStore.pinSetup.error"
+          class="error-state pin-error-msg"
+          role="status"
+          aria-live="polite"
+        >
+          {{ sessionStore.pinSetup.error }}
         </div>
-        <div class="modal-body">
-          <p>
-            Choose a numeric security PIN to keep your saved survey answers
-            private on this device, even when you are offline.
-          </p>
-          <div
-            v-if="sessionStore.pinSetup.error"
-            class="error-state pin-error-msg"
-            role="status"
-            aria-live="polite"
-          >
-            {{ sessionStore.pinSetup.error }}
-          </div>
-          <div class="form-group mb-12">
-            <label for="setup-pin">Choose Numeric PIN</label>
-            <input
-              id="setup-pin"
-              v-model="sessionStore.pinSetup.pin"
-              type="password"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              placeholder="••••"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label for="confirm-setup-pin">Confirm Numeric PIN</label>
-            <input
-              id="confirm-setup-pin"
-              v-model="sessionStore.pinSetup.confirmPin"
-              type="password"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              placeholder="••••"
-              required
-            />
-          </div>
-        </div>
-        <div class="modal-footer modal-footer-between">
-          <button
-            id="btn-pin-setup-signout"
-            type="button"
-            class="btn btn-secondary"
-            @click="handleSignOut"
-          >
-            Sign Out
-          </button>
-          <button
-            id="btn-pin-setup-confirm"
-            type="submit"
-            class="btn btn-primary"
-          >
-            Save and Configure
-          </button>
-        </div>
-        <div class="modal-support-strip">
-          <SiteContactLinks
-            id="pin-setup-site-contacts"
-            compact
-            heading="Study Site Coordinator"
-            region-label="PIN setup study site coordinator contacts"
+        <div class="form-group mb-12">
+          <label for="setup-pin">Choose Numeric PIN</label>
+          <input
+            id="setup-pin"
+            v-model="sessionStore.pinSetup.pin"
+            type="password"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            placeholder="••••"
+            required
           />
         </div>
-      </form>
-    </div>
-    <SignOutConfirmModal
-      id="pin-setup-signout-confirm-modal"
-      :open="isSignOutConfirmOpen"
-      title="Log Out With Unsaved or Unsent Survey Entries?"
-      description="You have unsaved questionnaire drafts or unsent offline survey submissions on this device. Logging out before configuring your PIN will leave pending entries unsent."
-      stay-label="Stay & Configure PIN"
-      confirm-label="Log Out Anyway"
-      @confirm="confirmSignOut"
-      @cancel="cancelSignOut"
-    />
-  </div>
+        <div class="form-group">
+          <label for="confirm-setup-pin">Confirm Numeric PIN</label>
+          <input
+            id="confirm-setup-pin"
+            v-model="sessionStore.pinSetup.confirmPin"
+            type="password"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            placeholder="••••"
+            required
+          />
+        </div>
+      </div>
+      <div class="modal-footer modal-footer-between">
+        <button
+          id="btn-pin-setup-signout"
+          type="button"
+          class="btn btn-secondary"
+          @click="handleSignOut"
+        >
+          Sign Out
+        </button>
+        <button
+          id="btn-pin-setup-confirm"
+          type="submit"
+          class="btn btn-primary"
+        >
+          Save and Configure
+        </button>
+      </div>
+      <div class="modal-support-strip">
+        <SiteContactLinks
+          id="pin-setup-site-contacts"
+          compact
+          heading="Study Site Coordinator"
+          region-label="PIN setup study site coordinator contacts"
+        />
+      </div>
+    </form>
+  </ClinicalModal>
+  <SignOutConfirmModal
+    id="pin-setup-signout-confirm-modal"
+    :open="isSignOutConfirmOpen"
+    :teleport="false"
+    title="Log Out With Unsaved or Unsent Survey Entries?"
+    description="You have unsaved questionnaire drafts or unsent offline survey submissions on this device. Logging out before configuring your PIN will leave pending entries unsent."
+    stay-label="Stay & Configure PIN"
+    confirm-label="Log Out Anyway"
+    @confirm="confirmSignOut"
+    @cancel="cancelSignOut"
+  />
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { SignOutConfirmModal } from "ui";
+import { ClinicalModal, SignOutConfirmModal } from "ui";
 
 import { handlePINSetupSubmit, usePinModalGuard } from "../features/pin.js";
 import { useSessionStore } from "../stores/session.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
 
-const modalRef = ref(null);
 const sessionStore = useSessionStore();
 
 const { isSignOutConfirmOpen, confirmSignOut, cancelSignOut, handleSignOut } =
-  usePinModalGuard(modalRef, {
-    isOpen: () => sessionStore.pinSetup.isOpen,
-    initialFocus: "#setup-pin",
-  });
+  usePinModalGuard();
 </script>

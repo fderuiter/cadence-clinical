@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, useAttrs, useId, useSlots } from "vue";
+import { X } from "lucide-vue-next";
 import { useFocusTrap } from "../../composables/useFocusTrap.js";
 import {
   MaybeTeleport,
@@ -59,6 +60,10 @@ const props = defineProps({
   showFooter: {
     type: Boolean,
     default: true,
+  },
+  keepMounted: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -124,10 +129,16 @@ useFocusTrap(
 <template>
   <MaybeTeleport :to="teleportTarget" :disabled="!teleport">
     <div
-      v-if="modalOpen"
+      v-if="modalOpen || keepMounted"
       :id="overlayId"
-      :class="['clinical-modal-backdrop', backdropClass]"
+      :class="[
+        'clinical-modal-backdrop',
+        { 'is-closed': !modalOpen },
+        backdropClass,
+      ]"
       role="presentation"
+      :aria-hidden="!modalOpen ? 'true' : undefined"
+      :inert="!modalOpen || undefined"
       @click.self="onBackdropClick"
     >
       <div
@@ -135,8 +146,13 @@ useFocusTrap(
         ref="dialogRef"
         v-bind="attrs"
         :class="['clinical-modal-dialog', `size-${size}`, dialogClass]"
+        :style="
+          keepMounted ? { display: modalOpen ? 'flex' : 'none' } : undefined
+        "
         :role="role"
-        aria-modal="true"
+        :aria-modal="modalOpen ? 'true' : undefined"
+        :aria-hidden="!modalOpen && keepMounted ? 'true' : undefined"
+        :inert="!modalOpen && keepMounted ? true : undefined"
         :aria-labelledby="computedLabelledby"
         :aria-label="computedAriaLabel"
         :aria-describedby="computedDescribedby"
@@ -156,7 +172,12 @@ useFocusTrap(
             :disabled="!dismissible"
             @click="closeModal"
           >
-            ✕
+            <X
+              :size="18"
+              :stroke-width="1.75"
+              aria-hidden="true"
+              focusable="false"
+            />
           </button>
         </div>
 
@@ -202,6 +223,10 @@ useFocusTrap(
   padding: 16px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.clinical-modal-backdrop.is-closed {
+  display: none;
 }
 
 .clinical-modal-dialog {
@@ -257,13 +282,19 @@ useFocusTrap(
 }
 
 .modal-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  min-width: var(--control-target-min, 24px);
+  min-height: var(--control-target-min, 24px);
   background: transparent;
   border: none;
   font-size: 18px;
+  line-height: 1;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px;
   border-radius: var(--radius-xs);
 }
 
@@ -385,6 +416,10 @@ useFocusTrap(
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .clinical-modal-dialog:not([aria-hidden="true"]) {
+    display: block !important;
   }
 
   .modal-body {

@@ -106,22 +106,51 @@
             <div class="autocomplete-wrapper">
               <input
                 id="share-user-input"
+                ref="userInputRef"
                 v-model="internalTarget"
                 type="text"
+                role="combobox"
+                aria-autocomplete="list"
                 placeholder="e.g. cra.monitor, auditor, site_crc, data_manager..."
                 class="form-control"
                 required
+                :aria-expanded="
+                  showUserSuggestions && userSuggestions.length > 0
+                    ? 'true'
+                    : 'false'
+                "
+                :aria-controls="
+                  showUserSuggestions && userSuggestions.length > 0
+                    ? 'share-user-suggestions'
+                    : undefined
+                "
                 @focus="showUserSuggestions = true"
+                @input="showUserSuggestions = true"
               />
-              <div
-                v-if="showUserSuggestions && userSuggestions.length > 0"
-                class="suggestions-dropdown"
+              <ClinicalPopover
+                id="share-user-suggestions"
+                role="listbox"
+                aria-label="Recipient suggestions"
+                :model-value="showUserSuggestions && userSuggestions.length > 0"
+                :anchor="userInputRef"
+                :teleport="false"
+                placement="bottom"
+                align="start"
+                :offset="4"
+                :preferred-width="resolveSuggestionsWidth"
+                popover-class="suggestions-dropdown"
+                close-on-escape
+                close-on-outside-pointer
+                close-on-focus-out
+                restore-focus-on-escape
+                @update:model-value="showUserSuggestions = $event"
               >
                 <div
                   v-for="sugg in userSuggestions"
                   :key="sugg.value"
                   class="suggestion-item"
-                  role="button"
+                  role="option"
+                  :aria-selected="internalTarget === sugg.value"
                   tabindex="0"
                   @click="selectSuggestion(sugg)"
                   @keydown.enter.prevent="selectSuggestion(sugg)"
@@ -130,7 +159,7 @@
                   <span class="sugg-label">{{ sugg.label }}</span>
                   <span class="sugg-type">{{ sugg.type }}</span>
                 </div>
-              </div>
+              </ClinicalPopover>
             </div>
           </div>
 
@@ -479,8 +508,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
-import { ClinicalDrawer } from "ui";
+import { ref, computed, watch } from "vue";
+import { ClinicalDrawer, ClinicalPopover } from "ui";
 import {
   Check,
   CheckCircle2,
@@ -528,6 +557,12 @@ const hasExpiry = ref(false);
 const expiresAt = ref("");
 const reasonForChange = ref("");
 const showUserSuggestions = ref(false);
+const userInputRef = ref(null);
+
+function resolveSuggestionsWidth() {
+  const rect = userInputRef.value?.getBoundingClientRect?.();
+  return rect && rect.width > 0 ? Math.round(rect.width) : 320;
+}
 
 // Guest link state
 const guestExpiryHours = ref(24);
@@ -726,24 +761,6 @@ async function confirmRevoke() {
   grantToRevoke.value = null;
   revokeReason.value = "";
 }
-
-function handleDocumentClick(e) {
-  if (
-    props.isOpen &&
-    e.target instanceof Element &&
-    !e.target.closest(".autocomplete-wrapper")
-  ) {
-    showUserSuggestions.value = false;
-  }
-}
-
-onMounted(() => {
-  document.addEventListener("click", handleDocumentClick);
-});
-
-onUnmounted(() => {
-  document.removeEventListener("click", handleDocumentClick);
-});
 </script>
 
 <style scoped>
@@ -925,19 +942,13 @@ onUnmounted(() => {
   position: relative;
 }
 
-.suggestions-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
+:deep(.suggestions-dropdown) {
   background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   box-shadow: var(--shadow-md);
   z-index: 50;
   max-height: 200px;
-  overflow-y: auto;
-  margin-top: 4px;
 }
 
 .suggestion-item {

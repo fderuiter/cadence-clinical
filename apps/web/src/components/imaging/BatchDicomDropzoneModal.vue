@@ -27,9 +27,10 @@
             type="button"
             class="btn-close"
             aria-label="Close modal"
+            :disabled="isUploading"
             @click="handleClose"
           >
-            &times;
+            <ClinicalIcon name="x" :size="18" />
           </button>
         </div>
 
@@ -564,6 +565,7 @@ async function startBatchIngestion() {
 }
 
 function handleClose() {
+  if (isUploading.value) return;
   resetState();
   emit("close");
 }
@@ -571,7 +573,7 @@ function handleClose() {
 useFocusTrap(modalRef, {
   isOpen: () => props.isOpen,
   onEscape: handleClose,
-  escapeLock: () => isUploading.value,
+  escapeDeactivates: () => !isUploading.value,
 });
 
 function completeAndClose() {
@@ -664,10 +666,21 @@ function completeAndClose() {
   line-height: 1;
   cursor: pointer;
   padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 6px;
 }
 
-.btn-close:hover {
+.btn-close:hover:not(:disabled) {
   color: var(--semantic-color-text-inverse);
+}
+
+.btn-close:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .modal-body {

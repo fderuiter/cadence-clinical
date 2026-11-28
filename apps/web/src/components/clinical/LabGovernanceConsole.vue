@@ -41,13 +41,23 @@
       </div>
 
       <div class="header-actions">
-        <button class="btn btn-outline" @click="openBulkImportModal">
+        <button
+          id="btn-lab-bulk-import"
+          type="button"
+          class="btn btn-outline"
+          @click="openBulkImportModal"
+        >
           <span class="icon"
             ><ClinicalIcon name="trending-up" :size="16"
           /></span>
           Bulk Import Reference Ranges (CSV/XLSX)
         </button>
-        <button class="btn btn-secondary" @click="openIngestModal">
+        <button
+          id="btn-lab-ingest-feed"
+          type="button"
+          class="btn btn-secondary"
+          @click="openIngestModal"
+        >
           <span class="icon"><ClinicalIcon name="download" :size="16" /></span>
           Ingest Lab Feed (HL7 / CDISC / CSV)
         </button>
@@ -69,6 +79,8 @@
         Normal Reference Ranges ({{ ranges.length }})
       </button>
       <button
+        id="tab-lab-toxicity-queue"
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'toxicity_queue'"
         :class="['tab-button', { active: activeTab === 'toxicity_queue' }]"
@@ -1709,6 +1721,7 @@ const actionModalRef = ref(null);
 const bulkImportModalRef = ref(null);
 
 useFocusTrap(ingestModalRef, showIngestModal, {
+  fallbackFocus: "#btn-lab-ingest-feed",
   onEscape: () => {
     showIngestModal.value = false;
   },
@@ -1718,6 +1731,7 @@ useFocusTrap(
   actionModalRef,
   computed(() => Boolean(showActionModal.value && selectedReview.value)),
   {
+    fallbackFocus: "#tab-lab-toxicity-queue",
     onEscape: () => {
       showActionModal.value = false;
     },
@@ -1725,6 +1739,7 @@ useFocusTrap(
 );
 
 useFocusTrap(bulkImportModalRef, showBulkImportModal, {
+  fallbackFocus: "#btn-lab-bulk-import",
   onEscape: () => closeBulkImportModal(),
 });
 const isDryRunning = ref(false);

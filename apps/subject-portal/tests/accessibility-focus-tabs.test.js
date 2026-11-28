@@ -20,6 +20,7 @@ import {
   initSessionKey,
   clearSessionKey,
   getDraft,
+  saveDraft,
   clearAllSubmissions,
 } from "../src/sync-queue.js";
 
@@ -649,6 +650,125 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     ).toBe("questionnaire-title");
 
     clearSessionKey("subject_001");
+    await clearAllSubmissions();
+  });
+
+  it("renders semantic h2 headings across all 6 portal ClinicalModal dialogs, cancels PIN reset on Escape, and preserves stacked SignOutConfirmModal trigger focus", async () => {
+    const session = useSessionStore();
+
+    // Save a draft so guarded sign-out opens SignOutConfirmModal
+    await saveDraft("assign_pin_guard", { vssbp: "118" });
+
+    // 1. PinSetupModal: h2 title + stacked SignOutConfirmModal restores #btn-pin-setup-signout
+    session.pinSetup.isOpen = true;
+    await settle();
+    expect(document.querySelector("#pin-setup-title")?.tagName).toBe("H2");
+    const pinSetupSignOutBtn = document.getElementById("btn-pin-setup-signout");
+    pinSetupSignOutBtn.focus();
+    pinSetupSignOutBtn.click();
+    await settle();
+    expect(
+      document.getElementById("pin-setup-signout-confirm-modal")
+    ).not.toBeNull();
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await settle();
+    expect(
+      document.getElementById("pin-setup-signout-confirm-modal")
+    ).toBeNull();
+    expect(document.activeElement).toBe(pinSetupSignOutBtn);
+    session.pinSetup.isOpen = false;
+    await settle();
+
+    // 2. PinUnlockModal + #pin-reset-confirmation: h2 title, stacked SignOutConfirmModal restores #btn-pin-reset-signout, and Escape calls cancelPINReset()
+    session.pinUnlock.isOpen = true;
+    session.pinUnlock.confirmingReset = true;
+    await settle();
+    expect(document.querySelector("#pin-unlock-title")?.tagName).toBe("H2");
+    expect(document.getElementById("pin-reset-confirmation")).not.toBeNull();
+
+    const pinResetSignOutBtn = document.getElementById("btn-pin-reset-signout");
+    pinResetSignOutBtn.focus();
+    pinResetSignOutBtn.click();
+    await settle();
+    expect(
+      document.getElementById("pin-unlock-signout-confirm-modal")
+    ).not.toBeNull();
+
+    // First Escape closes stacked SignOutConfirmModal and restores #btn-pin-reset-signout
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await settle();
+    expect(
+      document.getElementById("pin-unlock-signout-confirm-modal")
+    ).toBeNull();
+    expect(session.pinUnlock.confirmingReset).toBe(true);
+    expect(document.activeElement).toBe(pinResetSignOutBtn);
+
+    // Second Escape inside #pin-reset-confirmation invokes cancelPINReset() while keeping PinUnlockModal open
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await settle();
+    expect(session.pinUnlock.isOpen).toBe(true);
+    expect(session.pinUnlock.confirmingReset).toBe(false);
+    expect(document.getElementById("pin-unlock-form")).not.toBeNull();
+    session.pinUnlock.isOpen = false;
+    await settle();
+
+    // 3. ReconsentModal h2 title
+    openReconsentModal();
+    await settle();
+    expect(
+      document.querySelector("#portal-reconsent-modal-title")?.tagName
+    ).toBe("H2");
+    state.reconsentModalOpen = false;
+    await settle();
+
+    // 4. SignatureModal h2 title
+    openSignatureModal({ vssbp: "120" }, false);
+    await settle();
+    expect(document.querySelector("#portal-modal-title")?.tagName).toBe("H2");
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    await settle();
+
+    // 5. QuestionnaireView #questionnaire-cancel-confirm h2 title
+    state.questionnaireCancelConfirmOpen = true;
+    showView("view-questionnaire");
+    await settle();
+    expect(document.querySelector("#cancel-confirm-title")?.tagName).toBe("H2");
+    state.questionnaireCancelConfirmOpen = false;
+    await settle();
+
+    // 6. WalletDisburseModal h2 title
+    state.walletBalance = 50;
+    state.disburseModalOpen = true;
+    showView("view-wallet");
+    await settle();
+    expect(document.querySelector("#disburse-modal-title")?.tagName).toBe("H2");
+    state.disburseModalOpen = false;
+    await settle();
+
     await clearAllSubmissions();
   });
 });

@@ -46,6 +46,7 @@
           Up-Versioning Impact
         </button>
         <button
+          id="btn-refresh-coding-queue"
           type="button"
           class="btn btn-primary"
           :disabled="codingStore.isLoading"

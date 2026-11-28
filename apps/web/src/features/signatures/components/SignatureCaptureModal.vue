@@ -4,6 +4,7 @@
     :is-open="isOpen"
     :teleport="false"
     :dismissible="!busy"
+    :fallback-focus="fallbackFocus"
     size="sm"
     dialog-class="modal signature-capture-dialog"
     title="Electronic Signature & Identity Verification"
@@ -114,6 +115,7 @@ export const SHARED_SIGNATURE_MODAL_PROPS = {
   semanticAction: { type: String, default: "" },
   onSign: { type: Function, default: null },
   reasons: { type: Array, default: null },
+  fallbackFocus: { type: [String, Object, Function], default: null },
 };
 </script>
 

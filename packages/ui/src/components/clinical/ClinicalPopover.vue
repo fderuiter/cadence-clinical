@@ -12,6 +12,8 @@ import {
 import { useEscapeClose } from "../../composables/useEscapeClose.js";
 import {
   DEFAULT_VIEWPORT_MARGIN,
+  didFocusExitElements,
+  isTargetWithinElements,
   useFloatingPosition,
 } from "../../composables/useFloatingPosition.js";
 
@@ -65,7 +67,7 @@ const props = defineProps({
     default: DEFAULT_VIEWPORT_MARGIN,
   },
   preferredWidth: {
-    type: Number,
+    type: [Number, Function],
     default: null,
   },
   minHeight: {
@@ -101,6 +103,10 @@ const props = defineProps({
     default: true,
   },
   closeOnOutsidePointer: {
+    type: Boolean,
+    default: true,
+  },
+  closeOnFocusOut: {
     type: Boolean,
     default: true,
   },
@@ -164,7 +170,10 @@ const {
   offset: () => props.offset,
   margin: () => props.viewportMargin,
   flip: () => props.flip,
-  preferredWidth: () => props.preferredWidth,
+  preferredWidth: () =>
+    typeof props.preferredWidth === "function"
+      ? props.preferredWidth()
+      : props.preferredWidth,
   minHeight: () => props.minHeight,
 });
 
@@ -202,24 +211,7 @@ useEscapeClose(
 );
 
 function isTargetInsidePopoverOrAnchor(target) {
-  if (!target) return false;
-  const popoverEl = popoverRef.value;
-  if (
-    popoverEl &&
-    typeof popoverEl.contains === "function" &&
-    popoverEl.contains(target)
-  ) {
-    return true;
-  }
-  const anchorEl = resolveAnchorElement();
-  if (
-    anchorEl &&
-    typeof anchorEl.contains === "function" &&
-    anchorEl.contains(target)
-  ) {
-    return true;
-  }
-  return false;
+  return isTargetWithinElements(target, [resolveAnchorElement, popoverRef]);
 }
 
 function handleDocumentOutsideEvent(event) {
@@ -228,7 +220,15 @@ function handleDocumentOutsideEvent(event) {
   requestClose("outside");
 }
 
+function handleDocumentFocusChange(event) {
+  if (!resolvedOpen.value || !props.closeOnFocusOut) return;
+  if (didFocusExitElements(event, [resolveAnchorElement, popoverRef])) {
+    requestClose("focusout");
+  }
+}
+
 let outsideListenersAttached = false;
+let focusOutListenersAttached = false;
 
 function attachOutsideListeners() {
   if (outsideListenersAttached || typeof document === "undefined") return;
@@ -244,6 +244,20 @@ function detachOutsideListeners() {
   document.removeEventListener("click", handleDocumentOutsideEvent);
 }
 
+function attachFocusOutListeners() {
+  if (focusOutListenersAttached || typeof document === "undefined") return;
+  focusOutListenersAttached = true;
+  document.addEventListener("focusout", handleDocumentFocusChange);
+  document.addEventListener("focusin", handleDocumentFocusChange);
+}
+
+function detachFocusOutListeners() {
+  if (!focusOutListenersAttached || typeof document === "undefined") return;
+  focusOutListenersAttached = false;
+  document.removeEventListener("focusout", handleDocumentFocusChange);
+  document.removeEventListener("focusin", handleDocumentFocusChange);
+}
+
 watch(
   () => resolvedOpen.value && props.closeOnOutsidePointer,
   (shouldListen) => {
@@ -251,6 +265,18 @@ watch(
       attachOutsideListeners();
     } else {
       detachOutsideListeners();
+    }
+  },
+  { immediate: true, flush: "post" }
+);
+
+watch(
+  () => resolvedOpen.value && props.closeOnFocusOut,
+  (shouldListen) => {
+    if (shouldListen) {
+      attachFocusOutListeners();
+    } else {
+      detachFocusOutListeners();
     }
   },
   { immediate: true, flush: "post" }
@@ -291,6 +317,7 @@ onBeforeUnmount(() => {
     popoverRef.value.removeEventListener("focusout", onPopoverFocusOut);
   }
   detachOutsideListeners();
+  detachFocusOutListeners();
 });
 
 defineExpose({
