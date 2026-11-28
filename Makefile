@@ -85,9 +85,9 @@ rtm: ## Validate requirement tags and the RTM integrity stamps (cadence gxp vali
 
 ##@ Architecture & Documentation
 
-adr: ## Scaffold a new Architecture Decision Record (make adr TITLE="Use X for Y")
-	@test -n "$(TITLE)" || { echo "Usage: make adr TITLE=\"Use X for Y\""; exit 1; }
-	$(CADENCE_CLI) scaffold adr "$(TITLE)"
+adr: ## Scaffold a new Architecture Decision Record (make adr DOMAIN="security" TITLE="Use X for Y")
+	@test -n "$(DOMAIN)" && test -n "$(TITLE)" || { echo "Usage: make adr DOMAIN=\"<kernel|platform|security|standards|operations|compliance|frontend|tooling>\" TITLE=\"Use X for Y\""; exit 1; }
+	$(CADENCE_CLI) scaffold adr --domain "$(DOMAIN)" "$(TITLE)"
 
 post: ## Scaffold a new engineering blog post (make post TITLE="Ship X")
 	@test -n "$(TITLE)" || { echo "Usage: make post TITLE=\"Ship X\""; exit 1; }

@@ -86,7 +86,7 @@ public static class ToolCommands
 
     public static void ConfigureGenerateDocIndex(Command command)
     {
-        var check = new Option<bool>("--check") { Description = "Only check that docs/DOCUMENTATION_INDEX.md is complete without modifying it" };
+        var check = new Option<bool>("--check") { Description = "Only check that category documentation shards and docs/DOCUMENTATION_INDEX.md are complete and sorted without modifying them" };
         command.Options.Add(check);
         command.SetAction(result => DocIndexSyncService.SyncDocIndex(check: result.GetValue(check)));
     }

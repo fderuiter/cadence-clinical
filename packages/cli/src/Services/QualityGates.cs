@@ -177,7 +177,7 @@ public static class QualityGates
         new("cli-docs", ["validate-cli-docs"],
             "`docs/cli.md` documents every command in `Program.cs` and `PortCheckerService` ports, and all synthesized doc regions match code metadata",
             ctx => CheckCliDocs(ctx.RepoRoot)),
-        new("adrs", ["validate-adrs"], "ADR schema, `docs/adr/index.md` consistency, and an ADR for architectural changes",
+        new("adrs", ["validate-adrs"], "ADR schema, unique IDs, alphabetical sorting across `docs/adr/<domain>/index.md` and `docs/adr/legacy-index.md`, and an ADR for architectural changes",
             ctx => AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: ctx.RepoRoot, preCommit: ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore, eventName: ctx.EventName, gitRef: ctx.GitRef))
         {
             PreCommit = PreCommitMode.Quick,
@@ -285,7 +285,7 @@ public static class QualityGates
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "validates staged dependency manifests, `.github/dependabot.yml`, Compose, CI workflow, and AppHost blobs",
         },
-        new("doc-index", ["validate-doc-index"], "Every Markdown document under `docs/` is listed in `docs/DOCUMENTATION_INDEX.md`",
+        new("doc-index", ["validate-doc-index"], "Every non-ADR Markdown document under `docs/` is listed in its owning category shard (`docs/ROOT_INDEX.md`, `docs/<category>/INDEX.md`, `docs/<category>/DOC_INDEX.md`), sorted alphabetically by file path, and `docs/DOCUMENTATION_INDEX.md` links only to shards",
             ctx => DocIndexSyncService.SyncDocIndex(check: true, repoRoot: ctx.RepoRoot) == 0),
         new("demo-manifest", ["validate-demo-manifest"],
             "`packages/demo-fixtures/demo-seed.json` matches `docker/cadence-realm.json` in memory with zero committed `manifest.js` or `manifest.d.ts` files",

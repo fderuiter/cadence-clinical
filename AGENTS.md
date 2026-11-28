@@ -254,18 +254,17 @@ Never re-add Python code, Python tooling or compatibility shims.
 
 ## Architecture decision records
 
-- New decision: `pnpm cadence scaffold adr "<title>"`, then add it to [docs/adr/index.md](docs/adr/index.md).
-- ADR numbers are unique; `pnpm cadence check adrs` fails on duplicates, missing `# ADR-NNNN:` headings
-  and broken index links.
+- New decision: `pnpm cadence scaffold adr --domain <domain> "<title>"` (`kernel`, `platform`, `security`, `standards`, `operations`, `compliance`, `frontend`, `tooling`), which writes `docs/adr/<domain>/YYYY-MM-DD-<slug>.md` (`# ADR-<DOMAIN>-YYYYMMDD-<slug>: <title>`) and inserts a sorted entry into `docs/adr/<domain>/index.md` while keeping [docs/adr/index.md](docs/adr/index.md) and [docs/adr/legacy-index.md](docs/adr/legacy-index.md) static.
+- ADR identifiers are globally unique; `pnpm cadence check adrs` fails on duplicate IDs, missing headings, out-of-order shard entries, and broken index links.
 - When a decision is superseded: set the old ADR's status to
-  `Superseded by ADR-XXXX` (linking the new ADR), add a `> [!NOTE]` callout at the top, annotate its index entry with
+  `Superseded by ADR-XXXX` (linking the new ADR), add a `> [!NOTE]` callout at the top, annotate its shard or legacy index entry with
   `*(Superseded by ADR-XXXX)*`, and update [ARCHITECTURE.md](ARCHITECTURE.md) and [CONTEXT.md](CONTEXT.md).
 
 ## Documentation is part of the change
 
 Every pull request updates the documentation its change affects, in the same PR: the service or
 package README, `ARCHITECTURE.md`, `CONTEXT.md`, `docs/ENVIRONMENT_VARIABLES.md` for new settings, an
-ADR for a new decision, and the [documentation index](docs/DOCUMENTATION_INDEX.md) for new documents.
+ADR in `docs/adr/<domain>/` for a new decision, and the owning category shard (`pnpm cadence generate-doc-index`, see [docs/DOCUMENTATION_INDEX.md](docs/DOCUMENTATION_INDEX.md)) for new documents.
 The generated RTM and IQ/OQ/PQ report come only from the integration owner's `pnpm cadence gxp snapshot`,
 never from hand edits or a feature branch.
 

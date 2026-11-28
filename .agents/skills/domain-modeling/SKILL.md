@@ -13,12 +13,12 @@ Actively build, sharpen, and maintain the project's domain model, ubiquitous lan
 
 ## Antigravity Tool Execution Matrix
 
-| Phase                   | Antigravity Tool       | Invocation Pattern                            | Objective                                                        |
-| :---------------------- | :--------------------- | :-------------------------------------------- | :--------------------------------------------------------------- |
-| **Terminology Audit**   | `grep_search`          | `Query="<term>"`, `SearchPath="apps/"`        | Scan codebase for usage of conflicting or legacy terminology     |
-| **Glossary Inspection** | `view_file`            | `AbsolutePath=".../CONTEXT.md"`               | Read current canonical definitions and domain boundaries         |
-| **Live Glossary Edit**  | `replace_file_content` | Target: `CONTEXT.md`, surgical section edit   | Add or update terms under `# Clinical Domain Glossary`           |
-| **ADR Scaffolding**     | `run_command`          | `CommandLine="pnpm cadence scaffold adr ..."` | Scaffold formal decision record when architectural models change |
+| Phase                   | Antigravity Tool       | Invocation Pattern                                              | Objective                                                        |
+| :---------------------- | :--------------------- | :-------------------------------------------------------------- | :--------------------------------------------------------------- |
+| **Terminology Audit**   | `grep_search`          | `Query="<term>"`, `SearchPath="apps/"`                          | Scan codebase for usage of conflicting or legacy terminology     |
+| **Glossary Inspection** | `view_file`            | `AbsolutePath=".../CONTEXT.md"`                                 | Read current canonical definitions and domain boundaries         |
+| **Live Glossary Edit**  | `replace_file_content` | Target: `CONTEXT.md`, surgical section edit                     | Add or update terms under `# Clinical Domain Glossary`           |
+| **ADR Scaffolding**     | `run_command`          | `CommandLine="pnpm cadence scaffold adr --domain <domain> ..."` | Scaffold formal decision record when architectural models change |
 
 ---
 
@@ -44,5 +44,5 @@ The root `CONTEXT.md` file defines the canonical glossary of clinical concepts, 
 5. **Scaffold ADRs for High-Stakes Decisions (MANDATORY TOOL: `run_command`)**:
    When a decision is hard to reverse, surprising without context, and the result of a real trade-off, scaffold an ADR:
    ```bash
-   pnpm cadence scaffold adr "Title"
+   pnpm cadence scaffold adr --domain <domain> "Title"
    ```

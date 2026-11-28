@@ -22,7 +22,8 @@ export function isDraftBlogPostFile(filePath) {
   const normalizedPath = filePath.replace(/\\/g, "/");
   if (
     !normalizedPath.includes("/blog/") ||
-    normalizedPath.endsWith("/blog/index.md")
+    normalizedPath.endsWith("/blog/index.md") ||
+    /\/blog\/DOC_INDEX\.md$/i.test(normalizedPath)
   ) {
     return false;
   }
@@ -46,7 +47,12 @@ export function getDraftBlogPostExcludes(docsDir) {
 
   return fs
     .readdirSync(blogDir)
-    .filter((file) => file.endsWith(".md") && file !== "index.md")
+    .filter(
+      (file) =>
+        file.endsWith(".md") &&
+        file !== "index.md" &&
+        file.toUpperCase() !== "DOC_INDEX.MD"
+    )
     .sort()
     .filter((file) => isDraftBlogPostFile(path.join(blogDir, file)))
     .map((file) => `blog/${file}`);
@@ -64,7 +70,13 @@ export function loadPublishedBlogPosts(docsDir) {
 
   const posts = [];
   for (const file of fs.readdirSync(blogDir)) {
-    if (!file.endsWith(".md") || file === "index.md") continue;
+    if (
+      !file.endsWith(".md") ||
+      file === "index.md" ||
+      file.toUpperCase() === "DOC_INDEX.MD"
+    ) {
+      continue;
+    }
     const fullPath = path.join(blogDir, file);
     const raw = fs.readFileSync(fullPath, "utf-8");
     const { frontmatter, body } = parseBlogFrontmatter(raw);

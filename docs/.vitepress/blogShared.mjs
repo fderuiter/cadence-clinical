@@ -765,7 +765,11 @@ export function formatDisplayDate(isoDate) {
  */
 export function normalizeBlogPost(entry) {
   const url = normalizeSiteLink(entry?.url ?? "");
-  if (url === "/blog/" || url.endsWith("/blog/index.html")) {
+  if (
+    url === "/blog/" ||
+    url.endsWith("/blog/index.html") ||
+    /\/blog\/doc_index\.html$/i.test(url)
+  ) {
     return null;
   }
 

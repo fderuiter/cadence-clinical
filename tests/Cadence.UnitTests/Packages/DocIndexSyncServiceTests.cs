@@ -35,7 +35,7 @@ public sealed class DocIndexSyncServiceTests : IDisposable
     }
 
     [Fact]
-    public void ScanMarkdownFiles_ExcludesBuildArtifactsAndSystemDirs()
+    public void ScanMarkdownFiles_ExcludesAdrsIndexShardsBuildArtifactsAndStagedPages_WhileKeepingAuthoredLowercaseSubdirIndex()
     {
         string docsDir = Path.Combine(_tempDir, "docs");
         Directory.CreateDirectory(docsDir);
@@ -45,6 +45,11 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         string adrDir = Path.Combine(docsDir, "adr");
         Directory.CreateDirectory(adrDir);
         File.WriteAllText(Path.Combine(adrDir, "2026-01-01-test.md"), "# Test ADR\nADR content\n");
+
+        string kernelDir = Path.Combine(docsDir, "kernel");
+        Directory.CreateDirectory(kernelDir);
+        File.WriteAllText(Path.Combine(kernelDir, "INDEX.md"), "# Kernel Shard\n");
+        File.WriteAllText(Path.Combine(kernelDir, "SPEC.md"), "# Spec\nContent\n");
 
         string nodeModulesDir = Path.Combine(docsDir, "node_modules");
         Directory.CreateDirectory(nodeModulesDir);
@@ -59,7 +64,8 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         File.WriteAllText(Path.Combine(runsDir, "run_report.md"), "# Run Report\n");
 
         File.WriteAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"), "# Index\n");
-        File.WriteAllText(Path.Combine(docsDir, "empty.md"), ""); // Empty file
+        File.WriteAllText(Path.Combine(docsDir, "ROOT_INDEX.md"), "# Root Shard\n");
+        File.WriteAllText(Path.Combine(docsDir, "empty.md"), "");
         foreach (string stagedPage in new[]
                  {
                      "AGENTS.md",
@@ -78,13 +84,14 @@ public sealed class DocIndexSyncServiceTests : IDisposable
 
         string migrationDir = Path.Combine(docsDir, "migration");
         Directory.CreateDirectory(migrationDir);
+        File.WriteAllText(Path.Combine(migrationDir, "DOC_INDEX.md"), "# Migration Shard\n");
         File.WriteAllText(Path.Combine(migrationDir, "index.md"), "# Authored migration page\n");
 
         var files = DocIndexSyncService.ScanMarkdownFiles(docsDir);
 
         files.Should().HaveCount(3);
         files.Should().Contain(f => f.RelativePath == "VALID1.md");
-        files.Should().Contain(f => f.RelativePath == "adr/2026-01-01-test.md");
+        files.Should().Contain(f => f.RelativePath == "kernel/SPEC.md");
         files.Should().Contain(f => f.RelativePath == "migration/index.md");
     }
 
@@ -160,43 +167,88 @@ public sealed class DocIndexSyncServiceTests : IDisposable
     }
 
     [Fact]
-    public void SyncDocIndex_ReconcilesSupersededAndPythonNeo4jAdrStatuses()
+    public void SyncDocIndex_UpdatesOnlyOwningCategoryShardSortedAlphabetically_WhileKeepingStaticHubUnchanged()
     {
         string docsDir = Path.Combine(_tempDir, "docs");
-        string adrDir = Path.Combine(docsDir, "adr");
-        Directory.CreateDirectory(adrDir);
+        string kernelDir = Path.Combine(docsDir, "kernel");
+        Directory.CreateDirectory(kernelDir);
 
+        string hubContent = string.Join(
+            '\n',
+            "# Documentation Index",
+            "",
+            "## Category documentation shards",
+            "",
+            "| Document | Status | What it is |",
+            "| --- | --- | --- |",
+            "| [Kernel index](kernel/INDEX.md) | Normative | Kernel docs |",
+            "| [Root index](ROOT_INDEX.md) | Current | Root docs |",
+            "",
+            "## Architecture decision records",
+            "",
+            "| Document | Status | What it is |",
+            "| --- | --- | --- |",
+            "| [ADR hub](adr/index.md) | Current | Static ADR hub |",
+            "| [Legacy ADRs](adr/legacy-index.md) | Historical | Frozen legacy ADRs |",
+            "| [Security ADRs](adr/security/index.md) | Current | Security shard |",
+            "");
+
+        File.WriteAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"), hubContent);
         File.WriteAllText(
-            Path.Combine(adrDir, "2023-01-01-neo4j-graph-database.md"),
-            "# ADR-2262: Neo4j Graph Database\n\n- **Status:** Superseded by ADR-2245\n\nStore protocol metadata in Neo4j.\n");
+            Path.Combine(docsDir, "ROOT_INDEX.md"),
+            "# Root Index\n\n## Developing and running\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Doc A](doca.md) | Current | Description A |\n");
         File.WriteAllText(
-            Path.Combine(adrDir, "2026-07-22-python-service.md"),
-            "# ADR-010: Python FastAPI Service\n\n- **Status:** Accepted\n\nBuild API endpoints with FastAPI and Pydantic.\n");
+            Path.Combine(kernelDir, "INDEX.md"),
+            "# Kernel Index\n\n## Kernel and roadmap\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Zeta Spec](ZETA_SPEC.md) | Current | Zeta description |\n");
+
+        File.WriteAllText(Path.Combine(docsDir, "doca.md"), "# Doc A\nDescription A\n");
+        File.WriteAllText(Path.Combine(kernelDir, "ZETA_SPEC.md"), "# Zeta Spec\nZeta description\n");
+        File.WriteAllText(Path.Combine(kernelDir, "ALPHA_SPEC.md"), "# Alpha Spec\nAlpha description\n");
+
+        // Check fails because kernel/ALPHA_SPEC.md is missing from kernel/INDEX.md.
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(1);
+
+        // Sync updates only kernel/INDEX.md, inserting ALPHA_SPEC.md before ZETA_SPEC.md, leaving hub and ROOT_INDEX.md untouched.
+        string rootShardBefore = File.ReadAllText(Path.Combine(docsDir, "ROOT_INDEX.md"));
+        DocIndexSyncService.SyncDocIndex(check: false, repoRoot: _tempDir).Should().Be(0);
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
+
+        File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md")).Should().Be(hubContent);
+        File.ReadAllText(Path.Combine(docsDir, "ROOT_INDEX.md")).Should().Be(rootShardBefore);
+
+        string kernelShard = File.ReadAllText(Path.Combine(kernelDir, "INDEX.md"));
+        int alphaPos = kernelShard.IndexOf("ALPHA_SPEC.md", StringComparison.Ordinal);
+        int zetaPos = kernelShard.IndexOf("ZETA_SPEC.md", StringComparison.Ordinal);
+        alphaPos.Should().BeGreaterThan(0);
+        zetaPos.Should().BeGreaterThan(alphaPos);
+    }
+
+    [Fact]
+    public void SyncDocIndex_CheckMode_RejectsPerAdrRowsInHubAndOutOfOrderShardRows()
+    {
+        string docsDir = Path.Combine(_tempDir, "docs");
+        Directory.CreateDirectory(docsDir);
+        File.WriteAllText(Path.Combine(docsDir, "doca.md"), "# Doc A\nFirst\n");
+        File.WriteAllText(Path.Combine(docsDir, "docb.md"), "# Doc B\nSecond\n");
+
+        // 1. Out-of-order rows in ROOT_INDEX.md fail check mode.
         File.WriteAllText(
-            Path.Combine(adrDir, "2026-09-29-clinical-kernel-modular-monolith-architecture.md"),
-            "# ADR-2244: Clinical Kernel Modular Monolith Architecture\n\n- **Status:** Accepted\n\nConsolidate clinical truth in the .NET 10 Clinical Kernel.\n");
-
-        string indexContent = """
-            # Documentation Index
-
-            ## Architecture decision records
-
-            | Document | Status | What it is |
-            | --- | --- | --- |
-            | [ADR-2262](adr/2023-01-01-neo4j-graph-database.md) | Current | Neo4j graph metadata |
-            | [ADR-010](adr/2026-07-22-python-service.md) | Current | Python FastAPI service |
-            | [ADR-2244](adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) | Current | Clinical Kernel modular monolith |
-            """;
-        File.WriteAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"), indexContent);
+            Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"),
+            "# Documentation Index\n\n## Category documentation shards\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Root](ROOT_INDEX.md) | Current | Root |\n");
+        File.WriteAllText(
+            Path.Combine(docsDir, "ROOT_INDEX.md"),
+            "# Root Index\n\n## Developing and running\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Doc B](docb.md) | Current | Second |\n| [Doc A](doca.md) | Current | First |\n");
 
         DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(1);
         DocIndexSyncService.SyncDocIndex(check: false, repoRoot: _tempDir).Should().Be(0);
         DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
 
-        string synced = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));
-        synced.Should().Contain("| [ADR-2262](adr/2023-01-01-neo4j-graph-database.md) | Historical |");
-        synced.Should().Contain("| [ADR-010](adr/2026-07-22-python-service.md) | Historical |");
-        synced.Should().Contain("| [ADR-2244](adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) | Current |");
+        // 2. Per-ADR row in DOCUMENTATION_INDEX.md fails check mode.
+        File.WriteAllText(
+            Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"),
+            "# Documentation Index\n\n## Category documentation shards\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Root](ROOT_INDEX.md) | Current | Root |\n\n## Architecture decision records\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [ADR-2508](adr/2026-10-16-pin-pnpm.md) | Current | Per-ADR row forbidden |\n");
+
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(1);
     }
 
     [Fact]
@@ -211,10 +263,6 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         desc.Should().StartWith("This is the main description paragraph");
     }
 
-    /// <summary>
-    /// A description taken from a line with an inline link keeps the link text only, so a truncated
-    /// description cannot leave a half link that the docs build reports as broken.
-    /// </summary>
     [Fact]
     public void ExtractDocMetadata_ReducesInlineLinksToTheirText()
     {
@@ -225,43 +273,6 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         var (_, desc) = DocIndexSyncService.ExtractDocMetadata(filePath, "superseded.md");
 
         desc.Should().Be("- Status: Superseded by ADR-2428");
-    }
-
-    [Fact]
-    public void SyncDocIndex_CheckMode_FailsWhenUnindexedFileExists()
-    {
-        string docsDir = Path.Combine(_tempDir, "docs");
-        Directory.CreateDirectory(docsDir);
-
-        string indexContent = """
-            # Documentation Index
-
-            ## Developing and running
-
-            | Document | Status | What it is |
-            | --- | --- | --- |
-            | [Doc A](doca.md) | Current | Description A |
-            """;
-
-        File.WriteAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"), indexContent);
-        File.WriteAllText(Path.Combine(docsDir, "doca.md"), "# Doc A\nDescription A\n");
-        File.WriteAllText(Path.Combine(docsDir, "docb.md"), "# Doc B\nDescription B\n");
-
-        // First check: should fail because docb.md is unindexed
-        int checkExitCode = DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir);
-        checkExitCode.Should().Be(1);
-
-        // Sync: should update DOCUMENTATION_INDEX.md
-        int syncExitCode = DocIndexSyncService.SyncDocIndex(check: false, repoRoot: _tempDir);
-        syncExitCode.Should().Be(0);
-
-        // Second check: should pass cleanly
-        int checkExitCode2 = DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir);
-        checkExitCode2.Should().Be(0);
-
-        string updatedIndex = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));
-        updatedIndex.Should().Contain("docb.md");
-        updatedIndex.Should().Contain("Doc B");
     }
 
     [Fact]
@@ -294,7 +305,10 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         File.WriteAllText(Path.Combine(docsDir, "docb.md"), "# Doc B\nOk\n");
         File.WriteAllText(
             Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"),
-            "# Documentation Index\n\n## Developing and running\n\n| Document | Status | What it is |\n| --- | --- | --- |\n" + malformedRows);
+            "# Documentation Index\n\n## Category documentation shards\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Root](ROOT_INDEX.md) | Current | Root |\n");
+        File.WriteAllText(
+            Path.Combine(docsDir, "ROOT_INDEX.md"),
+            "# Root Index\n\n## Developing and running\n\n| Document | Status | What it is |\n| --- | --- | --- |\n" + malformedRows);
 
         DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(1);
     }
@@ -360,31 +374,36 @@ public sealed class DocIndexSyncServiceTests : IDisposable
     }
 
     [Fact]
-    public void SyncDocIndex_RefreshesEngineeringBlogRowsOnMetadataChanges_AndRemovesRevertedDrafts()
+    public void SyncDocIndex_RefreshesBlogShardRowsOnMetadataChanges_RemovesRevertedDrafts_AndKeepsHubStatic()
     {
         string docsDir = Path.Combine(_tempDir, "docs");
         string blogDir = Path.Combine(docsDir, "blog");
         Directory.CreateDirectory(blogDir);
 
+        string hubContent = "# Documentation Index\n\n## Category documentation shards\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Engineering blog index](blog/DOC_INDEX.md) | Current | Blog shard |\n";
+        File.WriteAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"), hubContent);
+
         File.WriteAllText(
             Path.Combine(blogDir, "index.md"),
             "---\ntitle: \"Cadence Engineering Blog\"\nsummary: \"Overview of posts.\"\n---\n\n# Cadence Engineering Blog\n");
+        File.WriteAllText(
+            Path.Combine(blogDir, "DOC_INDEX.md"),
+            "# Engineering Blog Index\n\n## Engineering blog\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Cadence Engineering Blog](index.md) | Current | Overview of posts. |\n");
 
         string postPath = Path.Combine(blogDir, "2026-11-19-milestone.md");
         File.WriteAllText(
             postPath,
             "---\ntitle: \"Initial Milestone Title\"\ndate: \"2026-11-19\"\nsummary: \"Initial summary text.\"\ndraft: false\n---\n\n# Initial Milestone Title\n");
 
-        File.WriteAllText(
-            Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"),
-            "# Documentation Index\n\n## Engineering blog\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Cadence Engineering Blog](blog/index.md) | Current | Overview of posts. |\n");
-
         DocIndexSyncService.SyncDocIndex(check: false, repoRoot: _tempDir).Should().Be(0);
         DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
+        File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md")).Should().Be(hubContent);
 
-        string initialIndex = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));
-        initialIndex.Should().Contain("[Initial Milestone Title](blog/2026-11-19-milestone.md)");
-        initialIndex.Should().Contain("2026-11-19 — Initial summary text.");
+        string initialShard = File.ReadAllText(Path.Combine(blogDir, "DOC_INDEX.md"));
+        initialShard.Should().Contain("[Initial Milestone Title](2026-11-19-milestone.md)");
+        initialShard.Should().Contain("2026-11-19 — Initial summary text.");
+        initialShard.IndexOf("2026-11-19-milestone.md", StringComparison.Ordinal)
+            .Should().BeLessThan(initialShard.IndexOf("(index.md)", StringComparison.Ordinal));
 
         // Update title, summary, and date on the existing post: check mode must detect stale metadata
         File.WriteAllText(
@@ -395,10 +414,10 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         DocIndexSyncService.SyncDocIndex(check: false, repoRoot: _tempDir).Should().Be(0);
         DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
 
-        string refreshedIndex = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));
-        refreshedIndex.Should().Contain("[Revised Milestone Title](blog/2026-11-19-milestone.md)");
-        refreshedIndex.Should().Contain("2026-11-20 — Revised summary text.");
-        refreshedIndex.Should().NotContain("Initial Milestone Title");
+        string refreshedShard = File.ReadAllText(Path.Combine(blogDir, "DOC_INDEX.md"));
+        refreshedShard.Should().Contain("[Revised Milestone Title](2026-11-19-milestone.md)");
+        refreshedShard.Should().Contain("2026-11-20 — Revised summary text.");
+        refreshedShard.Should().NotContain("Initial Milestone Title");
 
         // Revert post back to draft: true — check mode must fail until the row is removed
         File.WriteAllText(
@@ -410,9 +429,10 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         DocIndexSyncService.SyncDocIndex(check: false, repoRoot: _tempDir).Should().Be(0);
         DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
 
-        string afterRevertIndex = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));
-        afterRevertIndex.Should().NotContain("blog/2026-11-19-milestone.md");
-        afterRevertIndex.Should().Contain("blog/index.md");
+        string afterRevertShard = File.ReadAllText(Path.Combine(blogDir, "DOC_INDEX.md"));
+        afterRevertShard.Should().NotContain("2026-11-19-milestone.md");
+        afterRevertShard.Should().Contain("(index.md)");
+        File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md")).Should().Be(hubContent);
     }
 
     [Fact]
@@ -424,9 +444,13 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         File.WriteAllText(Path.Combine(docsDir, "docb.md"), "# Doc B\nSecond doc\n");
         File.WriteAllText(Path.Combine(docsDir, "docc.md"), "# Doc C\nThird doc\n");
 
-        string splitIndex = string.Join(
+        File.WriteAllText(
+            Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"),
+            "# Documentation Index\n\n## Category documentation shards\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Root](ROOT_INDEX.md) | Current | Root |\n");
+
+        string splitShard = string.Join(
             '\n',
-            "# Documentation Index",
+            "# Root Index",
             "",
             "## Developing and running",
             "",
@@ -441,78 +465,22 @@ public sealed class DocIndexSyncServiceTests : IDisposable
             "| [Doc C](docc.md) | Current | Separate valid table after blank line |",
             "");
 
-        string indexPath = Path.Combine(docsDir, "DOCUMENTATION_INDEX.md");
-        File.WriteAllText(indexPath, splitIndex);
+        string shardPath = Path.Combine(docsDir, "ROOT_INDEX.md");
+        File.WriteAllText(shardPath, splitShard);
 
         DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(1);
         DocIndexSyncService.SyncDocIndex(check: false, repoRoot: _tempDir).Should().Be(0);
         DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
 
-        string repaired = File.ReadAllText(indexPath);
+        string repaired = File.ReadAllText(shardPath);
         repaired.Should().Contain("| [Doc A](doca.md) | Current | First doc |\n| [Doc B](docb.md) | Current | Split by intra-table blank line |");
         repaired.Should().Contain("| [Doc B](docb.md) | Current | Split by intra-table blank line |\n\n| Document | Status | What it is |");
     }
 
     [Fact]
-    public void SyncDocIndex_WriteMode_AnchorsNewAdrRowsByNumberAndMarksPythonInventoryHistorical()
+    public void RepositoryShards_PassSyncDocIndexCheckCleanly()
     {
-        DocIndexSyncService.DetermineStatus("PYTHON_REFERENCE_INVENTORY.md", "# Python Reference Inventory\n")
-            .Should().Be("Historical");
-
-        string docsDir = Path.Combine(_tempDir, "docs");
-        string adrDir = Path.Combine(docsDir, "adr");
-        Directory.CreateDirectory(adrDir);
-
-        File.WriteAllText(Path.Combine(adrDir, "index.md"), "# Architectural Decision Records (Index)\nMaster ADR index.\n");
-        File.WriteAllText(Path.Combine(adrDir, "2026-10-16-pin-pnpm.md"), "# ADR-2508: Pin pnpm and Node\n- Status: Accepted\n");
-        File.WriteAllText(Path.Combine(adrDir, "2026-10-19-kernel-command-path.md"), "# ADR-2600: Kernel Command Path\n- Status: Accepted\n");
-        File.WriteAllText(Path.Combine(adrDir, "2026-11-24-retire-dead-ui.md"), "# ADR-2677: Retire Dead UI Exports\n- Status: Accepted\n");
-        File.WriteAllText(Path.Combine(adrDir, "2026-11-24-early-band.md"), "# ADR-2499: Early Band Decision\n- Status: Accepted\n");
-        File.WriteAllText(Path.Combine(adrDir, "2026-11-24-retire-python.md"), "# ADR-2509: Retire Remaining Python References\n- Status: Accepted\n");
-        File.WriteAllText(Path.Combine(adrDir, "2026-11-24-high-band.md"), "# ADR-2900: High Band Decision\n- Status: Accepted\n");
-        File.WriteAllText(Path.Combine(docsDir, "PYTHON_REFERENCE_INVENTORY.md"), "# Python Reference Inventory (#4789)\nArchived record.\n");
-
-        string initialIndex = string.Join(
-            '\n',
-            "# Documentation Index",
-            "",
-            "## Architecture decision records",
-            "",
-            "| Document | Status | What it is |",
-            "| --- | --- | --- |",
-            "| [Architectural Decision Records (Index)](adr/index.md) | Current | Master ADR index. |",
-            "| [ADR-2508: Pin pnpm and Node](adr/2026-10-16-pin-pnpm.md) | Current | - Status: Accepted |",
-            "| [ADR-2600: Kernel Command Path](adr/2026-10-19-kernel-command-path.md) | Current | - Status: Accepted |",
-            "| [ADR-2677: Retire Dead UI Exports](adr/2026-11-24-retire-dead-ui.md) | Current | - Status: Accepted |",
-            "## Developing and running",
-            "",
-            "| Document | Status | What it is |",
-            "| --- | --- | --- |",
-            "");
-
-        string indexPath = Path.Combine(docsDir, "DOCUMENTATION_INDEX.md");
-        File.WriteAllText(indexPath, initialIndex);
-
-        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(1);
-        DocIndexSyncService.SyncDocIndex(check: false, repoRoot: _tempDir).Should().Be(0);
-        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
-
-        string updated = File.ReadAllText(indexPath);
-        int idxMaster = updated.IndexOf("adr/index.md", StringComparison.Ordinal);
-        int idx2499 = updated.IndexOf("ADR-2499:", StringComparison.Ordinal);
-        int idx2508 = updated.IndexOf("ADR-2508:", StringComparison.Ordinal);
-        int idx2509 = updated.IndexOf("ADR-2509:", StringComparison.Ordinal);
-        int idx2600 = updated.IndexOf("ADR-2600:", StringComparison.Ordinal);
-        int idx2677 = updated.IndexOf("ADR-2677:", StringComparison.Ordinal);
-        int idx2900 = updated.IndexOf("ADR-2900:", StringComparison.Ordinal);
-
-        idxMaster.Should().BeLessThan(idx2499);
-        idx2499.Should().BeLessThan(idx2508);
-        idx2508.Should().BeLessThan(idx2509);
-        idx2509.Should().BeLessThan(idx2600);
-        idx2600.Should().BeLessThan(idx2677);
-        idx2677.Should().BeLessThan(idx2900);
-        updated.Should().Contain("(adr/2026-11-24-high-band.md) | Current | - Status: Accepted |\n\n## Developing and running");
-        updated.Should().Contain("| [Python Reference Inventory (#4789)](PYTHON_REFERENCE_INVENTORY.md) | Historical |");
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: DocIndexSyncService.FindRepoRoot())
+            .Should().Be(0);
     }
 }

@@ -508,7 +508,10 @@ export function repoLinksPlugin(
   md.core.ruler.push("cadence_repo_links", (state) => {
     const relativePath = state.env?.relativePath;
     if (!relativePath) return;
-    const currentFile = path.join(docsDir, relativePath);
+    const currentFile =
+      state.env?.realPath && fs.existsSync(state.env.realPath)
+        ? state.env.realPath
+        : path.join(docsDir, relativePath);
     const pageDir = path.dirname(currentFile);
     let samePageAnchors = null;
     const getSamePageAnchors = () => {
@@ -922,15 +925,38 @@ function resolveThemePagePath(docsDir, link) {
     .replace(/\.(html|md)$/, "");
   if (page === "" || page.endsWith("/")) {
     const indexCandidate = path.join(docsDir, page, "index.md");
-    if (isExcludedPortalDocFile(indexCandidate, docsDir)) return null;
-    return fs.existsSync(indexCandidate) ? indexCandidate : null;
+    if (
+      !isExcludedPortalDocFile(indexCandidate, docsDir) &&
+      fs.existsSync(indexCandidate)
+    ) {
+      return indexCandidate;
+    }
+    const upperIndexCandidate = path.join(docsDir, page, "INDEX.md");
+    if (
+      !isExcludedPortalDocFile(upperIndexCandidate, docsDir) &&
+      fs.existsSync(upperIndexCandidate)
+    ) {
+      return upperIndexCandidate;
+    }
+    return null;
   }
   const mdCandidate = path.join(docsDir, `${page}.md`);
   if (isExcludedPortalDocFile(mdCandidate, docsDir)) return null;
   if (fs.existsSync(mdCandidate)) return mdCandidate;
   const dirIndexCandidate = path.join(docsDir, page, "index.md");
-  if (isExcludedPortalDocFile(dirIndexCandidate, docsDir)) return null;
-  if (fs.existsSync(dirIndexCandidate)) return dirIndexCandidate;
+  if (
+    !isExcludedPortalDocFile(dirIndexCandidate, docsDir) &&
+    fs.existsSync(dirIndexCandidate)
+  ) {
+    return dirIndexCandidate;
+  }
+  const upperDirIndexCandidate = path.join(docsDir, page, "INDEX.md");
+  if (
+    !isExcludedPortalDocFile(upperDirIndexCandidate, docsDir) &&
+    fs.existsSync(upperDirIndexCandidate)
+  ) {
+    return upperDirIndexCandidate;
+  }
 
   const repoRoot = path.resolve(docsDir, "..");
   for (const [srcName, destName] of Object.entries(STAGED_ROOT_DOCS)) {

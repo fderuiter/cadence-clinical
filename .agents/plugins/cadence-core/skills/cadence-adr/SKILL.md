@@ -1,10 +1,10 @@
 ---
 name: cadence-adr
-description: "Scaffold, author, and record Architecture Decision Records (ADRs) aligned with Cadence domain standards and auto-indexed in docs/adr/index.md. Use when introducing dependencies, changing data models, modifying service boundaries, or making architectural trade-offs."
+description: "Scaffold, author, and record Architecture Decision Records (ADRs) aligned with Cadence domain standards and auto-indexed in docs/adr/<domain>/index.md. Use when introducing dependencies, changing data models, modifying service boundaries, or making architectural trade-offs."
 license: MIT
 metadata:
   author: Cadence Team
-  version: "1.0"
+  version: "2.0"
 ---
 
 # Cadence Architecture Decision Records (ADR)
@@ -13,12 +13,12 @@ Records significant, hard-to-reverse architectural decisions with clear rational
 
 ## Antigravity Tool Execution Matrix
 
-| Phase           | Antigravity Tool       | Invocation Pattern                                              | Objective                                                         |
-| :-------------- | :--------------------- | :-------------------------------------------------------------- | :---------------------------------------------------------------- |
-| **Scaffolding** | `run_command`          | `CommandLine="pnpm cadence scaffold adr '<Title>'"`             | Generate dated ADR template and auto-index in `docs/adr/index.md` |
-| **Inspection**  | `view_file`            | `AbsolutePath=".../docs/adr/YYYY-MM-DD-slug.md"`                | Inspect scaffolded sections and template comments                 |
-| **Authoring**   | `replace_file_content` | Target: `docs/adr/YYYY-MM-DD-slug.md`, contiguous section edits | Populate Problem Statement, Options, Outcome, and Trade-offs      |
-| **Validation**  | `run_command`          | `CommandLine="pnpm cadence check adrs"`                         | Verify format, frontmatter, and requirement ID traceability       |
+| Phase           | Antigravity Tool       | Invocation Pattern                                                       | Objective                                                                           |
+| :-------------- | :--------------------- | :----------------------------------------------------------------------- | :---------------------------------------------------------------------------------- |
+| **Scaffolding** | `run_command`          | `CommandLine="pnpm cadence scaffold adr --domain <domain> '<Title>'"`    | Generate dated ADR template and insert sorted entry in `docs/adr/<domain>/index.md` |
+| **Inspection**  | `view_file`            | `AbsolutePath=".../docs/adr/<domain>/YYYY-MM-DD-slug.md"`                | Inspect scaffolded sections and template comments                                   |
+| **Authoring**   | `replace_file_content` | Target: `docs/adr/<domain>/YYYY-MM-DD-slug.md`, contiguous section edits | Populate Problem Statement, Options, Outcome, and Trade-offs                        |
+| **Validation**  | `run_command`          | `CommandLine="pnpm cadence check adrs"`                                  | Verify format, unique ID, shard sorting, and requirement ID traceability            |
 
 ## When an ADR is Required
 
@@ -26,7 +26,7 @@ Create an ADR when:
 
 1. Adding a new third-party dependency or database engine.
 2. Modifying inter-service data contracts or introducing new API gateways.
-3. Changing data storage models (Neo4j graph nodes or PostgreSQL schema migrations).
+3. Changing data storage models (PostgreSQL schema migrations; Neo4j is retired, ADR-2245).
 4. Making architectural decisions that satisfy all three criteria:
    - **Hard to reverse**: High cost to change later.
    - **Surprising without context**: Future maintainers would ask "why was this done this way?".
@@ -34,17 +34,17 @@ Create an ADR when:
 
 ## Scaffolding an ADR
 
-Use the automated ADR generator:
+Use the automated ADR generator with `--domain`:
 
 ```bash
-pnpm cadence scaffold adr "Descriptive Title"
+pnpm cadence scaffold adr --domain security "Descriptive Title"
 ```
 
-This creates a dated file under `docs/adr/YYYY-MM-DD-slug.md` and automatically updates the index table in [`docs/adr/index.md`](../../../../docs/adr/index.md).
+This creates `docs/adr/<domain>/YYYY-MM-DD-slug.md` headed `# ADR-<DOMAIN>-YYYYMMDD-<slug>: <title>` and inserts a sorted entry into `docs/adr/<domain>/index.md` while keeping [`docs/adr/index.md`](../../../../docs/adr/index.md) untouched.
 
 ## ADR Authoring Protocol
 
-1. **Scaffold**: Execute `pnpm cadence scaffold adr "Title"`.
+1. **Scaffold**: Execute `pnpm cadence scaffold adr --domain <domain> "Title"`.
 2. **Author Sections**: Use `replace_file_content` or `edit_file` to fill in:
    - **Header Metadata**: Hyphenated list items (`- **Status:**`, `- **Date:**`, `- **Authors:**`, `- **Deciders:**`).
    - **Context & Problem Statement**: Background, forces, requirements, and constraints (`PRD-SYS-xxx`).
