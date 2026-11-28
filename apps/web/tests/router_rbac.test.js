@@ -166,22 +166,36 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.path).toBe("/forbidden");
     });
 
-    it("redirects /data-lock into StudyCanvasView (stage=data&section=locks) for Data Manager and blocks unauthorized roles", async () => {
+    it("redirects /data-lock into StudyCanvasView (stage=data&section=locks) for study closeout roles and blocks non-study roles", async () => {
       const authStore = useAuthStore();
       const canvasStore = useStudyCanvasStore();
       authStore.isAuthenticated = true;
-      authStore.rawRoles = ["Data Manager"];
       canvasStore.studyCode = "CAD-101";
 
-      await router.push("/data-lock");
-      expect(router.currentRoute.value.name).toBe("study");
-      expect(router.currentRoute.value.params.studyCode).toBe("CAD-101");
-      expect(router.currentRoute.value.query).toMatchObject({
-        stage: "data",
-        section: "locks",
-      });
+      for (const role of [
+        "Data Manager",
+        "CRC",
+        "CRA",
+        "Sponsor Medical Monitor",
+      ]) {
+        authStore.rawRoles = [role];
+        await router.push("/login");
+        await router.push("/data-lock");
+        expect(router.currentRoute.value.name).toBe("study");
+        expect(router.currentRoute.value.params.studyCode).toBe("CAD-101");
+        expect(router.currentRoute.value.query).toMatchObject({
+          stage: "data",
+          section: "locks",
+        });
+      }
 
-      authStore.rawRoles = ["CRC"];
+      authStore.rawRoles = ["Sponsor Medical Monitor"];
+      await router.push(
+        "/observations/observation:00000000-0000-0000-0000-000000000003"
+      );
+      expect(router.currentRoute.value.name).toBe("observation");
+
+      authStore.rawRoles = ["Finance Officer"];
       await router.push("/data-lock");
       expect(router.currentRoute.value.path).toBe("/forbidden");
     });

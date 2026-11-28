@@ -5,7 +5,10 @@
     class="scope-lock-controls"
     :data-testid="`${prefix}-controls`"
   >
-    <div class="scope-lock-row">
+    <div
+      v-if="canFreeze || canLock || releasableLocks.length > 0"
+      class="scope-lock-row"
+    >
       <label :for="`${prefix}-reason`" class="scope-lock-label">
         Reason for {{ scopeLabel }} lock change
       </label>
@@ -55,7 +58,7 @@
     </div>
 
     <div
-      v-if="canApply && !hasDirectLocked && readiness"
+      v-if="showReadinessPanel && readiness"
       :data-testid="`${prefix}-readiness`"
       :class="[
         'scope-lock-readiness',
@@ -73,10 +76,14 @@
             readinessGates.map((gate) => gate.label).join(" · ")
           }}).
         </template>
-        <template v-else>
+        <template v-else-if="canApply">
           Locked blocked:
           {{ readinessGates.map((gate) => gate.label).join(", ") }}
           (Freeze {{ scopeLabel }} remains available).
+        </template>
+        <template v-else>
+          Closeout blockers on this {{ scopeLabel }}:
+          {{ readinessGates.map((gate) => gate.label).join(", ") }}.
         </template>
       </span>
       <ul
@@ -111,6 +118,7 @@
               v-if="blocker.target_ref"
               :node-ref="blocker.target_ref"
               :fallback-title="formatLockBlockerFallbackTitle(blocker)"
+              :to="blockerLocation(blocker)"
               include-kind
             />
             <NodeRefChip
@@ -118,6 +126,7 @@
                 blocker.query_ref && blocker.query_ref !== blocker.target_ref
               "
               :node-ref="blocker.query_ref"
+              :to="blockerLocation(blocker)"
               include-kind
             />
             <NodeRefChip
@@ -127,12 +136,24 @@
               "
               :node-ref="blocker.finding_ref"
               :fallback-title="blocker.rule_id ?? undefined"
+              :to="blockerLocation(blocker)"
               include-kind
             />
             <span v-if="formatLockBlockerDetail(blocker)">{{
               formatLockBlockerDetail(blocker)
             }}</span>
             <span v-if="blocker.next_action">— {{ blocker.next_action }}</span>
+            <component
+              :is="routerLinkComponent"
+              v-if="
+                hasRouter && routerLinkComponent && blockerLocation(blocker)
+              "
+              class="scope-lock-blocker-link"
+              :data-testid="`${prefix}-blocker-open-${idx}`"
+              :to="blockerLocation(blocker)!"
+            >
+              {{ resolveLockBlockerActionLabel(blocker) }}
+            </component>
           </template>
         </li>
       </ul>
@@ -163,12 +184,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import { type KernelLock, type KernelLockKind } from "../../api/kernelApi";
+import { computed, getCurrentInstance, ref, watch } from "vue";
+import {
+  type KernelLock,
+  type KernelLockBlocker,
+  type KernelLockKind,
+} from "../../api/kernelApi";
 import type {
   CoveringScopeLockItem,
   DirectScopeLockItem,
 } from "../../canvas/kernelLocks";
+import {
+  resolveLockBlockerActionLabel,
+  resolveLockBlockerLocation,
+} from "../../canvas/lockBlockerRoutes";
 import {
   formatLockBlockerDetail,
   formatLockBlockerFallbackTitle,
@@ -187,6 +216,7 @@ export type {
 
 const props = withDefaults(
   defineProps<{
+    studyCode?: string | null;
     studyRef: string | null;
     scopeRef: string;
     scopeLabel: string;
@@ -195,6 +225,7 @@ const props = withDefaults(
     idPrefix?: string;
   }>(),
   {
+    studyCode: null,
     directLocks: () => [],
     coveringLocks: () => [],
     idPrefix: "scope-lock",
@@ -204,6 +235,18 @@ const props = withDefaults(
 const emit = defineEmits<{
   changed: [lock: KernelLock];
 }>();
+
+const instance = getCurrentInstance();
+const hasRouter = Boolean(instance?.appContext.config.globalProperties.$router);
+const routerLinkComponent = instance?.appContext.components.RouterLink ?? null;
+const routeStudyCode = computed(() => {
+  const raw = (
+    instance?.appContext.config.globalProperties as {
+      $route?: { params?: Record<string, unknown> };
+    }
+  )?.$route?.params?.studyCode;
+  return typeof raw === "string" ? raw.trim() : "";
+});
 
 const prefix = computed(() => props.idPrefix);
 const reason = ref("");
@@ -259,13 +302,33 @@ const releasableLocks = computed(() =>
   canRelease.value ? props.directLocks : []
 );
 
+const showReadinessPanel = computed(
+  () =>
+    !hasDirectLocked.value &&
+    readiness.value !== null &&
+    (canApply.value ||
+      (!readiness.value.ready_for_lock && readiness.value.blockers.length > 0))
+);
+
 const showControls = computed(
   () =>
     canFreeze.value ||
     canLock.value ||
     releasableLocks.value.length > 0 ||
+    showReadinessPanel.value ||
     outcome.value !== null
 );
+
+const resolvedStudyCode = computed(
+  () =>
+    props.studyCode?.trim() ||
+    readiness.value?.study_code?.trim() ||
+    routeStudyCode.value
+);
+
+function blockerLocation(blocker: Partial<KernelLockBlocker>) {
+  return resolveLockBlockerLocation(resolvedStudyCode.value, blocker);
+}
 
 watch(
   () => props.directLocks,
@@ -397,6 +460,13 @@ function openRelease(lockRef: string, lockKind: string) {
   color: var(--semantic-color-text-dark);
   font-size: 0.75rem;
   font-weight: 600;
+}
+
+.scope-lock-blocker-link {
+  color: var(--semantic-color-interactive-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 @media (pointer: coarse), (max-width: 1024px) {

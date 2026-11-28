@@ -59,10 +59,16 @@ public static class KernelObservationEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesKernelCommand<VerifyObservation>();
 
+        group.MapPost("/{observationRef}/reviews", ReviewAsync)
+            .WithName("KernelReviewObservation")
+            .WithSummary("Records medical review of the current revision of an observation with the signed reason for change (observation.review).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesKernelCommand<ReviewObservation>();
+
         var assertions = kernel.MapGroup("/assertions").AddEndpointFilter<KernelTenantFilter>().WithTags("Kernel observations");
         assertions.MapPost("/{assertionRef}/retraction", RetractAssertionAsync)
             .WithName("KernelRetractAssertion")
-            .WithSummary("Retracts a verification, answer or query assertion with the signed reason for change (assertion.retract).")
+            .WithSummary("Retracts a verification, review, answer or query assertion with the signed reason for change (assertion.retract).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesKernelCommand<RetractAssertion>();
 
@@ -203,6 +209,47 @@ public static class KernelObservationEndpoints
             : Problem(result.Error!);
     }
 
+    internal static async Task<Results<Created<KernelAssertionStateResponse>, ProblemHttpResult>> ReviewAsync(
+        string observationRef,
+        KernelReviewObservationRequest request,
+        HttpContext context,
+        IKernelCommandSender sender,
+        IKernelChangeReason changeReason,
+        CancellationToken cancellationToken)
+    {
+        if (ParseObservation(observationRef) is not { } observation)
+        {
+            return ObservationRefInvalid(observationRef);
+        }
+
+        if (request is null
+            || !NodeRef.TryParse(request.EnrollmentRef, out var enrollment)
+            || enrollment.Kind != NodeKinds.Enrollment
+            || request.Revision < 1)
+        {
+            return KernelProblems.BadRequest(
+                "Invalid review",
+                "Name the observation's enrollment as an enrollment NodeRef and the revision reviewed (from 1).");
+        }
+
+        var assertion = request.AssertionId is { } given && given != Guid.Empty ? AssertionId.FromGuid(given) : AssertionId.New();
+        var result = await sender.SendAsync(
+            new ReviewObservation(
+                KernelRequestTenant.Get(context),
+                assertion,
+                EnrollmentId.FromGuid(enrollment.Id),
+                observation,
+                request.Revision,
+                IdempotencyKey(context),
+                changeReason.Read(context) ?? string.Empty),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        return result.Value is { } state
+            ? TypedResults.Created(
+                $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/observations/{NodeRef.For(observation)}",
+                KernelAssertionStateResponse.From(state))
+            : Problem(result.Error!);
+    }
+
     internal static async Task<Results<Ok<KernelAssertionStateResponse>, ProblemHttpResult>> RetractAssertionAsync(
         string assertionRef,
         KernelRetractAssertionRequest request,
@@ -290,6 +337,12 @@ public sealed record KernelCorrectObservationRequest(string EnrollmentRef, Obser
 /// <param name="AssertionId">The new assertion's id; the kernel assigns one when absent.</param>
 public sealed record KernelVerifyObservationRequest(string EnrollmentRef, int Revision, Guid? AssertionId = null);
 
+/// <summary>Body of <c>POST /observations/{ref}/reviews</c>.</summary>
+/// <param name="EnrollmentRef">The observation's enrollment, as a NodeRef; the review is authorized against it.</param>
+/// <param name="Revision">The current revision of the observation receiving medical review.</param>
+/// <param name="AssertionId">The new assertion's id; the kernel assigns one when absent.</param>
+public sealed record KernelReviewObservationRequest(string EnrollmentRef, int Revision, Guid? AssertionId = null);
+
 /// <summary>Body of <c>POST /assertions/{ref}/retraction</c>.</summary>
 /// <param name="EnrollmentRef">The assertion's enrollment, as a NodeRef; the retraction is authorized against it.</param>
 /// <param name="AssertionId">The retracting assertion's id; the kernel assigns one when absent.</param>
@@ -353,6 +406,8 @@ public sealed record KernelObservationStateResponse(string Ref, string Enrollmen
 /// <param name="ExpectedCodeSystemVersionId">Expected code-system version declared by the owning collection item.</param>
 /// <param name="ExpectedCodelist">Expected codelist group code declared by the owning collection item.</param>
 /// <param name="ExpectedCodelistOptions">Hydrated codelist options declared by the owning collection item.</param>
+/// <param name="SdvRequired">Whether source data verification is required before hard lock.</param>
+/// <param name="MedicalReviewRequired">Whether medical review is required before hard lock.</param>
 public sealed record KernelObservationResponse(
     string Ref,
     string EnrollmentRef,
@@ -370,7 +425,9 @@ public sealed record KernelObservationResponse(
     string? ExpectedUnit = null,
     Guid? ExpectedCodeSystemVersionId = null,
     string? ExpectedCodelist = null,
-    IReadOnlyList<CodelistOptionView>? ExpectedCodelistOptions = null)
+    IReadOnlyList<CodelistOptionView>? ExpectedCodelistOptions = null,
+    bool SdvRequired = true,
+    bool MedicalReviewRequired = false)
 {
     internal static KernelObservationResponse From(ObservationRecord record) =>
         new(
@@ -390,5 +447,7 @@ public sealed record KernelObservationResponse(
             record.ExpectedUnit,
             record.ExpectedCodeSystemVersionId?.Value,
             record.ExpectedCodelist,
-            record.ExpectedCodelistOptions?.ToList());
+            record.ExpectedCodelistOptions?.ToList(),
+            record.SdvRequired,
+            record.MedicalReviewRequired);
 }

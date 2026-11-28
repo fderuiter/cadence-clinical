@@ -16,6 +16,7 @@ using Cadence.Kernel.Persistence.Evidence;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Persistence.Validation;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Validation;
@@ -569,8 +570,52 @@ internal sealed class ObservationsAwaitingVerificationSource(KernelTenantDbConte
 {
     public string Name => KernelWorkItemSources.ObservationsAwaitingVerification;
 
-    public async Task<IReadOnlyList<WorkItemCandidate>> CandidatesAsync(
-        TenantId tenant, NodeRef? within, int take, CancellationToken cancellationToken)
+    public Task<IReadOnlyList<WorkItemCandidate>> CandidatesAsync(
+        TenantId tenant, NodeRef? within, int take, CancellationToken cancellationToken) =>
+        ObservationReviewQueueLoader.LoadCandidatesAsync(
+            contexts,
+            tenant,
+            within,
+            take,
+            AssertionKind.Verified,
+            actionVerb: "Verify",
+            requireMedicalReviewFlag: false,
+            cancellationToken);
+}
+
+/// <summary>
+/// The <see cref="KernelWorkItemSources.ObservationsAwaitingReview"/> source: recorded, unlocked, unqueried
+/// observations on items with <see cref="CollectionItem.MedicalReviewRequired"/> lacking an active
+/// <see cref="AssertionKind.Reviewed"/> assertion at their current revision.
+/// </summary>
+internal sealed class ObservationsAwaitingReviewSource(KernelTenantDbContextFactory contexts) : IWorkItemSource
+{
+    public string Name => KernelWorkItemSources.ObservationsAwaitingReview;
+
+    public Task<IReadOnlyList<WorkItemCandidate>> CandidatesAsync(
+        TenantId tenant, NodeRef? within, int take, CancellationToken cancellationToken) =>
+        ObservationReviewQueueLoader.LoadCandidatesAsync(
+            contexts,
+            tenant,
+            within,
+            take,
+            AssertionKind.Reviewed,
+            actionVerb: "Review",
+            requireMedicalReviewFlag: true,
+            cancellationToken);
+}
+
+internal static class ObservationReviewQueueLoader
+{
+    public static async Task<IReadOnlyList<WorkItemCandidate>> LoadCandidatesAsync(
+        KernelTenantDbContextFactory contexts,
+        TenantId tenant,
+        NodeRef? within,
+        int take,
+        AssertionKind assertionKind,
+        string actionVerb,
+        bool requireMedicalReviewFlag,
+        CancellationToken cancellationToken)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(take);
         await using var db = contexts.Create(tenant);
@@ -633,23 +678,58 @@ internal sealed class ObservationsAwaitingVerificationSource(KernelTenantDbConte
         }
 
         var candidateObsGuids = recordedCandidates.Select(o => o.Id.Value).ToList();
-        var verifiedTargets = await db.Assertions.AsNoTracking()
+        var completedTargets = await db.Assertions.AsNoTracking()
             .Where(v => v.TenantId == tenant
-                && v.Kind == AssertionKind.Verified
+                && v.Kind == assertionKind
                 && v.RetractsId == null
                 && v.TargetKind == NodeKinds.Observation
                 && candidateObsGuids.Contains(v.TargetId)
-                && !db.Assertions.Any(r => r.TenantId == tenant && r.Kind == AssertionKind.Verified && r.RetractsId == v.Id))
+                && !db.Assertions.Any(r => r.TenantId == tenant && r.RetractsId == v.Id))
             .Select(v => new { v.TargetId, v.TargetRevision })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
-        var verifiedAtRevision = verifiedTargets
+        var completedAtRevision = completedTargets
             .Select(v => (v.TargetId, v.TargetRevision))
             .ToHashSet();
 
-        var recorded = recordedCandidates
-            .Where(o => !verifiedAtRevision.Contains((o.Id.Value, o.Revision)))
-            .ToList();
+        var openQueriedGuids = (await db.Assertions.AsNoTracking()
+            .Where(q => q.TenantId == tenant
+                && q.Kind == AssertionKind.Queried
+                && q.RetractsId == null
+                && q.TargetKind == NodeKinds.Observation
+                && candidateObsGuids.Contains(q.TargetId)
+                && !db.Assertions.Any(r => r.TenantId == tenant && r.RetractsId == q.Id))
+            .Select(q => q.TargetId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false)).ToHashSet();
+
+        var unreviewedAndUnqueried = FilterUncompletedAndUnqueried(recordedCandidates, completedAtRevision, openQueriedGuids);
+        if (unreviewedAndUnqueried.Count == 0)
+        {
+            return [];
+        }
+
+        var obsIds = unreviewedAndUnqueried.Select(o => o.Id).ToList();
+        var formsWithMembers = await db.CollectionInstances.AsNoTracking()
+            .Where(c => c.Members.Any(m => obsIds.Contains(m.ObservationId)))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var versionIds = formsWithMembers.Select(f => f.ProtocolVersionId).Distinct().ToList();
+        var specsByVersion = versionIds.Count == 0
+            ? new Dictionary<ProtocolVersionId, IReadOnlyList<CollectionSpec>>()
+            : (await db.ProtocolVersions.AsNoTracking()
+                .Where(pv => versionIds.Contains(pv.Id))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false))
+                .ToDictionary(
+                    pv => pv.Id,
+                    pv => ProtocolDesignDocument.Read(pv.Content).Design?.CollectionSpecs ?? []);
+
+        var (recorded, formByObs) = FilterByItemRequirement(
+            unreviewedAndUnqueried,
+            formsWithMembers,
+            specsByVersion,
+            requireMedicalReviewFlag);
         if (recorded.Count == 0)
         {
             return [];
@@ -660,20 +740,6 @@ internal sealed class ObservationsAwaitingVerificationSource(KernelTenantDbConte
             .Where(e => enrollmentIds.Contains(e.Id))
             .ToDictionaryAsync(e => e.Id, cancellationToken)
             .ConfigureAwait(false);
-
-        var obsIds = recorded.Select(o => o.Id).ToList();
-        var formsWithMembers = await db.CollectionInstances.AsNoTracking()
-            .Where(c => c.Members.Any(m => obsIds.Contains(m.ObservationId)))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-        var formByObs = new Dictionary<ObservationId, CollectionInstanceId>();
-        foreach (var inst in formsWithMembers)
-        {
-            foreach (var member in inst.Members)
-            {
-                formByObs[member.ObservationId] = inst.Id;
-            }
-        }
 
         var studyIds = recorded.Select(o => o.StudyId).Distinct().ToList();
         var activeHardLocks = await db.Assertions.AsNoTracking()
@@ -687,31 +753,7 @@ internal sealed class ObservationsAwaitingVerificationSource(KernelTenantDbConte
             .ConfigureAwait(false);
         var hardLockTargets = activeHardLocks.Select(l => (l.TargetKind, l.TargetId)).ToHashSet();
 
-        var unlocked = recorded
-            .Where(o =>
-            {
-                if (hardLockTargets.Contains((NodeKinds.Study, o.StudyId.Value))
-                    || hardLockTargets.Contains((NodeKinds.Enrollment, o.EnrollmentId.Value))
-                    || hardLockTargets.Contains((NodeKinds.Observation, o.Id.Value)))
-                {
-                    return false;
-                }
-
-                if (enrollments.TryGetValue(o.EnrollmentId, out var enr)
-                    && hardLockTargets.Contains((NodeKinds.StudySite, enr.StudySiteId.Value)))
-                {
-                    return false;
-                }
-
-                if (formByObs.TryGetValue(o.Id, out var fid)
-                    && hardLockTargets.Contains((NodeKinds.CollectionInstance, fid.Value)))
-                {
-                    return false;
-                }
-
-                return true;
-            })
-            .ToList();
+        var unlocked = FilterUnlocked(recorded, enrollments, formByObs, hardLockTargets);
         if (unlocked.Count == 0)
         {
             return [];
@@ -723,24 +765,181 @@ internal sealed class ObservationsAwaitingVerificationSource(KernelTenantDbConte
             .ToDictionaryAsync(c => c.Id, c => c.PreferredLabel, cancellationToken)
             .ConfigureAwait(false);
 
-        return
-        [
-            .. unlocked
-                .Select(o =>
-                {
-                    var since = o.Revisions.FirstOrDefault(r => r.Number == o.Revision)?.RecordedAt
-                        ?? new DateTimeOffset(DateTime.SpecifyKind(o.CreatedAt, DateTimeKind.Utc));
-                    var label = concepts.GetValueOrDefault(o.ConceptId, o.ConceptId.Value.ToString());
-                    var title = enrollments.TryGetValue(o.EnrollmentId, out var enr)
-                        ? string.Create(CultureInfo.InvariantCulture, $"Verify {label} for {enr.SubjectCode.Value}")
-                        : string.Create(CultureInfo.InvariantCulture, $"Verify {label}");
-                    return new WorkItemCandidate(NodeRef.For(o.Id, o.VersionIndex), title, since);
-                })
-                .OrderBy(c => c.Since)
-                .ThenBy(c => c.Subject.Id)
-                .Take(take),
-        ];
+        return FormatCandidates(unlocked, enrollments, concepts, actionVerb, take);
     }
+
+    internal static IReadOnlyList<WorkItemCandidate> EvaluateCandidates(
+        TenantId tenant,
+        IReadOnlyList<Observation> candidateObservations,
+        IReadOnlyList<Assertion> assertions,
+        IReadOnlyList<CollectionInstance> formsWithMembers,
+        IReadOnlyList<ProtocolVersion> protocolVersions,
+        IReadOnlyDictionary<EnrollmentId, Enrollment> enrollments,
+        IReadOnlyDictionary<ConceptId, string> concepts,
+        AssertionKind assertionKind,
+        string actionVerb,
+        bool requireMedicalReviewFlag,
+        int take)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(take);
+        var recordedCandidates = candidateObservations
+            .Where(o => o.TenantId == tenant && o.Value is not MissingValue { Reason: NullFlavor.NotAsked })
+            .ToList();
+        if (recordedCandidates.Count == 0)
+        {
+            return [];
+        }
+
+        var tenantAssertions = assertions.Where(a => a.TenantId == tenant).ToList();
+        var retractedIds = tenantAssertions
+            .Where(a => a.RetractsId is not null)
+            .Select(a => a.RetractsId!.Value)
+            .ToHashSet();
+        var retractedLockIds = tenantAssertions
+            .Where(a => a.Kind == AssertionKind.Locked && a.RetractsId is not null)
+            .Select(a => a.RetractsId!.Value)
+            .ToHashSet();
+
+        var completedAtRevision = tenantAssertions
+            .Where(a => a.Kind == assertionKind
+                && a.RetractsId is null
+                && a.TargetKind == NodeKinds.Observation
+                && !retractedIds.Contains(a.Id))
+            .Select(a => (a.TargetId, a.TargetRevision))
+            .ToHashSet();
+        var openQueriedGuids = tenantAssertions
+            .Where(q => q.Kind == AssertionKind.Queried
+                && q.RetractsId is null
+                && q.TargetKind == NodeKinds.Observation
+                && !retractedIds.Contains(q.Id))
+            .Select(q => q.TargetId)
+            .ToHashSet();
+        var hardLockTargets = tenantAssertions
+            .Where(l => l.Kind == AssertionKind.Locked
+                && l.RetractsId is null
+                && !retractedLockIds.Contains(l.Id))
+            .Select(l => (l.TargetKind, l.TargetId))
+            .ToHashSet();
+
+        var unreviewedAndUnqueried = FilterUncompletedAndUnqueried(recordedCandidates, completedAtRevision, openQueriedGuids);
+        if (unreviewedAndUnqueried.Count == 0)
+        {
+            return [];
+        }
+
+        var specsByVersion = protocolVersions.ToDictionary(
+            pv => pv.Id,
+            pv => ProtocolDesignDocument.Read(pv.Content).Design?.CollectionSpecs ?? []);
+        var (recorded, formByObs) = FilterByItemRequirement(
+            unreviewedAndUnqueried,
+            formsWithMembers,
+            specsByVersion,
+            requireMedicalReviewFlag);
+        if (recorded.Count == 0)
+        {
+            return [];
+        }
+
+        var unlocked = FilterUnlocked(recorded, enrollments, formByObs, hardLockTargets);
+        return unlocked.Count == 0
+            ? []
+            : FormatCandidates(unlocked, enrollments, concepts, actionVerb, take);
+    }
+
+    private static List<Observation> FilterUncompletedAndUnqueried(
+        IReadOnlyList<Observation> recordedCandidates,
+        IReadOnlySet<(Guid TargetId, int? TargetRevision)> completedAtRevision,
+        IReadOnlySet<Guid> openQueriedGuids) =>
+    [
+        .. recordedCandidates.Where(o =>
+            !completedAtRevision.Contains((o.Id.Value, o.Revision))
+            && !openQueriedGuids.Contains(o.Id.Value)),
+    ];
+
+    private static (List<Observation> Recorded, Dictionary<ObservationId, CollectionInstanceId> FormByObservation) FilterByItemRequirement(
+        IReadOnlyList<Observation> candidates,
+        IReadOnlyList<CollectionInstance> formsWithMembers,
+        IReadOnlyDictionary<ProtocolVersionId, IReadOnlyList<CollectionSpec>> specsByVersion,
+        bool requireMedicalReviewFlag)
+    {
+        var formByObs = new Dictionary<ObservationId, CollectionInstanceId>();
+        var itemByObs = new Dictionary<ObservationId, CollectionItem?>();
+        foreach (var inst in formsWithMembers)
+        {
+            var spec = specsByVersion.GetValueOrDefault(inst.ProtocolVersionId)?
+                .FirstOrDefault(s => string.Equals(s.Id, inst.CollectionSpecId, StringComparison.Ordinal));
+            foreach (var member in inst.Members)
+            {
+                formByObs[member.ObservationId] = inst.Id;
+                itemByObs[member.ObservationId] = spec?.Items.FirstOrDefault(i => string.Equals(i.Id, member.ItemId, StringComparison.Ordinal));
+            }
+        }
+
+        var recorded = candidates
+            .Where(o =>
+            {
+                itemByObs.TryGetValue(o.Id, out var item);
+                return requireMedicalReviewFlag
+                    ? (item?.MedicalReviewRequired ?? false)
+                    : (item?.SdvRequired ?? true);
+            })
+            .ToList();
+        return (recorded, formByObs);
+    }
+
+    private static List<Observation> FilterUnlocked(
+        IReadOnlyList<Observation> recorded,
+        IReadOnlyDictionary<EnrollmentId, Enrollment> enrollments,
+        IReadOnlyDictionary<ObservationId, CollectionInstanceId> formByObs,
+        IReadOnlySet<(string TargetKind, Guid TargetId)> hardLockTargets) =>
+    [
+        .. recorded.Where(o =>
+        {
+            if (hardLockTargets.Contains((NodeKinds.Study, o.StudyId.Value))
+                || hardLockTargets.Contains((NodeKinds.Enrollment, o.EnrollmentId.Value))
+                || hardLockTargets.Contains((NodeKinds.Observation, o.Id.Value)))
+            {
+                return false;
+            }
+
+            if (enrollments.TryGetValue(o.EnrollmentId, out var enr)
+                && hardLockTargets.Contains((NodeKinds.StudySite, enr.StudySiteId.Value)))
+            {
+                return false;
+            }
+
+            if (formByObs.TryGetValue(o.Id, out var fid)
+                && hardLockTargets.Contains((NodeKinds.CollectionInstance, fid.Value)))
+            {
+                return false;
+            }
+
+            return true;
+        }),
+    ];
+
+    private static List<WorkItemCandidate> FormatCandidates(
+        IReadOnlyList<Observation> unlocked,
+        IReadOnlyDictionary<EnrollmentId, Enrollment> enrollments,
+        IReadOnlyDictionary<ConceptId, string> concepts,
+        string actionVerb,
+        int take) =>
+    [
+        .. unlocked
+            .Select(o =>
+            {
+                var since = o.Revisions.FirstOrDefault(r => r.Number == o.Revision)?.RecordedAt
+                    ?? new DateTimeOffset(DateTime.SpecifyKind(o.CreatedAt, DateTimeKind.Utc));
+                var label = concepts.GetValueOrDefault(o.ConceptId, o.ConceptId.Value.ToString());
+                var title = enrollments.TryGetValue(o.EnrollmentId, out var enr)
+                    ? string.Create(CultureInfo.InvariantCulture, $"{actionVerb} {label} for {enr.SubjectCode.Value}")
+                    : string.Create(CultureInfo.InvariantCulture, $"{actionVerb} {label}");
+                return new WorkItemCandidate(NodeRef.For(o.Id, o.VersionIndex), title, since);
+            })
+            .OrderBy(c => c.Since)
+            .ThenBy(c => c.Subject.Id)
+            .Take(take),
+    ];
 }
 
 /// <summary>The <see cref="KernelWorkItemSources.ProposalsPending"/> source: open, unexpired proposals awaiting human review.</summary>
@@ -1046,28 +1245,6 @@ internal sealed class KernelWorkItemTargetResolver(KernelTenantDbContextFactory 
         }
 
         var formNodes = subjects.Where(s => s.Kind == NodeKinds.CollectionInstance).ToList();
-        if (formNodes.Count > 0)
-        {
-            var formIds = formNodes.Select(s => CollectionInstanceId.FromGuid(s.Id)).Distinct().ToList();
-            var formRows = await db.CollectionInstances.AsNoTracking()
-                .Where(c => formIds.Contains(c.Id))
-                .Select(c => new { c.Id, c.StudyId, c.EnrollmentId })
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
-            var forms = formRows.ToDictionary(c => c.Id.Value, c => (c.StudyId, c.EnrollmentId));
-            foreach (var node in formNodes)
-            {
-                if (forms.TryGetValue(node.Id, out var f))
-                {
-                    result[node] = new WorkItemTargetContext(
-                        StudyRef: NodeRef.For(f.StudyId).ToString(),
-                        StudyId: f.StudyId.Value,
-                        EnrollmentId: f.EnrollmentId.Value,
-                        FormId: node.Id);
-                }
-            }
-        }
-
         var obsNodes = subjects.Where(s => s.Kind == NodeKinds.Observation).ToList();
         var assertionNodes = subjects.Where(s => s.Kind == NodeKinds.Assertion).ToList();
         var findingNodes = subjects.Where(s => s.Kind == NodeKinds.ValidationFinding).ToList();
@@ -1088,13 +1265,13 @@ internal sealed class KernelWorkItemTargetResolver(KernelTenantDbContextFactory 
             }
         }
 
-        var findingTargets = new Dictionary<Guid, (StudyId StudyId, CollectionInstanceId? FormId, ObservationId? ObservationId)>();
+        var findingTargets = new Dictionary<Guid, (StudyId StudyId, CollectionInstanceId? FormId, ObservationId? ObservationId, string? Variable)>();
         if (findingNodes.Count > 0)
         {
             var fIds = findingNodes.Select(s => ValidationFindingId.FromGuid(s.Id)).Distinct().ToList();
             var dets = await db.Set<ValidationDetectionRecord>().AsNoTracking()
                 .Where(d => fIds.Contains(d.FindingId))
-                .Select(d => new { d.FindingId, d.StudyId, d.Stage, d.TargetKind, d.TargetKey })
+                .Select(d => new { d.FindingId, d.StudyId, d.Stage, d.TargetKind, d.TargetKey, d.Variable })
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
             foreach (var det in dets.GroupBy(d => d.FindingId).Select(g => g.First()))
@@ -1109,7 +1286,7 @@ internal sealed class KernelWorkItemTargetResolver(KernelTenantDbContextFactory 
                     && on.Kind == NodeKinds.Observation
                     ? ObservationId.FromGuid(on.Id)
                     : null;
-                findingTargets[det.FindingId.Value] = (det.StudyId, fId, oId);
+                findingTargets[det.FindingId.Value] = (det.StudyId, fId, oId, det.Variable);
             }
         }
 
@@ -1134,9 +1311,8 @@ internal sealed class KernelWorkItemTargetResolver(KernelTenantDbContextFactory 
             obsDetails = obsRows.ToDictionary(o => o.Id, o => (o.StudyId, o.EnrollmentId, o.VersionIndex));
         }
 
-        var referencedFormIds = findingTargets.Values
-            .Where(v => v.FormId is not null)
-            .Select(v => v.FormId!.Value)
+        var referencedFormIds = formNodes.Select(s => CollectionInstanceId.FromGuid(s.Id))
+            .Concat(findingTargets.Values.Where(v => v.FormId is not null).Select(v => v.FormId!.Value))
             .Distinct()
             .ToList();
 
@@ -1148,6 +1324,7 @@ internal sealed class KernelWorkItemTargetResolver(KernelTenantDbContextFactory 
                 .ConfigureAwait(false);
 
         var formByObs = new Dictionary<ObservationId, CollectionInstance>();
+        var itemIdByObs = new Dictionary<ObservationId, string>();
         var formById = new Dictionary<CollectionInstanceId, CollectionInstance>();
         foreach (var inst in memberForms)
         {
@@ -1155,6 +1332,104 @@ internal sealed class KernelWorkItemTargetResolver(KernelTenantDbContextFactory 
             foreach (var member in inst.Members)
             {
                 formByObs[member.ObservationId] = inst;
+                itemIdByObs[member.ObservationId] = member.ItemId;
+            }
+        }
+
+        var formVersionIds = memberForms.Select(f => f.ProtocolVersionId).Distinct().ToList();
+        var formTitlesByVersionAndSpec = new Dictionary<(ProtocolVersionId, string), string>();
+        if (formVersionIds.Count > 0)
+        {
+            var versionRows = await db.ProtocolVersions.AsNoTracking()
+                .Where(pv => formVersionIds.Contains(pv.Id))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var pv in versionRows)
+            {
+                var specs = ProtocolDesignDocument.Read(pv.Content).Design?.CollectionSpecs ?? [];
+                foreach (var spec in specs)
+                {
+                    formTitlesByVersionAndSpec[(pv.Id, spec.Id)] = string.IsNullOrWhiteSpace(spec.Name) ? spec.Id : spec.Name;
+                }
+            }
+        }
+
+        var allEnrollmentIds = memberForms.Select(f => f.EnrollmentId)
+            .Concat(obsDetails.Values.Select(o => o.EnrollmentId))
+            .Concat(assertionTargets.Values.Where(a => a.EnrollmentId is not null).Select(a => a.EnrollmentId!.Value))
+            .Distinct()
+            .ToList();
+        var enrollmentsById = allEnrollmentIds.Count == 0
+            ? new Dictionary<EnrollmentId, Enrollment>()
+            : await db.Enrollments.AsNoTracking()
+                .Where(e => allEnrollmentIds.Contains(e.Id))
+                .ToDictionaryAsync(e => e.Id, cancellationToken)
+                .ConfigureAwait(false);
+
+        var allStudySiteIds = enrollmentsById.Values.Select(e => e.StudySiteId)
+            .Concat(memberForms.Select(f => f.StudySiteId))
+            .Distinct()
+            .ToList();
+        var siteCodeByStudySiteId = new Dictionary<StudySiteId, string>();
+        if (allStudySiteIds.Count > 0)
+        {
+            var studySites = await db.StudySites.AsNoTracking()
+                .Where(ss => allStudySiteIds.Contains(ss.Id))
+                .Select(ss => new { ss.Id, ss.SiteId })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var siteIds = studySites.Select(ss => ss.SiteId).Distinct().ToList();
+            var sites = siteIds.Count == 0
+                ? new Dictionary<SiteId, string>()
+                : await db.Sites.AsNoTracking()
+                    .Where(s => siteIds.Contains(s.Id))
+                    .ToDictionaryAsync(s => s.Id, s => s.SiteCode, cancellationToken)
+                    .ConfigureAwait(false);
+            foreach (var ss in studySites)
+            {
+                if (sites.TryGetValue(ss.SiteId, out var code))
+                {
+                    siteCodeByStudySiteId[ss.Id] = code;
+                }
+            }
+        }
+
+        string? ResolveFormTitle(CollectionInstance? inst) =>
+            inst is null
+                ? null
+                : formTitlesByVersionAndSpec.GetValueOrDefault((inst.ProtocolVersionId, inst.CollectionSpecId), inst.CollectionSpecId);
+
+        (string? SiteCode, string? SubjectCode) ResolveParticipantContext(EnrollmentId? enrollmentId, CollectionInstance? inst)
+        {
+            Enrollment? enr = null;
+            if (enrollmentId is { } eid)
+            {
+                enrollmentsById.TryGetValue(eid, out enr);
+            }
+            else if (inst is not null)
+            {
+                enrollmentsById.TryGetValue(inst.EnrollmentId, out enr);
+            }
+
+            var siteId = enr?.StudySiteId ?? inst?.StudySiteId;
+            var siteCode = siteId is { } sid ? siteCodeByStudySiteId.GetValueOrDefault(sid) : null;
+            return (siteCode, enr?.SubjectCode.Value);
+        }
+
+        foreach (var node in formNodes)
+        {
+            if (formById.TryGetValue(CollectionInstanceId.FromGuid(node.Id), out var f))
+            {
+                var (siteCode, subjectCode) = ResolveParticipantContext(f.EnrollmentId, f);
+                result[node] = new WorkItemTargetContext(
+                    StudyRef: NodeRef.For(f.StudyId).ToString(),
+                    StudyId: f.StudyId.Value,
+                    EnrollmentId: f.EnrollmentId.Value,
+                    FormId: node.Id,
+                    SiteCode: siteCode,
+                    SubjectCode: subjectCode,
+                    FormTitle: ResolveFormTitle(f),
+                    CollectionSpecId: f.CollectionSpecId);
             }
         }
 
@@ -1164,12 +1439,19 @@ internal sealed class KernelWorkItemTargetResolver(KernelTenantDbContextFactory 
             if (obsDetails.TryGetValue(obsId, out var detail))
             {
                 formByObs.TryGetValue(obsId, out var inst);
+                itemIdByObs.TryGetValue(obsId, out var itemId);
+                var (siteCode, subjectCode) = ResolveParticipantContext(detail.EnrollmentId, inst);
                 result[node] = new WorkItemTargetContext(
                     StudyRef: NodeRef.For(detail.StudyId).ToString(),
                     StudyId: detail.StudyId.Value,
                     EnrollmentId: detail.EnrollmentId.Value,
                     FormId: inst?.Id.Value,
-                    ObservationRef: node.ToString());
+                    ObservationRef: node.ToString(),
+                    SiteCode: siteCode,
+                    SubjectCode: subjectCode,
+                    FormTitle: ResolveFormTitle(inst),
+                    CollectionSpecId: inst?.CollectionSpecId,
+                    ItemId: itemId);
             }
         }
 
@@ -1179,10 +1461,12 @@ internal sealed class KernelWorkItemTargetResolver(KernelTenantDbContextFactory 
             {
                 CollectionInstance? inst = null;
                 string? obsRef = null;
+                string? itemId = null;
                 var enrollmentId = target.EnrollmentId;
                 if (target.ObservationId is { } oId)
                 {
                     formByObs.TryGetValue(oId, out inst);
+                    itemIdByObs.TryGetValue(oId, out itemId);
                     if (obsDetails.TryGetValue(oId, out var od))
                     {
                         enrollmentId ??= od.EnrollmentId;
@@ -1194,12 +1478,18 @@ internal sealed class KernelWorkItemTargetResolver(KernelTenantDbContextFactory 
                     }
                 }
 
+                var (siteCode, subjectCode) = ResolveParticipantContext(enrollmentId, inst);
                 result[node] = new WorkItemTargetContext(
                     StudyRef: NodeRef.For(target.StudyId).ToString(),
                     StudyId: target.StudyId.Value,
                     EnrollmentId: enrollmentId?.Value ?? inst?.EnrollmentId.Value,
                     FormId: inst?.Id.Value,
-                    ObservationRef: obsRef);
+                    ObservationRef: obsRef,
+                    SiteCode: siteCode,
+                    SubjectCode: subjectCode,
+                    FormTitle: ResolveFormTitle(inst),
+                    CollectionSpecId: inst?.CollectionSpecId,
+                    ItemId: itemId);
             }
         }
 
@@ -1208,29 +1498,41 @@ internal sealed class KernelWorkItemTargetResolver(KernelTenantDbContextFactory 
             if (findingTargets.TryGetValue(node.Id, out var target))
             {
                 CollectionInstance? inst = null;
-                Guid? enrollmentGuid = null;
+                EnrollmentId? enrollmentId = null;
                 string? obsRef = null;
+                string? itemId = target.Variable;
                 if (target.FormId is { } fId && formById.TryGetValue(fId, out inst))
                 {
-                    enrollmentGuid = inst.EnrollmentId.Value;
+                    enrollmentId = inst.EnrollmentId;
                 }
                 else if (target.ObservationId is { } oId)
                 {
                     formByObs.TryGetValue(oId, out inst);
+                    if (itemIdByObs.TryGetValue(oId, out var obsItemId))
+                    {
+                        itemId = obsItemId;
+                    }
+
                     if (obsDetails.TryGetValue(oId, out var od))
                     {
-                        enrollmentGuid = od.EnrollmentId.Value;
+                        enrollmentId = od.EnrollmentId;
                         obsRef = NodeRef.For(oId, od.VersionIndex).ToString();
                     }
                 }
 
+                var (siteCode, subjectCode) = ResolveParticipantContext(enrollmentId, inst);
                 result[node] = new WorkItemTargetContext(
                     StudyRef: NodeRef.For(target.StudyId).ToString(),
                     StudyId: target.StudyId.Value,
-                    EnrollmentId: enrollmentGuid ?? inst?.EnrollmentId.Value,
+                    EnrollmentId: enrollmentId?.Value ?? inst?.EnrollmentId.Value,
                     FormId: inst?.Id.Value,
                     ObservationRef: obsRef,
-                    FindingRef: node.Unversioned().ToString());
+                    FindingRef: node.Unversioned().ToString(),
+                    SiteCode: siteCode,
+                    SubjectCode: subjectCode,
+                    FormTitle: ResolveFormTitle(inst),
+                    CollectionSpecId: inst?.CollectionSpecId,
+                    ItemId: itemId);
             }
         }
 

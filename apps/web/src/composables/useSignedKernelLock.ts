@@ -21,6 +21,7 @@ export type LockReadinessGateKey =
   | "open_queries"
   | "missing_required_items"
   | "unverified_values"
+  | "unreviewed_values"
   | "unsigned_forms"
   | "unopened_visits"
   | "error_findings";
@@ -55,6 +56,8 @@ export function normalizeLockBlockerKind(
       return "MissingRequiredItem";
     case "unverifiedvalue":
       return "UnverifiedValue";
+    case "unreviewedvalue":
+      return "UnreviewedValue";
     case "unsignedform":
       return "UnsignedForm";
     case "unopenedvisit":
@@ -77,6 +80,8 @@ export function formatLockBlockerKindLabel(
       return "Missing required item";
     case "UnverifiedValue":
       return "Unverified value";
+    case "UnreviewedValue":
+      return "Unreviewed value";
     case "UnsignedForm":
       return signatureSuperseded ? "Signature superseded" : "Unsigned form";
     case "UnopenedVisit":
@@ -122,6 +127,13 @@ export function formatLockBlockerDetail(
     }
     return blocker.item_label ?? null;
   }
+  if (kind === "UnreviewedValue") {
+    if (blocker.current_revision != null) {
+      const itemPrefix = blocker.item_label ? `${blocker.item_label} · ` : "";
+      return `${itemPrefix}Revision ${blocker.current_revision} awaiting medical review`;
+    }
+    return blocker.item_label ?? null;
+  }
   if (kind === "UnsignedForm") {
     const formTitle =
       blocker.collection_title || blocker.collection_spec_id || null;
@@ -160,6 +172,14 @@ export function buildLockReadinessGates(
   current: Partial<KernelLockReadiness> | null | undefined
 ): LockReadinessGateSummary[] {
   if (!current) return [];
+  const unreviewedCount = toReadinessCount(current.unreviewed_value_count);
+  const includeMedicalReviewGate =
+    unreviewedCount > 0 ||
+    Boolean(
+      current.explanation?.conditions?.some(
+        (c) => c.code === "lock.observations_reviewed"
+      )
+    );
   const specs: Array<{
     key: LockReadinessGateKey;
     kind: KernelLockBlockerKind;
@@ -188,6 +208,17 @@ export function buildLockReadinessGates(
       singular: "unverified value",
       plural: "unverified values",
     },
+    ...(includeMedicalReviewGate
+      ? [
+          {
+            key: "unreviewed_values" as const,
+            kind: "UnreviewedValue" as const,
+            count: unreviewedCount,
+            singular: "unreviewed value",
+            plural: "unreviewed values",
+          },
+        ]
+      : []),
     {
       key: "unsigned_forms",
       kind: "UnsignedForm",
@@ -354,7 +385,6 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
     if (
       !currentStudy ||
       !targetScope ||
-      !canApply.value ||
       typeof kernelApi.getStudyLockReadiness !== "function"
     ) {
       readiness.value = null;
@@ -408,16 +438,12 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
       canReleaseExplanation.value =
         (releaseDec?.explanation as Record<string, unknown> | undefined) ??
         null;
-      if (!canApply.value) {
-        resetReadiness();
-      }
     } catch {
       if (seq !== authProbeSeq) return;
       canApply.value = false;
       canRelease.value = false;
       canApplyExplanation.value = null;
       canReleaseExplanation.value = null;
-      resetReadiness();
     }
   }
 
@@ -429,7 +455,7 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
         resetReadiness();
         await probePermissions(nextStudyRef);
         if (authProbeSeq !== expectedProbeSeq) return;
-        if (options.scopeRef && canApply.value) {
+        if (options.scopeRef) {
           await reloadReadiness();
         }
       },

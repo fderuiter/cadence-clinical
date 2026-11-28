@@ -349,8 +349,11 @@ public enum LockBlockerKind
     /// <summary>A required <c>CollectionItem</c> on an opened <c>CollectionInstance</c> in scope with no recorded value.</summary>
     MissingRequiredItem,
 
-    /// <summary>A recorded observation in scope whose current revision lacks an unretracted <see cref="AssertionKind.Verified"/> assertion.</summary>
+    /// <summary>A recorded observation in scope whose item requires SDV and whose current revision lacks an unretracted <see cref="AssertionKind.Verified"/> assertion.</summary>
     UnverifiedValue,
+
+    /// <summary>A recorded observation in scope whose item requires medical review and whose current revision lacks an unretracted <see cref="AssertionKind.Reviewed"/> assertion.</summary>
+    UnreviewedValue,
 
     /// <summary>A populated <c>CollectionInstance</c> in scope lacking a current <c>Approved</c> or <c>Responsibility</c> signature (including forms with only superseded signatures).</summary>
     UnsignedForm,
@@ -407,7 +410,8 @@ public sealed record LockReadinessSnapshot(
     int OpenErrorFindingCount = 0,
     int UnverifiedValueCount = 0,
     int UnsignedFormCount = 0,
-    int UnopenedVisitCount = 0);
+    int UnopenedVisitCount = 0,
+    int UnreviewedValueCount = 0);
 
 /// <summary>Pre-check result evaluated before recording an electronic signature for <c>ApplyLock</c>.</summary>
 public sealed record LockApplyPrecheck(

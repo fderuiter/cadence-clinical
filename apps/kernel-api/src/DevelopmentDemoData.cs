@@ -118,6 +118,7 @@ internal static partial class DevelopmentDemoData
         ("validation_findings", "Validation findings to review", "validation_finding.investigate", VerbClass.Execute, KernelWorkItemSources.ValidationFindingsOpen),
         ("form_signatures", "Forms awaiting signature", "collection.sign", VerbClass.Execute, KernelWorkItemSources.FormsAwaitingSignature),
         ("source_verifications", "Source data verifications due", "observation.verify", VerbClass.Execute, KernelWorkItemSources.ObservationsAwaitingVerification),
+        ("medical_reviews", "Medical reviews due", "observation.review", VerbClass.Execute, KernelWorkItemSources.ObservationsAwaitingReview),
         ("protocol_reviews", "Protocol versions in review", "protocol.approve", VerbClass.Approve, KernelWorkItemSources.ProtocolVersionsInReview),
         ("ai_proposals", "Proposals awaiting approval", "proposal.approve", VerbClass.Approve, KernelWorkItemSources.ProposalsPending),
     ];
@@ -725,7 +726,7 @@ internal static partial class DevelopmentDemoData
                         new CollectionItem("item.sbp", systolic, "mm[Hg]", Required: true),
                         new CollectionItem("item.dbp", diastolic, "mm[Hg]", Required: true),
                         new CollectionItem("item.hr", heartRate, "/min", Required: true),
-                        new CollectionItem("item.vs_notes", systolic, ValueKind: ObservationValueKind.Text),
+                        new CollectionItem("item.vs_notes", systolic, ValueKind: ObservationValueKind.Text, SdvRequired: false),
                     ],
                     new DataPurpose { EndpointIds = ["ep.sbp_change"], EstimandIds = ["est.primary"] }),
                 new CollectionSpec(
@@ -733,15 +734,15 @@ internal static partial class DevelopmentDemoData
                     "Physical Examination",
                     [
                         new CollectionItem("item.pe_summary", examFinding, Required: true, ValueKind: ObservationValueKind.Text),
-                        new CollectionItem("item.pe_clinically_significant", examFinding, Required: true, ValueKind: ObservationValueKind.Boolean),
+                        new CollectionItem("item.pe_clinically_significant", examFinding, Required: true, ValueKind: ObservationValueKind.Boolean, MedicalReviewRequired: true),
                     ],
                     new DataPurpose { OperationalNeed = "Baseline and follow-up clinical assessment" }),
                 new CollectionSpec(
                     "cs.adverse_event",
                     "Adverse Event Log",
                     [
-                        new CollectionItem("item.ae_term", adverseEventTerm, Required: true, ValueKind: ObservationValueKind.Text),
-                        new CollectionItem("item.ae_severity", adverseEventSeverity, Required: true, ValueKind: ObservationValueKind.Text),
+                        new CollectionItem("item.ae_term", adverseEventTerm, Required: true, ValueKind: ObservationValueKind.Text, MedicalReviewRequired: true),
+                        new CollectionItem("item.ae_severity", adverseEventSeverity, Required: true, ValueKind: ObservationValueKind.Text, MedicalReviewRequired: true),
                     ],
                     new DataPurpose { SafetyRuleIds = ["rule.safety_monitoring"] }),
                 new CollectionSpec(
@@ -749,7 +750,7 @@ internal static partial class DevelopmentDemoData
                     "Concomitant Medications",
                     [
                         new CollectionItem("item.cm_name", medicationName, Required: true, ValueKind: ObservationValueKind.Text),
-                        new CollectionItem("item.cm_indication", medicationIndication, ValueKind: ObservationValueKind.Text),
+                        new CollectionItem("item.cm_indication", medicationIndication, ValueKind: ObservationValueKind.Text, SdvRequired: false),
                     ],
                     new DataPurpose { SafetyRuleIds = ["rule.safety_monitoring"] }),
             ],

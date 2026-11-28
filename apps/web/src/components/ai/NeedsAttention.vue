@@ -357,7 +357,7 @@ function findingLocation(finding: KernelValidationFinding): RouteLocationRaw {
     section: "validation",
     ...(formRef ? { form: formRef } : {}),
     ...(formRef && finding.variable ? { item: finding.variable } : {}),
-    ...(obsRef ? { observation: obsRef } : {}),
+    ...(!formRef && obsRef ? { observation: obsRef } : {}),
   });
 }
 
@@ -371,7 +371,7 @@ function sdvAlertLocation(
     ...(alert.site_code ? { site: alert.site_code } : {}),
     ...(formRef ? { form: formRef } : {}),
     ...(alert.item_id ? { item: alert.item_id } : {}),
-    ...(obsRef ? { observation: obsRef } : {}),
+    ...(!formRef && obsRef ? { observation: obsRef } : {}),
   });
 }
 

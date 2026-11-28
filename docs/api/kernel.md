@@ -6,7 +6,7 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | ------ | ---- | --------- | ------- |
 | `GET` | `/api/v1/kernel/activity` | KernelActivity | What happened in a scope, newest first. |
 | `POST` | `/api/v1/kernel/artifact-versions/{artifactVersionRef}/review` | KernelReviewArtifactVersion | Records a 21 CFR Part 11 Reviewed attestation bound to an immutable artifact version's content hash (attestation.sign, K-SIM-5). |
-| `POST` | `/api/v1/kernel/assertions/{assertionRef}/retraction` | KernelRetractAssertion | Retracts a verification, answer or query assertion with the signed reason for change (assertion.retract). |
+| `POST` | `/api/v1/kernel/assertions/{assertionRef}/retraction` | KernelRetractAssertion | Retracts a verification, review, answer or query assertion with the signed reason for change (assertion.retract). |
 | `GET` | `/api/v1/kernel/authorization/can-i` | KernelCanI | Whether the caller may exercise a capability on an object now, and why. |
 | `POST` | `/api/v1/kernel/effectivities/{effectivityRef}/status` | KernelChangeEffectivityStatus | Transitions an effectivity's status in valid time with supporting approval artifact evidence (effectivity.change_status, K-TIME-5). |
 | `GET` | `/api/v1/kernel/enrollments/lookup` | KernelLookupEnrollment | Resolves a study code, subject code, and optional site code to pinned study and enrollment references. |
@@ -32,6 +32,7 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `POST` | `/api/v1/kernel/observations` | KernelRecordObservation | Records an observation for the participant of an enrollment (observation.record). |
 | `GET` | `/api/v1/kernel/observations/{observationRef}` | KernelGetObservation | An observation with its revisions, the locks covering it, the assertions about it and its kernel audit entries. |
 | `POST` | `/api/v1/kernel/observations/{observationRef}/corrections` | KernelCorrectObservation | Corrects an observation's value with the signed reason for change (observation.correct). |
+| `POST` | `/api/v1/kernel/observations/{observationRef}/reviews` | KernelReviewObservation | Records medical review of the current revision of an observation with the signed reason for change (observation.review). |
 | `POST` | `/api/v1/kernel/observations/{observationRef}/verifications` | KernelVerifyObservation | Verifies the current revision of an observation against source with the signed reason for change (observation.verify). |
 | `POST` | `/api/v1/kernel/onboarding/trial` | KernelBootstrapTrialWorkspace | Provisions an isolated self-service trial workspace for an unbound authenticated OIDC caller. |
 | `GET` | `/api/v1/kernel/organizations` | KernelListOrganizations | Lists visible organizations in the caller's tenant. |

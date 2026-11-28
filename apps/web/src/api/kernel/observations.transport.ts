@@ -4,6 +4,7 @@ import type {
   KernelAssertionState,
   KernelObservation,
   KernelObservationCorrection,
+  KernelObservationReview,
   KernelObservationState,
   KernelObservationVerification,
 } from "./observations";
@@ -64,6 +65,27 @@ export function executeVerifyObservation({
         headers: mutationHeaders(reason, idempotencyKey),
       }
     )
+  );
+}
+
+export function executeReviewObservation({
+  observationRef,
+  enrollmentRef,
+  revision,
+  assertionId,
+  reason,
+  idempotencyKey,
+}: KernelObservationReview): Promise<KernelAssertionState> {
+  return unwrapResponse(
+    kernelClient.POST("/api/v1/kernel/observations/{observationRef}/reviews", {
+      params: { path: { observationRef: unversioned(observationRef) } },
+      body: {
+        enrollment_ref: enrollmentRef,
+        revision,
+        ...(assertionId ? { assertion_id: assertionId } : {}),
+      },
+      headers: mutationHeaders(reason, idempotencyKey),
+    })
   );
 }
 

@@ -84,6 +84,17 @@ const SDV_AUTHORITY_ROLES = new Set([
   "external_monitor",
 ]);
 
+const MEDICAL_REVIEW_ROLES = new Set(["sysadmin", "sponsor_mm", "sponsor_dm"]);
+
+const RETRACT_ASSERTION_ROLES = new Set([
+  "sysadmin",
+  "sponsor_dm",
+  "sponsor_mm",
+  "cra",
+  "monitor",
+  "external_monitor",
+]);
+
 const QUERY_MANAGE_ROLES = new Set([
   "sysadmin",
   "sponsor_dm",
@@ -142,6 +153,7 @@ export const DEMO_PERSONA_DEFAULT_SCOPES = Object.freeze({
       "Principal Investigator",
       "Site Investigator",
       "CRC",
+      "Medical Monitor",
       "Safety Reviewer",
       "Auditor",
       "TMF Auditor",
@@ -178,6 +190,10 @@ export const DEMO_PERSONA_DEFAULT_SCOPES = Object.freeze({
   },
   cra_monitor: {
     rawRoles: ["CRA", "Monitor"],
+    siteIds: [],
+  },
+  medical_monitor: {
+    rawRoles: ["Medical Monitor", "Safety Reviewer"],
     siteIds: [],
   },
   safety_officer: {
@@ -647,11 +663,31 @@ export function evaluateCapabilityDecision(
       allowed ? undefined : "Auth.Forbidden"
     );
   }
-  if (
-    cap.includes("verify") ||
-    cap.includes("sdv") ||
-    cap.includes("retract")
-  ) {
+  if (cap === "observation.review") {
+    const allowed = hasAnyRole(caller, MEDICAL_REVIEW_ROLES);
+    return store.buildDecision(
+      capability,
+      res,
+      allowed,
+      allowed
+        ? undefined
+        : "Medical review requires Medical Monitor or Data Manager role",
+      allowed ? undefined : "Auth.Forbidden"
+    );
+  }
+  if (cap.includes("retract")) {
+    const allowed = hasAnyRole(caller, RETRACT_ASSERTION_ROLES);
+    return store.buildDecision(
+      capability,
+      res,
+      allowed,
+      allowed
+        ? undefined
+        : "Assertion withdrawal requires Monitor, Medical Monitor, or Data Manager role",
+      allowed ? undefined : "Auth.Forbidden"
+    );
+  }
+  if (cap.includes("verify") || cap.includes("sdv")) {
     const allowed = hasAnyRole(caller, SDV_AUTHORITY_ROLES);
     return store.buildDecision(
       capability,
@@ -1135,10 +1171,7 @@ export async function evaluateDemoRequestPolicy(request, store) {
     return null;
   }
 
-  if (
-    /\/api\/v1\/kernel\/observations\/[^/]+\/verifications$/.test(pathname) ||
-    /\/api\/v1\/kernel\/assertions\/[^/]+\/retraction$/.test(pathname)
-  ) {
+  if (/\/api\/v1\/kernel\/observations\/[^/]+\/verifications$/.test(pathname)) {
     if (!hasAnyRole(caller, SDV_AUTHORITY_ROLES)) {
       return {
         status: 403,
@@ -1147,6 +1180,36 @@ export async function evaluateDemoRequestPolicy(request, store) {
           "Kernel.Sdv.Forbidden",
           "Source Data Verification not permitted",
           "Only Clinical Monitors (CRA) and Data Managers hold 'sdv:update' authority."
+        ),
+      };
+    }
+    return null;
+  }
+
+  if (/\/api\/v1\/kernel\/observations\/[^/]+\/reviews$/.test(pathname)) {
+    if (!hasAnyRole(caller, MEDICAL_REVIEW_ROLES)) {
+      return {
+        status: 403,
+        problem: buildProblemDetails(
+          403,
+          "Kernel.Review.Forbidden",
+          "Medical review not permitted",
+          "Only Medical Monitors and Data Managers hold 'observation.review' authority."
+        ),
+      };
+    }
+    return null;
+  }
+
+  if (/\/api\/v1\/kernel\/assertions\/[^/]+\/retraction$/.test(pathname)) {
+    if (!hasAnyRole(caller, RETRACT_ASSERTION_ROLES)) {
+      return {
+        status: 403,
+        problem: buildProblemDetails(
+          403,
+          "Kernel.Assertion.Forbidden",
+          "Assertion retraction not permitted",
+          "Only Clinical Monitors, Medical Monitors, and Data Managers may withdraw assertions."
         ),
       };
     }

@@ -2541,6 +2541,14 @@
             "items": {
               "$ref": "#/components/schemas/ExecutionForms_CodelistOptionView"
             }
+          },
+          "sdv_required": {
+            "type": "boolean",
+            "default": true
+          },
+          "medical_review_required": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

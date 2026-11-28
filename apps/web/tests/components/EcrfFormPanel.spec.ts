@@ -3660,9 +3660,12 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
       await nextTick();
 
       expect(
+        wrapper.find('[data-testid="ecrf-sdv-query-blocked-SYSBP"]').exists()
+      ).toBe(true);
+      expect(
         (wrapper.find("#ecrf-sdv-select-SYSBP").element as HTMLInputElement)
           .checked
-      ).toBe(true);
+      ).toBe(false);
       expect(
         (wrapper.find("#ecrf-sdv-select-HR").element as HTMLInputElement)
           .checked
@@ -3672,7 +3675,7 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
           .checked
       ).toBe(true);
       expect(wrapper.find('[data-testid="ecrf-bulk-sdv"]').text()).toContain(
-        "3 selected"
+        "2 selected"
       );
 
       Array.prototype.includes = function <T>(
@@ -3680,12 +3683,7 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
         searchElement: T,
         fromIndex?: number
       ) {
-        if (
-          this.length === 3 &&
-          this[0] === "SYSBP" &&
-          this[1] === "HR" &&
-          this[2] === "TEMP"
-        ) {
+        if (this.length === 2 && this[0] === "HR" && this[1] === "TEMP") {
           selectedIncludesCalls += 1;
         }
         return origIncludes.call(this, searchElement, fromIndex);

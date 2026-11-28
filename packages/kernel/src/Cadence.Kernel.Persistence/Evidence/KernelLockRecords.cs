@@ -757,12 +757,13 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
         List<Assertion> openQueries = [];
         HashSet<AssertionId> answeredQueryIds = [];
         HashSet<(ObservationId ObservationId, int Revision)> verifiedRevisions = [];
+        HashSet<(ObservationId ObservationId, int Revision)> reviewedRevisions = [];
         if (coveredObservations.Count > 0)
         {
             var targetGuids = coveredObservations.Select(o => o.Id.Value).ToList();
             var candidateAssertions = await db.Assertions.AsNoTracking()
                 .Where(a => a.StudyId == study
-                    && (a.Kind == AssertionKind.Queried || a.Kind == AssertionKind.Verified)
+                    && (a.Kind == AssertionKind.Queried || a.Kind == AssertionKind.Verified || a.Kind == AssertionKind.Reviewed)
                     && a.RetractsId == null
                     && a.TargetKind == NodeKinds.Observation
                     && targetGuids.Contains(a.TargetId))
@@ -781,6 +782,10 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
                 openQueries = [.. candidateAssertions.Where(a => a.Kind == AssertionKind.Queried && !retractedSet.Contains(a.Id))];
                 verifiedRevisions = candidateAssertions
                     .Where(a => a.Kind == AssertionKind.Verified && !retractedSet.Contains(a.Id) && a.TargetRevision is not null)
+                    .Select(a => (ObservationId.FromGuid(a.TargetId), a.TargetRevision!.Value))
+                    .ToHashSet();
+                reviewedRevisions = candidateAssertions
+                    .Where(a => a.Kind == AssertionKind.Reviewed && !retractedSet.Contains(a.Id) && a.TargetRevision is not null)
                     .Select(a => (ObservationId.FromGuid(a.TargetId), a.TargetRevision!.Value))
                     .ToHashSet();
 
@@ -947,13 +952,14 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
             }
         }
 
-        var unverifiedObservationIds = coveredObservations
-            .Where(o => o.Value is not MissingValue { Reason: NullFlavor.NotAsked } && !verifiedRevisions.Contains((o.Id, o.Revision)))
+        var pendingAssertionObservationIds = coveredObservations
+            .Where(o => o.Value is not MissingValue { Reason: NullFlavor.NotAsked }
+                && (!verifiedRevisions.Contains((o.Id, o.Revision)) || !reviewedRevisions.Contains((o.Id, o.Revision))))
             .Select(o => o.Id);
 
         var candidateBlindedObservations = openQueries
             .Select(q => ObservationId.FromGuid(q.TargetId))
-            .Concat(unverifiedObservationIds)
+            .Concat(pendingAssertionObservationIds)
             .Concat(activeErrorFindings
                 .Select(f => f.Target.Node is { Kind: NodeKinds.Observation } obsNode ? ObservationId.FromGuid(obsNode.Id) : ObservationId.Empty)
                 .Where(id => !id.IsEmpty))
@@ -987,7 +993,8 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
             evaluatedAt,
             studySitesById,
             sitesById,
-            studyEffectivities);
+            studyEffectivities,
+            reviewedRevisions);
     }
 
     internal static async Task<IReadOnlyList<StudyLockEntry>> HydrateAsync(

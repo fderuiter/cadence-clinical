@@ -6,8 +6,10 @@ import type {
   EcrfFormAssertion,
   EcrfFormItem,
 } from "../api/ecrfFormsApi";
+import type { FormQueryResponse } from "../api/ecrfQueriesApi";
 import {
   ASSERTION_ALREADY_RETRACTED,
+  ASSERTION_ALREADY_REVIEWED,
   ASSERTION_ALREADY_VERIFIED,
   ASSERTION_QUERY_OPEN,
   ASSERTION_REVISION_STALE,
@@ -15,6 +17,7 @@ import {
   describeAssertionError,
   kernelApi,
 } from "../api/kernelApi";
+import { isLiveQuery } from "./useFormQueries";
 
 export type PendingSdvTarget =
   | {
@@ -25,6 +28,17 @@ export type PendingSdvTarget =
     }
   | {
       mode: "retract";
+      item_id: string;
+      assertion_id: string;
+    }
+  | {
+      mode: "review";
+      item_id: string;
+      observation_id: string;
+      revision: number;
+    }
+  | {
+      mode: "retract-review";
       item_id: string;
       assertion_id: string;
     };
@@ -42,7 +56,7 @@ export interface BulkSdvItemResult {
 
 const OBSERVATION_TARGET_PREFIX = "observation:";
 
-interface IndexedObservationVerifications {
+interface IndexedObservationAssertions {
   byRevision: Map<number, EcrfFormAssertion>;
   minNonNullRevision: number | null;
 }
@@ -61,16 +75,62 @@ export function hasRecordedValue(item: EcrfFormItem): boolean {
   return Boolean(item.observation_id) && !isUnrecordedValue(item.value);
 }
 
+export function isSdvRequired(item: EcrfFormItem): boolean {
+  return item.sdv_required !== false;
+}
+
+export function isMedicalReviewRequired(item: EcrfFormItem): boolean {
+  return Boolean(item.medical_review_required);
+}
+
+function indexAssertionsByKind(
+  assertions: EcrfFormAssertion[] | undefined,
+  expectedKind: string
+): Map<string, IndexedObservationAssertions> {
+  const index = new Map<string, IndexedObservationAssertions>();
+  if (!assertions || assertions.length === 0) return index;
+
+  for (const a of assertions) {
+    if (a.retracted_at || a.kind.toLowerCase() !== expectedKind) continue;
+    const observationId = observationTargetId(a.target);
+    if (!observationId) continue;
+
+    const numericRevision = Number(a.revision);
+    if (Number.isNaN(numericRevision)) continue;
+
+    let entry = index.get(observationId);
+    if (!entry) {
+      entry = {
+        byRevision: new Map<number, EcrfFormAssertion>(),
+        minNonNullRevision: null,
+      };
+      index.set(observationId, entry);
+    }
+
+    entry.byRevision.set(numericRevision, a);
+    if (
+      a.revision !== null &&
+      (entry.minNonNullRevision === null ||
+        numericRevision < entry.minNonNullRevision)
+    ) {
+      entry.minNonNullRevision = numericRevision;
+    }
+  }
+  return index;
+}
+
 /**
- * Append-only kernel source data verification (`VerifyObservation`, `RetractAssertion`)
- * for single items and multi-item batches on an eCRF form instance.
+ * Append-only kernel source data verification (`VerifyObservation`), medical review
+ * (`ReviewObservation`), and retraction (`RetractAssertion`) for single items and
+ * multi-item SDV batches on an eCRF form instance.
  */
 export function useEcrfSdv(options: {
   form: Ref<EcrfForm | null>;
   items: Ref<EcrfFormItem[]>;
+  queries?: Ref<FormQueryResponse[]>;
   reload: () => Promise<unknown>;
 }) {
-  const { form, items, reload } = options;
+  const { form, items, queries, reload } = options;
 
   const pendingSdv = ref<PendingSdvTarget | null>(null);
   const sdvReason = ref("");
@@ -81,39 +141,55 @@ export function useEcrfSdv(options: {
   const bulkSdvReason = ref("");
   const bulkSdvResults = ref<BulkSdvItemResult[]>([]);
 
-  const verifiedByObservationId = computed(() => {
-    const index = new Map<string, IndexedObservationVerifications>();
+  const verifiedByObservationId = computed(() =>
+    indexAssertionsByKind(form.value?.assertions, "verified")
+  );
+
+  const reviewedByObservationId = computed(() =>
+    indexAssertionsByKind(form.value?.assertions, "reviewed")
+  );
+
+  const queriedTargetIndex = computed(() => {
+    const observationIds = new Set<string>();
+    const itemIds = new Set<string>();
+
     const assertions = form.value?.assertions;
-    if (!assertions || assertions.length === 0) return index;
-
-    for (const a of assertions) {
-      if (a.retracted_at || a.kind.toLowerCase() !== "verified") continue;
-      const observationId = observationTargetId(a.target);
-      if (!observationId) continue;
-
-      const numericRevision = Number(a.revision);
-      if (Number.isNaN(numericRevision)) continue;
-
-      let entry = index.get(observationId);
-      if (!entry) {
-        entry = {
-          byRevision: new Map<number, EcrfFormAssertion>(),
-          minNonNullRevision: null,
-        };
-        index.set(observationId, entry);
-      }
-
-      entry.byRevision.set(numericRevision, a);
-      if (
-        a.revision !== null &&
-        (entry.minNonNullRevision === null ||
-          numericRevision < entry.minNonNullRevision)
-      ) {
-        entry.minNonNullRevision = numericRevision;
+    if (assertions) {
+      for (const a of assertions) {
+        if (a.retracted_at || a.kind.toLowerCase() !== "queried") continue;
+        const obsId = observationTargetId(a.target);
+        if (obsId) observationIds.add(obsId.toLowerCase());
       }
     }
-    return index;
+
+    const currentFormId = form.value?.form_id;
+    const loadedQueries = queries?.value;
+    if (loadedQueries && loadedQueries.length > 0) {
+      for (const q of loadedQueries) {
+        if (currentFormId && q.form_id !== currentFormId) continue;
+        if (!isLiveQuery(q)) continue;
+        if (q.observation_id) {
+          observationIds.add(q.observation_id.toLowerCase());
+        }
+        if (q.item_id) {
+          itemIds.add(q.item_id);
+        }
+      }
+    }
+
+    return { observationIds, itemIds };
   });
+
+  function hasOpenQuery(item: EcrfFormItem): boolean {
+    const idx = queriedTargetIndex.value;
+    if (
+      item.observation_id &&
+      idx.observationIds.has(item.observation_id.toLowerCase())
+    ) {
+      return true;
+    }
+    return idx.itemIds.has(item.item_id);
+  }
 
   function activeVerification(item: EcrfFormItem): EcrfFormAssertion | null {
     if (!hasRecordedValue(item) || !item.observation_id) return null;
@@ -133,14 +209,47 @@ export function useEcrfSdv(options: {
     return entry.minNonNullRevision < itemRevision;
   }
 
+  function activeReview(item: EcrfFormItem): EcrfFormAssertion | null {
+    if (!hasRecordedValue(item) || !item.observation_id) return null;
+    return (
+      reviewedByObservationId.value
+        .get(item.observation_id)
+        ?.byRevision.get(Number(item.revision)) ?? null
+    );
+  }
+
+  function needsRereview(item: EcrfFormItem): boolean {
+    if (!hasRecordedValue(item) || !item.observation_id) return false;
+    const entry = reviewedByObservationId.value.get(item.observation_id);
+    if (!entry || entry.minNonNullRevision === null) return false;
+    const itemRevision = Number(item.revision);
+    if (entry.byRevision.has(itemRevision)) return false;
+    return entry.minNonNullRevision < itemRevision;
+  }
+
   function isSdvSelected(itemId: string): boolean {
     return selectedSdvItemSet.value.has(itemId);
   }
 
   const unverifiedItems = computed(() =>
     items.value.filter(
-      (item) => hasRecordedValue(item) && !activeVerification(item)
+      (item) =>
+        hasRecordedValue(item) &&
+        isSdvRequired(item) &&
+        !activeVerification(item) &&
+        !hasOpenQuery(item)
     )
+  );
+
+  const queriedUnverifiedCount = computed(
+    () =>
+      items.value.filter(
+        (item) =>
+          hasRecordedValue(item) &&
+          isSdvRequired(item) &&
+          !activeVerification(item) &&
+          hasOpenQuery(item)
+      ).length
   );
 
   function selectAllUnverifiedSdv() {
@@ -158,6 +267,12 @@ export function useEcrfSdv(options: {
 
   function toggleSdvItem(itemId: string, checked: boolean) {
     if (checked) {
+      const target = items.value.find(
+        (candidate) => candidate.item_id === itemId
+      );
+      if (target && (!isSdvRequired(target) || hasOpenQuery(target))) {
+        return;
+      }
       if (!selectedSdvItemSet.value.has(itemId)) {
         selectedSdvItems.value = [...selectedSdvItems.value, itemId];
       }
@@ -169,7 +284,14 @@ export function useEcrfSdv(options: {
   }
 
   function beginVerify(item: EcrfFormItem) {
-    if (!item.observation_id || !hasRecordedValue(item)) return;
+    if (
+      !item.observation_id ||
+      !hasRecordedValue(item) ||
+      !isSdvRequired(item) ||
+      hasOpenQuery(item)
+    ) {
+      return;
+    }
     pendingSdv.value = {
       mode: "verify",
       item_id: item.item_id,
@@ -192,6 +314,35 @@ export function useEcrfSdv(options: {
     void handoffFocus("#ecrf-sdv-reason", { scrollIfOffscreen: true });
   }
 
+  function beginReview(item: EcrfFormItem) {
+    if (!item.observation_id || !hasRecordedValue(item) || hasOpenQuery(item)) {
+      return;
+    }
+    pendingSdv.value = {
+      mode: "review",
+      item_id: item.item_id,
+      observation_id: item.observation_id,
+      revision: Number(item.revision),
+    };
+    sdvReason.value = "";
+    sdvOutcome.value = null;
+    void handoffFocus("#ecrf-sdv-reason", { scrollIfOffscreen: true });
+  }
+
+  function beginRetractReview(
+    item: EcrfFormItem,
+    assertion: EcrfFormAssertion
+  ) {
+    pendingSdv.value = {
+      mode: "retract-review",
+      item_id: item.item_id,
+      assertion_id: assertion.assertion_id,
+    };
+    sdvReason.value = "";
+    sdvOutcome.value = null;
+    void handoffFocus("#ecrf-sdv-reason", { scrollIfOffscreen: true });
+  }
+
   function cancelPendingSdv(restoreFocus = false) {
     const itemId = pendingSdv.value?.item_id ?? null;
     pendingSdv.value = null;
@@ -199,6 +350,8 @@ export function useEcrfSdv(options: {
       void handoffFocus([
         `#ecrf-verify-${itemId}`,
         `#ecrf-unverify-${itemId}`,
+        `#ecrf-review-${itemId}`,
+        `#ecrf-unreview-${itemId}`,
         `#ecrf-item-${itemId}`,
         "#canvas-form-workspace-title",
         "#ecrf-form-title",
@@ -248,7 +401,30 @@ export function useEcrfSdv(options: {
           "#canvas-form-workspace-title",
           "#ecrf-form-title",
         ]);
+      } else if (current.mode === "review") {
+        await kernelApi.reviewObservation({
+          observationRef: `observation:${current.observation_id}`,
+          enrollmentRef,
+          revision: current.revision,
+          reason: text,
+          idempotencyKey: globalThis.crypto.randomUUID(),
+        });
+        pendingSdv.value = null;
+        sdvReason.value = "";
+        await reload();
+        sdvOutcome.value = {
+          kind: "done",
+          message: `Reviewed ${current.item_id} (revision ${current.revision}).`,
+        };
+        void handoffFocus([
+          `#ecrf-unreview-${current.item_id}`,
+          `#ecrf-review-${current.item_id}`,
+          `#ecrf-item-${current.item_id}`,
+          "#canvas-form-workspace-title",
+          "#ecrf-form-title",
+        ]);
       } else {
+        const isReviewRetraction = current.mode === "retract-review";
         await kernelApi.retractAssertion({
           assertionRef: `assertion:${current.assertion_id}`,
           enrollmentRef,
@@ -260,11 +436,17 @@ export function useEcrfSdv(options: {
         await reload();
         sdvOutcome.value = {
           kind: "done",
-          message: `Verification withdrawn on ${current.item_id}.`,
+          message: isReviewRetraction
+            ? `Medical review withdrawn on ${current.item_id}.`
+            : `Verification withdrawn on ${current.item_id}.`,
         };
         void handoffFocus([
-          `#ecrf-verify-${current.item_id}`,
-          `#ecrf-unverify-${current.item_id}`,
+          isReviewRetraction
+            ? `#ecrf-review-${current.item_id}`
+            : `#ecrf-verify-${current.item_id}`,
+          isReviewRetraction
+            ? `#ecrf-unreview-${current.item_id}`
+            : `#ecrf-unverify-${current.item_id}`,
           `#ecrf-item-${current.item_id}`,
           "#canvas-form-workspace-title",
           "#ecrf-form-title",
@@ -278,6 +460,7 @@ export function useEcrfSdv(options: {
         code === ASSERTION_REVISION_STALE ||
         code === ASSERTION_ALREADY_RETRACTED ||
         code === ASSERTION_ALREADY_VERIFIED ||
+        code === ASSERTION_ALREADY_REVIEWED ||
         (status === 409 && code !== ASSERTION_QUERY_OPEN);
       sdvOutcome.value = {
         kind: isStale ? "stale" : "failed",
@@ -380,14 +563,22 @@ export function useEcrfSdv(options: {
     bulkSdvReason,
     bulkSdvResults,
     hasRecordedValue,
+    isSdvRequired,
+    isMedicalReviewRequired,
+    hasOpenQuery,
     activeVerification,
     needsReverification,
+    activeReview,
+    needsRereview,
     unverifiedItems,
+    queriedUnverifiedCount,
     selectAllUnverifiedSdv,
     clearSdvSelection,
     toggleSdvItem,
     beginVerify,
     beginRetract,
+    beginReview,
+    beginRetractReview,
     cancelPendingSdv,
     setSdvReason,
     setBulkSdvReason,

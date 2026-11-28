@@ -89,6 +89,11 @@ public interface IWorkItemBlindingMask
 /// <param name="FindingRef">The validation finding's NodeRef, when the item targets a validation finding.</param>
 /// <param name="ProtocolVersionRef">The protocol version's NodeRef, when the item targets a protocol version.</param>
 /// <param name="ProposalRef">The proposal's NodeRef, when the item targets a proposal.</param>
+/// <param name="SiteCode">The site short code when resolved from the item's enrollment or form.</param>
+/// <param name="SubjectCode">The participant subject code when resolved from the item's enrollment.</param>
+/// <param name="FormTitle">The human-readable form title when resolved from the item's collection spec.</param>
+/// <param name="CollectionSpecId">The collection spec identifier when the item belongs to a form.</param>
+/// <param name="ItemId">The form item identifier when the item targets a specific form field.</param>
 public sealed record WorkItemTargetContext(
     string? StudyRef = null,
     Guid? StudyId = null,
@@ -97,7 +102,12 @@ public sealed record WorkItemTargetContext(
     string? ObservationRef = null,
     string? FindingRef = null,
     string? ProtocolVersionRef = null,
-    string? ProposalRef = null);
+    string? ProposalRef = null,
+    string? SiteCode = null,
+    string? SubjectCode = null,
+    string? FormTitle = null,
+    string? CollectionSpecId = null,
+    string? ItemId = null);
 
 /// <summary>Resolves navigation context for unmasked work items.</summary>
 public interface IWorkItemTargetResolver

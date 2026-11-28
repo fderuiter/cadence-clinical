@@ -80,6 +80,7 @@ function buildAllDemoRoles() {
           "Site Pharmacist",
           "Principal Investigator",
           "Safety Reviewer",
+          "Sponsor Medical Monitor",
           "TMF Auditor",
         ])
       )
@@ -141,7 +142,12 @@ function resolveDemoPersonaScope(personaKey) {
       hasAllStudiesScope: true,
     },
     safety_officer: {
-      rawRoles: ["Safety Reviewer"],
+      rawRoles: ["Safety Reviewer", "Sponsor Medical Monitor"],
+      siteIds: [],
+      hasAllStudiesScope: true,
+    },
+    sponsor_mm: {
+      rawRoles: ["Sponsor Medical Monitor", "Safety Reviewer"],
       siteIds: [],
       hasAllStudiesScope: true,
     },
@@ -177,6 +183,7 @@ const ADMIN_ROLE_ALIASES = [
   "cra",
   "monitor",
   "safety_reviewer",
+  "sponsor_mm",
   "auditor",
   "tmf_auditor",
 ];
@@ -211,7 +218,24 @@ export const ROLE_ALIASES = {
   ],
   cra: ["cra", "monitor"],
   monitor: ["cra", "monitor"],
-  safety_reviewer: ["safety_reviewer", "safety_officer"],
+  safety_reviewer: [
+    "safety_reviewer",
+    "safety_officer",
+    "sponsor_mm",
+    "medical_monitor",
+  ],
+  sponsor_mm: [
+    "sponsor_mm",
+    "medical_monitor",
+    "safety_reviewer",
+    "safety_officer",
+  ],
+  medical_monitor: [
+    "sponsor_mm",
+    "medical_monitor",
+    "safety_reviewer",
+    "safety_officer",
+  ],
   auditor: ["auditor", "tmf_auditor"],
   tmf_auditor: ["auditor", "tmf_auditor"],
   designer: ["sponsor_designer"],
@@ -279,7 +303,7 @@ export const PERSONA_PRESETS = [
   {
     key: "safety_officer",
     label: "Pharmacovigilance & Safety",
-    requires: ["safety_reviewer"],
+    requires: ["safety_reviewer", "sponsor_mm", "medical_monitor"],
   },
   {
     key: "auditor",
@@ -311,6 +335,13 @@ export function normalizeRole(role) {
     normalized === "unblinded_pharmacist"
   ) {
     return "pharmacist";
+  }
+  if (
+    normalized === "sponsor_medical_monitor" ||
+    normalized === "medical_monitor" ||
+    normalized === "sponsor_mm"
+  ) {
+    return "sponsor_mm";
   }
   return normalized;
 }
@@ -737,9 +768,14 @@ export const useAuthStore = defineStore("auth", {
       this.isAuthenticated = true;
       this.sessionExpired = false;
       this.isLoggingOut = false;
+      const normalizedPersona =
+        personaKey === "sponsor_mm" || personaKey === "medical_monitor"
+          ? "safety_officer"
+          : personaKey;
       const selectedPersona =
-        personaKey && PERSONA_PRESETS.some((p) => p.key === personaKey)
-          ? personaKey
+        normalizedPersona &&
+        PERSONA_PRESETS.some((p) => p.key === normalizedPersona)
+          ? normalizedPersona
           : PERSONA_PRESETS[0]?.key || "super_admin";
       const scope = resolveDemoPersonaScope(selectedPersona);
       this.currentPersona = selectedPersona;

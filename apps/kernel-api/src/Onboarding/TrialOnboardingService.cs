@@ -85,6 +85,7 @@ public sealed partial class TrialOnboardingService(
         "observation.record",
         "observation.correct",
         "observation.verify",
+        "observation.review",
         "observation.query",
         "observation.query.answer",
         "assertion.retract",

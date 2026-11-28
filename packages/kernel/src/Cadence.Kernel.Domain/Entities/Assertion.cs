@@ -108,6 +108,18 @@ public class Assertion : AggregateRoot<AssertionId>
         };
     }
 
+    /// <summary>Records medical review (SDR, spec §8.2) of revision <paramref name="revision"/> of <paramref name="observation"/>.</summary>
+    public static Assertion Review(AssertionId id, Observation observation, int revision, string assertedBy, DateTimeOffset assertedAt)
+    {
+        ArgumentNullException.ThrowIfNull(observation);
+        return new Assertion(
+            id, observation.TenantId, AssertionKind.Reviewed, observation.StudyId, observation.EnrollmentId,
+            NodeRef.For(observation.Id), assertedBy, assertedAt)
+        {
+            TargetRevision = revision,
+        };
+    }
+
     /// <summary>Raises a query about <paramref name="observation"/>, or returns why the text or revision is refused.</summary>
     public static CommandResult<Assertion> Query(
         AssertionId id,

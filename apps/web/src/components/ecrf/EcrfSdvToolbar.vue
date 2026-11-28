@@ -116,7 +116,10 @@
   />
 
   <div
-    v-if="canVerifySource && sdv.unverifiedItems.length > 0"
+    v-if="
+      canVerifySource &&
+      (sdv.unverifiedItems.length > 0 || sdv.queriedUnverifiedCount > 0)
+    "
     class="ecrf-bulk-sdv"
     data-testid="ecrf-bulk-sdv"
   >
@@ -129,7 +132,9 @@
         id="ecrf-sdv-select-all"
         class="btn btn-secondary"
         type="button"
-        :disabled="sdv.sdvBusy || assertionsLocked"
+        :disabled="
+          sdv.sdvBusy || assertionsLocked || sdv.unverifiedItems.length === 0
+        "
         @click="sdv.selectAllUnverifiedSdv()"
       >
         Select all unverified
@@ -145,6 +150,15 @@
         Clear selection
       </button>
     </div>
+    <p
+      v-if="sdv.queriedUnverifiedCount > 0"
+      class="ecrf-form-hint"
+      data-testid="ecrf-sdv-queried-note"
+    >
+      {{ sdv.queriedUnverifiedCount }}
+      {{ sdv.queriedUnverifiedCount === 1 ? "item" : "items" }} with an open
+      query skipped until queries close.
+    </p>
     <p
       v-if="assertionsLocked"
       class="ecrf-form-hint"

@@ -415,4 +415,287 @@ public sealed class LockReadinessEvaluatorTests
         snapshot.OpenErrorFindingCount.Should().Be(0);
         snapshot.Explanation.Conditions.Should().HaveCount(6).And.OnlyContain(c => c.Met);
     }
+
+    [Fact]
+    public void BuildSnapshot_WhenItemHasSdvRequiredFalse_ExemptsObservationFromUnverifiedValueGate()
+    {
+        var studySiteId = StudySiteId.New();
+        var notesConcept = new ConceptRef(ConceptId.New(), 1);
+        var design = ProtocolDesignSamples.MinimalDesign() with
+        {
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    "cs.vitals",
+                    "Vital Signs",
+                    [
+                        new CollectionItem("item.sbp", Systolic, "mm[Hg]", Prompt: "Systolic BP", Required: true, SdvRequired: true),
+                        new CollectionItem("item.notes", notesConcept, Prompt: "Assessment Comments", Required: false, SdvRequired: false),
+                    ]),
+            ],
+        };
+
+        var version = ProtocolVersion.CreateFirst(
+            ProtocolVersionId.New(),
+            Tenant,
+            Study,
+            ProtocolDesignDocument.Write(design)).Value!;
+
+        var enrollment = Enrollment.Screen(
+            EnrollmentId.New(),
+            Tenant,
+            ParticipantId.New(),
+            Study,
+            studySiteId,
+            SubjectCode.From("SUBJ-TARGETED"),
+            BaseInstant,
+            BaseInstant).Value!;
+
+        var form = CollectionInstance.Open(
+            CollectionInstanceId.New(),
+            enrollment,
+            version.Id,
+            "cs.vitals",
+            "act.day1",
+            BaseInstant.AddHours(1),
+            "crc@test.org",
+            BaseInstant.AddHours(1));
+
+        var sbp = Observation.Record(
+            ObservationId.New(),
+            Tenant,
+            enrollment.Id,
+            enrollment.ParticipantId,
+            Study,
+            Systolic,
+            new QuantityValue(122m, "mm[Hg]"),
+            BaseInstant.AddHours(1),
+            "Initial entry",
+            "crc@test.org",
+            BaseInstant.AddHours(1)).Value!;
+        var notes = Observation.Record(
+            ObservationId.New(),
+            Tenant,
+            enrollment.Id,
+            enrollment.ParticipantId,
+            Study,
+            notesConcept,
+            new TextValue("Seated quietly for 5 minutes"),
+            BaseInstant.AddHours(1),
+            "Initial comment",
+            "crc@test.org",
+            BaseInstant.AddHours(1)).Value!;
+
+        form.Join("item.sbp", sbp.Id, BaseInstant.AddHours(1));
+        form.Join("item.notes", notes.Id, BaseInstant.AddHours(1));
+
+        var formHash = CollectionInstance.ContentHashOf([
+            new CollectionContentEntry(sbp.Id, sbp.Revision, sbp.Value),
+            new CollectionContentEntry(notes.Id, notes.Revision, notes.Value),
+        ]);
+        var signature = Attestation.Sign(
+            AttestationId.New(),
+            Tenant,
+            Actor.Person("pi@test.org"),
+            AttestationMeaning.Approved,
+            new AttestationTarget(NodeKinds.CollectionInstance, form.Id.Value, formHash),
+            BaseInstant.AddHours(2),
+            "password",
+            BaseInstant.AddHours(2).AddMinutes(1),
+            "Investigator sign-off").Value!;
+
+        var snapshot = LockReadinessEvaluator.BuildSnapshot(
+            Study,
+            StudyCode,
+            NodeRef.For(Study),
+            instances: [form],
+            observationsById: new Dictionary<ObservationId, Observation>
+            {
+                [sbp.Id] = sbp,
+                [notes.Id] = notes,
+            },
+            enrollmentsById: new Dictionary<EnrollmentId, Enrollment> { [enrollment.Id] = enrollment },
+            versionsById: new Dictionary<ProtocolVersionId, ProtocolVersion> { [version.Id] = version },
+            openQueries: [],
+            answeredQueryIds: new HashSet<AssertionId>(),
+            blindedObservationIds: new HashSet<ObservationId>(),
+            verifiedRevisions: new HashSet<(ObservationId, int)> { (sbp.Id, 1) },
+            formSignaturesByInstance: new Dictionary<CollectionInstanceId, IReadOnlyList<Attestation>> { [form.Id] = [signature] });
+
+        snapshot.UnverifiedValueCount.Should().Be(0, "item.notes has SdvRequired = false and is exempt from source verification");
+        snapshot.UnreviewedValueCount.Should().Be(0);
+        snapshot.ReadyForLock.Should().BeTrue();
+        snapshot.Blockers.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void BuildSnapshot_WhenItemHasMedicalReviewRequiredTrue_RequiresCurrentRevisionReviewAndPropagatesBlinding()
+    {
+        var studySiteId = StudySiteId.New();
+        var pulseConcept = new ConceptRef(ConceptId.New(), 1);
+        var design = ProtocolDesignSamples.MinimalDesign() with
+        {
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    "cs.vitals",
+                    "Vital Signs",
+                    [
+                        new CollectionItem(
+                            "item.pulse",
+                            pulseConcept,
+                            "/min",
+                            Prompt: "Pulse Rate",
+                            Required: true,
+                            SdvRequired: true,
+                            MedicalReviewRequired: true),
+                    ]),
+            ],
+        };
+
+        var version = ProtocolVersion.CreateFirst(
+            ProtocolVersionId.New(),
+            Tenant,
+            Study,
+            ProtocolDesignDocument.Write(design)).Value!;
+
+        var enrollment = Enrollment.Screen(
+            EnrollmentId.New(),
+            Tenant,
+            ParticipantId.New(),
+            Study,
+            studySiteId,
+            SubjectCode.From("SUBJ-MEDREV"),
+            BaseInstant,
+            BaseInstant).Value!;
+
+        var form = CollectionInstance.Open(
+            CollectionInstanceId.New(),
+            enrollment,
+            version.Id,
+            "cs.vitals",
+            "act.day1",
+            BaseInstant.AddHours(1),
+            "crc@test.org",
+            BaseInstant.AddHours(1));
+
+        var pulse = Observation.Record(
+            ObservationId.New(),
+            Tenant,
+            enrollment.Id,
+            enrollment.ParticipantId,
+            Study,
+            pulseConcept,
+            new QuantityValue(118m, "/min"),
+            BaseInstant.AddHours(1),
+            "Initial entry",
+            "crc@test.org",
+            BaseInstant.AddHours(1)).Value!;
+        form.Join("item.pulse", pulse.Id, BaseInstant.AddHours(1));
+
+        Attestation SignCurrentForm(DateTimeOffset at)
+        {
+            var hash = CollectionInstance.ContentHashOf([
+                new CollectionContentEntry(pulse.Id, pulse.Revision, pulse.Value),
+            ]);
+            return Attestation.Sign(
+                AttestationId.New(),
+                Tenant,
+                Actor.Person("pi@test.org"),
+                AttestationMeaning.Approved,
+                new AttestationTarget(NodeKinds.CollectionInstance, form.Id.Value, hash),
+                at,
+                "password",
+                at.AddMinutes(1),
+                "Investigator sign-off").Value!;
+        }
+
+        // 1. Verified and signed at rev 1, but unreviewed (and blinded): blocks on UnreviewedValue with Blinded == true.
+        var unreviewedSnapshot = LockReadinessEvaluator.BuildSnapshot(
+            Study,
+            StudyCode,
+            NodeRef.For(Study),
+            instances: [form],
+            observationsById: new Dictionary<ObservationId, Observation> { [pulse.Id] = pulse },
+            enrollmentsById: new Dictionary<EnrollmentId, Enrollment> { [enrollment.Id] = enrollment },
+            versionsById: new Dictionary<ProtocolVersionId, ProtocolVersion> { [version.Id] = version },
+            openQueries: [],
+            answeredQueryIds: new HashSet<AssertionId>(),
+            blindedObservationIds: new HashSet<ObservationId> { pulse.Id },
+            verifiedRevisions: new HashSet<(ObservationId, int)> { (pulse.Id, 1) },
+            formSignaturesByInstance: new Dictionary<CollectionInstanceId, IReadOnlyList<Attestation>>
+            {
+                [form.Id] = [SignCurrentForm(BaseInstant.AddHours(2))],
+            },
+            reviewedRevisions: new HashSet<(ObservationId, int)>());
+
+        unreviewedSnapshot.ReadyForLock.Should().BeFalse();
+        unreviewedSnapshot.UnverifiedValueCount.Should().Be(0);
+        unreviewedSnapshot.UnreviewedValueCount.Should().Be(1);
+        unreviewedSnapshot.Blockers.Should().ContainSingle(b =>
+            b.Kind == LockBlockerKind.UnreviewedValue
+            && b.ObservationId == pulse.Id
+            && b.CurrentRevision == 1
+            && b.Blinded
+            && b.Owner == LockReadinessEvaluator.MedicalMonitorOwner
+            && b.NextCapability == "observation.review");
+        unreviewedSnapshot.Explanation.Conditions.Should().ContainSingle(c =>
+            c.Code == LockReadinessEvaluator.ObservationsReviewedCondition && !c.Met);
+
+        // 2. Reviewed at rev 1: ReadyForLock becomes true and ObservationsReviewedCondition is met.
+        var reviewedSnapshot = LockReadinessEvaluator.BuildSnapshot(
+            Study,
+            StudyCode,
+            NodeRef.For(Study),
+            instances: [form],
+            observationsById: new Dictionary<ObservationId, Observation> { [pulse.Id] = pulse },
+            enrollmentsById: new Dictionary<EnrollmentId, Enrollment> { [enrollment.Id] = enrollment },
+            versionsById: new Dictionary<ProtocolVersionId, ProtocolVersion> { [version.Id] = version },
+            openQueries: [],
+            answeredQueryIds: new HashSet<AssertionId>(),
+            blindedObservationIds: new HashSet<ObservationId>(),
+            verifiedRevisions: new HashSet<(ObservationId, int)> { (pulse.Id, 1) },
+            formSignaturesByInstance: new Dictionary<CollectionInstanceId, IReadOnlyList<Attestation>>
+            {
+                [form.Id] = [SignCurrentForm(BaseInstant.AddHours(2))],
+            },
+            reviewedRevisions: new HashSet<(ObservationId, int)> { (pulse.Id, 1) });
+
+        reviewedSnapshot.ReadyForLock.Should().BeTrue();
+        reviewedSnapshot.UnreviewedValueCount.Should().Be(0);
+        reviewedSnapshot.Explanation.Conditions.Should().ContainSingle(c =>
+            c.Code == LockReadinessEvaluator.ObservationsReviewedCondition && c.Met);
+
+        // 3. Correction to rev 2 supersedes rev-1 medical review until rev 2 is reviewed.
+        pulse.Correct(
+            new QuantityValue(96m, "/min"),
+            "Repeat seated pulse reading",
+            "crc@test.org",
+            BaseInstant.AddHours(3)).Should().BeNull();
+
+        var correctedSnapshot = LockReadinessEvaluator.BuildSnapshot(
+            Study,
+            StudyCode,
+            NodeRef.For(Study),
+            instances: [form],
+            observationsById: new Dictionary<ObservationId, Observation> { [pulse.Id] = pulse },
+            enrollmentsById: new Dictionary<EnrollmentId, Enrollment> { [enrollment.Id] = enrollment },
+            versionsById: new Dictionary<ProtocolVersionId, ProtocolVersion> { [version.Id] = version },
+            openQueries: [],
+            answeredQueryIds: new HashSet<AssertionId>(),
+            blindedObservationIds: new HashSet<ObservationId>(),
+            verifiedRevisions: new HashSet<(ObservationId, int)> { (pulse.Id, 2) },
+            formSignaturesByInstance: new Dictionary<CollectionInstanceId, IReadOnlyList<Attestation>>
+            {
+                [form.Id] = [SignCurrentForm(BaseInstant.AddHours(4))],
+            },
+            reviewedRevisions: new HashSet<(ObservationId, int)> { (pulse.Id, 1) });
+
+        correctedSnapshot.ReadyForLock.Should().BeFalse();
+        correctedSnapshot.UnreviewedValueCount.Should().Be(1);
+        correctedSnapshot.Blockers.Should().ContainSingle(b =>
+            b.Kind == LockBlockerKind.UnreviewedValue
+            && b.ObservationId == pulse.Id
+            && b.CurrentRevision == 2);
+    }
 }

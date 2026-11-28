@@ -176,6 +176,23 @@ export function canVerifySource(auth: AuthorityAuth): boolean {
   return false;
 }
 
+/** Record or withdraw medical review assertions on observations (`observation:review`). */
+export function canReviewSource(auth: AuthorityAuth): boolean {
+  if (!auth) return false;
+  if ((auth.rawRoles?.length ?? 0) > 0) {
+    return holdsBackendPermission(auth, "observation:review");
+  }
+  if (typeof auth.hasRole === "function") {
+    return [
+      "sponsor_mm",
+      "medical_monitor",
+      "safety_reviewer",
+      "safety_officer",
+    ].some((role) => auth.hasRole!(role));
+  }
+  return false;
+}
+
 /** Whether the caller holds a role permitted to submit observation value corrections (`observation.correct`). */
 export function canCorrectObservations(auth: AuthorityAuth): boolean {
   if (!auth) return false;

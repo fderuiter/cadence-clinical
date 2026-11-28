@@ -167,6 +167,7 @@
         :queries="queries"
         :highlight-item-id="highlightItemId"
         :can-verify-source="canVerifySource"
+        :can-review-source="effectiveCanReviewSource"
         :can-manage-queries="canManageQueries"
         :item-observation-link="itemObservationLink"
         @entry-text="setEntryText"
@@ -233,7 +234,10 @@ import { handoffFocus } from "ui";
 import type { RouteLocationRaw } from "vue-router";
 import type { EcrfForm } from "../../api/ecrfFormsApi";
 import type { FormQueryResponse } from "../../api/ecrfQueriesApi";
-import { canAnswerQueries as hasQueryAnswerRole } from "../../canvas/authority";
+import {
+  canAnswerQueries as hasQueryAnswerRole,
+  canReviewSource as hasReviewSourceRole,
+} from "../../canvas/authority";
 import {
   collectionInstanceRef,
   observationNodeRef,
@@ -276,9 +280,10 @@ const props = withDefaults(
     canManageQueries?: boolean;
     canAnswerQueries?: boolean;
     canVerifySource?: boolean;
+    canReviewSource?: boolean;
     highlightItemId?: string | null;
   }>(),
-  { canAnswerQueries: undefined }
+  { canAnswerQueries: undefined, canReviewSource: undefined }
 );
 
 const emit = defineEmits<{
@@ -295,10 +300,16 @@ const authStore = useAuthStore();
 const rawForm = useEcrfForm();
 const { form, dirty, lastHydratedSave } = rawForm;
 const formState = reactive(rawForm);
+const rawQueries = useFormQueries();
 const sdv = reactive(
-  useEcrfSdv({ form, items: rawForm.items, reload: rawForm.reload })
+  useEcrfSdv({
+    form,
+    items: rawForm.items,
+    queries: rawQueries.queries,
+    reload: rawForm.reload,
+  })
 );
-const queries = reactive(useFormQueries());
+const queries = reactive(rawQueries);
 
 function setEntryText(itemId: string, text: string) {
   if (formState.entries[itemId]) formState.entries[itemId].text = text;
@@ -410,6 +421,13 @@ const effectiveCanAnswerQueries = computed(() =>
     : authStore.isAuthenticated
       ? hasQueryAnswerRole(authStore)
       : !props.canManageQueries
+);
+const effectiveCanReviewSource = computed(() =>
+  props.canReviewSource !== undefined
+    ? props.canReviewSource
+    : authStore.isAuthenticated
+      ? hasReviewSourceRole(authStore)
+      : false
 );
 
 async function reloadAfterLockChange() {

@@ -84,6 +84,7 @@ export function createLocksAndEntitlementsDomain(ctx) {
     let openQueryCount = 0;
     let missingRequiredItemCount = 0;
     let unverifiedValueCount = 0;
+    let unreviewedValueCount = 0;
     let unsignedFormCount = 0;
 
     for (const q of state.queries.values()) {
@@ -104,6 +105,11 @@ export function createLocksAndEntitlementsDomain(ctx) {
         owner,
         target_ref: targetRef,
         target_kind: q.observation_id ? "observation" : "collection_instance",
+        form_ref: q.form_id ? `collection_instance:${q.form_id}` : null,
+        enrollment_ref: q.enrollment_id
+          ? `enrollment:${q.enrollment_id}`
+          : null,
+        site_code: q.site_code || null,
         subject_code: q.subject_code || null,
         collection_spec_id: q.collection_spec_id || null,
         collection_title:
@@ -144,6 +150,11 @@ export function createLocksAndEntitlementsDomain(ctx) {
             owner: "Site Coordinator",
             target_ref: targetRef,
             target_kind: "collection_instance",
+            form_ref: targetRef,
+            enrollment_ref: f.enrollment_id
+              ? `enrollment:${f.enrollment_id}`
+              : null,
+            site_code: subj?.site_id || null,
             subject_code: subj?.subject_id || null,
             collection_spec_id: f.collection_spec_id || null,
             collection_title:
@@ -168,6 +179,10 @@ export function createLocksAndEntitlementsDomain(ctx) {
     for (const f of state.forms.values()) {
       if (scopeKind !== "observation" && !matchesScope(f)) continue;
       const subj = resolveEnrollmentByIdOrCode(state.subjects, f.enrollment_id);
+      const formRef = `collection_instance:${f.form_id}`;
+      const enrollmentRef = f.enrollment_id
+        ? `enrollment:${f.enrollment_id}`
+        : null;
       const collectionTitle =
         f.collection_title ||
         resolveCollectionTitle(f.collection_spec_id) ||
@@ -195,14 +210,21 @@ export function createLocksAndEntitlementsDomain(ctx) {
         recordedItemCount += 1;
         const obsRef = `observation:${it.observation_id}`;
         checkedObservationRefs.add(obsRef);
-        if (activeFormVerified) continue;
 
         const obs = state.observations.get(obsRef);
         const obsAssertions = Array.isArray(obs?.assertions)
           ? obs.assertions
           : [];
         const currentRevision = Number(it.revision ?? obs?.version ?? 1);
+        const itemLabel = it.concept || it.item_id || obsRef;
+        const sdvRequired =
+          it.sdv_required !== false && obs?.sdv_required !== false;
+        const medReviewRequired = Boolean(
+          it.medical_review_required || obs?.medical_review_required
+        );
+
         const isObsVerified =
+          activeFormVerified ||
           obsAssertions.some(
             (a) =>
               !a.retracted_at &&
@@ -218,14 +240,17 @@ export function createLocksAndEntitlementsDomain(ctx) {
               (a.revision === undefined ||
                 Number(a.revision) === currentRevision)
           );
-        if (!isObsVerified) {
+
+        if (sdvRequired && !isObsVerified) {
           unverifiedValueCount += 1;
-          const itemLabel = it.concept || it.item_id || obsRef;
           blockers.push({
             kind: "UnverifiedValue",
             owner: "Monitor / Data Management",
             target_ref: obsRef,
             target_kind: "observation",
+            form_ref: formRef,
+            enrollment_ref: enrollmentRef,
+            site_code: subj?.site_id || null,
             subject_code: subj?.subject_id || null,
             collection_spec_id: f.collection_spec_id || null,
             collection_title: collectionTitle,
@@ -242,6 +267,50 @@ export function createLocksAndEntitlementsDomain(ctx) {
             mask: null,
           });
         }
+
+        const isObsReviewed =
+          obsAssertions.some(
+            (a) =>
+              !a.retracted_at &&
+              String(a.kind).toLowerCase() === "reviewed" &&
+              (a.revision === undefined ||
+                Number(a.revision) === currentRevision)
+          ) ||
+          formAssertions.some(
+            (a) =>
+              !a.retracted_at &&
+              String(a.kind).toLowerCase() === "reviewed" &&
+              a.target === obsRef &&
+              (a.revision === undefined ||
+                Number(a.revision) === currentRevision)
+          );
+
+        if (medReviewRequired && !isObsReviewed) {
+          unreviewedValueCount += 1;
+          blockers.push({
+            kind: "UnreviewedValue",
+            owner: "Medical Monitor",
+            target_ref: obsRef,
+            target_kind: "observation",
+            form_ref: formRef,
+            enrollment_ref: enrollmentRef,
+            site_code: subj?.site_id || null,
+            subject_code: subj?.subject_id || null,
+            collection_spec_id: f.collection_spec_id || null,
+            collection_title: collectionTitle,
+            item_id: it.item_id || null,
+            item_label: itemLabel,
+            query_ref: null,
+            query_text: null,
+            answered: false,
+            current_revision: currentRevision,
+            detail: `Revision ${currentRevision} awaiting medical review`,
+            next_action: `Medical Monitor: review revision ${currentRevision} of '${itemLabel}' (${obsRef}) for clinical causality and protocol compliance.`,
+            next_capability: "observation.review",
+            masked: false,
+            mask: null,
+          });
+        }
       }
 
       if (scopeKind !== "observation" && recordedItemCount > 0) {
@@ -251,7 +320,6 @@ export function createLocksAndEntitlementsDomain(ctx) {
           sigs.some((s) => !s.superseded && s.content_hash === f.content_hash);
         if (!signed) {
           unsignedFormCount += 1;
-          const formRef = `collection_instance:${f.form_id}`;
           const titleLabel = collectionTitle || f.collection_spec_id || formRef;
           const signatureSuperseded = sigs.length > 0;
           blockers.push({
@@ -259,6 +327,9 @@ export function createLocksAndEntitlementsDomain(ctx) {
             owner: "Principal Investigator",
             target_ref: formRef,
             target_kind: "collection_instance",
+            form_ref: formRef,
+            enrollment_ref: enrollmentRef,
+            site_code: subj?.site_id || null,
             subject_code: subj?.subject_id || null,
             collection_spec_id: f.collection_spec_id || null,
             collection_title: collectionTitle,
@@ -288,35 +359,72 @@ export function createLocksAndEntitlementsDomain(ctx) {
           ? obs.assertions
           : [];
         const currentRevision = Number(obs?.version ?? 1);
-        const isObsVerified = obsAssertions.some(
-          (a) =>
-            !a.retracted_at &&
-            String(a.kind).toLowerCase() === "verified" &&
-            (a.revision === undefined || Number(a.revision) === currentRevision)
-        );
-        if (!isObsVerified) {
-          unverifiedValueCount += 1;
-          const itemLabel = obs?.concept || singleObsRef;
-          blockers.push({
-            kind: "UnverifiedValue",
-            owner: "Monitor / Data Management",
-            target_ref: singleObsRef,
-            target_kind: "observation",
-            subject_code: null,
-            collection_spec_id: null,
-            collection_title: null,
-            item_id: null,
-            item_label: itemLabel,
-            query_ref: null,
-            query_text: null,
-            answered: false,
-            current_revision: currentRevision,
-            detail: `Revision ${currentRevision} awaiting source verification`,
-            next_action: `Monitor / Data Management: verify revision ${currentRevision} of '${itemLabel}' (${singleObsRef}) against source records.`,
-            next_capability: "observation.verify",
-            masked: false,
-            mask: null,
-          });
+        const itemLabel = obs?.concept || singleObsRef;
+        if (obs?.sdv_required !== false) {
+          const isObsVerified = obsAssertions.some(
+            (a) =>
+              !a.retracted_at &&
+              String(a.kind).toLowerCase() === "verified" &&
+              (a.revision === undefined ||
+                Number(a.revision) === currentRevision)
+          );
+          if (!isObsVerified) {
+            unverifiedValueCount += 1;
+            blockers.push({
+              kind: "UnverifiedValue",
+              owner: "Monitor / Data Management",
+              target_ref: singleObsRef,
+              target_kind: "observation",
+              enrollment_ref: obs?.enrollment_ref || null,
+              subject_code: null,
+              collection_spec_id: null,
+              collection_title: null,
+              item_id: null,
+              item_label: itemLabel,
+              query_ref: null,
+              query_text: null,
+              answered: false,
+              current_revision: currentRevision,
+              detail: `Revision ${currentRevision} awaiting source verification`,
+              next_action: `Monitor / Data Management: verify revision ${currentRevision} of '${itemLabel}' (${singleObsRef}) against source records.`,
+              next_capability: "observation.verify",
+              masked: false,
+              mask: null,
+            });
+          }
+        }
+        if (obs?.medical_review_required) {
+          const isObsReviewed = obsAssertions.some(
+            (a) =>
+              !a.retracted_at &&
+              String(a.kind).toLowerCase() === "reviewed" &&
+              (a.revision === undefined ||
+                Number(a.revision) === currentRevision)
+          );
+          if (!isObsReviewed) {
+            unreviewedValueCount += 1;
+            blockers.push({
+              kind: "UnreviewedValue",
+              owner: "Medical Monitor",
+              target_ref: singleObsRef,
+              target_kind: "observation",
+              enrollment_ref: obs?.enrollment_ref || null,
+              subject_code: null,
+              collection_spec_id: null,
+              collection_title: null,
+              item_id: null,
+              item_label: itemLabel,
+              query_ref: null,
+              query_text: null,
+              answered: false,
+              current_revision: currentRevision,
+              detail: `Revision ${currentRevision} awaiting medical review`,
+              next_action: `Medical Monitor: review revision ${currentRevision} of '${itemLabel}' (${singleObsRef}) for clinical causality and protocol compliance.`,
+              next_capability: "observation.review",
+              masked: false,
+              mask: null,
+            });
+          }
         }
       }
     }
@@ -324,7 +432,7 @@ export function createLocksAndEntitlementsDomain(ctx) {
     const readyForLock = blockers.length === 0;
     const claim = readyForLock
       ? `Scope ${cleanScopeRef} satisfies all lock readiness gates and is ready for Locked.`
-      : `Scope ${cleanScopeRef} cannot be committed as Locked because ${openQueryCount} open ${openQueryCount === 1 ? "query" : "queries"}, ${missingRequiredItemCount} missing required ${missingRequiredItemCount === 1 ? "item" : "items"}, ${unverifiedValueCount} unverified ${unverifiedValueCount === 1 ? "value" : "values"}, and ${unsignedFormCount} unsigned ${unsignedFormCount === 1 ? "form" : "forms"} remain unresolved (Frozen remains available).`;
+      : `Scope ${cleanScopeRef} cannot be committed as Locked because ${openQueryCount} open ${openQueryCount === 1 ? "query" : "queries"}, ${missingRequiredItemCount} missing required ${missingRequiredItemCount === 1 ? "item" : "items"}, ${unverifiedValueCount} unverified ${unverifiedValueCount === 1 ? "value" : "values"}, ${unreviewedValueCount} unreviewed ${unreviewedValueCount === 1 ? "value" : "values"}, and ${unsignedFormCount} unsigned ${unsignedFormCount === 1 ? "form" : "forms"} remain unresolved (Frozen remains available).`;
 
     return {
       study_ref: cleanStudyRef,
@@ -336,6 +444,7 @@ export function createLocksAndEntitlementsDomain(ctx) {
       open_query_count: openQueryCount,
       missing_required_item_count: missingRequiredItemCount,
       unverified_value_count: unverifiedValueCount,
+      unreviewed_value_count: unreviewedValueCount,
       unsigned_form_count: unsignedFormCount,
       unopened_visit_count: 0,
       open_error_finding_count: 0,

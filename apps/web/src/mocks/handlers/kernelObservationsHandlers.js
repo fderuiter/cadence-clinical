@@ -60,6 +60,21 @@ export function createKernelObservationsHandlers(store) {
       }
     ),
     http.post(
+      "*/api/v1/kernel/observations/:observationRef/reviews",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const result = store.reviewObservation(
+          decodeURIComponent(String(params.observationRef)),
+          body,
+          decodeReasonHeader(request)
+        );
+        if (result.conflict) {
+          return HttpResponse.json(result.problem, { status: 409 });
+        }
+        return HttpResponse.json(result.data, { status: 201 });
+      }
+    ),
+    http.post(
       "*/api/v1/kernel/assertions/:assertionRef/retraction",
       async ({ params, request }) => {
         const body = await readJsonBody(request);

@@ -313,6 +313,10 @@ export interface components {
       codelist?: null | string;
       codelist_options?:
         null | components["schemas"]["ExecutionForms_CodelistOptionView"][];
+      /** @default true */
+      sdv_required: boolean;
+      /** @default false */
+      medical_review_required: boolean;
     };
     ExecutionForms_FormLockResponse: {
       /** Format: uuid */

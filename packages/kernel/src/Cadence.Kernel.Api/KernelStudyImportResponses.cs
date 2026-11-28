@@ -287,6 +287,8 @@ public sealed record KernelProtocolImportNoteResponse(string Source, string Mess
 /// <param name="Required">True when the item is mandatory.</param>
 /// <param name="ValueKind">Expected value kind (<c>Text</c>, <c>Quantity</c>, <c>DateTime</c>, <c>Boolean</c>, <c>Coded</c>).</param>
 /// <param name="Unit">UCUM unit when constrained.</param>
+/// <param name="SdvRequired">True when source data verification is required before hard lock.</param>
+/// <param name="MedicalReviewRequired">True when medical monitor review is required before hard lock.</param>
 public sealed record KernelProtocolFormItemResponse(
     string Id,
     int DisplayOrder,
@@ -294,7 +296,9 @@ public sealed record KernelProtocolFormItemResponse(
     string Concept,
     bool Required,
     string? ValueKind,
-    string? Unit)
+    string? Unit,
+    bool SdvRequired = true,
+    bool MedicalReviewRequired = false)
 {
     internal static KernelProtocolFormItemResponse From(
         CollectionItem item,
@@ -311,7 +315,9 @@ public sealed record KernelProtocolFormItemResponse(
             item.Concept.ToString(),
             item.Required,
             item.ExpectedKind?.ToString(),
-            item.Unit);
+            item.Unit,
+            item.SdvRequired,
+            item.MedicalReviewRequired);
     }
 }
 

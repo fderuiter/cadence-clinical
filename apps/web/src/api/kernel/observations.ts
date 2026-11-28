@@ -1,6 +1,7 @@
 import type { KernelObservationValue } from "../observationValue";
 import {
   ASSERTION_ALREADY_RETRACTED,
+  ASSERTION_ALREADY_REVIEWED,
   ASSERTION_ALREADY_VERIFIED,
   ASSERTION_LOCKED,
   ASSERTION_QUERY_OPEN,
@@ -24,8 +25,13 @@ export type KernelObservationLock = Omit<
 > & {
   masked?: boolean;
 };
-export type KernelObservation = Omit<GeneratedKernelObservation, "locks"> & {
+export type KernelObservation = Omit<
+  GeneratedKernelObservation,
+  "locks" | "sdv_required" | "medical_review_required"
+> & {
   locks: KernelObservationLock[];
+  sdv_required?: boolean;
+  medical_review_required?: boolean;
 };
 export type KernelObservationState =
   KernelSchemas["Kernel_KernelObservationStateResponse"];
@@ -47,6 +53,20 @@ export interface KernelObservationVerification {
   assertionId?: string | null;
   reason: string;
   /** One key per verification the user confirms, reused if that request is retried. */
+  idempotencyKey: string;
+}
+
+/** Medical review of one observation's current revision (`ReviewObservation`). */
+export interface KernelObservationReview {
+  /** The observation's NodeRef; a version suffix is ignored. */
+  observationRef: string;
+  /** The enrollment the observation belongs to: the scope the review is authorised against. */
+  enrollmentRef: string;
+  /** The revision the medical monitor reviewed; the kernel answers 409 (`K.Assertion.RevisionStale`) if it moved on. */
+  revision: number;
+  assertionId?: string | null;
+  reason: string;
+  /** One key per review the user confirms, reused if that request is retried. */
   idempotencyKey: string;
 }
 
@@ -77,7 +97,7 @@ export interface KernelObservationCorrection {
   idempotencyKey: string;
 }
 
-/** Actionable user-facing explanation when a verification or withdrawal call fails. */
+/** Actionable user-facing explanation when a verification, review, or withdrawal call fails. */
 export function describeAssertionError(error: unknown): string {
   const code = assertionErrorCode(error);
   const status = (error as { status?: number | null } | null)?.status ?? null;
@@ -85,22 +105,25 @@ export function describeAssertionError(error: unknown): string {
     return describeKernelError(error);
   }
   if (code === ASSERTION_LOCKED || status === 423) {
-    return "This scope is locked (Locked), so verifications cannot be recorded or withdrawn until the lock is released.";
+    return "This scope is locked (Locked), so verifications and reviews cannot be recorded or withdrawn until the lock is released.";
   }
   if (code === ASSERTION_ALREADY_RETRACTED) {
-    return "That verification was already withdrawn; reload the form.";
+    return "That assertion was already withdrawn; reload the form.";
   }
   if (code === ASSERTION_QUERY_OPEN) {
-    return "This value has an open query; resolve and close the query before verifying source data.";
+    return "This value has an open query; resolve and close the query before verifying or reviewing.";
   }
   if (code === ASSERTION_ALREADY_VERIFIED) {
     return "This revision is already source data verified; reload to see the current verification.";
   }
+  if (code === ASSERTION_ALREADY_REVIEWED) {
+    return "This revision is already medically reviewed; reload to see the current review.";
+  }
   if (code === ASSERTION_REVISION_STALE || status === 409) {
-    return "The value changed since you loaded the form; reload the form and verify the current revision.";
+    return "The value changed since you loaded the form; reload the form and verify or review the current revision.";
   }
   if (code === KERNEL_AUTHORIZATION_DENIED || status === 403) {
-    return "You are not authorised to verify or withdraw verifications on this participant.";
+    return "You are not authorised to verify, review, or withdraw assertions on this participant.";
   }
   return error instanceof Error ? error.message : String(error);
 }
@@ -129,7 +152,16 @@ export const kernelObservationsApi = {
   ),
 
   /**
-   * Withdraws an active verification or assertion with a mandatory reason (`POST /api/v1/kernel/assertions/{assertionRef}/retraction`).
+   * Records a medical review assertion on an observation's current revision (`POST /api/v1/kernel/observations/{observationRef}/reviews`).
+   * Rejects with 409 (`K.Assertion.RevisionStale`, `K.Assertion.QueryOpen`, `K.Assertion.AlreadyReviewed`), 423 (`K.Assertion.Locked`), 422 (no reason), or 403 (`K.Authorization.Denied`).
+   */
+  reviewObservation: lazyKernelAction(
+    loadRouteTransport,
+    "executeReviewObservation"
+  ),
+
+  /**
+   * Withdraws an active verification, review, or assertion with a mandatory reason (`POST /api/v1/kernel/assertions/{assertionRef}/retraction`).
    * Rejects with 409 (`K.Assertion.AlreadyRetracted`), 423 (`K.Assertion.Locked`), 422 (no reason), or 403 (`K.Authorization.Denied`).
    */
   retractAssertion: lazyKernelAction(

@@ -110,6 +110,30 @@ public sealed record VerifyObservation(
     string ReasonForChange) : ICommand<AssertionState>;
 
 /// <summary>
+/// Records medical review (SDR, spec §8.2) of one revision of an observation's value. It targets
+/// <c>(ObservationId, Revision)</c>, so a later correction requires fresh review (ADR-2621). Refused when the revision
+/// is not the current one, when an open query holds on the observation, when the revision is already reviewed, or when
+/// a <see cref="LockKind.Locked"/> lock covers the observation.
+/// </summary>
+[KernelCapability("observation.review", VerbClass.Execute, Resource = nameof(ReviewObservation.EnrollmentId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(
+    typeof(AssertionErrors),
+    nameof(AssertionErrors.RevisionStale),
+    nameof(AssertionErrors.QueryOpen),
+    nameof(AssertionErrors.AlreadyReviewed),
+    nameof(AssertionErrors.Locked))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+public sealed record ReviewObservation(
+    TenantId TenantId,
+    AssertionId AssertionId,
+    EnrollmentId EnrollmentId,
+    ObservationId ObservationId,
+    int Revision,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<AssertionState>;
+
+/// <summary>
 /// Raises a query about an observation (spec §8.2). It names the <c>ObservationId</c> and records the revision judged
 /// (<c>TargetRevision</c>, defaulting to the observation's current revision), staying open across corrections until it
 /// is retracted. Service-account forwarders may supply <c>AssertedBy</c> to preserve the originating actor.
@@ -160,7 +184,7 @@ public sealed record AnswerQuery(
     string? AssertedBy = null) : ICommand<AssertionState>;
 
 /// <summary>
-/// Retracts an assertion about an observation (spec §8.2): withdraws a verification or an answer, or closes a query.
+/// Retracts an assertion about an observation (spec §8.2): withdraws a verification, review or answer, or closes a query.
 /// Service-account forwarders may supply <c>AssertedBy</c> to preserve the originating actor.
 /// The retracted assertion stays readable. Locks are released with <see cref="ReleaseLock"/> instead.
 /// </summary>
@@ -243,6 +267,9 @@ public static class AssertionErrors
     public static readonly KernelError AlreadyVerified =
         new("K.Assertion.AlreadyVerified", 409, "This observation revision is already verified against source.");
 
+    public static readonly KernelError AlreadyReviewed =
+        new("K.Assertion.AlreadyReviewed", 409, "This observation revision has already received medical review.");
+
     public static readonly KernelError TextInvalid =
         new("K.Assertion.TextInvalid", 422, $"The text is required and at most {AssertionText.MaxLength} characters.");
 
@@ -265,6 +292,7 @@ public static class AssertionErrors
         RevisionStale,
         QueryOpen,
         AlreadyVerified,
+        AlreadyReviewed,
         TextInvalid,
         Locked,
         AttestationRejected,

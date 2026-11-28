@@ -1650,11 +1650,243 @@ export function createProtocolDesignDomain(ctx) {
         const check = ctx.validateScopeOrStudyParam(within);
         if (check.error) return check;
       }
-      let queues = cloneJson(state.workQueues || []);
-      if (queue) {
-        queues = queues.filter((q) => q.code === queue);
+      if (Array.isArray(state.workQueues) && state.workQueues.length > 0) {
+        let seeded = cloneJson(state.workQueues);
+        if (queue) {
+          seeded = seeded.filter((q) => q.code === queue);
+        }
+        return { data: { queues: seeded } };
       }
-      return { data: { queues } };
+
+      const openQueryObsIds = new Set();
+      const openQueryItems = [];
+      for (const q of state.queries.values()) {
+        const status = String(q.status || "").toLowerCase();
+        if (status === "closed" || status === "cancelled") continue;
+        if (q.observation_id) openQueryObsIds.add(String(q.observation_id));
+        const answered = status === "answered";
+        const targetRef = q.observation_id
+          ? `observation:${q.observation_id}`
+          : `collection_instance:${q.form_id}`;
+        openQueryItems.push({
+          target: targetRef,
+          target_kind: q.observation_id ? "observation" : "collection_instance",
+          site_code: q.site_code || null,
+          subject_code: q.subject_code || null,
+          enrollment_ref: q.enrollment_id
+            ? `enrollment:${q.enrollment_id}`
+            : null,
+          form_ref: q.form_id ? `collection_instance:${q.form_id}` : null,
+          collection_spec_id: q.collection_spec_id || null,
+          collection_title: q.collection_spec_id || "Vital Signs (CDASH VS)",
+          item_id: q.item_id || null,
+          headline: `${q.subject_code || "Participant"} · ${q.item_id || "Form"} — ${answered ? "Answered query awaiting closure" : "Open discrepancy query"}`,
+          detail: q.text || null,
+          next_capability: answered ? "query.close" : "query.answer",
+          since: q.opened_at || demoNowIso(),
+          priority: q.priority === "high" ? "High" : "Normal",
+          masked: false,
+          mask: null,
+        });
+      }
+
+      const verificationItems = [];
+      const medicalReviewItems = [];
+      const unsignedFormItems = [];
+
+      for (const f of state.forms.values()) {
+        const subj = resolveEnrollmentByIdOrCode(
+          state.subjects,
+          f.enrollment_id
+        );
+        const formRef = `collection_instance:${f.form_id}`;
+        const enrollmentRef = f.enrollment_id
+          ? `enrollment:${f.enrollment_id}`
+          : null;
+        const collectionTitle =
+          f.collection_title || f.collection_spec_id || "Case Report Form";
+        const formAssertions = Array.isArray(f.assertions) ? f.assertions : [];
+        let recordedCount = 0;
+
+        for (const it of f.items || []) {
+          if (
+            !it.observation_id ||
+            it.value === null ||
+            it.value === undefined
+          ) {
+            continue;
+          }
+          recordedCount += 1;
+          const obsIdStr = String(it.observation_id);
+          if (openQueryObsIds.has(obsIdStr)) {
+            continue;
+          }
+          const obsRef = `observation:${obsIdStr}`;
+          const obs = state.observations.get(obsRef);
+          const obsAssertions = Array.isArray(obs?.assertions)
+            ? obs.assertions
+            : [];
+          const hasKernelOpenQuery = obsAssertions.some(
+            (a) => !a.retracted_at && String(a.kind).toLowerCase() === "queried"
+          );
+          if (hasKernelOpenQuery) continue;
+
+          const currentRev = Number(it.revision ?? obs?.version ?? 1);
+          const sdvRequired =
+            it.sdv_required !== false && obs?.sdv_required !== false;
+          const medReviewRequired = Boolean(
+            it.medical_review_required || obs?.medical_review_required
+          );
+
+          const isVerified =
+            obsAssertions.some(
+              (a) =>
+                !a.retracted_at &&
+                String(a.kind).toLowerCase() === "verified" &&
+                (a.revision === undefined || Number(a.revision) === currentRev)
+            ) ||
+            formAssertions.some(
+              (a) =>
+                !a.retracted_at &&
+                String(a.kind).toLowerCase() === "verified" &&
+                a.target === obsRef &&
+                (a.revision === undefined || Number(a.revision) === currentRev)
+            );
+
+          if (sdvRequired && !isVerified) {
+            verificationItems.push({
+              target: obsRef,
+              target_kind: "observation",
+              site_code: subj?.site_id || null,
+              subject_code: subj?.subject_id || null,
+              enrollment_ref: enrollmentRef,
+              form_ref: formRef,
+              collection_spec_id: f.collection_spec_id || null,
+              collection_title: collectionTitle,
+              item_id: it.item_id || null,
+              headline: `${subj?.subject_id || "Participant"} · ${collectionTitle} · ${it.concept || it.item_id}`,
+              detail: `Revision ${currentRev} awaiting targeted source verification`,
+              next_capability: "observation.verify",
+              since: it.recorded_at || f.collected_at || demoNowIso(),
+              priority: "Normal",
+              masked: false,
+              mask: null,
+            });
+          }
+
+          const isReviewed =
+            obsAssertions.some(
+              (a) =>
+                !a.retracted_at &&
+                String(a.kind).toLowerCase() === "reviewed" &&
+                (a.revision === undefined || Number(a.revision) === currentRev)
+            ) ||
+            formAssertions.some(
+              (a) =>
+                !a.retracted_at &&
+                String(a.kind).toLowerCase() === "reviewed" &&
+                a.target === obsRef &&
+                (a.revision === undefined || Number(a.revision) === currentRev)
+            );
+
+          if (medReviewRequired && !isReviewed) {
+            medicalReviewItems.push({
+              target: obsRef,
+              target_kind: "observation",
+              site_code: subj?.site_id || null,
+              subject_code: subj?.subject_id || null,
+              enrollment_ref: enrollmentRef,
+              form_ref: formRef,
+              collection_spec_id: f.collection_spec_id || null,
+              collection_title: collectionTitle,
+              item_id: it.item_id || null,
+              headline: `${subj?.subject_id || "Participant"} · ${collectionTitle} · ${it.concept || it.item_id}`,
+              detail: `Revision ${currentRev} awaiting medical monitor review`,
+              next_capability: "observation.review",
+              since: it.recorded_at || f.collected_at || demoNowIso(),
+              priority: "Normal",
+              masked: false,
+              mask: null,
+            });
+          }
+        }
+
+        if (recordedCount > 0) {
+          const sigs = Array.isArray(f.signatures) ? f.signatures : [];
+          const signed =
+            sigs.length > 0 &&
+            sigs.some(
+              (s) => !s.superseded && s.content_hash === f.content_hash
+            );
+          if (!signed) {
+            unsignedFormItems.push({
+              target: formRef,
+              target_kind: "collection_instance",
+              site_code: subj?.site_id || null,
+              subject_code: subj?.subject_id || null,
+              enrollment_ref: enrollmentRef,
+              form_ref: formRef,
+              collection_spec_id: f.collection_spec_id || null,
+              collection_title: collectionTitle,
+              item_id: null,
+              headline: `${subj?.subject_id || "Participant"} · ${collectionTitle}`,
+              detail:
+                sigs.length > 0
+                  ? "Investigator signature superseded by subsequent edit"
+                  : "Awaiting Principal Investigator 21 CFR Part 11 signature",
+              next_capability: "collection.sign",
+              since: f.opened_at || demoNowIso(),
+              priority: "Normal",
+              masked: false,
+              mask: null,
+            });
+          }
+        }
+      }
+
+      let dynamicQueues = [
+        {
+          code: "open_queries",
+          title: "Open discrepancy queries",
+          owner_role: "Site Coordinator / Monitor",
+          total_count: openQueryItems.length,
+          visible_count: openQueryItems.length,
+          masked_count: 0,
+          items: openQueryItems,
+        },
+        {
+          code: "source_verifications",
+          title: "Targeted source verifications due",
+          owner_role: "Monitor / CRA",
+          total_count: verificationItems.length,
+          visible_count: verificationItems.length,
+          masked_count: 0,
+          items: verificationItems,
+        },
+        {
+          code: "medical_reviews",
+          title: "Medical reviews due",
+          owner_role: "Medical Monitor",
+          total_count: medicalReviewItems.length,
+          visible_count: medicalReviewItems.length,
+          masked_count: 0,
+          items: medicalReviewItems,
+        },
+        {
+          code: "unsigned_forms",
+          title: "Forms awaiting investigator signature",
+          owner_role: "Principal Investigator",
+          total_count: unsignedFormItems.length,
+          visible_count: unsignedFormItems.length,
+          masked_count: 0,
+          items: unsignedFormItems,
+        },
+      ];
+
+      if (queue) {
+        dynamicQueues = dynamicQueues.filter((q) => q.code === queue);
+      }
+      return { data: { queues: dynamicQueues } };
     },
 
     getProposal(proposalRef) {

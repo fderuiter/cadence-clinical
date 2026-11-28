@@ -76,8 +76,16 @@
     </p>
 
     <template v-else>
+      <LocksCloseoutReadinessCard
+        :can-apply="canApply"
+        :study-code="studyCode"
+        :apply-scope-ref="applyScopeRef"
+        :readiness="readiness"
+        :readiness-loading="readinessLoading"
+        :readiness-gates="readinessGates"
+      />
+
       <LocksApplyForm
-        v-if="canApply"
         v-model:apply-scope-kind="applyScopeKind"
         v-model:selected-site-ref="selectedSiteRef"
         v-model:selected-enrollment-ref="selectedEnrollmentRef"
@@ -85,6 +93,7 @@
         v-model:selected-observation-ref="selectedObservationRef"
         v-model:apply-kind="applyKind"
         v-model:apply-reason="applyReason"
+        :can-apply="canApply"
         :study-code="studyCode"
         :study-ref="studyRef"
         :needs-site-picker="needsSitePicker"
@@ -99,9 +108,6 @@
         :forms-loading="formsLoading"
         :observations-loading="observationsLoading"
         :apply-scope-ref="applyScopeRef"
-        :readiness="readiness"
-        :readiness-loading="readinessLoading"
-        :readiness-gates="readinessGates"
         :is-apply-disabled="isApplyDisabled"
         :busy="busy"
         :can-freeze-by-readiness="canFreezeByReadiness"
@@ -335,6 +341,7 @@ import { ClinicalDataTable, ClinicalInput } from "ui";
 import { normalizeLookupNodeRef } from "../../canvas/nodeResolver";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import LocksApplyForm from "./LocksApplyForm.vue";
+import LocksCloseoutReadinessCard from "./LocksCloseoutReadinessCard.vue";
 import LocksQuickReasonModal from "./LocksQuickReasonModal.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 import SupportDetails from "./SupportDetails.vue";

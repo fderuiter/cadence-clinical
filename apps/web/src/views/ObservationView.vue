@@ -70,6 +70,13 @@
               </span>
             </template>
             <span
+              v-else-if="hasRecordedValue && !sdvRequired"
+              class="clinical-badge clinical-badge--draft"
+              data-testid="observation-sdv-badge"
+            >
+              SDV not required
+            </span>
+            <span
               v-else-if="hasRecordedValue"
               class="clinical-badge clinical-badge--draft"
               data-testid="observation-sdv-badge"
@@ -101,6 +108,23 @@
             <template v-else> Open for correction </template>
           </dd>
         </dl>
+
+        <ObservationVerificationControls
+          :observation-ref="cleanObservationRef"
+          :enrollment-ref="observation.enrollment_ref"
+          :current-revision-number="currentRevisionNumber"
+          :has-recorded-value="hasRecordedValue"
+          :sdv-required="sdvRequired"
+          :medical-review-required="medicalReviewRequired"
+          :active-verification="activeVerification"
+          :active-review="activeReview"
+          :superseded-review="supersededReview"
+          :has-open-query="hasOpenQuery"
+          :assertions-locked="assertionsLocked"
+          :can-verify="canVerify"
+          :can-review="canReview"
+          @changed="load"
+        />
 
         <nav
           v-if="hasRouter && (owningFormLocation || studyQueriesLocation)"
@@ -338,6 +362,7 @@ import ScopeLockControls from "../components/canvas/ScopeLockControls.vue";
 import NodeRefChip from "../components/canvas/NodeRefChip.vue";
 import SupportDetails from "../components/canvas/SupportDetails.vue";
 import ObservationQueriesAndAssertions from "../components/observation/ObservationQueriesAndAssertions.vue";
+import ObservationVerificationControls from "../components/observation/ObservationVerificationControls.vue";
 import ReasonForChangeModal from "../components/ReasonForChangeModal.vue";
 import { useObservationCorrection } from "../composables/useObservationCorrection";
 import { useObservationScopeNavigation } from "../composables/useObservationScopeNavigation";
@@ -348,7 +373,11 @@ import {
 import type { KernelObservation } from "../api/kernelApi";
 import { formatObservationValue } from "../api/observationValue";
 import { normalizeLookupNodeRef } from "../canvas/nodeResolver";
-import { canCorrectObservations } from "../canvas/authority";
+import {
+  canCorrectObservations,
+  canReviewSource,
+  canVerifySource,
+} from "../canvas/authority";
 import { useAuthStore } from "../stores/auth";
 
 const props = defineProps<{
@@ -367,6 +396,8 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore();
 const canCorrect = computed(() => canCorrectObservations(authStore));
+const canVerify = computed(() => canVerifySource(authStore));
+const canReview = computed(() => canReviewSource(authStore));
 
 const {
   observation,
@@ -380,17 +411,21 @@ const {
 } = useObservationCorrection(() => props.observationRef);
 
 const {
+  activeReview,
   activeVerification,
   ancestorObservationLocks,
+  assertionsLocked,
   canSave,
   cleanObservationRef,
   correctionDescribedBy,
   currentRevisionNumber,
   directObservationLocks,
   discardCorrection,
+  hasOpenQuery,
   hasRecordedValue,
   isDirty,
   isTabularObservation,
+  medicalReviewRequired,
   newValue,
   normalizedConceptRef,
   observationAssertions,
@@ -402,6 +437,8 @@ const {
   parsed,
   reasonModalDescription,
   reasonOpen,
+  sdvRequired,
+  supersededReview,
   supersededVerification,
   unit,
 } = useObservationViewModel({
@@ -471,22 +508,3 @@ watch(
 </script>
 
 <style scoped src="../components/observation/observationView.css"></style>
-<style scoped>
-[data-testid="observation-concept"],
-[data-testid="observation-value"],
-[data-testid="observation-version"],
-.observation-timestamp,
-#observation-new-value,
-[data-testid="observation-unit"] {
-  font-family: var(--semantic-font-mono);
-}
-
-[data-testid="observation-value"],
-[data-testid="observation-version"],
-.observation-timestamp,
-.observation-lock,
-#observation-new-value,
-.observation-outcome {
-  font-variant-numeric: tabular-nums;
-}
-</style>

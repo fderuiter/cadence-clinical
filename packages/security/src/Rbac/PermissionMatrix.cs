@@ -176,6 +176,7 @@ public static partial class PermissionMatrix
             ["study_design"] = ["read"],
             ["subject_enrollment"] = ["read"],
             ["ecrf_data_entry"] = ["read"],
+            ["observation"] = ["review"],
             ["system_audit_logs"] = ["read"],
             ["export_masked"] = ["read"],
             ["eisf_document"] = ["read"],
