@@ -1,7 +1,10 @@
 <script setup>
 import { computed, isRef } from "vue";
 import ClinicalDrawer from "./ClinicalDrawer.vue";
-import { clinicalOverlayProps } from "./sharedProps.js";
+import {
+  clinicalDrawerHostProps,
+  clinicalOverlayProps,
+} from "./sharedProps.js";
 import { useResponsiveSplitWorkspace } from "../../composables/useResponsiveSplitWorkspace.js";
 
 const props = defineProps({
@@ -47,22 +50,7 @@ const props = defineProps({
     type: Number,
     default: 640,
   },
-  drawerId: {
-    type: String,
-    default: undefined,
-  },
-  drawerOverlayId: {
-    type: String,
-    default: undefined,
-  },
-  drawerTitle: {
-    type: String,
-    default: "",
-  },
-  drawerSubtitle: {
-    type: String,
-    default: "",
-  },
+  ...clinicalDrawerHostProps,
   drawerSize: {
     type: String,
     default: "lg",
@@ -70,10 +58,6 @@ const props = defineProps({
   drawerPosition: {
     type: String,
     default: "right",
-  },
-  mobileBottomSheet: {
-    type: Boolean,
-    default: true,
   },
   showDrawerHeader: {
     type: Boolean,

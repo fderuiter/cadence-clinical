@@ -47,6 +47,29 @@ export const clinicalOverlayOpenProps = {
 export const validateClinicalOverlayRole = (val) =>
   ["dialog", "alertdialog"].includes(val);
 
+export const clinicalDrawerHostProps = {
+  drawerId: {
+    type: String,
+    default: undefined,
+  },
+  drawerOverlayId: {
+    type: String,
+    default: undefined,
+  },
+  drawerTitle: {
+    type: String,
+    default: "",
+  },
+  drawerSubtitle: {
+    type: String,
+    default: "",
+  },
+  mobileBottomSheet: {
+    type: Boolean,
+    default: true,
+  },
+};
+
 export const clinicalOverlayProps = {
   size: {
     type: String,
