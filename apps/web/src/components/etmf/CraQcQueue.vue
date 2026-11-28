@@ -585,7 +585,7 @@ import { useToastStore } from "../../stores/toasts.js";
 import {
   canReviewEtmfQc,
   ETMF_QC_REVIEW_ROLE_REASON,
-} from "../../canvas/authority.ts";
+} from "../../canvas/authority/etmfTraining";
 
 const etmfStore = useEtmfStore();
 const authStore = useAuthStore();

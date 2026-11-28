@@ -2165,11 +2165,35 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "artifact_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "section",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Etmf_TmfDocumentSummaryDto"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2191,7 +2215,14 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Etmf_TmfDocumentDetailDto"
+                }
+              }
+            }
           }
         }
       }
@@ -25490,6 +25521,427 @@
             ]
           },
           "assignedCra": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Etmf_TmfDocumentDetailDto": {
+        "required": [
+          "id",
+          "studyCode",
+          "siteCode",
+          "zone",
+          "section",
+          "artifactCode",
+          "artifactType",
+          "filename",
+          "mimeType",
+          "status",
+          "approvalStatus",
+          "taxonomyVersion",
+          "versionIndex",
+          "createdAt",
+          "createdBy",
+          "reasonForChange",
+          "signer",
+          "signingTimestamp",
+          "isRedacted",
+          "documentOwnerId",
+          "protocolVersionTag",
+          "protocolVersionIndex",
+          "protocolVersionStatus",
+          "documentType",
+          "issueDate",
+          "expirationDate",
+          "correlationKey",
+          "contentChecksum",
+          "sourceSystem",
+          "syncStatus",
+          "objectKey",
+          "metadataJson",
+          "signatureManifestation",
+          "redactionManifestJson",
+          "redactionSourceId",
+          "idempotencyKey"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "studyCode": {
+            "type": "string"
+          },
+          "siteCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "zone": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "section": {
+            "type": "string"
+          },
+          "artifactCode": {
+            "type": "string"
+          },
+          "artifactType": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "approvalStatus": {
+            "type": "string"
+          },
+          "taxonomyVersion": {
+            "type": "string"
+          },
+          "versionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "reasonForChange": {
+            "type": "string"
+          },
+          "signer": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signingTimestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "isRedacted": {
+            "type": "boolean"
+          },
+          "documentOwnerId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "protocolVersionTag": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "protocolVersionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "protocolVersionStatus": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "documentType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "issueDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "expirationDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "correlationKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contentChecksum": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sourceSystem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "syncStatus": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "objectKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "metadataJson": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signatureManifestation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "redactionManifestJson": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "redactionSourceId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "idempotencyKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Etmf_TmfDocumentSummaryDto": {
+        "required": [
+          "id",
+          "studyCode",
+          "siteCode",
+          "zone",
+          "section",
+          "artifactCode",
+          "artifactType",
+          "filename",
+          "mimeType",
+          "status",
+          "approvalStatus",
+          "taxonomyVersion",
+          "versionIndex",
+          "createdAt",
+          "createdBy",
+          "reasonForChange",
+          "signer",
+          "signingTimestamp",
+          "isRedacted",
+          "documentOwnerId",
+          "protocolVersionTag",
+          "protocolVersionIndex",
+          "protocolVersionStatus",
+          "documentType",
+          "issueDate",
+          "expirationDate",
+          "correlationKey",
+          "contentChecksum",
+          "sourceSystem",
+          "syncStatus",
+          "objectKey"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "studyCode": {
+            "type": "string"
+          },
+          "siteCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "zone": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "section": {
+            "type": "string"
+          },
+          "artifactCode": {
+            "type": "string"
+          },
+          "artifactType": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "approvalStatus": {
+            "type": "string"
+          },
+          "taxonomyVersion": {
+            "type": "string"
+          },
+          "versionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "reasonForChange": {
+            "type": "string"
+          },
+          "signer": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signingTimestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "isRedacted": {
+            "type": "boolean"
+          },
+          "documentOwnerId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "protocolVersionTag": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "protocolVersionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "protocolVersionStatus": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "documentType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "issueDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "expirationDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "correlationKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contentChecksum": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sourceSystem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "syncStatus": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "objectKey": {
             "type": [
               "null",
               "string"

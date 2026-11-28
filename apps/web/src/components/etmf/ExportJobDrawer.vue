@@ -277,7 +277,7 @@ import { useToastStore } from "../../stores/toasts.js";
 import {
   canExportEtmf,
   ETMF_EXPORT_ROLE_REASON,
-} from "../../canvas/authority.ts";
+} from "../../canvas/authority/etmfTraining";
 import { formatClinicalStatus } from "../../utils/clinicalLabels";
 
 const store = useEtmfStore();

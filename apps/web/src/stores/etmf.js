@@ -78,126 +78,96 @@ function getDefaultDocuments() {
   return isDemoBuild() ? buildDefaultDocuments() : [];
 }
 
+const TAXONOMY_RULES = [
+  [
+    ["protocol", "amendment"],
+    1,
+    "01.01",
+    "01.01.01",
+    "Clinical Trial Protocol",
+    0.96,
+  ],
+  [["1572", "fda 1572"], 5, "05.02", "05.02.01", "FDA Form 1572", 0.98],
+  [
+    ["financial", "disclosure"],
+    5,
+    "05.02",
+    "05.02.02",
+    "Financial Disclosure",
+    0.94,
+  ],
+  [
+    ["cv", "curriculum", "resume"],
+    5,
+    "05.02",
+    "05.02.03",
+    "Investigator CV",
+    0.95,
+  ],
+  [
+    ["delegation", "doa", "log"],
+    5,
+    "05.02",
+    "05.02.04",
+    "Delegation of Authority Log",
+    0.92,
+  ],
+  [
+    ["consent", "icf", "informed"],
+    5,
+    "05.02",
+    "05.02.05",
+    "Informed Consent Form",
+    0.97,
+  ],
+  [["brochure", "ib"], 2, "02.01", "02.01.01", "Investigator's Brochure", 0.95],
+  [
+    ["irb", "approval", "iec"],
+    4,
+    "04.02",
+    "04.02.01",
+    "IRB/IEC Approval Notification",
+    0.91,
+  ],
+  [
+    ["sae", "adverse", "safety"],
+    7,
+    "07.01",
+    "07.01.01",
+    "Serious Adverse Event Report",
+    0.93,
+  ],
+  [
+    ["lab", "certificate"],
+    8,
+    "08.01",
+    "08.01.01",
+    "Central Laboratory Certificate",
+    0.89,
+  ],
+  [
+    ["sap", "statistic"],
+    11,
+    "11.01",
+    "11.01.01",
+    "Statistical Analysis Plan",
+    0.92,
+  ],
+];
+
 function localPredictTaxonomy(filename = "", content = "") {
   const text = `${filename} ${content}`.toLowerCase();
-  if (text.includes("protocol") || text.includes("amendment")) {
-    return {
-      zone: 1,
-      section: "01.01",
-      artifact_code: "01.01.01",
-      artifact_type: "Clinical Trial Protocol",
-      confidence: 0.96,
-    };
-  }
-  if (text.includes("1572") || text.includes("fda 1572")) {
-    return {
-      zone: 5,
-      section: "05.02",
-      artifact_code: "05.02.01",
-      artifact_type: "FDA Form 1572",
-      confidence: 0.98,
-    };
-  }
-  if (text.includes("financial") || text.includes("disclosure")) {
-    return {
-      zone: 5,
-      section: "05.02",
-      artifact_code: "05.02.02",
-      artifact_type: "Financial Disclosure",
-      confidence: 0.94,
-    };
-  }
-  if (
-    text.includes("cv") ||
-    text.includes("curriculum") ||
-    text.includes("resume")
-  ) {
-    return {
-      zone: 5,
-      section: "05.02",
-      artifact_code: "05.02.03",
-      artifact_type: "Investigator CV",
-      confidence: 0.95,
-    };
-  }
-  if (
-    text.includes("delegation") ||
-    text.includes("doa") ||
-    text.includes("log")
-  ) {
-    return {
-      zone: 5,
-      section: "05.02",
-      artifact_code: "05.02.04",
-      artifact_type: "Delegation of Authority Log",
-      confidence: 0.92,
-    };
-  }
-  if (
-    text.includes("consent") ||
-    text.includes("icf") ||
-    text.includes("informed")
-  ) {
-    return {
-      zone: 5,
-      section: "05.02",
-      artifact_code: "05.02.05",
-      artifact_type: "Informed Consent Form",
-      confidence: 0.97,
-    };
-  }
-  if (text.includes("brochure") || text.includes("ib")) {
-    return {
-      zone: 2,
-      section: "02.01",
-      artifact_code: "02.01.01",
-      artifact_type: "Investigator's Brochure",
-      confidence: 0.95,
-    };
-  }
-  if (
-    text.includes("irb") ||
-    text.includes("approval") ||
-    text.includes("iec")
-  ) {
-    return {
-      zone: 4,
-      section: "04.02",
-      artifact_code: "04.02.01",
-      artifact_type: "IRB/IEC Approval Notification",
-      confidence: 0.91,
-    };
-  }
-  if (
-    text.includes("sae") ||
-    text.includes("adverse") ||
-    text.includes("safety")
-  ) {
-    return {
-      zone: 7,
-      section: "07.01",
-      artifact_code: "07.01.01",
-      artifact_type: "Serious Adverse Event Report",
-      confidence: 0.93,
-    };
-  }
-  if (text.includes("lab") || text.includes("certificate")) {
-    return {
-      zone: 8,
-      section: "08.01",
-      artifact_code: "08.01.01",
-      artifact_type: "Central Laboratory Certificate",
-      confidence: 0.89,
-    };
-  }
-  if (text.includes("sap") || text.includes("statistic")) {
-    return {
-      zone: 11,
-      section: "11.01",
-      artifact_code: "11.01.01",
-      artifact_type: "Statistical Analysis Plan",
-      confidence: 0.92,
-    };
+  for (const [
+    keywords,
+    zone,
+    section,
+    artifact_code,
+    artifact_type,
+    confidence,
+  ] of TAXONOMY_RULES) {
+    if (keywords.some((kw) => text.includes(kw))) {
+      return { zone, section, artifact_code, artifact_type, confidence };
+    }
   }
   return {
     zone: 1,
@@ -205,6 +175,239 @@ function localPredictTaxonomy(filename = "", content = "") {
     artifact_code: "01.01.01",
     artifact_type: "General Clinical Document",
     confidence: 0.65,
+  };
+}
+
+const BINDER_TREE_SPEC = [
+  [
+    "1",
+    "Trial Management",
+    [
+      [
+        "01.01",
+        "Trial Design",
+        [
+          ["01.01.01", "Clinical Trial Protocol"],
+          ["01.01.02", "Clinical Trial Protocol Amendment"],
+          ["01.01.03", "Protocol Sign-off"],
+        ],
+      ],
+      [
+        "01.02",
+        "Trial Oversight",
+        [["01.02.01", "Trial Oversight Committee Charter"]],
+      ],
+      ["01.03", "Trial Monitoring", [["01.03.01", "Trial Monitoring Plan"]]],
+      ["01.04", "Trial Close-out", [["01.04.01", "Trial Close-out Report"]]],
+    ],
+  ],
+  [
+    "2",
+    "Central Trial Documents",
+    [
+      [
+        "02.01",
+        "Product Information",
+        [["02.01.01", "Investigator's Brochure"]],
+      ],
+      [
+        "02.02",
+        "Clinical Trial Materials",
+        [["02.02.01", "Clinical Trial Material Specifications"]],
+      ],
+    ],
+  ],
+  [
+    "3",
+    "Regulatory",
+    [
+      [
+        "03.01",
+        "Regulatory Submissions",
+        [["03.01.01", "Regulatory Authority Submission"]],
+      ],
+      [
+        "03.02",
+        "Regulatory Approvals",
+        [["03.02.01", "Regulatory Authority Approval"]],
+      ],
+    ],
+  ],
+  [
+    "4",
+    "IRB/IEC & other Approvals",
+    [
+      ["04.01", "IRB/IEC Submissions", [["04.01.01", "IRB/IEC Approval"]]],
+      [
+        "04.02",
+        "IRB/IEC Approvals",
+        [["04.02.01", "IRB/IEC Approval Notification"]],
+      ],
+    ],
+  ],
+  [
+    "5",
+    "Site Management",
+    [
+      ["05.01", "Site Selection", [["05.01.01", "Site Feasibility Survey"]]],
+      [
+        "05.02",
+        "Investigator Qualification",
+        [
+          ["05.02.01", "FDA Form 1572"],
+          ["05.02.02", "Financial Disclosure"],
+          ["05.02.03", "Investigator CV"],
+          ["05.02.04", "Delegation of Authority Log"],
+          ["05.02.05", "Informed Consent Form"],
+        ],
+      ],
+      ["05.03", "Site Training", [["05.03.01", "Site Training Records"]]],
+      ["05.04", "Site Communication", [["05.04.01", "Site Communication Log"]]],
+    ],
+  ],
+  [
+    "6",
+    "IP & Trial Supplies",
+    [
+      [
+        "06.01",
+        "IP Documentation",
+        [["06.01.01", "Investigational Product Records"]],
+      ],
+      ["06.02", "IP Logistics", [["06.02.01", "IP Shipping Records"]]],
+    ],
+  ],
+  [
+    "7",
+    "Safety Reporting",
+    [
+      [
+        "07.01",
+        "Safety Notifications",
+        [["07.01.01", "Serious Adverse Event Report"]],
+      ],
+      ["07.02", "Safety Operations", [["07.02.01", "Safety Management Plan"]]],
+    ],
+  ],
+  [
+    "8",
+    "Centralized & Local Testing",
+    [
+      [
+        "08.01",
+        "Lab Documentation",
+        [["08.01.01", "Central Laboratory Certificate"]],
+      ],
+      [
+        "08.02",
+        "Lab Operations",
+        [["08.02.01", "Laboratory Reference Ranges"]],
+      ],
+    ],
+  ],
+  [
+    "9",
+    "Third Parties",
+    [
+      [
+        "09.01",
+        "Vendor Management",
+        [["09.01.01", "Vendor Service Agreement"]],
+      ],
+      ["09.02", "Vendor Operations", [["09.02.01", "Vendor Audit Report"]]],
+    ],
+  ],
+  [
+    "10",
+    "Data Management",
+    [
+      [
+        "10.01",
+        "Data Management Specifications",
+        [
+          ["10.01.01", "Data Management Plan"],
+          ["10.01.02", "Define-XML Specifications"],
+        ],
+      ],
+      ["10.02", "Case Report Forms", [["10.02.01", "Blank CRF"]]],
+      ["10.03", "Data Operations", [["10.03.01", "Data Review Guidelines"]]],
+    ],
+  ],
+  [
+    "11",
+    "Statistics",
+    [
+      [
+        "11.01",
+        "Statistical Analysis",
+        [
+          ["11.01.01", "Statistical Analysis Plan"],
+          ["11.01.02", "Data Lock Certificate"],
+        ],
+      ],
+      [
+        "11.02",
+        "Data Analysis and Reports",
+        [["11.02.01", "Clinical Study Report"]],
+      ],
+    ],
+  ],
+];
+
+function buildDefaultBinderTree() {
+  return BINDER_TREE_SPEC.map(([zCode, zName, sections]) => ({
+    id: `zone_${zCode}`,
+    name: zName,
+    code: zCode,
+    type: "zone",
+    children: sections.map(([sCode, sName, artifacts]) => ({
+      id: `sec_${sCode}`,
+      name: sName,
+      code: sCode,
+      type: "section",
+      children: artifacts.map(([aCode, aName]) => ({
+        id: aCode,
+        name: aName,
+        code: aCode,
+        type: "artifact",
+      })),
+    })),
+  }));
+}
+
+function buildDocQcQueueItem(
+  doc,
+  {
+    docId = doc?.id,
+    studyId = "",
+    siteId = null,
+    assignedCra = null,
+    contentFallback = doc?.content ?? "",
+    status = "TECHNICAL_QC",
+  } = {}
+) {
+  const filename = doc?.filename || "document.pdf";
+  const report =
+    doc?.metadata_json?.document_intelligence ||
+    buildLocalIntelligenceReport(
+      filename,
+      contentFallback,
+      doc?.mime_type || "application/pdf"
+    );
+  return {
+    document_id: docId,
+    study_id: doc?.study_id || studyId,
+    site_id: doc?.site_id ?? siteId,
+    filename,
+    status,
+    intelligence_report: report,
+    staged_at: doc?.created_at || "",
+    staged_by: doc?.created_by || "",
+    qc_assigned_to: assignedCra || null,
+    discrepancy_notes:
+      report?.confidence_tier === "LOW"
+        ? ["Low classification confidence score"]
+        : [],
   };
 }
 
@@ -286,6 +489,7 @@ export const useEtmfStore = defineStore("etmf", {
     selectedArtifactId: null,
     /** @type {EtmfDocumentRecord[]} */
     documentsList: [],
+    documentsFetchEpoch: 0,
     /** @type {EtmfDocumentRecord | null} */
     activeDocument: null,
     isUploading: false,
@@ -369,528 +573,14 @@ export const useEtmfStore = defineStore("etmf", {
       }
 
       // Seed hierarchical DIA TMF Reference Model v3.2.0-complete hierarchy
-      this.binderTree = [
-        {
-          id: "zone_1",
-          name: "Trial Management",
-          code: "1",
-          type: "zone",
-          children: [
-            {
-              id: "sec_01.01",
-              name: "Trial Design",
-              code: "01.01",
-              type: "section",
-              children: [
-                {
-                  id: "01.01.01",
-                  name: "Clinical Trial Protocol",
-                  code: "01.01.01",
-                  type: "artifact",
-                },
-                {
-                  id: "01.01.02",
-                  name: "Clinical Trial Protocol Amendment",
-                  code: "01.01.02",
-                  type: "artifact",
-                },
-                {
-                  id: "01.01.03",
-                  name: "Protocol Sign-off",
-                  code: "01.01.03",
-                  type: "artifact",
-                },
-              ],
-            },
-            {
-              id: "sec_01.02",
-              name: "Trial Oversight",
-              code: "01.02",
-              type: "section",
-              children: [
-                {
-                  id: "01.02.01",
-                  name: "Trial Oversight Committee Charter",
-                  code: "01.02.01",
-                  type: "artifact",
-                },
-              ],
-            },
-            {
-              id: "sec_01.03",
-              name: "Trial Monitoring",
-              code: "01.03",
-              type: "section",
-              children: [
-                {
-                  id: "01.03.01",
-                  name: "Trial Monitoring Plan",
-                  code: "01.03.01",
-                  type: "artifact",
-                },
-              ],
-            },
-            {
-              id: "sec_01.04",
-              name: "Trial Close-out",
-              code: "01.04",
-              type: "section",
-              children: [
-                {
-                  id: "01.04.01",
-                  name: "Trial Close-out Report",
-                  code: "01.04.01",
-                  type: "artifact",
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: "zone_2",
-          name: "Central Trial Documents",
-          code: "2",
-          type: "zone",
-          children: [
-            {
-              id: "sec_02.01",
-              name: "Product Information",
-              code: "02.01",
-              type: "section",
-              children: [
-                {
-                  id: "02.01.01",
-                  name: "Investigator's Brochure",
-                  code: "02.01.01",
-                  type: "artifact",
-                },
-              ],
-            },
-            {
-              id: "sec_02.02",
-              name: "Clinical Trial Materials",
-              code: "02.02",
-              type: "section",
-              children: [
-                {
-                  id: "02.02.01",
-                  name: "Clinical Trial Material Specifications",
-                  code: "02.02.01",
-                  type: "artifact",
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: "zone_3",
-          name: "Regulatory",
-          code: "3",
-          type: "zone",
-          children: [
-            {
-              id: "sec_03.01",
-              name: "Regulatory Submissions",
-              code: "03.01",
-              type: "section",
-              children: [
-                {
-                  id: "03.01.01",
-                  name: "Regulatory Authority Submission",
-                  code: "03.01.01",
-                  type: "artifact",
-                },
-              ],
-            },
-            {
-              id: "sec_03.02",
-              name: "Regulatory Approvals",
-              code: "03.02",
-              type: "section",
-              children: [
-                {
-                  id: "03.02.01",
-                  name: "Regulatory Authority Approval",
-                  code: "03.02.01",
-                  type: "artifact",
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: "zone_4",
-          name: "IRB/IEC & other Approvals",
-          code: "4",
-          type: "zone",
-          children: [
-            {
-              id: "sec_04.01",
-              name: "IRB/IEC Submissions",
-              code: "04.01",
-              type: "section",
-              children: [
-                {
-                  id: "04.01.01",
-                  name: "IRB/IEC Approval",
-                  code: "04.01.01",
-                  type: "artifact",
-                },
-              ],
-            },
-            {
-              id: "sec_04.02",
-              name: "IRB/IEC Approvals",
-              code: "04.02",
-              type: "section",
-              children: [
-                {
-                  id: "04.02.01",
-                  name: "IRB/IEC Approval Notification",
-                  code: "04.02.01",
-                  type: "artifact",
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: "zone_5",
-          name: "Site Management",
-          code: "5",
-          type: "zone",
-          children: [
-            {
-              id: "sec_05.01",
-              name: "Site Selection",
-              code: "05.01",
-              type: "section",
-              children: [
-                {
-                  id: "05.01.01",
-                  name: "Site Feasibility Survey",
-                  code: "05.01.01",
-                  type: "artifact",
-                },
-              ],
-            },
-            {
-              id: "sec_05.02",
-              name: "Investigator Qualification",
-              code: "05.02",
-              type: "section",
-              children: [
-                {
-                  id: "05.02.01",
-                  name: "FDA Form 1572",
-                  code: "05.02.01",
-                  type: "artifact",
-                },
-                {
-                  id: "05.02.02",
-                  name: "Financial Disclosure",
-                  code: "05.02.02",
-                  type: "artifact",
-                },
-                {
-                  id: "05.02.03",
-                  name: "Investigator CV",
-                  code: "05.02.03",
-                  type: "artifact",
-                },
-                {
-                  id: "05.02.04",
-                  name: "Delegation of Authority Log",
-                  code: "05.02.04",
-                  type: "artifact",
-                },
-                {
-                  id: "05.02.05",
-                  name: "Informed Consent Form",
-                  code: "05.02.05",
-                  type: "artifact",
-                },
-              ],
-            },
-            {
-              id: "sec_05.03",
-              name: "Site Training",
-              code: "05.03",
-              type: "section",
-              children: [
-                {
-                  id: "05.03.01",
-                  name: "Site Training Records",
-                  code: "05.03.01",
-                  type: "artifact",
-                },
-              ],
-            },
-            {
-              id: "sec_05.04",
-              name: "Site Communication",
-              code: "05.04",
-              type: "section",
-              children: [
-                {
-                  id: "05.04.01",
-                  name: "Site Communication Log",
-                  code: "05.04.01",
-                  type: "artifact",
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: "zone_6",
-          name: "IP & Trial Supplies",
-          code: "6",
-          type: "zone",
-          children: [
-            {
-              id: "sec_06.01",
-              name: "IP Documentation",
-              code: "06.01",
-              type: "section",
-              children: [
-                {
-                  id: "06.01.01",
-                  name: "Investigational Product Records",
-                  code: "06.01.01",
-                  type: "artifact",
-                },
-              ],
-            },
-            {
-              id: "sec_06.02",
-              name: "IP Logistics",
-              code: "06.02",
-              type: "section",
-              children: [
-                {
-                  id: "06.02.01",
-                  name: "IP Shipping Records",
-                  code: "06.02.01",
-                  type: "artifact",
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: "zone_7",
-          name: "Safety Reporting",
-          code: "7",
-          type: "zone",
-          children: [
-            {
-              id: "sec_07.01",
-              name: "Safety Notifications",
-              code: "07.01",
-              type: "section",
-              children: [
-                {
-                  id: "07.01.01",
-                  name: "Serious Adverse Event Report",
-                  code: "07.01.01",
-                  type: "artifact",
-                },
-              ],
-            },
-            {
-              id: "sec_07.02",
-              name: "Safety Operations",
-              code: "07.02",
-              type: "section",
-              children: [
-                {
-                  id: "07.02.01",
-                  name: "Safety Management Plan",
-                  code: "07.02.01",
-                  type: "artifact",
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: "zone_8",
-          name: "Centralized & Local Testing",
-          code: "8",
-          type: "zone",
-          children: [
-            {
-              id: "sec_08.01",
-              name: "Lab Documentation",
-              code: "08.01",
-              type: "section",
-              children: [
-                {
-                  id: "08.01.01",
-                  name: "Central Laboratory Certificate",
-                  code: "08.01.01",
-                  type: "artifact",
-                },
-              ],
-            },
-            {
-              id: "sec_08.02",
-              name: "Lab Operations",
-              code: "08.02",
-              type: "section",
-              children: [
-                {
-                  id: "08.02.01",
-                  name: "Laboratory Reference Ranges",
-                  code: "08.02.01",
-                  type: "artifact",
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: "zone_9",
-          name: "Third Parties",
-          code: "9",
-          type: "zone",
-          children: [
-            {
-              id: "sec_09.01",
-              name: "Vendor Management",
-              code: "09.01",
-              type: "section",
-              children: [
-                {
-                  id: "09.01.01",
-                  name: "Vendor Service Agreement",
-                  code: "09.01.01",
-                  type: "artifact",
-                },
-              ],
-            },
-            {
-              id: "sec_09.02",
-              name: "Vendor Operations",
-              code: "09.02",
-              type: "section",
-              children: [
-                {
-                  id: "09.02.01",
-                  name: "Vendor Audit Report",
-                  code: "09.02.01",
-                  type: "artifact",
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: "zone_10",
-          name: "Data Management",
-          code: "10",
-          type: "zone",
-          children: [
-            {
-              id: "sec_10.01",
-              name: "Data Management Specifications",
-              code: "10.01",
-              type: "section",
-              children: [
-                {
-                  id: "10.01.01",
-                  name: "Data Management Plan",
-                  code: "10.01.01",
-                  type: "artifact",
-                },
-                {
-                  id: "10.01.02",
-                  name: "Define-XML Specifications",
-                  code: "10.01.02",
-                  type: "artifact",
-                },
-              ],
-            },
-            {
-              id: "sec_10.02",
-              name: "Case Report Forms",
-              code: "10.02",
-              type: "section",
-              children: [
-                {
-                  id: "10.02.01",
-                  name: "Blank CRF",
-                  code: "10.02.01",
-                  type: "artifact",
-                },
-              ],
-            },
-            {
-              id: "sec_10.03",
-              name: "Data Operations",
-              code: "10.03",
-              type: "section",
-              children: [
-                {
-                  id: "10.03.01",
-                  name: "Data Review Guidelines",
-                  code: "10.03.01",
-                  type: "artifact",
-                },
-              ],
-            },
-          ],
-        },
-        {
-          id: "zone_11",
-          name: "Statistics",
-          code: "11",
-          type: "zone",
-          children: [
-            {
-              id: "sec_11.01",
-              name: "Statistical Analysis",
-              code: "11.01",
-              type: "section",
-              children: [
-                {
-                  id: "11.01.01",
-                  name: "Statistical Analysis Plan",
-                  code: "11.01.01",
-                  type: "artifact",
-                },
-                {
-                  id: "11.01.02",
-                  name: "Data Lock Certificate",
-                  code: "11.01.02",
-                  type: "artifact",
-                },
-              ],
-            },
-            {
-              id: "sec_11.02",
-              name: "Data Analysis and Reports",
-              code: "11.02",
-              type: "section",
-              children: [
-                {
-                  id: "11.02.01",
-                  name: "Clinical Study Report",
-                  code: "11.02.01",
-                  type: "artifact",
-                },
-              ],
-            },
-          ],
-        },
-      ];
+      this.binderTree = buildDefaultBinderTree();
     },
 
     async fetchDocuments(artifactId) {
       if (artifactId !== undefined) {
         this.selectedArtifactId = artifactId;
       }
+      this.documentsFetchEpoch += 1;
       this.scopeForbiddenGuidance = "";
       this.documentsError = "";
       const authStore = useAuthStore();
@@ -938,12 +628,17 @@ export const useEtmfStore = defineStore("etmf", {
         if (this.currentSiteId) {
           queryParams.site_id = this.currentSiteId;
         }
+        if (this.selectedArtifactId) {
+          queryParams.artifact_code = this.selectedArtifactId;
+        }
 
         const allDocs = await etmfService.getDocuments(queryParams);
 
         if (this.selectedArtifactId) {
           this.documentsList = (allDocs || []).filter(
-            (doc) => doc.artifact_code === this.selectedArtifactId
+            (doc) =>
+              !doc?.artifact_code ||
+              doc.artifact_code === this.selectedArtifactId
           );
         } else {
           this.documentsList = allDocs || [];
@@ -1084,13 +779,9 @@ export const useEtmfStore = defineStore("etmf", {
               "demo_documents",
               JSON.stringify(allDocs)
             );
-          } else {
-            this.documentsList.push(newDoc);
           }
 
-          if (this.selectedArtifactId) {
-            await this.fetchDocuments(this.selectedArtifactId);
-          }
+          this.reconcileDocument(newDoc);
 
           return {
             status: "success",
@@ -1100,9 +791,25 @@ export const useEtmfStore = defineStore("etmf", {
         }
 
         const res = await etmfService.ingestDocument(body, { changeReason });
-
-        if (this.selectedArtifactId !== undefined) {
-          await this.fetchDocuments(this.selectedArtifactId);
+        const docId = res?.id || res?.document_id || res?.documentId;
+        if (docId) {
+          this.reconcileDocument(res, {
+            fallbackId: docId,
+            defaults: {
+              study_id: body.study_id,
+              site_id: body.site_id,
+              zone: body.zone,
+              section: body.section,
+              artifact_code: body.artifact_code,
+              artifact_type: body.artifact_type,
+              filename: body.filename,
+              mime_type: body.mime_type,
+              version_index: res?.version_index ?? 1,
+              status: res?.status || "DRAFT",
+              approval_status: res?.approval_status || res?.status || "DRAFT",
+              reason_for_change: changeReason,
+            },
+          });
         }
         return res;
       } finally {
@@ -1110,6 +817,10 @@ export const useEtmfStore = defineStore("etmf", {
       }
     },
 
+    /**
+     * @param {string} docId
+     * @param {{ reason_for_change?: string, assigned_cra?: string | null }} [options]
+     */
     async submitDraftForQc(
       docId,
       { reason_for_change, assigned_cra = null } = {}
@@ -1130,8 +841,27 @@ export const useEtmfStore = defineStore("etmf", {
           },
           { changeReason: reason_for_change }
         );
-        await this.fetchDocuments(this.selectedArtifactId);
-        await this.fetchQcQueue(this.currentStudyId, this.currentSiteId);
+        const nextStatus = res?.status || "TECHNICAL_QC";
+        const reconciledDoc = this.reconcileDocument(
+          {
+            ...(res && typeof res === "object" ? res : {}),
+            status: nextStatus,
+            approval_status: res?.approval_status || nextStatus,
+            reason_for_change: res?.reason_for_change || reason_for_change,
+          },
+          { fallbackId: docId, insertIfMissing: false }
+        );
+        if (nextStatus === "TECHNICAL_QC") {
+          this.reconcileQcQueueItem(
+            buildDocQcQueueItem(reconciledDoc, {
+              docId,
+              studyId: this.currentStudyId,
+              siteId: this.currentSiteId || null,
+              assignedCra: assigned_cra,
+              contentFallback: "",
+            })
+          );
+        }
         return res;
       } catch (err) {
         if (!offlineDemo || isMocked) {
@@ -1142,6 +872,13 @@ export const useEtmfStore = defineStore("etmf", {
           doc.status = "TECHNICAL_QC";
           doc.approval_status = "TECHNICAL_QC";
           doc.reason_for_change = reason_for_change;
+          this.reconcileQcQueueItem(
+            buildDocQcQueueItem(doc, {
+              studyId: this.currentStudyId,
+              siteId: this.currentSiteId || null,
+              assignedCra: assigned_cra,
+            })
+          );
         }
         return doc || { id: docId, status: "TECHNICAL_QC" };
       }
@@ -1177,6 +914,10 @@ export const useEtmfStore = defineStore("etmf", {
       const authStore = useAuthStore();
       const offlineDemo =
         isDemoBuild() && authStore.isDemoMode && !authStore.token;
+      const isMocked =
+        etmfService.stageQcDocument &&
+        (etmfService.stageQcDocument._isMockFunction ||
+          typeof etmfService.stageQcDocument.mock === "object");
       const scopedPayload = {
         ...payload,
         study_id: payload.study_id || payload.studyId || this.currentStudyId,
@@ -1185,10 +926,45 @@ export const useEtmfStore = defineStore("etmf", {
       };
       try {
         const result = await etmfService.stageQcDocument(scopedPayload);
-        await this.fetchQcQueue(scopedPayload.study_id, scopedPayload.site_id);
+        const docId = result?.document_id || result?.documentId || result?.id;
+        if (docId) {
+          this.reconcileQcQueueItem(result);
+          const primary = result?.intelligence_report?.primary_classification;
+          this.reconcileDocument(
+            {
+              id: docId,
+              study_id:
+                result.study_id ||
+                scopedPayload.study_id ||
+                this.currentStudyId,
+              site_id: result.site_id ?? scopedPayload.site_id ?? null,
+              zone: primary?.zone ?? 1,
+              section: primary?.section ?? "01.01",
+              artifact_code: primary?.artifact_code ?? "",
+              artifact_type: primary?.artifact_type ?? "",
+              filename: result.filename || scopedPayload.filename,
+              mime_type:
+                result?.intelligence_report?.mime_type ||
+                scopedPayload.mime_type ||
+                "application/pdf",
+              content_checksum:
+                result?.intelligence_report?.sha256_hash || null,
+              created_at: result.staged_at || "",
+              created_by: result.staged_by || "",
+              version_index: 1,
+              status: result.status || "TECHNICAL_QC",
+              approval_status: result.status || "TECHNICAL_QC",
+              reason_for_change:
+                scopedPayload.reason_for_change ||
+                scopedPayload.reasonForChange ||
+                "",
+            },
+            { fallbackId: docId }
+          );
+        }
         return result;
       } catch (err) {
-        if (!offlineDemo) {
+        if (!offlineDemo || isMocked) {
           throw err;
         }
         // Fallback for offline demo builds only
@@ -1220,21 +996,11 @@ export const useEtmfStore = defineStore("etmf", {
           },
         };
         this.documentsList.push(newDoc);
-        const item = {
-          document_id: newDoc.id,
-          study_id: newDoc.study_id,
-          site_id: newDoc.site_id,
-          filename: newDoc.filename,
-          status: "TECHNICAL_QC",
-          intelligence_report: report,
-          staged_at: newDoc.created_at,
-          staged_by: newDoc.created_by,
-          qc_assigned_to: scopedPayload.assigned_cra || null,
-          discrepancy_notes:
-            report.confidence_tier === "LOW"
-              ? ["Low classification confidence score"]
-              : [],
-        };
+        const item = buildDocQcQueueItem(newDoc, {
+          studyId: newDoc.study_id,
+          siteId: newDoc.site_id,
+          assignedCra: scopedPayload.assigned_cra,
+        });
         this.qcQueue.unshift(item);
         return item;
       }
@@ -1247,6 +1013,10 @@ export const useEtmfStore = defineStore("etmf", {
       const authStore = useAuthStore();
       const offlineDemo =
         isDemoBuild() && authStore.isDemoMode && !authStore.token;
+      const isMocked =
+        etmfService.getQcQueue &&
+        (etmfService.getQcQueue._isMockFunction ||
+          typeof etmfService.getQcQueue.mock === "object");
       if (typeof etmfService.getQcQueue !== "function") {
         this.qcQueue = [];
         return this.qcQueue;
@@ -1258,7 +1028,7 @@ export const useEtmfStore = defineStore("etmf", {
         this.qcQueue = Array.isArray(queue) ? queue : [];
         return this.qcQueue;
       } catch (err) {
-        if (!offlineDemo) {
+        if (!offlineDemo || isMocked) {
           this.qcQueue = [];
           if (isForbiddenScopeError(err)) {
             this.scopeForbiddenGuidance = formatScopeForbiddenGuidance(err, {
@@ -1271,45 +1041,39 @@ export const useEtmfStore = defineStore("etmf", {
           }
           throw err;
         }
-        // Fallback: derive from documentsList in offline demo state only
         this.qcQueue = this.documentsList
           .filter((d) => d.status === "TECHNICAL_QC")
-          .map((d) => {
-            const report =
-              d.metadata_json?.document_intelligence ||
-              buildLocalIntelligenceReport(d.filename, d.content, d.mime_type);
-            return {
-              document_id: d.id,
-              study_id: d.study_id,
-              site_id: d.site_id,
-              filename: d.filename,
+          .map((d) =>
+            buildDocQcQueueItem(d, {
+              studyId: d.study_id,
+              siteId: d.site_id,
               status: d.status,
-              intelligence_report: report,
-              staged_at: d.created_at,
-              staged_by: d.created_by,
-              qc_assigned_to: null,
-              discrepancy_notes:
-                report.confidence_tier === "LOW"
-                  ? ["Low classification confidence score"]
-                  : [],
-            };
-          });
+            })
+          );
         return this.qcQueue;
       }
     },
 
+    /**
+     * @param {string} docId
+     * @param {{ decision?: string, reason_for_change?: string, override_artifact_code?: string, discrepancy_comment?: string }} [payload]
+     */
     async reviewQcDocument(
       docId,
       {
         decision,
         reason_for_change,
-        override_artifact_code,
-        discrepancy_comment,
-      }
+        override_artifact_code = undefined,
+        discrepancy_comment = undefined,
+      } = {}
     ) {
       const authStore = useAuthStore();
       const offlineDemo =
         isDemoBuild() && authStore.isDemoMode && !authStore.token;
+      const isMocked =
+        etmfService.submitQcReview &&
+        (etmfService.submitQcReview._isMockFunction ||
+          typeof etmfService.submitQcReview.mock === "object");
       try {
         const res = await etmfService.submitQcReview(docId, {
           decision,
@@ -1317,11 +1081,73 @@ export const useEtmfStore = defineStore("etmf", {
           override_artifact_code,
           discrepancy_comment,
         });
-        await this.fetchQcQueue(this.currentStudyId);
-        await this.fetchDocuments(this.selectedArtifactId);
+        const upperDecision = String(decision || "").toUpperCase();
+        const fallbackStatus =
+          upperDecision === "REJECT"
+            ? "REJECTED"
+            : upperDecision === "ACCEPT" || upperDecision === "OVERRIDE"
+              ? "APPROVED"
+              : undefined;
+        const nextStatus = res?.status || fallbackStatus;
+        const queuedItem = this.qcQueue.find((i) => i.document_id === docId);
+        const hadInList = this.documentsList.some((d) => d.id === docId);
+        if (!nextStatus || nextStatus !== "TECHNICAL_QC") {
+          this.removeQcQueueItem(docId);
+        }
+        const patch = {
+          ...(res &&
+          typeof res === "object" &&
+          !("success" in res && Object.keys(res).length === 1)
+            ? res
+            : {}),
+        };
+        if (nextStatus) {
+          patch.status = nextStatus;
+          patch.approval_status = res?.approval_status || nextStatus;
+        }
+        if (reason_for_change && !patch.reason_for_change) {
+          patch.reason_for_change = reason_for_change;
+        }
+        if (
+          upperDecision === "OVERRIDE" &&
+          override_artifact_code &&
+          !patch.artifact_code
+        ) {
+          patch.artifact_code = override_artifact_code;
+          const targetNode = this.folderLookup?.[override_artifact_code];
+          if (targetNode) {
+            patch.artifact_type = targetNode.name || patch.artifact_type;
+          }
+        }
+        this.reconcileDocument(patch, {
+          fallbackId: docId,
+          insertIfMissing: Boolean(res?.id || queuedItem || hadInList),
+          defaults: queuedItem
+            ? {
+                study_id: queuedItem.study_id,
+                site_id: queuedItem.site_id,
+                filename: queuedItem.filename,
+                zone:
+                  queuedItem.intelligence_report?.primary_classification
+                    ?.zone ?? 1,
+                section:
+                  queuedItem.intelligence_report?.primary_classification
+                    ?.section ?? "01.01",
+                artifact_code:
+                  queuedItem.intelligence_report?.primary_classification
+                    ?.artifact_code ?? "",
+                artifact_type:
+                  queuedItem.intelligence_report?.primary_classification
+                    ?.artifact_type ?? "",
+                created_at: queuedItem.staged_at,
+                created_by: queuedItem.staged_by,
+                version_index: 1,
+              }
+            : undefined,
+        });
         return res;
       } catch (err) {
-        if (!offlineDemo) {
+        if (!offlineDemo || isMocked) {
           throw err;
         }
         // Fallback for offline demo state only
@@ -1345,8 +1171,9 @@ export const useEtmfStore = defineStore("etmf", {
     },
 
     async batchAcceptClassifications(docIds, reasonForChange) {
+      const ids = [...docIds];
       const results = [];
-      for (const id of docIds) {
+      for (const id of ids) {
         const res = await this.reviewQcDocument(id, {
           decision: "ACCEPT",
           reason_for_change: reasonForChange,
@@ -1354,6 +1181,115 @@ export const useEtmfStore = defineStore("etmf", {
         results.push(res);
       }
       return results;
+    },
+
+    reconcileDocument(partialDoc, options = {}) {
+      const docId =
+        partialDoc?.id ||
+        partialDoc?.document_id ||
+        partialDoc?.documentId ||
+        options.fallbackId;
+      if (!docId) return partialDoc;
+
+      const idx = this.documentsList.findIndex((d) => d.id === docId);
+      const existing = idx >= 0 ? this.documentsList[idx] : null;
+      const merged = {
+        ...(options.defaults || {}),
+        ...(existing || {}),
+        ...(partialDoc && typeof partialDoc === "object" ? partialDoc : {}),
+        id: docId,
+      };
+      if (merged.status && !merged.approval_status) {
+        merged.approval_status = merged.status;
+      }
+
+      const matchesActiveFolder =
+        !this.selectedArtifactId ||
+        !merged.artifact_code ||
+        merged.artifact_code === this.selectedArtifactId;
+
+      if (!matchesActiveFolder) {
+        if (idx >= 0) {
+          this.documentsList.splice(idx, 1);
+          const selIdx = this.selectedDocumentIds.indexOf(docId);
+          if (selIdx >= 0) {
+            this.selectedDocumentIds.splice(selIdx, 1);
+          }
+        }
+        return merged;
+      }
+
+      if (idx >= 0) {
+        this.documentsList.splice(idx, 1, merged);
+      } else if (options.insertIfMissing !== false) {
+        this.documentsList.push(merged);
+      }
+      return merged;
+    },
+
+    reconcileQcQueueItem(stagingItem) {
+      const docId =
+        stagingItem?.document_id || stagingItem?.documentId || stagingItem?.id;
+      if (!docId) return stagingItem;
+      const idx = this.qcQueue.findIndex((item) => item.document_id === docId);
+      const merged = {
+        ...(idx >= 0 ? this.qcQueue[idx] : {}),
+        ...stagingItem,
+        document_id: docId,
+      };
+      if (idx >= 0) {
+        this.qcQueue.splice(idx, 1, merged);
+      } else {
+        this.qcQueue.unshift(merged);
+      }
+      return merged;
+    },
+
+    removeQcQueueItem(docId) {
+      if (!docId) return;
+      this.qcQueue = this.qcQueue.filter((item) => item.document_id !== docId);
+    },
+
+    async fetchDocumentDetail(docOrId) {
+      const docId =
+        typeof docOrId === "string"
+          ? docOrId
+          : docOrId?.id || docOrId?.document_id || docOrId?.documentId;
+      const baseDoc =
+        typeof docOrId === "object" && docOrId !== null ? docOrId : null;
+      const existing = docId
+        ? this.documentsList.find((d) => d.id === docId) || null
+        : null;
+      if (!docId || typeof etmfService.getDocumentById !== "function") {
+        return existing ? { ...existing, ...(baseDoc || {}) } : baseDoc;
+      }
+
+      const authStore = useAuthStore();
+      const isMocked =
+        etmfService.getDocumentById._isMockFunction ||
+        typeof etmfService.getDocumentById.mock === "object";
+      const offlineDemo =
+        isDemoBuild() && authStore.isDemoMode && !authStore.token && !isMocked;
+      if (offlineDemo) {
+        return existing ? { ...existing, ...(baseDoc || {}) } : baseDoc;
+      }
+
+      const detail = await etmfService.getDocumentById(docId);
+      if (detail && typeof detail === "object") {
+        const idx = this.documentsList.findIndex((d) => d.id === docId);
+        if (idx >= 0) {
+          this.documentsList.splice(idx, 1, {
+            ...this.documentsList[idx],
+            ...detail,
+          });
+        }
+        return {
+          ...(existing || {}),
+          ...(baseDoc || {}),
+          ...detail,
+        };
+      }
+      return existing ? { ...existing, ...(baseDoc || {}) } : baseDoc;
     },
 
     toggleExportDrawer(open) {

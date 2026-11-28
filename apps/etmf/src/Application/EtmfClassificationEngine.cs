@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -49,6 +50,65 @@ public static class EtmfClassificationEngine
             siteId,
             allowUnassignedSiteForScopedCaller: true,
             code: ClinicalScopeGuard.ForbiddenCode);
+
+    internal static IResult? TryScopeDocumentsQuery(
+        IQueryable<TmfDocument> source,
+        HttpContext httpContext,
+        string? studyId,
+        string? siteId,
+        out IQueryable<TmfDocument> scopedQuery)
+    {
+        scopedQuery = source;
+
+        if (!string.IsNullOrWhiteSpace(studyId) && !ClinicalScopeGuard.CanAccessStudy(httpContext, studyId))
+        {
+            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.StudyAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
+        }
+
+        var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
+        if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
+        {
+            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
+        }
+
+        string? requestedSiteId = !string.IsNullOrWhiteSpace(siteId)
+            ? siteId
+            : httpContext.Request.Query["site_id"].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(requestedSiteId) && !ClinicalScopeGuard.CanAccessSite(httpContext, requestedSiteId))
+        {
+            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
+        }
+
+        var query = ClinicalScopeGuard.NarrowToStudyScope(source, httpContext, d => d.StudyId);
+        if (!string.IsNullOrWhiteSpace(studyId))
+        {
+            var normalizedStudyId = studyId.Trim();
+            query = query.Where(d => d.StudyId == normalizedStudyId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(requestedSiteId))
+        {
+            var normalizedSiteId = requestedSiteId.Trim();
+            query = query.Where(d => d.SiteId == normalizedSiteId);
+        }
+
+        if (ClinicalScopeGuard.IsSiteBound(principal))
+        {
+            var allowedSites = principal!.AssignedSites
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => s.Trim().ToUpperInvariant())
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            query = query.Where(d =>
+                d.SiteId == null
+                || d.SiteId.Trim().Length == 0
+                || allowedSites.Contains(d.SiteId.Trim().ToUpper()));
+        }
+
+        scopedQuery = query;
+        return null;
+    }
 
     internal static string? ResolveChangeReason(string? bodyReason, HttpContext httpContext)
     {

@@ -17,7 +17,7 @@ export async function executeCommitTaxonomy({
   }
   const { zone, section } = getZoneAndSectionFromCode(targetCode);
   try {
-    await etmfService.tagDocument(
+    const updated = await etmfService.tagDocument(
       doc.id,
       { zone, section, artifact_code: targetCode },
       {
@@ -25,7 +25,20 @@ export async function executeCommitTaxonomy({
           "Corrected taxonomy classification via interactive grid navigation",
       }
     );
-    await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
+    const serverFields =
+      updated && typeof updated === "object" && "id" in updated ? updated : {};
+    if (typeof etmfStore.reconcileDocument === "function") {
+      etmfStore.reconcileDocument(
+        {
+          ...serverFields,
+          zone: serverFields.zone ?? zone,
+          section: serverFields.section ?? section,
+          artifact_code: serverFields.artifact_code ?? targetCode,
+          artifact_type: serverFields.artifact_type ?? selectedNode.name,
+        },
+        { fallbackId: doc.id, insertIfMissing: false }
+      );
+    }
   } catch (err) {
     useToastStore().apiError("Failed to update document taxonomy", err);
   } finally {

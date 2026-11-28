@@ -200,6 +200,8 @@ export interface paths {
           study_id?: string;
           zone?: number | string;
           site_id?: string;
+          artifact_code?: string;
+          section?: string;
         };
         header?: never;
         path?: never;
@@ -212,7 +214,9 @@ export interface paths {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/json": components["schemas"]["Etmf_TmfDocumentSummaryDto"][];
+          };
         };
       };
     };
@@ -247,7 +251,9 @@ export interface paths {
           headers: {
             [name: string]: unknown;
           };
-          content?: never;
+          content: {
+            "application/json": components["schemas"]["Etmf_TmfDocumentDetailDto"];
+          };
         };
       };
     };
@@ -652,6 +658,91 @@ export interface components {
     Etmf_SubmitDocumentForQcRequest: {
       reasonForChange?: null | string;
       assignedCra?: null | string;
+    };
+    Etmf_TmfDocumentDetailDto: {
+      id: string;
+      studyCode: string;
+      siteCode: null | string;
+      /** Format: int32 */
+      zone: number | string;
+      section: string;
+      artifactCode: string;
+      artifactType: string;
+      filename: string;
+      mimeType: string;
+      status: string;
+      approvalStatus: string;
+      taxonomyVersion: string;
+      /** Format: int64 */
+      versionIndex: number | string;
+      /** Format: date-time */
+      createdAt: string;
+      createdBy: string;
+      reasonForChange: string;
+      signer: null | string;
+      /** Format: date-time */
+      signingTimestamp: null | string;
+      isRedacted: boolean;
+      documentOwnerId: null | string;
+      protocolVersionTag: null | string;
+      /** Format: int32 */
+      protocolVersionIndex: null | number | string;
+      protocolVersionStatus: null | string;
+      documentType: null | string;
+      /** Format: date-time */
+      issueDate: null | string;
+      /** Format: date-time */
+      expirationDate: null | string;
+      correlationKey: null | string;
+      contentChecksum: null | string;
+      sourceSystem: null | string;
+      syncStatus: null | string;
+      objectKey: null | string;
+      metadataJson: null | string;
+      signatureManifestation: null | string;
+      redactionManifestJson: null | string;
+      redactionSourceId: null | string;
+      idempotencyKey: null | string;
+    };
+    Etmf_TmfDocumentSummaryDto: {
+      id: string;
+      studyCode: string;
+      siteCode: null | string;
+      /** Format: int32 */
+      zone: number | string;
+      section: string;
+      artifactCode: string;
+      artifactType: string;
+      filename: string;
+      mimeType: string;
+      status: string;
+      approvalStatus: string;
+      taxonomyVersion: string;
+      /** Format: int64 */
+      versionIndex: number | string;
+      /** Format: date-time */
+      createdAt: string;
+      createdBy: string;
+      reasonForChange: string;
+      signer: null | string;
+      /** Format: date-time */
+      signingTimestamp: null | string;
+      isRedacted: boolean;
+      documentOwnerId: null | string;
+      protocolVersionTag: null | string;
+      /** Format: int32 */
+      protocolVersionIndex: null | number | string;
+      protocolVersionStatus: null | string;
+      documentType: null | string;
+      /** Format: date-time */
+      issueDate: null | string;
+      /** Format: date-time */
+      expirationDate: null | string;
+      correlationKey: null | string;
+      contentChecksum: null | string;
+      sourceSystem: null | string;
+      syncStatus: null | string;
+      objectKey: null | string;
     };
     Etmf_UpdateDocumentTaxonomyRequest: {
       /** Format: int32 */

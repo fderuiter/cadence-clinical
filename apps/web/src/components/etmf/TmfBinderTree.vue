@@ -232,7 +232,7 @@ import { useToastStore } from "../../stores/toasts.js";
 import {
   canExportEtmf,
   ETMF_EXPORT_ROLE_REASON,
-} from "../../canvas/authority.ts";
+} from "../../canvas/authority/etmfTraining";
 
 function getEtmfStore() {
   try {

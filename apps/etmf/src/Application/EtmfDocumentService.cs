@@ -25,7 +25,9 @@ public interface IEtmfDocumentService
         int? zone,
         string? siteId,
         HttpContext httpContext,
-        CancellationToken ct);
+        CancellationToken ct,
+        string? artifactCode = null,
+        string? section = null);
 
     Task<IResult> GetDocumentByIdAsync(
         string documentId,
@@ -67,46 +69,79 @@ public sealed class EtmfDocumentService(
         int? zone,
         string? siteId,
         HttpContext httpContext,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? artifactCode = null,
+        string? section = null)
     {
-        if (!string.IsNullOrWhiteSpace(studyId) && !ClinicalScopeGuard.CanAccessStudy(httpContext, studyId))
+        if (EtmfClassificationEngine.TryScopeDocumentsQuery(
+            dbContext.TmfDocuments.AsNoTracking(),
+            httpContext,
+            studyId,
+            siteId,
+            out var query) is { } scopeDenied)
         {
-            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.StudyAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
+            return scopeDenied;
         }
 
-        var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
-        if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
-        {
-            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
-        }
-
-        string? requestedSiteId = !string.IsNullOrWhiteSpace(siteId)
-            ? siteId
-            : httpContext.Request.Query["site_id"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(requestedSiteId) && !ClinicalScopeGuard.CanAccessSite(httpContext, requestedSiteId))
-        {
-            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
-        }
-
-        var query = ClinicalScopeGuard.NarrowToStudyScope(dbContext.TmfDocuments.AsNoTracking(), httpContext, d => d.StudyId);
-        if (!string.IsNullOrWhiteSpace(studyId))
-        {
-            query = query.Where(d => d.StudyId == studyId);
-        }
-
-        if (!string.IsNullOrWhiteSpace(requestedSiteId))
-        {
-            query = query.Where(d => d.SiteId == requestedSiteId);
-        }
+        string? requestedArtifactCode = !string.IsNullOrWhiteSpace(artifactCode)
+            ? artifactCode
+            : httpContext.Request.Query["artifact_code"].FirstOrDefault();
+        string? requestedSection = !string.IsNullOrWhiteSpace(section)
+            ? section
+            : httpContext.Request.Query["section"].FirstOrDefault();
 
         if (zone.HasValue)
         {
             query = query.Where(d => d.Zone == zone.Value);
         }
 
-        var docs = (await query.ToListAsync(ct))
-            .Where(d => string.IsNullOrWhiteSpace(d.SiteId) || ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteId))
-            .ToList();
+        if (!string.IsNullOrWhiteSpace(requestedSection))
+        {
+            var normalizedSection = requestedSection.Trim();
+            query = query.Where(d => d.Section == normalizedSection);
+        }
+
+        if (!string.IsNullOrWhiteSpace(requestedArtifactCode))
+        {
+            var normalizedArtifactCode = requestedArtifactCode.Trim();
+            query = query.Where(d => d.ArtifactCode == normalizedArtifactCode);
+        }
+
+        var docs = await query
+            .Select(d => new TmfDocumentSummaryDto(
+                d.Id,
+                d.StudyId,
+                d.SiteId,
+                d.Zone,
+                d.Section,
+                d.ArtifactCode,
+                d.ArtifactType,
+                d.Filename,
+                d.MimeType,
+                d.Status,
+                d.ApprovalStatus,
+                d.TaxonomyVersion,
+                d.VersionIndex,
+                d.CreatedAt,
+                d.CreatedBy,
+                d.ReasonForChange,
+                d.Signer,
+                d.SigningTimestamp,
+                d.IsRedacted,
+                d.DocumentOwnerId,
+                d.ProtocolVersionTag,
+                d.ProtocolVersionIndex,
+                d.ProtocolVersionStatus,
+                d.DocumentType,
+                d.IssueDate,
+                d.ExpirationDate,
+                d.CorrelationKey,
+                d.ContentChecksum,
+                d.SourceSystem,
+                d.SyncStatus,
+                d.ObjectKey))
+            .ToListAsync(ct);
+
         return TypedResults.Ok(docs);
     }
 
@@ -115,8 +150,48 @@ public sealed class EtmfDocumentService(
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var doc = await dbContext.TmfDocuments.AsNoTracking().FirstOrDefaultAsync(d => d.Id == documentId, ct);
-        if (doc == null || ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, doc.StudyId, doc.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
+        var doc = await dbContext.TmfDocuments
+            .AsNoTracking()
+            .Where(d => d.Id == documentId)
+            .Select(d => new TmfDocumentDetailDto(
+                d.Id,
+                d.StudyId,
+                d.SiteId,
+                d.Zone,
+                d.Section,
+                d.ArtifactCode,
+                d.ArtifactType,
+                d.Filename,
+                d.MimeType,
+                d.Status,
+                d.ApprovalStatus,
+                d.TaxonomyVersion,
+                d.VersionIndex,
+                d.CreatedAt,
+                d.CreatedBy,
+                d.ReasonForChange,
+                d.Signer,
+                d.SigningTimestamp,
+                d.IsRedacted,
+                d.DocumentOwnerId,
+                d.ProtocolVersionTag,
+                d.ProtocolVersionIndex,
+                d.ProtocolVersionStatus,
+                d.DocumentType,
+                d.IssueDate,
+                d.ExpirationDate,
+                d.CorrelationKey,
+                d.ContentChecksum,
+                d.SourceSystem,
+                d.SyncStatus,
+                d.ObjectKey,
+                d.MetadataJson,
+                d.SignatureManifestation,
+                d.RedactionManifestJson,
+                d.RedactionSourceId,
+                d.IdempotencyKey))
+            .FirstOrDefaultAsync(ct);
+        if (doc == null || ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, doc.StudyCode, doc.SiteCode, allowUnassignedSiteForScopedCaller: true) is not null)
         {
             return TypedResults.NotFound(new { error = $"Document '{documentId}' not found." });
         }

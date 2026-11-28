@@ -75,7 +75,7 @@ import {
   ETMF_EXPORT_ROLE_REASON,
   ETMF_STAGE_ROLE_REASON,
   ETMF_TAG_ROLE_REASON,
-} from "../../../canvas/authority.ts";
+} from "../../../canvas/authority/etmfTraining";
 
 defineProps({
   selectedArtifactCode: {
