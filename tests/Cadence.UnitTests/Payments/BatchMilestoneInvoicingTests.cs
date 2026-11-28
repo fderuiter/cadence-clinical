@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Json;
@@ -10,6 +11,7 @@ using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Endpoints;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
 
@@ -212,10 +214,53 @@ public sealed class BatchMilestoneInvoicingTests : IDisposable
         var payables = await db.Payables.Where(p => p.StudyId == "STUDY-ONC-201").ToListAsync(TestContext.Current.CancellationToken);
         payables.All(p => p.Status == "INVOICED").Should().BeTrue();
 
-        // Verify Audit Logs recorded for batch execution and each site
+        // Verify Audit Logs recorded for batch execution and each site, including verified step-up signature metadata
         var auditLogs = await db.PaymentAuditLogs.ToListAsync(TestContext.Current.CancellationToken);
         auditLogs.Should().Contain(a => a.EntityType == "SelfBillingInvoiceBatch" && a.EntityId == result.BatchExecutionId);
-        auditLogs.Should().Contain(a => a.EntityType == "SelfBillingInvoice" && a.Action == "BATCH_SITE_INVOICE_COMPILED");
+        var siteAudits = auditLogs.Where(a => a.EntityType == "SelfBillingInvoice" && a.Action == "BATCH_SITE_INVOICE_COMPILED").ToList();
+        siteAudits.Should().HaveCount(2);
+        foreach (var siteAudit in siteAudits)
+        {
+            using var detailsDoc = JsonDocument.Parse(siteAudit.Details!);
+            detailsDoc.RootElement.GetProperty("signature_subject").GetString().Should().Be("finance-1");
+            detailsDoc.RootElement.GetProperty("signature_token_id").GetString().Should().NotBeNullOrWhiteSpace();
+            detailsDoc.RootElement.GetProperty("signature_semantic_action").GetString().Should().Be("payments.invoice.approve");
+        }
+    }
+
+    [Fact]
+    public async Task CompileHandlers_RejectAutoApproveWithoutVerifiedSigToken_AndWriteNothing()
+    {
+        await using var db = CreateContext();
+        await SeedDataAsync(db);
+
+        var service = new InvoiceCompilationService(db, new PaymentsUnitOfWork(db), _clock);
+
+        var singleResult = await InvoiceEndpoints.CompileBillingCycle(
+            new BillingCycleCompilationRequest(
+                StudyId: "STUDY-ONC-201",
+                SiteId: "SITE-101",
+                BillingCycle: "MONTHLY",
+                AutoApprove: true),
+            service,
+            PaymentEndpointsTestInvoker.FinanceOfficerContext());
+        var singleProblem = singleResult.Should().BeOfType<ProblemHttpResult>().Subject;
+        singleProblem.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        singleProblem.ProblemDetails.Detail.Should().Be(SigTokenVerifier.ReauthenticationRequired);
+
+        var batchResult = await InvoiceEndpoints.BatchCompileBillingCycles(
+            new BatchBillingCycleCompilationRequest(
+                StudyId: "STUDY-ONC-201",
+                BillingCycle: "MONTHLY",
+                AutoApprove: true),
+            service,
+            PaymentEndpointsTestInvoker.FinanceOfficerContext());
+        var batchProblem = batchResult.Should().BeOfType<ProblemHttpResult>().Subject;
+        batchProblem.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        batchProblem.ProblemDetails.Detail.Should().Be(SigTokenVerifier.ReauthenticationRequired);
+
+        (await db.SelfBillingInvoices.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        (await db.Payables.AllAsync(p => p.Status == "TRIGGERED", TestContext.Current.CancellationToken)).Should().BeTrue();
     }
 
     [Fact]
@@ -300,13 +345,35 @@ public static class PaymentEndpointsTestInvoker
     public static ClaimsPrincipal FinanceOfficer { get; } = TestSecurityContext.CreateScopedPrincipal(
         "finance-1", TestSecurityContext.AllStudies, [], "Grants Manager");
 
-    public static HttpContext FinanceOfficerContext() => new DefaultHttpContext { User = FinanceOfficer };
+    public static HttpContext FinanceOfficerContext(
+        bool withVerifiedApproveSignature = false,
+        string action = "/api/v1/payments/invoices/compile",
+        DateTimeOffset? issuedAt = null)
+    {
+        var context = new DefaultHttpContext { User = FinanceOfficer };
+        if (withVerifiedApproveSignature)
+        {
+            string rawToken = TestSecurityContext.CreateSigToken(
+                userId: "finance-1",
+                action: action,
+                semanticAction: InvoiceEndpoints.InvoiceApproveSemanticAction,
+                roles: ["finance_officer"],
+                issuedAt: issuedAt);
+            context.Items[ElectronicSignatureEndpointFilter.VerifiedTokenItemKey] = new JwtSecurityTokenHandler().ReadJwtToken(rawToken);
+        }
+
+        return context;
+    }
 
     public static async Task<BatchBillingCompilationResponse> InvokeBatchCompileAsync(
         BatchBillingCycleCompilationRequest request, PaymentsDbContext db, IClock clock)
     {
         var service = new InvoiceCompilationService(db, new PaymentsUnitOfWork(db), clock);
-        var result = await InvoiceEndpoints.BatchCompileBillingCycles(request, service, FinanceOfficerContext());
+        var context = FinanceOfficerContext(
+            withVerifiedApproveSignature: request.AutoApprove,
+            action: "/api/v1/payments/invoices/batch-compile",
+            issuedAt: clock.UtcNow);
+        var result = await InvoiceEndpoints.BatchCompileBillingCycles(request, service, context);
 
         var createdResult = result as Created<BatchBillingCompilationResponse>;
         createdResult.Should().NotBeNull("Method should return Created<BatchBillingCompilationResponse>");
@@ -317,7 +384,11 @@ public static class PaymentEndpointsTestInvoker
         BillingCycleCompilationRequest request, PaymentsDbContext db, IClock clock)
     {
         var service = new InvoiceCompilationService(db, new PaymentsUnitOfWork(db), clock);
-        var result = await InvoiceEndpoints.CompileBillingCycle(request, service, FinanceOfficerContext());
+        var context = FinanceOfficerContext(
+            withVerifiedApproveSignature: request.AutoApprove,
+            action: "/api/v1/payments/invoices/compile",
+            issuedAt: clock.UtcNow);
+        var result = await InvoiceEndpoints.CompileBillingCycle(request, service, context);
 
         var createdResult = result as Created<SelfBillingInvoiceResponse>;
         createdResult.Should().NotBeNull("Method should return Created<SelfBillingInvoiceResponse>");

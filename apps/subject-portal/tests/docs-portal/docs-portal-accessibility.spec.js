@@ -193,40 +193,84 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
       docIndexHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
       (m) => m[1]
     );
-    const dataRowCount = tbodyBlocks.reduce(
+    expect(tbodyBlocks.length).toBeGreaterThanOrEqual(2);
+    const topLevelRowCount = tbodyBlocks.reduce(
       (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
       0
     );
-    expect(dataRowCount).toBeGreaterThanOrEqual(28);
+    expect(topLevelRowCount).toBeGreaterThanOrEqual(28);
 
-    const shardHrefs = new Set(
+    const extractShardHrefs = (tbody) =>
       Array.from(
-        tbodyBlocks.join("\n").matchAll(/href="([^"#?]+)"/gi),
-        (m) => m[1]
-      )
-    );
-    let shardedEntryCount = 0;
-    for (const rawHref of shardHrefs) {
-      let relShard = rawHref
-        .replace(/^\/cadence-clinical\//, "")
-        .replace(/^\.\//, "");
-      if (relShard.endsWith("/")) relShard += "index.html";
-      if (!relShard.endsWith(".html")) relShard += ".html";
-      const shardFullPath = path.join(docsDistDir, relShard);
-      expect(fs.existsSync(shardFullPath)).toBe(true);
-      const shardHtml = fs.readFileSync(shardFullPath, "utf8");
-      const shardTbodies = Array.from(
-        shardHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
+        tbody.matchAll(
+          /<tr(?:\s[^>]*)?>[\s\S]*?<td(?:\s[^>]*)?>[\s\S]*?<a\s+[^>]*href="([^"]+)"/gi
+        ),
         (m) => m[1]
       );
-      const shardRows = shardTbodies.reduce(
+    const resolveShardPath = (href) => {
+      const clean = href
+        .split("#")[0]
+        .split("?")[0]
+        .replace(/^\.\//, "")
+        .replace(/^\/cadence-clinical\//, "");
+      const candidates = clean.endsWith("/")
+        ? [
+            path.join(docsDistDir, clean, "index.html"),
+            path.join(docsDistDir, clean, "INDEX.html"),
+          ]
+        : [path.join(docsDistDir, clean)];
+      return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+    };
+    const extractDocBody = (pageHtml) => {
+      const match = pageHtml.match(
+        /<div\s+class="vp-doc[^"]*"[^>]*>([\s\S]*?)<\/main>/i
+      );
+      return match ? match[1] : pageHtml;
+    };
+
+    const categoryShardHrefs = extractShardHrefs(tbodyBlocks[0]);
+    const adrShardHrefs = extractShardHrefs(tbodyBlocks[1]);
+    const missingShards = [];
+
+    let categoryRowCount = 0;
+    for (const href of categoryShardHrefs) {
+      const shardPath = resolveShardPath(href);
+      if (!shardPath) {
+        missingShards.push(href);
+        continue;
+      }
+      const shardDoc = extractDocBody(fs.readFileSync(shardPath, "utf8"));
+      const shardTbodies = Array.from(
+        shardDoc.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
+        (m) => m[1]
+      );
+      categoryRowCount += shardTbodies.reduce(
         (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
         0
       );
-      const shardAdrItems = (shardHtml.match(/<li><a\s/gi) || []).length;
-      shardedEntryCount += shardRows + shardAdrItems;
     }
-    expect(shardedEntryCount).toBeGreaterThanOrEqual(715);
+
+    let adrEntryCount = 0;
+    for (const href of adrShardHrefs) {
+      const shardPath = resolveShardPath(href);
+      if (!shardPath) {
+        missingShards.push(href);
+        continue;
+      }
+      if (href.endsWith("TEMPLATE.html") || href === "./adr/") {
+        continue;
+      }
+      const shardDoc = extractDocBody(fs.readFileSync(shardPath, "utf8"));
+      adrEntryCount += (
+        shardDoc.match(
+          /<li(?:\s[^>]*)?>\s*<a\s+[^>]*href="[^"]+"\s*>\s*ADR-/gi
+        ) || []
+      ).length;
+    }
+
+    expect(missingShards).toEqual([]);
+    const dataRowCount = categoryRowCount + adrEntryCount;
+    expect(dataRowCount).toBeGreaterThanOrEqual(715);
   });
 
   test("navbar items and portal layout render without clipping, overlap, or horizontal scroll across 375px–1920px viewports", async ({

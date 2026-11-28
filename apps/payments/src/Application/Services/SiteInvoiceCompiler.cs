@@ -14,6 +14,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.Apps.Payments.Application.Services;
 
+internal readonly record struct VerifiedInvoiceSignature(
+    string Subject,
+    string TokenId,
+    string SemanticAction);
+
 /// <summary>
 /// Compiles SDV-verified site payables into a self-billing invoice, line items, SHA-256 sealed remittance advice, and audit log.
 /// </summary>
@@ -32,8 +37,16 @@ internal static class SiteInvoiceCompiler
         bool autoApprove,
         string userId,
         string rolesText,
-        string? batchExecutionId = null)
+        string? batchExecutionId = null,
+        VerifiedInvoiceSignature? signature = null)
     {
+        if (autoApprove && (signature is null
+            || string.IsNullOrWhiteSpace(signature.Value.TokenId)
+            || !string.Equals(signature.Value.Subject, userId, StringComparison.Ordinal)))
+        {
+            throw new UnauthorizedAccessException("A verified electronic signature token matching the caller is required when autoApprove is true.");
+        }
+
         DateTimeOffset now = clock.UtcNow;
 
         var contract = await dbContext.BudgetContracts.AsNoTracking()
@@ -157,15 +170,25 @@ internal static class SiteInvoiceCompiler
             VersionIndex = 1
         };
 
-        var auditLog = new PaymentAuditLog
-        {
-            Id = Guid.NewGuid().ToString(),
-            EntityType = "SelfBillingInvoice",
-            EntityId = invoice.Id,
-            Action = batchExecutionId != null ? "BATCH_SITE_INVOICE_COMPILED" : "INVOICE_COMPILED",
-            UserId = userId,
-            UserRoles = rolesText,
-            Details = JsonSerializer.Serialize(new
+        string detailsJson = signature is { } sig
+            ? JsonSerializer.Serialize(new
+            {
+                invoice_id = invoice.Id,
+                invoice_number = invoice.InvoiceNumber,
+                study_id = studyId,
+                site_id = siteId,
+                billing_cycle = billingCycle,
+                status = invoice.Status,
+                payable_count = eligiblePayables.Count,
+                total_gross_amount = totalGross,
+                total_holdback_amount = totalHoldback,
+                total_net_amount = totalNet,
+                batch_execution_id = batchExecutionId,
+                signature_subject = sig.Subject,
+                signature_token_id = sig.TokenId,
+                signature_semantic_action = sig.SemanticAction
+            })
+            : JsonSerializer.Serialize(new
             {
                 invoice_id = invoice.Id,
                 invoice_number = invoice.InvoiceNumber,
@@ -177,7 +200,17 @@ internal static class SiteInvoiceCompiler
                 total_holdback_amount = totalHoldback,
                 total_net_amount = totalNet,
                 batch_execution_id = batchExecutionId
-            }),
+            });
+
+        var auditLog = new PaymentAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            EntityType = "SelfBillingInvoice",
+            EntityId = invoice.Id,
+            Action = batchExecutionId != null ? "BATCH_SITE_INVOICE_COMPILED" : "INVOICE_COMPILED",
+            UserId = userId,
+            UserRoles = rolesText,
+            Details = detailsJson,
             CreatedAt = now,
             CreatedBy = userId,
             ReasonForChange = $"Self-billing invoice {invoiceNumber} generated for site {siteId}",
