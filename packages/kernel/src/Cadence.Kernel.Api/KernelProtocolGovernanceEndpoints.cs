@@ -46,8 +46,22 @@ public static class KernelProtocolGovernanceEndpoints
     /// <summary>The semantic action a protocol-version withdrawal step-up token must carry (21 CFR Part 11).</summary>
     public const string WithdrawProtocolVersionSemanticAction = "kernel.protocol_version.withdraw";
 
+    /// <summary>Canonical qualification code gating protocol capture capabilities across approved protocol versions.</summary>
+    public const string DefaultProtocolQualificationCode = "protocol_training";
+
     private static readonly Capability ApproveProtocolVersionCapability = new("protocol.approve", VerbClass.Approve);
     private static readonly Capability WithdrawProtocolVersionCapability = new("protocol.withdraw", VerbClass.Approve);
+    private static readonly Capability DefineQualificationRequirementCapability = new("qualification_requirement.define", VerbClass.Approve);
+
+    private static readonly string[] CaptureGatedCapabilities =
+    [
+        "participant.screen",
+        "observation.record",
+        "observation.correct",
+        "collection.open",
+        "collection.record",
+        "collection.sign",
+    ];
 
     /// <summary>The canonical concrete action path for approving a protocol version reference.</summary>
     public static string ApproveProtocolVersionAction(string versionRef)
@@ -438,6 +452,39 @@ public static class KernelProtocolGovernanceEndpoints
         if (!approveResult.IsSuccess)
         {
             return KernelErrorEndpoints.Problem(approveResult.Error!);
+        }
+
+        var canDefineRequirements = await probe.CanIAsync(
+            tenant,
+            DefineQualificationRequirementCapability,
+            NodeRef.For(existing.StudyId),
+            cancellationToken).ConfigureAwait(false);
+        if (canDefineRequirements.Permitted)
+        {
+            foreach (string gatedCapability in CaptureGatedCapabilities)
+            {
+                var reqId = QualificationRequirementId.FromGuid(
+                    DeriveGuid(tenant, "protocol-qualification-requirement", $"{versionId.Value:D}:{gatedCapability}"));
+                var reqResult = await sender.SendAsync(
+                    new DefineQualificationRequirement(
+                        tenant,
+                        reqId,
+                        gatedCapability,
+                        DefaultProtocolQualificationCode,
+                        versionId,
+                        AuthorityScope.Study(existing.StudyId),
+                        DateTimeOffset.UnixEpoch,
+                        null,
+                        $"{idempotencyKey}:qual-req:{gatedCapability}",
+                        reason),
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+                if (!reqResult.IsSuccess
+                    && reqResult.Error?.Code != KernelErrors.AlreadyExists.Code
+                    && reqResult.Error?.Code != KernelErrors.IdempotencyConflict.Code)
+                {
+                    return KernelErrorEndpoints.Problem(reqResult.Error!);
+                }
+            }
         }
 
         var updated = await versions.GetAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);

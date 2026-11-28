@@ -250,7 +250,7 @@ export interface components {
       section: null | string;
       uri: null | string;
     };
-    Designer_StudyId: unknown;
+    Designer_StudyId: string;
     Designer_ValidationDetection: {
       packKey: string;
       ruleId: string;

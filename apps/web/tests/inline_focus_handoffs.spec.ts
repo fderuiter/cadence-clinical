@@ -35,6 +35,7 @@ import { kernelGovernanceApi } from "../src/api/kernelGovernanceApi";
 import { ecrfFormsApi } from "../src/api/ecrfFormsApi";
 import { ecrfQueriesApi } from "../src/api/ecrfQueriesApi";
 import { executionApi } from "../src/api/executionApi";
+import * as signatureVerification from "../src/api/signatureVerification";
 import { ticketsApi } from "../src/api/ticketsApi";
 import { trainingApi } from "../src/api/training";
 
@@ -1120,6 +1121,9 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
           audit_history: [],
         }) as never
     );
+    vi.spyOn(signatureVerification, "requestStepUpSignature").mockResolvedValue(
+      { sig_token: "sig-focus-test" }
+    );
     vi.mocked(ctmsApi.signOffDelegation).mockImplementation(async () => {
       staffStatus = "ACTIVE";
       return {} as never;
@@ -1161,6 +1165,7 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
     await wrapper
       .find("#doa-signoff-reason")
       .setValue("Verified training and CV qualifications");
+    await wrapper.find("#doa-signoff-credential").setValue("StepUpCred123!"); // pragma: allowlist secret
     await wrapper.find("#btn-confirm-doa-signoff").trigger("click");
     await settleFocus();
     expect(document.activeElement?.id).toBe("btn-doa-revoke-rec-1");
@@ -1846,7 +1851,7 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
       async (id) =>
         (curricula.find((c) => c.id === id) || curricula[0]) as never
     );
-    vi.spyOn(trainingApi, "listDelegations").mockResolvedValue([]);
+    vi.spyOn(trainingApi, "listStudyStaff").mockResolvedValue([]);
 
     const wrapper = track(
       mount(ProtocolTrainingConsole, {

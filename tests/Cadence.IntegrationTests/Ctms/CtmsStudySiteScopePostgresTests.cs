@@ -57,7 +57,7 @@ public sealed class CtmsStudySiteScopePostgresTests(CtmsPostgresApiFactory facto
             using var _ = scope.ServiceProvider.GetRequiredService<IAuditActorScope>().Begin("svc:test-seeder", "Test fixture seeding");
             var db = scope.ServiceProvider.GetRequiredService<CtmsDbContext>();
 
-            db.CtmsDelegations.Add(new CtmsDelegation("DEL-BETA-ONLY")
+            db.CtmsDoaTaskEndorsements.Add(new CtmsDoaTaskEndorsement("DEL-BETA-ONLY")
             {
                 StudyId = "STUDY-BETA",
                 SiteId = "SITE-BETA-DELEG",
@@ -122,8 +122,8 @@ public sealed class CtmsStudySiteScopePostgresTests(CtmsPostgresApiFactory facto
                     VersionIndex = 1,
                 });
 
-            db.CtmsDelegations.AddRange(
-                new CtmsDelegation("DEL-ALPHA-SHARED")
+            db.CtmsDoaTaskEndorsements.AddRange(
+                new CtmsDoaTaskEndorsement("DEL-ALPHA-SHARED")
                 {
                     StudyId = "STUDY-ALPHA",
                     SiteId = "SITE-SHARED",
@@ -137,7 +137,7 @@ public sealed class CtmsStudySiteScopePostgresTests(CtmsPostgresApiFactory facto
                     ReasonForChange = "Seed alpha shared delegation",
                     VersionIndex = 1,
                 },
-                new CtmsDelegation("DEL-BETA-SHARED")
+                new CtmsDoaTaskEndorsement("DEL-BETA-SHARED")
                 {
                     StudyId = "STUDY-BETA",
                     SiteId = "SITE-SHARED",
@@ -372,7 +372,7 @@ public sealed class CtmsStudySiteScopePostgresTests(CtmsPostgresApiFactory facto
             await cmd.ExecuteNonQueryAsync(Ct);
         }
 
-        await migrator.MigrateAsync(cancellationToken: Ct);
+        await migrator.MigrateAsync("20261123170408_AddConsumedSignatureTokens", Ct); // pragma: allowlist secret
 
         await using var verifyConn = new NpgsqlConnection(adminConn);
         await verifyConn.OpenAsync(Ct);
@@ -381,6 +381,11 @@ public sealed class CtmsStudySiteScopePostgresTests(CtmsPostgresApiFactory facto
 
         await using var delCmd = new NpgsqlCommand("""SELECT "StudyId" FROM "ctms"."ctms_delegations" WHERE "Id" = 'D-MIG-1';""", verifyConn);
         ((string?)await delCmd.ExecuteScalarAsync(Ct)).Should().Be("STUDY-MIG-A");
+
+        await migrator.MigrateAsync(cancellationToken: Ct);
+
+        await using var retiredDelCmd = new NpgsqlCommand("""SELECT to_regclass('ctms.ctms_delegations') IS NULL;""", verifyConn);
+        ((bool)(await retiredDelCmd.ExecuteScalarAsync(Ct))!).Should().BeTrue();
 
         await using var letVisitCmd = new NpgsqlCommand("""SELECT "StudyId", "SiteId" FROM "ctms"."ctms_generated_letters" WHERE "Id" = 'L-MIG-VISIT';""", verifyConn);
         await using (var r = await letVisitCmd.ExecuteReaderAsync(Ct))
@@ -416,9 +421,9 @@ public sealed class CtmsStudySiteScopePostgresTests(CtmsPostgresApiFactory facto
             r.GetString(2).Should().Be(originalAudit101Details);
         }
 
-        // Confirm FORCE ROW LEVEL SECURITY remains active after migration
+        // Confirm FORCE ROW LEVEL SECURITY remains active on ctms_doa_task_endorsements after migration
         await using var rlsCmd = new NpgsqlCommand(
-            """SELECT relforcerowsecurity FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'ctms' AND c.relname = 'ctms_delegations';""",
+            """SELECT relforcerowsecurity FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'ctms' AND c.relname = 'ctms_doa_task_endorsements';""",
             verifyConn);
         ((bool)(await rlsCmd.ExecuteScalarAsync(Ct))!).Should().BeTrue();
     }

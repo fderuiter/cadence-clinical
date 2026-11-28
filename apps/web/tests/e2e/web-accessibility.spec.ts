@@ -857,23 +857,17 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
               ? input.href
               : input.url;
         if (
-          url.includes("/api/v1/training/delegations") &&
-          !url.includes("bulk-signoff") &&
+          url.includes("/api/v1/training/study-staff") &&
           (!init?.method || init.method.toUpperCase() === "GET")
         ) {
           return new Response(
             JSON.stringify([
               {
-                id: "del-01",
-                study_id: "CADENCE-101",
+                user_id: "usr-01",
+                user_name: "Dr. Elena Rostova", // deid-ignore
                 site_id: "SITE-101",
-                staff_user_id: "usr-01",
-                staff_name: "Dr. Elena Rostova",
                 role: "Sub-Investigator",
-                task_code: "INFORMED_CONSENT",
-                duties: "Informed Consent Administration",
-                status: "PENDING",
-                signed_off: false,
+                grant_id: "00000000-0000-0000-0000-000000008102", // deid-ignore
               },
             ]),
             {

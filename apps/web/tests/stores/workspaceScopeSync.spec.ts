@@ -213,7 +213,7 @@ describe("workspaceScope cross-view synchronization", () => {
 
     vi.spyOn(trainingApi, "listCurricula").mockResolvedValue([]);
     vi.spyOn(trainingApi, "listAssignments").mockResolvedValue([]);
-    vi.spyOn(trainingApi, "listDelegations").mockResolvedValue([]);
+    vi.spyOn(trainingApi, "listStudyStaff").mockResolvedValue([]);
     vi.spyOn(ticketsApi, "listTickets").mockResolvedValue([]);
 
     const localRouter = createRouter({

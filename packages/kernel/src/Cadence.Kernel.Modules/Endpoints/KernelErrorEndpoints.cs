@@ -115,7 +115,12 @@ public static class KernelErrorEndpoints
             return;
         }
 
-        var nodes = ExplanationMasking.CollectNodes(source);
+        var nodes = new HashSet<NodeRef>(ExplanationMasking.CollectNodes(source));
+        foreach (var inlineNode in ExplanationMasking.CollectInlineNodes(problem.ProblemDetails.Detail))
+        {
+            nodes.Add(inlineNode);
+        }
+
         if (nodes.Count == 0)
         {
             return;

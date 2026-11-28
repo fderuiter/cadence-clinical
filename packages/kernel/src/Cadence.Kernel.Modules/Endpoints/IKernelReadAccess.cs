@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Authorization;
+using Cadence.Kernel.Explanations;
 using Cadence.Kernel.References;
 
 namespace Cadence.Kernel.Modules;
@@ -93,6 +94,33 @@ public interface IKernelReadAccess
         NodeRef resource,
         CancellationToken cancellationToken) =>
         ValueTask.FromResult(!Capability.IsUnblinding(capability.Token));
+
+    /// <summary>
+    /// Evaluates whether the current caller holds <paramref name="capability"/> on <paramref name="resource"/> in
+    /// <paramref name="tenant"/> and, when denied, returns the masked ADR-2482 <see cref="ProblemExplanation"/>
+    /// naming unmet grant or qualification conditions (K-AUTH-5, K-AUTH-6, K-EXP-2).
+    /// </summary>
+    async ValueTask<(bool Permitted, ProblemExplanation? Explanation)> ExplainExerciseAsync(
+        TenantId tenant,
+        Capability capability,
+        NodeRef resource,
+        CancellationToken cancellationToken)
+    {
+        var permitted = await CanExerciseAsync(tenant, capability, resource, cancellationToken).ConfigureAwait(false);
+        if (permitted)
+        {
+            return (true, null);
+        }
+
+        var fallback = new Explanation(
+            resource,
+            $"{capability.Token} is not permitted.",
+            "kernel.authorization",
+            [],
+            [],
+            []);
+        return (false, ProblemExplanation.From(fallback));
+    }
 
     /// <summary>
     /// True when the current caller holds <c>enrollment.unblind</c> covering <paramref name="enrollment"/> in

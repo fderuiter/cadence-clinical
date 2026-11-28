@@ -276,7 +276,7 @@
         <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <fieldset
-          :disabled="isReconsentGated"
+          :disabled="isReconsentGated || isTrainingGated"
           style="border: none; padding: 0; margin: 0; display: contents"
           @click="handleFieldsetInteraction"
         >
@@ -466,20 +466,23 @@
         <button
           id="btn-clear-ecrf"
           class="btn"
-          :disabled="isReconsentGated || !canEditForm"
-          @click="canEditForm ? $emit('clear-form') : undefined"
+          :disabled="isReconsentGated || isTrainingGated || !canEditForm"
+          @click="
+            canEditForm && !isTrainingGated ? $emit('clear-form') : undefined
+          "
         >
           {{ $t("ecrf.form.clearForm") }}
         </button>
         <button
           id="btn-submit-ecrf"
           class="btn btn-primary"
-          :disabled="!canEditForm"
+          :disabled="!canEditForm || isTrainingGated"
           :style="{
             backgroundColor: isReconsentGated
               ? 'var(--semantic-color-error)'
               : undefined,
-            opacity: isReconsentGated || !canEditForm ? 0.9 : 1,
+            opacity:
+              isReconsentGated || isTrainingGated || !canEditForm ? 0.9 : 1,
           }"
           @click="handleSubmitClick"
         >
@@ -1022,7 +1025,7 @@ function handleFieldsetInteraction() {
 }
 
 function handleSubmitClick() {
-  if (!props.canEditForm) return;
+  if (!props.canEditForm || props.isTrainingGated) return;
   if (props.isReconsentGated) {
     showReconsentGateModal.value = true;
     return;
@@ -1056,7 +1059,7 @@ async function handleEnrollSubmit() {
 }
 
 function updateFieldValue(fieldId, val) {
-  if (!props.canEditForm) return;
+  if (!props.canEditForm || props.isTrainingGated) return;
   const storeInstance = props.store || clinicalStore;
   storeInstance.formValues[fieldId] = val;
 }

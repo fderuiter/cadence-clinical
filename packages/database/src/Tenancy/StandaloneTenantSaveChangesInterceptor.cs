@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Tenancy;
 using Cadence.Security.Authentication;
@@ -222,6 +223,17 @@ public sealed class StandaloneTenantSaveChangesInterceptor : SaveChangesIntercep
             else if (prop.CurrentValue is not string current || !Guid.TryParse(current, out _))
             {
                 prop.CurrentValue = Guid.Empty.ToString("D");
+            }
+        }
+        else if (prop.Metadata.ClrType == typeof(TenantId))
+        {
+            if (targetTenantId != Guid.Empty)
+            {
+                prop.CurrentValue = TenantId.FromGuid(targetTenantId);
+            }
+            else if (prop.CurrentValue is not TenantId existingTenantId || existingTenantId.IsEmpty)
+            {
+                prop.CurrentValue = default(TenantId);
             }
         }
         else

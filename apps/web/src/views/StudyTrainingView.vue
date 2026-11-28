@@ -12,8 +12,8 @@
           Study Training &amp; Qualification Hub
         </h2>
         <p class="view-subtitle">
-          Protocol curricula, role- and site-scoped batch curriculum assignment,
-          and 21 CFR Part 11 Principal Investigator delegation sign-off.
+          Protocol curricula, Kernel-backed batch assignment, quiz scoring, and
+          21 CFR Part 11 TMF 05.02.04 qualification filing.
         </p>
       </div>
       <div class="protocol-filter-group">
@@ -109,6 +109,7 @@
         :study-id="effectiveStudyId"
         :site-id="effectiveSiteId"
         :protocol-version="effectiveProtocolVersion"
+        @training-updated="loadMetrics"
       />
     </div>
   </div>

@@ -1585,7 +1585,7 @@
             "type": "string"
           },
           "site_id": {
-            "type": "string"
+            "$ref": "#/components/schemas/Ctms_KernelSiteCode"
           },
           "staff_user_id": {
             "type": "string"
@@ -1624,6 +1624,13 @@
               "string"
             ],
             "format": "int64"
+          },
+          "kernel_grant_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -1638,7 +1645,7 @@
         "type": "object",
         "properties": {
           "site_id": {
-            "type": "string"
+            "$ref": "#/components/schemas/Ctms_KernelSiteCode"
           },
           "staff_user_id": {
             "type": "string"
@@ -1708,7 +1715,7 @@
         "type": "object",
         "properties": {
           "site_id": {
-            "type": "string"
+            "$ref": "#/components/schemas/Ctms_KernelSiteCode"
           },
           "pi_name": {
             "type": "string"
@@ -1824,6 +1831,9 @@
             "format": "int64"
           }
         }
+      },
+      "Ctms_KernelSiteCode": {
+        "type": "string"
       },
       "Ctms_MonitoringVisitCompleteDto": {
         "required": [

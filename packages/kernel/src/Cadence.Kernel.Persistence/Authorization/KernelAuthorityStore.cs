@@ -58,6 +58,7 @@ internal sealed class KernelAuthorityStore(
         NodeKinds.Artifact,
         NodeKinds.ArtifactVersion,
         NodeKinds.Grant,
+        NodeKinds.Qualification,
         NodeKinds.QualificationRequirement,
         NodeKinds.Effectivity,
         NodeKinds.Proposal,
@@ -197,6 +198,28 @@ internal sealed class KernelAuthorityStore(
         LEFT JOIN kernel.sites AS ss_site
             ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
         WHERE g.tenant_id = @tenant AND g.id = ANY(@ids)
+        """;
+
+    private const string QualificationPathsSql = """
+        SELECT
+            q.id AS "Id",
+            COALESCE(pv_study.sponsor_id, art_study.sponsor_id) AS "OrganizationId",
+            COALESCE(pv.study_id, art.study_id) AS "StudyId",
+            NULL::text AS "Country",
+            NULL::uuid AS "StudySiteId",
+            FALSE AS "MayBeBlinded"
+        FROM kernel.qualifications AS q
+        LEFT JOIN kernel.protocol_versions AS pv
+            ON q.protocol_version_id IS NOT NULL AND pv.tenant_id = q.tenant_id AND pv.id = q.protocol_version_id
+        LEFT JOIN kernel.studies AS pv_study
+            ON pv_study.tenant_id = pv.tenant_id AND pv_study.id = pv.study_id
+        LEFT JOIN kernel.artifact_versions AS av
+            ON av.tenant_id = q.tenant_id AND av.id = q.evidence_artifact_version_id
+        LEFT JOIN kernel.artifacts AS art
+            ON art.tenant_id = av.tenant_id AND art.id = av.artifact_id
+        LEFT JOIN kernel.studies AS art_study
+            ON art.study_id IS NOT NULL AND art_study.tenant_id = art.tenant_id AND art_study.id = art.study_id
+        WHERE q.tenant_id = @tenant AND q.id = ANY(@ids)
         """;
 
     private const string QualificationRequirementPathsSql = """
@@ -1940,6 +1963,10 @@ internal sealed class KernelAuthorityStore(
 
             case NodeKinds.Grant:
                 await LoadRawPathsAsync(db, tenant, kind, rawIds, GrantPathsSql, resolved, potentiallyBlinded, ct).ConfigureAwait(false);
+                break;
+
+            case NodeKinds.Qualification:
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, QualificationPathsSql, resolved, potentiallyBlinded, ct).ConfigureAwait(false);
                 break;
 
             case NodeKinds.QualificationRequirement:

@@ -225,6 +225,9 @@ export function createExecutionSubjectsAndFormsHandlers(store) {
           body,
           decodeReasonHeader(request)
         );
+        if (result.forbidden) {
+          return HttpResponse.json(result.problem, { status: 403 });
+        }
         if (result.conflict) {
           return HttpResponse.json(result.problem, { status: 409 });
         }

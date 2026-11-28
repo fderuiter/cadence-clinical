@@ -14,9 +14,12 @@ using Cadence.Apps.Ctms.Application;
 using Cadence.Apps.Ctms.Application.Services;
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
+using Cadence.Apps.Ctms.Infrastructure.Kernel;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
 using Cadence.Database.Audit;
+using Cadence.Database.Tenancy;
+using Cadence.Kernel;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
@@ -47,6 +50,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
 
     private readonly CtmsDbContext _db;
     private readonly FakeClock _clock;
+    private readonly InMemoryCtmsKernelTrustClient _kernelTrust;
     private readonly IHost _host;
     private readonly TestServer _server;
 
@@ -58,6 +62,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             .Options;
         _db = new CtmsDbContext(options);
         _clock = new FakeClock(new DateTimeOffset(2026, 11, 14, 10, 0, 0, TimeSpan.Zero));
+        _kernelTrust = new InMemoryCtmsKernelTrustClient(_clock);
 
         var builder = Host.CreateDefaultBuilder()
             .ConfigureWebHost(webHost =>
@@ -69,6 +74,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
                     services.AddRouting();
                     services.AddSingleton<IClock>(_clock);
                     services.AddSingleton(_db);
+                    services.AddSingleton<ICtmsKernelTrustClient>(_kernelTrust);
                     services.AddCtmsApplicationServices();
                     services.AddCadenceSecurity();
                 });
@@ -158,10 +164,10 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
     }
 
     private DoaMutationService CreateMutationService() =>
-        new(_db, new CtmsUnitOfWork(_db), new CtmsSiteScopeService(_db), _clock);
+        new(_db, new CtmsUnitOfWork(_db), new CtmsSiteScopeService(_db), _clock, _kernelTrust);
 
     private DoaQueryAndExportService CreateQueryService() =>
-        new(_db, new CtmsUnitOfWork(_db), new CtmsSiteScopeService(_db), _clock);
+        new(_db, new CtmsUnitOfWork(_db), new CtmsSiteScopeService(_db), _clock, _kernelTrust);
 
     [Fact]
     [GxPRequirement("PRD-SYS-001")]
@@ -184,7 +190,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
 
         var created = result.Should().BeOfType<Created<DelegationResponseDto>>().Subject;
         created.Value.Should().NotBeNull();
-        created.Value!.Site.Should().Be(SiteId);
+        created.Value!.Site.Raw.Should().Be(SiteId);
         created.Value.StaffUserId.Should().Be("staff-crc-01");
         created.Value.TaskCodes.Should().Equal("CRF_DATA_ENTRY", "INFORMED_CONSENT");
         created.Value.StartDate.Should().Be("2026-11-15");
@@ -193,12 +199,13 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         created.Value.ReasonForChange.Should().Be("Initial delegation assignment for data entry");
 
         // Verify DB persistence
-        var delegation = await _db.CtmsDelegations.FindAsync([created.Value.RecordId], TestContext.Current.CancellationToken);
+        var delegation = await _db.CtmsDoaTaskEndorsements.FindAsync([created.Value.RecordId], TestContext.Current.CancellationToken);
         delegation.Should().NotBeNull();
-        delegation!.SiteId.Should().Be(SiteId);
+        delegation!.SiteId.Raw.Should().Be(SiteId);
         delegation.StaffUserId.Should().Be("staff-crc-01");
         delegation.IsActive.Should().BeTrue();
         delegation.SignedOff.Should().BeFalse();
+        delegation.KernelGrantId.Should().BeNull();
 
         // Verify audit log
         var audit = await _db.CtmsAuditLogs.FirstOrDefaultAsync(
@@ -259,13 +266,13 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
     {
         await SeedSiteAsync();
 
-        var delegation = new CtmsDelegation
+        var delegation = new CtmsDoaTaskEndorsement
         {
             StudyId = StudyId,
             SiteId = SiteId,
             StaffUserId = "staff-crc-01",
             TaskCodes = JsonSerializer.Serialize(new[] { "CRF_DATA_ENTRY" }),
-            StartDate = "2026-11-15",
+            StartDate = "2026-11-14",
             IsActive = true,
             SignedOff = false,
             CreatedAt = _clock.UtcNow.UtcDateTime,
@@ -273,7 +280,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             ReasonForChange = "Initial assignment",
             VersionIndex = 1,
         };
-        _db.CtmsDelegations.Add(delegation);
+        _db.CtmsDoaTaskEndorsements.Add(delegation);
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var caller = Caller(RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR, "pi-user");
@@ -290,10 +297,17 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         okResult.Value.Should().NotBeNull();
         okResult.Value!.SignedOff.Should().BeTrue();
         okResult.Value.VersionIndex.Should().Be(2);
+        okResult.Value.KernelGrantId.Should().NotBeNull();
 
-        // Verify entity in DB
-        var updated = await _db.CtmsDelegations.FindAsync([delegation.Id], TestContext.Current.CancellationToken);
+        // Verify entity in DB and canonical Kernel grant
+        var updated = await _db.CtmsDoaTaskEndorsements.FindAsync([delegation.Id], TestContext.Current.CancellationToken);
         updated!.SignedOff.Should().BeTrue();
+        updated.KernelGrantId.Should().Be(okResult.Value.KernelGrantId);
+
+        var tenantId = TenantId.FromGuid(DeterministicTenantCodeResolver.ComputeDeterministicGuid(TestSecurityContext.TenantCode));
+        var kernelGrants = await _kernelTrust.ListSiteGrantsAsync(
+            tenantId, TestSecurityContext.TenantCode, StudyId, SiteId, null, null, includeInactive: false, TestContext.Current.CancellationToken);
+        kernelGrants.Should().ContainSingle(g => g.GrantId == updated.KernelGrantId && g.GranteeId == "staff-crc-01" && g.InEffect);
 
         // Verify audit log
         var audit = await _db.CtmsAuditLogs.FirstOrDefaultAsync(
@@ -326,7 +340,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
     {
         await SeedSiteAsync();
 
-        var delegation = new CtmsDelegation
+        var delegation = new CtmsDoaTaskEndorsement
         {
             StudyId = StudyId,
             SiteId = SiteId,
@@ -340,7 +354,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             ReasonForChange = "Initial assignment",
             VersionIndex = 2,
         };
-        _db.CtmsDelegations.Add(delegation);
+        _db.CtmsDoaTaskEndorsements.Add(delegation);
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var caller = Caller(RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR, "pi-user");
@@ -363,13 +377,29 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
     {
         await SeedSiteAsync();
 
-        var delegation = new CtmsDelegation
+        var tenantId = TenantId.FromGuid(DeterministicTenantCodeResolver.ComputeDeterministicGuid(TestSecurityContext.TenantCode));
+        var issuedGrant = await _kernelTrust.IssueOrDelegateSiteGrantAsync(
+            tenantId,
+            TestSecurityContext.TenantCode,
+            StudyId,
+            SiteId,
+            "staff-crc-01",
+            ["CRF_DATA_ENTRY"],
+            new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero),
+            "pi-user",
+            [RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR],
+            "Initial assignment",
+            "idem-seed-revoke",
+            TestContext.Current.CancellationToken);
+
+        var delegation = new CtmsDoaTaskEndorsement
         {
             StudyId = StudyId,
             SiteId = SiteId,
+            KernelGrantId = issuedGrant.GrantId,
             StaffUserId = "staff-crc-01",
             TaskCodes = JsonSerializer.Serialize(new[] { "CRF_DATA_ENTRY" }),
-            StartDate = "2026-11-15",
+            StartDate = "2026-11-01",
             IsActive = true,
             SignedOff = true,
             CreatedAt = _clock.UtcNow.UtcDateTime,
@@ -377,7 +407,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             ReasonForChange = "Initial assignment",
             VersionIndex = 1,
         };
-        _db.CtmsDelegations.Add(delegation);
+        _db.CtmsDoaTaskEndorsements.Add(delegation);
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var caller = Caller(RoleNormalization.ROLE_INVESTIGATOR, "pi-user");
@@ -394,10 +424,14 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         okResult.Value!.IsActive.Should().BeFalse();
         okResult.Value.EndDate.Should().NotBeNullOrWhiteSpace();
 
-        // Verify entity in DB
-        var updated = await _db.CtmsDelegations.FindAsync([delegation.Id], TestContext.Current.CancellationToken);
+        // Verify entity in DB and revoked Kernel grant bitemporal periods
+        var updated = await _db.CtmsDoaTaskEndorsements.FindAsync([delegation.Id], TestContext.Current.CancellationToken);
         updated!.IsActive.Should().BeFalse();
         updated.EndDate.Should().Be("2026-11-14");
+
+        var allGrants = await _kernelTrust.ListSiteGrantsAsync(
+            tenantId, TestSecurityContext.TenantCode, StudyId, SiteId, null, null, includeInactive: true, TestContext.Current.CancellationToken);
+        allGrants.Should().ContainSingle(g => g.GrantId == issuedGrant.GrantId && g.Revoked && !g.InEffect);
 
         // Verify audit log
         var audit = await _db.CtmsAuditLogs.FirstOrDefaultAsync(
@@ -412,7 +446,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
     {
         await SeedSiteAsync();
 
-        var delegation = new CtmsDelegation
+        var delegation = new CtmsDoaTaskEndorsement
         {
             StudyId = StudyId,
             SiteId = SiteId,
@@ -427,7 +461,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             ReasonForChange = "Revoked",
             VersionIndex = 2,
         };
-        _db.CtmsDelegations.Add(delegation);
+        _db.CtmsDoaTaskEndorsements.Add(delegation);
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var caller = Caller();
@@ -450,7 +484,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
     {
         await SeedSiteAsync(piName: "Dr. Arthur Pendragon");
 
-        var delegation = new CtmsDelegation
+        var delegation = new CtmsDoaTaskEndorsement
         {
             StudyId = StudyId,
             SiteId = SiteId,
@@ -464,7 +498,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             ReasonForChange = "Initial site staffing",
             VersionIndex = 1,
         };
-        _db.CtmsDelegations.Add(delegation);
+        _db.CtmsDoaTaskEndorsements.Add(delegation);
 
         var audit = new CtmsAuditLog
         {
@@ -488,7 +522,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
 
         var okResult = result.Should().BeOfType<Ok<DoaLogResponseDto>>().Subject;
         okResult.Value.Should().NotBeNull();
-        okResult.Value!.Site.Should().Be(SiteId);
+        okResult.Value!.Site.Raw.Should().Be(SiteId);
         okResult.Value.PiName.Should().Be("Dr. Arthur Pendragon");
         okResult.Value.DelegatedStaff.Should().HaveCount(1);
         okResult.Value.DelegatedStaff[0].StaffUserId.Should().Be("staff-user-42");
@@ -514,7 +548,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
     {
         await SeedSiteAsync();
 
-        var delegation = new CtmsDelegation
+        var delegation = new CtmsDoaTaskEndorsement
         {
             StudyId = StudyId,
             SiteId = SiteId,
@@ -528,7 +562,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             ReasonForChange = "Initial site staffing",
             VersionIndex = 1,
         };
-        _db.CtmsDelegations.Add(delegation);
+        _db.CtmsDoaTaskEndorsements.Add(delegation);
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var caller = Caller(RoleNormalization.ROLE_INVESTIGATOR, "investigator-01");
@@ -717,7 +751,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
                 VersionIndex = 1,
             });
 
-            var delegation = new CtmsDelegation
+            var delegation = new CtmsDoaTaskEndorsement
             {
                 StudyId = StudyId,
                 SiteId = SiteId,
@@ -731,7 +765,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
                 ReasonForChange = "Initial assignment",
                 VersionIndex = 1,
             };
-            seedDb.CtmsDelegations.Add(delegation);
+            seedDb.CtmsDoaTaskEndorsements.Add(delegation);
             using (AmbientAuditActorScope.BeginScope("svc:test-seed", "Test setup"))
             {
                 await seedDb.SaveChangesAsync(ct);
@@ -795,7 +829,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         await using (var verifyForbiddenScope = factory.Services.CreateAsyncScope())
         {
             var verifyDb = verifyForbiddenScope.ServiceProvider.GetRequiredService<CtmsDbContext>();
-            var unendorsed = await verifyDb.CtmsDelegations
+            var unendorsed = await verifyDb.CtmsDoaTaskEndorsements
                 .AsNoTracking()
                 .SingleAsync(d => d.Id == delegationId, ct);
             unendorsed.SignedOff.Should().BeFalse();
@@ -828,10 +862,11 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         await using (var verifyOkScope = factory.Services.CreateAsyncScope())
         {
             var verifyDb = verifyOkScope.ServiceProvider.GetRequiredService<CtmsDbContext>();
-            var endorsed = await verifyDb.CtmsDelegations
+            var endorsed = await verifyDb.CtmsDoaTaskEndorsements
                 .AsNoTracking()
                 .SingleAsync(d => d.Id == delegationId, ct);
             endorsed.SignedOff.Should().BeTrue();
+            endorsed.KernelGrantId.Should().NotBeNull();
 
             var audit = await verifyDb.CtmsAuditLogs
                 .AsNoTracking()

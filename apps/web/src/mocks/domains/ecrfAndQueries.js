@@ -110,7 +110,36 @@ function createInitialForm() {
     signatures: [],
     visit_timing: "InWindow",
     days_outside_window: 0,
+    can_record: true,
+    capture_explanation: null,
     content_hash: computeContentHash(items),
+  };
+}
+
+const GATED_DEMO_FORM_UUID = "00000000-0000-0000-0000-000000002099"; // deid-ignore
+
+function createQualificationGatedDemoForm() {
+  const base = createInitialForm();
+  return {
+    ...base,
+    form_id: GATED_DEMO_FORM_UUID,
+    enrollment_id: ENROLLMENT_1002_UUID,
+    study_site_id: SITE_102_UUID,
+    can_record: false,
+    capture_explanation: {
+      decision: "deny",
+      claim:
+        "Actor lacks required qualification 'protocol_training' for capability 'observation.record' at site SITE-102.",
+      conditions: [
+        {
+          code: "K-AUTH-6",
+          description:
+            "Actor holds active qualification 'protocol_training' required by protocol v2.0.",
+          met: false,
+          evidence: [],
+        },
+      ],
+    },
   };
 }
 
@@ -123,7 +152,11 @@ export function createEcrfAndQueriesDomain(ctx) {
 
   function seed() {
     const initialForm = createInitialForm();
-    state.forms = new Map([[initialForm.form_id, initialForm]]);
+    const gatedForm = createQualificationGatedDemoForm();
+    state.forms = new Map([
+      [initialForm.form_id, initialForm],
+      [gatedForm.form_id, gatedForm],
+    ]);
 
     state.queries = new Map([
       [
@@ -364,6 +397,8 @@ export function createEcrfAndQueriesDomain(ctx) {
         locks: [],
         assertions: [],
         signatures: [],
+        can_record: true,
+        capture_explanation: null,
         content_hash: computeContentHash(items),
       };
       state.forms.set(formId, created);
@@ -540,6 +575,20 @@ export function createEcrfAndQueriesDomain(ctx) {
     saveFormValues(formId, body, reason = "Saved eCRF form values") {
       const form =
         state.forms.get(formId) || state.forms.get(DEFAULT_FORM_UUID);
+      if (form.can_record === false) {
+        return {
+          forbidden: true,
+          problem: {
+            title: "Qualification required for observation capture",
+            status: 403,
+            code: "K.Auth.Denied",
+            detail:
+              form.capture_explanation?.claim ||
+              "Active delegation and protocol qualification are required to record values.",
+            explanation: form.capture_explanation,
+          },
+        };
+      }
       const incoming = Array.isArray(body?.values) ? body.values : [];
       const now = new Date().toISOString();
       const savedValues = [];

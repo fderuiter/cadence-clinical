@@ -1,5 +1,5 @@
 using Cadence.Apps.Knowledge.Domain;
-using Cadence.Database.Temporal;
+using Cadence.Kernel.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -133,34 +133,47 @@ public class ProtocolKnowledgeChunkConfiguration : IEntityTypeConfiguration<Prot
     }
 }
 
-public sealed class DelegationRecordPeriodConfiguration(DbContext dbContext) : IEntityTypeConfiguration<DelegationRecordPeriod>
+public sealed class TrainingCurriculumConfiguration : IEntityTypeConfiguration<TrainingCurriculum>
 {
-    public void Configure(EntityTypeBuilder<DelegationRecordPeriod> builder)
+    public void Configure(EntityTypeBuilder<TrainingCurriculum> builder)
     {
-        builder.ToTable("delegation_record_periods");
+        builder.ToTable("TrainingCurricula");
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasMaxLength(36);
-        builder.Property(x => x.DelegationRecordId).IsRequired();
-        builder.Property(x => x.StudyCode).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.SiteCode).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.StaffUserId).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.StaffName).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.Role).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.TaskCode).HasMaxLength(100).IsRequired();
-        builder.Property(x => x.Duties).IsRequired();
-        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
-        builder.Property(x => x.PiSignatureHash).HasMaxLength(255);
-        builder.Property(x => x.BatchTransactionId).HasMaxLength(100);
-        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+        builder.Property(x => x.StudyId)
+            .HasConversion(v => v.Value, raw => new KernelStudyCode(raw))
+            .IsRequired();
+        builder.Property(x => x.QualificationCode).HasMaxLength(128).HasDefaultValue("protocol_training").IsRequired();
+        builder.Property(x => x.ProtocolVersionNumber).HasDefaultValue(1);
+        builder.Property(x => x.PassingScore).HasDefaultValue(0.8);
+    }
+}
 
-        builder.HasOne<DelegationRecord>()
-            .WithMany()
-            .HasForeignKey(x => x.DelegationRecordId)
-            .OnDelete(DeleteBehavior.Restrict);
+public sealed class TrainingAssignmentConfiguration : IEntityTypeConfiguration<TrainingAssignment>
+{
+    public void Configure(EntityTypeBuilder<TrainingAssignment> builder)
+    {
+        builder.ToTable("TrainingAssignments");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.StudyId)
+            .HasConversion(v => v.Value, raw => new KernelStudyCode(raw))
+            .IsRequired();
+        builder.Property(x => x.SiteId)
+            .HasConversion(v => v.Value, raw => new KernelSiteCode(raw))
+            .IsRequired();
+        builder.Property(x => x.EtmfDocumentId).HasMaxLength(128);
+        builder.Property(x => x.KernelArtifactVersionRef).HasMaxLength(128);
+        builder.Property(x => x.KernelQualificationRef).HasMaxLength(128);
+    }
+}
 
-        builder.HasIndex(x => x.DelegationRecordId);
-        builder.HasIndex(x => new { x.StudyCode, x.SiteCode });
-        builder.ConfigureStandaloneBitemporal(dbContext);
+public sealed class TrainingCertificateConfiguration : IEntityTypeConfiguration<TrainingCertificate>
+{
+    public void Configure(EntityTypeBuilder<TrainingCertificate> builder)
+    {
+        builder.ToTable("TrainingCertificates");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.EtmfDocumentId).HasMaxLength(128);
+        builder.Property(x => x.KernelArtifactVersionRef).HasMaxLength(128);
+        builder.Property(x => x.KernelQualificationRef).HasMaxLength(128);
     }
 }

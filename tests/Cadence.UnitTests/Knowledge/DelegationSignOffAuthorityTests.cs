@@ -1,15 +1,15 @@
 using System;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Knowledge.Domain;
+using Cadence.Apps.Knowledge.Endpoints;
+using Cadence.Apps.Knowledge.Infrastructure;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence;
 using Cadence.Database.Tenancy;
+using Cadence.Kernel.Tenancy;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
@@ -29,167 +29,216 @@ using Xunit;
 namespace Cadence.UnitTests.Knowledge;
 
 /// <summary>
-/// The PI's bulk delegation-log sign-off through the real knowledge host (#5311). It needs the
-/// <c>delegation_log:sign</c> permission and a fresh step-up token bound to the delegation ids, records the verified
-/// caller as the signer, keys its seal, and never creates the delegation records it is asked to sign. Before the
-/// fix any signed-in caller with a non-empty password string in the body could sign, the signer and role came from
-/// the body, and unknown ids were invented as completed, PI-signed records.
+/// Verifies through the real Knowledge host that duplicate delegation endpoints are retired (404) and that
+/// <c>POST /api/v1/training/assignments/{assignment_id}/complete</c> enforces 21 CFR Part 11 step-up electronic
+/// signatures (<c>X-Sig-Token</c>), personal trainee identity binding, <c>05.02.04</c> eTMF filing, and Kernel
+/// <c>TrainingRecord</c> + <c>Qualification</c> registration.
 /// </summary>
 public sealed class DelegationSignOffAuthorityTests(DelegationSignOffAuthorityTests.KnowledgeFactory factory)
     : IClassFixture<DelegationSignOffAuthorityTests.KnowledgeFactory>
 {
-    private const string Path = "/api/v1/training/delegations/bulk-signoff";
-    private const string SemanticAction = "knowledge.delegation.sign_off";
+    private const string SemanticAction = "training.assignment.complete";
 
-    private static readonly GatewayIdentity Pi = TestSecurityContext.Identity("pi-knowledge", "Principal Investigator") with
+    private static readonly GatewayIdentity Trainee = TestSecurityContext.Identity("crc-trainee-1", "Clinical Research Coordinator") with
     {
+        StudyIds = ["CARDIO-2026"],
         SiteIds = ["SITE-101"],
     };
 
     [Fact]
-    [GxPRequirement("SRS-SYS-005")]
-    public async Task BulkSignOff_WithoutSigToken_Returns401AndSignsNothing()
+    [GxPRequirement("PRD-TRN-001")]
+    public async Task RetiredDelegationRoutes_Return404OnKnowledgeHost()
     {
-        string id = await SeedPendingAsync();
-        using var client = factory.CreateSignedClient(Pi);
+        using var client = factory.CreateSignedClient(Trainee);
 
-        var response = await client.PostAsJsonAsync(Path, Body(id), Ct);
+        var getResponse = await client.GetAsync("/api/v1/training/delegations?study_id=CARDIO-2026", Ct);
+        var postResponse = await client.PostAsJsonAsync("/api/v1/training/delegations/bulk-signoff", new { }, Ct);
+
+        getResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        postResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task CompleteAssignment_WithoutSigToken_Returns401AndSealsNothing()
+    {
+        string id = await SeedPendingAssignmentAsync();
+        using var client = factory.CreateSignedClient(Trainee);
+
+        var response = await client.PostAsJsonAsync(CompletePath(id), Body(), Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized, await response.Content.ReadAsStringAsync(Ct));
-        (await RecordAsync(id))!.SignedOff.Should().BeFalse();
+        (await AssignmentAsync(id))!.Status.Should().Be("PENDING");
     }
 
     [Theory]
     [GxPRequirement("PRD-TRN-003")]
-    [InlineData("Clinical Research Coordinator")]
-    [InlineData("CRA")]
     [InlineData("Auditor")]
-    public async Task BulkSignOff_WithoutDelegationSignPermission_Returns403(string role)
+    public async Task CompleteAssignment_WithoutTrainingCompletePermission_Returns403(string role)
     {
-        string id = await SeedPendingAsync();
-        var caller = TestSecurityContext.Identity("not-a-pi", role);
+        string id = await SeedPendingAssignmentAsync("auditor-1");
+        var caller = TestSecurityContext.Identity("auditor-1", role) with
+        {
+            StudyIds = ["CARDIO-2026"],
+            SiteIds = ["SITE-101"],
+        };
         using var client = factory.CreateSignedClient(caller);
 
-        var response = await SendAsync(client, TokenFor(caller.UserId, id), Body(id));
+        var response = await SendAsync(client, CompletePath(id), TokenFor(caller.UserId, id), Body());
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync(Ct));
-        (await RecordAsync(id))!.SignedOff.Should().BeFalse();
+        (await AssignmentAsync(id))!.Status.Should().Be("PENDING");
     }
 
     [Fact]
     [GxPRequirement("PRD-TRN-003")]
-    public async Task BulkSignOff_WithAnUnknownDelegationId_Returns404AndCreatesNothing()
+    public async Task CompleteAssignment_SignedByDifferentUser_Returns403()
     {
-        string known = await SeedPendingAsync();
-        string unknown = $"del-unknown-{Guid.NewGuid():N}";
-        using var client = factory.CreateSignedClient(Pi);
+        string id = await SeedPendingAssignmentAsync("crc-trainee-1");
+        var otherStaff = TestSecurityContext.Identity("crc-other-2", "Clinical Research Coordinator") with
+        {
+            StudyIds = ["CARDIO-2026"],
+            SiteIds = ["SITE-101"],
+        };
+        using var client = factory.CreateSignedClient(otherStaff);
 
-        var response = await SendAsync(client, TokenFor(Pi.UserId, known, unknown), Body(known, unknown));
+        var response = await SendAsync(client, CompletePath(id), TokenFor(otherStaff.UserId, id), Body());
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync(Ct));
+        (await AssignmentAsync(id))!.Status.Should().Be("PENDING");
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-TRN-003")]
+    public async Task CompleteAssignment_WithUnknownAssignmentId_Returns404AndCreatesNothing()
+    {
+        string unknown = $"asn-unknown-{Guid.NewGuid():N}";
+        using var client = factory.CreateSignedClient(Trainee);
+
+        var response = await SendAsync(client, CompletePath(unknown), TokenFor(Trainee.UserId, unknown), Body());
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound, await response.Content.ReadAsStringAsync(Ct));
-        (await RecordAsync(unknown)).Should().BeNull();
-        (await RecordAsync(known))!.SignedOff.Should().BeFalse();
+        (await AssignmentAsync(unknown)).Should().BeNull();
     }
 
     [Fact]
     [GxPRequirement("SRS-SYS-005")]
-    public async Task BulkSignOff_WithATokenForOtherDelegations_Returns401()
+    public async Task CompleteAssignment_WithTokenForAnotherAssignment_Returns401()
     {
-        string id = await SeedPendingAsync();
-        string other = await SeedPendingAsync();
-        using var client = factory.CreateSignedClient(Pi);
+        string id = await SeedPendingAssignmentAsync();
+        string other = await SeedPendingAssignmentAsync();
+        using var client = factory.CreateSignedClient(Trainee);
 
-        var response = await SendAsync(client, TokenFor(Pi.UserId, other), Body(id));
+        var response = await SendAsync(client, CompletePath(id), TokenFor(Trainee.UserId, other), Body());
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        (await RecordAsync(id))!.SignedOff.Should().BeFalse();
+        (await AssignmentAsync(id))!.Status.Should().Be("PENDING");
     }
 
-    /// <summary>The verified caller is the signer and audit actor whatever the body says, and the seal is keyed.</summary>
     [Fact]
     [GxPRequirement("PRD-TRN-003")]
-    public async Task BulkSignOff_WithTokenForTheDelegations_SignsAsTheVerifiedCaller()
+    [GxPRequirement("PRD-TRN-004")]
+    public async Task CompleteAssignment_WithValidSigToken_SealsAsVerifiedCallerAndRegisters050204AndQualification()
     {
-        string id = await SeedPendingAsync();
-        using var client = factory.CreateSignedClient(Pi);
+        string id = await SeedPendingAssignmentAsync();
+        using var client = factory.CreateSignedClient(Trainee);
 
-        var response = await SendAsync(client, TokenFor(Pi.UserId, id), Body(id));
+        var response = await SendAsync(client, CompletePath(id), TokenFor(Trainee.UserId, id), Body());
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
-        var record = (await RecordAsync(id))!;
-        record.SignedOff.Should().BeTrue();
+        var payload = await response.Content.ReadFromJsonAsync<CompleteTrainingAssignmentResponse>(Ct);
+        payload.Should().NotBeNull();
+        payload!.EtmfArtifactId.Should().Be("05.02.04");
+        payload.KernelArtifactVersionRef.Should().StartWith("artifact_version:");
+        payload.KernelQualificationRef.Should().StartWith("qualification:");
+
+        var assignment = (await AssignmentAsync(id))!;
+        assignment.Status.Should().Be("COMPLETED");
+        assignment.EtmfDocumentId.Should().Be(payload.EtmfDocumentId);
+        assignment.KernelQualificationRef.Should().Be(payload.KernelQualificationRef);
+
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
-        var audit = await db.OrgAuditLogs.AsNoTracking().SingleAsync(a => a.BatchTransactionId == record.BatchTransactionId, Ct);
-        audit.ActorId.Should().Be(Pi.UserId);
-        audit.ActorRole.Should().NotBe("Someone Else's Role");
-        var certificate = await db.TrainingCertificates.AsNoTracking().SingleAsync(c => c.BatchTransactionId == record.BatchTransactionId, Ct);
-        certificate.SignerName.Should().Be(Pi.UserId);
-        string unkeyed = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(record.BatchTransactionId!)));
-        record.PiSignatureHash.Should().NotBeNullOrEmpty().And.NotBe(unkeyed);
+        var audit = await db.OrgAuditLogs.AsNoTracking().SingleAsync(a => a.RecordId == id && a.Action == "training.assignment.complete", Ct);
+        audit.ActorId.Should().Be(Trainee.UserId);
+        var certificate = await db.TrainingCertificates.AsNoTracking().SingleAsync(c => c.AssignmentId == id, Ct);
+        certificate.SignerName.Should().Be(Trainee.UserId);
+        certificate.EtmfArtifactId.Should().Be("05.02.04");
+        certificate.Sha256Seal.Should().NotBeNullOrEmpty();
     }
 
-    private static object Body(params string[] ids) => new
+    private static string CompletePath(string assignmentId) => $"/api/v1/training/assignments/{assignmentId}/complete";
+
+    private static object Body() => new
     {
-        delegation_ids = ids,
-        study_id = "CARDIO-2026",
-        site_id = "SITE-101",
+        quiz_answers = new[]
+        {
+            new { question_id = "q-1", selected_option_id = "opt-b" },
+        },
+        time_spent_seconds = 300,
         signature_payload = new
         {
-            signer_name = "Someone Else",
-            signer_role = "Someone Else's Role",
-            meaning = "I approve these delegations",
-            password = "not-checked-by-this-service", // pragma: allowlist secret
-            reason_for_change = "PI delegation sign-off",
+            meaning = "I have read, understood, and agree to follow this protocol version",
+            reason_for_change = "Completed protocol V3.0 qualification module and quiz",
         },
     };
 
-    private static string TokenFor(string userId, params string[] ids) =>
-        TestSecurityContext.CreateSigToken(userId, Path, SemanticAction, batchId: BatchId(ids));
+    private static string TokenFor(string userId, string assignmentId) =>
+        TestSecurityContext.CreateSigToken(userId, CompletePath(assignmentId), SemanticAction);
 
-    /// <summary>The lower-case hex SHA-256 of the trimmed ids, sorted ordinally and comma-joined.</summary>
-    private static string BatchId(params string[] ids) =>
-        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join(",", ids.Order(StringComparer.Ordinal)))));
-
-    private static async Task<HttpResponseMessage> SendAsync(HttpClient client, string token, object body)
+    private static async Task<HttpResponseMessage> SendAsync(HttpClient client, string path, string token, object body)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, Path) { Content = JsonContent.Create(body) };
+        using var request = new HttpRequestMessage(HttpMethod.Post, path) { Content = JsonContent.Create(body) };
         request.Headers.Add(GatewayHeaders.SigToken, token);
         return await client.SendAsync(request, Ct);
     }
 
-    private async Task<string> SeedPendingAsync()
+    private async Task<string> SeedPendingAssignmentAsync(string userId = "crc-trainee-1")
     {
-        string id = $"del-{Guid.NewGuid():N}";
+        string curriculumId = $"cur-{Guid.NewGuid():N}";
+        string id = $"asn-{Guid.NewGuid():N}";
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
-        db.DelegationRecords.Add(new DelegationRecord
+        db.TrainingCurricula.Add(new TrainingCurriculum
+        {
+            Id = curriculumId,
+            StudyId = new KernelStudyCode("CARDIO-2026"),
+            ProtocolVersion = "3.0",
+            ProtocolVersionNumber = 3,
+            QualificationCode = "protocol_training",
+            PassingScore = 0.8,
+            Title = "Protocol V3.0 Qualification Curriculum",
+            QuizQuestionsJson = "[{\"id\":\"q-1\",\"prompt\":\"Updated SBP threshold?\",\"options\":[{\"id\":\"opt-a\",\"label\":\"120\"},{\"id\":\"opt-b\",\"label\":\"140\"}],\"correct_option_id\":\"opt-b\"}]",
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UnixEpoch,
+            CreatedBy = "sponsor-dm",
+        });
+        db.TrainingAssignments.Add(new TrainingAssignment
         {
             Id = id,
-            StudyId = "CARDIO-2026",
-            SiteId = "SITE-101",
-            StaffUserId = "staff-1",
-            StaffName = "Site staff",
-            Role = "Clinical Research Coordinator",
-            TaskCode = "EDC_DATA_ENTRY",
-            Duties = "eCRF data entry",
+            CurriculumId = curriculumId,
+            StudyId = new KernelStudyCode("CARDIO-2026"),
+            SiteId = new KernelSiteCode("SITE-101"),
+            UserId = userId,
+            UserName = "Clinical Research Coordinator",
+            UserRole = "Clinical Research Coordinator",
+            Status = "PENDING",
             CreatedAt = DateTimeOffset.UnixEpoch,
-            CreatedBy = "pi-knowledge",
+            CreatedBy = "sponsor-dm",
         });
         await db.SaveChangesAsync(Ct);
         return id;
     }
 
-    private async Task<DelegationRecord?> RecordAsync(string id)
+    private async Task<TrainingAssignment?> AssignmentAsync(string id)
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
-        return await db.DelegationRecords.AsNoTracking().SingleOrDefaultAsync(d => d.Id == id, Ct);
+        return await db.TrainingAssignments.AsNoTracking().SingleOrDefaultAsync(a => a.Id == id, Ct);
     }
 
     private static System.Threading.CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    /// <summary>The knowledge host on an isolated EF Core in-memory database.</summary>
     public sealed class KnowledgeFactory : WebApplicationFactory<Cadence.Apps.Knowledge.Program>
     {
         private readonly string _databaseName = $"knowledge-signoff-{Guid.NewGuid():N}";
@@ -208,7 +257,14 @@ public sealed class DelegationSignOffAuthorityTests(DelegationSignOffAuthorityTe
                     .UseCadenceStandaloneTenancy(sp.GetService<ICurrentTenantAccessor>(), isRelational: false)
                     .AddInterceptors(StandaloneTenantSaveChangesInterceptor.Instance));
 
-                // The durable token-use store needs PostgreSQL; this in-memory host keeps uses in process memory.
+                services.RemoveAll<IKnowledgeKernelTrustClient>();
+                services.AddSingleton<InMemoryKnowledgeKernelTrustClient>();
+                services.AddSingleton<IKnowledgeKernelTrustClient>(sp => sp.GetRequiredService<InMemoryKnowledgeKernelTrustClient>());
+
+                services.RemoveAll<IEtmfTrainingIngestClient>();
+                services.AddSingleton<InMemoryEtmfTrainingIngestClient>();
+                services.AddSingleton<IEtmfTrainingIngestClient>(sp => sp.GetRequiredService<InMemoryEtmfTrainingIngestClient>());
+
                 services.RemoveAll<ISigTokenUseStore>();
                 services.AddSingleton<ISigTokenUseStore>(new ReplayCache());
             });

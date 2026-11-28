@@ -918,7 +918,9 @@
           }
         }
       },
-      "Designer_StudyId": {},
+      "Designer_StudyId": {
+        "type": "string"
+      },
       "Designer_ValidationDetection": {
         "required": [
           "packKey",

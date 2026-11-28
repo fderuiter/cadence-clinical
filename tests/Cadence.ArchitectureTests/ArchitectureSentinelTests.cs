@@ -655,11 +655,8 @@ public partial class ArchitectureSentinelTests
 
         string[] expectedBitemporalTables =
         [
-            "ctms_delegation_periods",
-            "doa_delegation_periods",
             "site_activation_periods",
             "delegation_of_authority_periods",
-            "delegation_record_periods",
         ];
         discoveredPeriodTables.Keys.Should().Contain(expectedBitemporalTables);
         foreach (string periodTable in expectedBitemporalTables)

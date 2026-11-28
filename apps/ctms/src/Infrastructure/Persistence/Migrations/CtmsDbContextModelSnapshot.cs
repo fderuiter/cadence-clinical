@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using NpgsqlTypes;
 
 #nullable disable
 
@@ -336,7 +335,7 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.ToTable("ctms_defeated_monitoring_visits", (string)null);
                 });
 
-            modelBuilder.Entity("Cadence.Apps.Ctms.Domain.CtmsDelegation", b =>
+            modelBuilder.Entity("Cadence.Apps.Ctms.Domain.CtmsDoaTaskEndorsement", b =>
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(36)
@@ -357,13 +356,30 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("KernelGrantId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ReasonForChange")
                         .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RevokedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
                     b.Property<bool>("SignedOff")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("SignedOffAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SignedOffBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("SiteId")
                         .IsRequired()
@@ -399,6 +415,8 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("KernelGrantId");
+
                     b.HasIndex("SiteId");
 
                     b.HasIndex("StaffUserId");
@@ -407,91 +425,7 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("ctms_delegations", (string)null);
-                });
-
-            modelBuilder.Entity("Cadence.Apps.Ctms.Domain.CtmsDelegationPeriod", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(36)
-                        .HasColumnType("character varying(36)");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("DelegationId")
-                        .IsRequired()
-                        .HasMaxLength(36)
-                        .HasColumnType("character varying(36)");
-
-                    b.Property<string>("EndDate")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("ReasonForChange")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<NpgsqlRange<DateTimeOffset>>("RecordedPeriod")
-                        .HasColumnType("tstzrange")
-                        .HasColumnName("recorded_period");
-
-                    b.Property<bool>("SignedOff")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("SiteCode")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("StaffUserId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("StartDate")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("StudyCode")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("TaskCodes")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.Property<NpgsqlRange<DateTimeOffset>>("ValidPeriod")
-                        .HasColumnType("tstzrange")
-                        .HasColumnName("valid_period");
-
-                    b.Property<long>("_version")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasDefaultValue(0L);
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DelegationId");
-
-                    b.HasIndex("TenantId");
-
-                    b.HasIndex("SiteCode", "StudyCode");
-
-                    b.ToTable("ctms_delegation_periods", (string)null);
+                    b.ToTable("ctms_doa_task_endorsements", (string)null);
                 });
 
             modelBuilder.Entity("Cadence.Apps.Ctms.Domain.CtmsGeneratedLetter", b =>
@@ -1239,163 +1173,6 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.ToTable("ctms_site_milestones", (string)null);
                 });
 
-            modelBuilder.Entity("Cadence.Apps.Ctms.Domain.DoaDelegationPeriod", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(36)
-                        .HasColumnType("character varying(36)");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("DelegationRecordId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<DateTimeOffset?>("EndDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTimeOffset?>("PiApprovedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("PiSignatureHash")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("ReasonForChange")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<NpgsqlRange<DateTimeOffset>>("RecordedPeriod")
-                        .HasColumnType("tstzrange")
-                        .HasColumnName("recorded_period");
-
-                    b.Property<string>("SiteCode")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("StaffUserId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<DateTimeOffset>("StartDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("TaskCode")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.Property<NpgsqlRange<DateTimeOffset>>("ValidPeriod")
-                        .HasColumnType("tstzrange")
-                        .HasColumnName("valid_period");
-
-                    b.Property<long>("_version")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasDefaultValue(0L);
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DelegationRecordId");
-
-                    b.HasIndex("SiteCode");
-
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("doa_delegation_periods", (string)null);
-                });
-
-            modelBuilder.Entity("Cadence.Apps.Ctms.Domain.DoaDelegationRecord", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset?>("EndDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTimeOffset?>("PiApprovedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("PiSignatureHash")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ReasonForChange")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SiteId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("StaffUserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset>("StartDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("TaskCode")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.Property<long>("VersionIndex")
-                        .IsConcurrencyToken()
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SiteId");
-
-                    b.HasIndex("StaffUserId");
-
-                    b.HasIndex("TaskCode");
-
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("doa_delegation_records", (string)null);
-                });
-
             modelBuilder.Entity("Cadence.Core.Domain.Audit.AuditLogEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1553,15 +1330,6 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Cadence.Apps.Ctms.Domain.CtmsDelegationPeriod", b =>
-                {
-                    b.HasOne("Cadence.Apps.Ctms.Domain.CtmsDelegation", null)
-                        .WithMany()
-                        .HasForeignKey("DelegationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("Cadence.Apps.Ctms.Domain.CtmsInvestigatorPayable", b =>
                 {
                     b.HasOne("Cadence.Apps.Ctms.Domain.CtmsInvestigatorGrant", null)
@@ -1581,15 +1349,6 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.HasOne("Cadence.Apps.Ctms.Domain.CtmsInvestigatorGrant", null)
                         .WithMany()
                         .HasForeignKey("GrantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Cadence.Apps.Ctms.Domain.DoaDelegationPeriod", b =>
-                {
-                    b.HasOne("Cadence.Apps.Ctms.Domain.DoaDelegationRecord", null)
-                        .WithMany()
-                        .HasForeignKey("DelegationRecordId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

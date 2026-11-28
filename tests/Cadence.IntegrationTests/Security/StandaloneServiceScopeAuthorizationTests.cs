@@ -180,7 +180,7 @@ public sealed class StandaloneServiceScopeAuthorizationTests(StandaloneScopePost
             ("etmf", fixture.Etmf.CreateSignedClient, HttpMethods.Get, "/api/v1/etmf/documents?study_id=STUDY-101&site_id=SITE-02", null),
             ("interop", fixture.Interop.CreateSignedClient, HttpMethods.Get, "/api/v1/interop/esource/candidates?study_id=STUDY-101&site_id=SITE-02&skip=0&limit=20", null),
             ("imaging", fixture.Imaging.CreateSignedClient, HttpMethods.Get, "/api/v1/imaging/studies/UID-DOES-NOT-EXIST", null),
-            ("knowledge", fixture.Knowledge.CreateSignedClient, HttpMethods.Get, "/api/v1/training/delegations?study_id=STUDY-101&site_id=SITE-02", null),
+            ("knowledge", fixture.Knowledge.CreateSignedClient, HttpMethods.Get, "/api/v1/training/assignments?study_id=STUDY-101&site_id=SITE-02", null),
         };
 
         // 1. Unassigned site scope (SiteIds = []) fails closed with 403 for ALL 5 site-scoped roles.

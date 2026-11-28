@@ -12,10 +12,12 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.WorkQueues;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
+using Cadence.Kernel.Trust;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -52,8 +54,23 @@ public sealed partial class TrialOnboardingService(
     /// <summary>Fixed valid-from anchor for initial trial grants so command payloads remain identical across retries.</summary>
     internal static readonly DateTimeOffset GrantEpoch = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
+    /// <summary>Canonical qualification code gating protocol capture capabilities across clinical workspaces.</summary>
+    public const string CaptureQualificationCode = "protocol_training";
+
+    /// <summary>All 6 capture capabilities gated by <see cref="DefineQualificationRequirement"/> under K-AUTH-6.</summary>
+    internal static readonly string[] CaptureGatedCapabilities =
+    [
+        "participant.screen",
+        "observation.record",
+        "observation.correct",
+        "collection.open",
+        "collection.record",
+        "collection.sign",
+    ];
+
     private const int TrialDurationDays = 30;
     private const string DefaultReason = "Bootstrap self-service pre-release trial workspace for authenticated OIDC caller";
+    private const string FounderTrainingPayload = "cadence-trial-founder-baseline-gcp-protocol-training-v1";
 
     private static readonly string[] OnboardingOperatorCapabilities =
     [
@@ -63,6 +80,9 @@ public sealed partial class TrialOnboardingService(
         "tenant.enroll_member",
         "subscription.provision",
         "work_queue.define",
+        "artifact.register",
+        "qualification.record",
+        "qualification_requirement.define",
     ];
 
     private static readonly string[] SponsorAdminCapabilities =
@@ -74,6 +94,10 @@ public sealed partial class TrialOnboardingService(
         "grant.issue",
         "grant.delegate",
         "grant.revoke",
+        "qualification.record",
+        "qualification.revoke",
+        "qualification_requirement.define",
+        "qualification_requirement.retire",
         "study.register",
         "site.register",
         "study_site.link",
@@ -155,6 +179,10 @@ public sealed partial class TrialOnboardingService(
         "validation_run.record",
         "attestation.sign",
         "simulation.save_report",
+        "qualification.record",
+        "qualification.revoke",
+        "qualification_requirement.define",
+        "qualification_requirement.retire",
     ];
 
     private static readonly string[] SiteInvestigatorCapabilities =
@@ -169,6 +197,25 @@ public sealed partial class TrialOnboardingService(
         "collection.record",
         "collection.sign",
         "attestation.sign",
+        "execution.query.answer",
+        "enrollment.export",
+        "grant.delegate",
+        "grant.revoke",
+        "qualification.record",
+        "qualification.revoke",
+        "artifact.register",
+        "artifact.add_version",
+    ];
+
+    private static readonly string[] SiteCoordinatorCapabilities =
+    [
+        "participant.register",
+        "participant.screen",
+        "enrollment.change_status",
+        "observation.record",
+        "observation.correct",
+        "collection.open",
+        "collection.record",
         "execution.query.answer",
         "enrollment.export",
     ];
@@ -415,13 +462,26 @@ public sealed partial class TrialOnboardingService(
                 Actor.Person(subject),
                 AuthorityScope.Tenant(),
                 GrantEpoch,
-                withGrantOption: false,
+                withGrantOption: true,
                 ids,
                 "site-investigator",
                 reason,
                 cancellationToken).ConfigureAwait(false) is { } investigatorErr)
         {
             return investigatorErr;
+        }
+
+        if (await EnsureRoleDefinedAsync(
+                tenant,
+                ids.Role("SITE_COORDINATOR"),
+                "SITE_COORDINATOR",
+                "Site clinical research coordinator",
+                SiteCoordinatorCapabilities,
+                ids,
+                reason,
+                cancellationToken).ConfigureAwait(false) is { } crcRoleErr)
+        {
+            return crcRoleErr;
         }
 
         if (await EnsureRoleDefinedAsync(
@@ -435,6 +495,66 @@ public sealed partial class TrialOnboardingService(
                 cancellationToken).ConfigureAwait(false) is { } dmRoleErr)
         {
             return dmRoleErr;
+        }
+
+        foreach (string gatedCapability in CaptureGatedCapabilities)
+        {
+            if (await EnsureRecordAsync(
+                    new DefineQualificationRequirement(
+                        tenant,
+                        ids.QualificationRequirement($"capture:{gatedCapability}"),
+                        gatedCapability,
+                        CaptureQualificationCode,
+                        null,
+                        AuthorityScope.Tenant(),
+                        GrantEpoch,
+                        null,
+                        ids.Key($"qual-req:{gatedCapability}"),
+                        reason),
+                    cancellationToken).ConfigureAwait(false) is { } reqErr)
+            {
+                return reqErr;
+            }
+        }
+
+        byte[] founderTrainingBytes = Encoding.UTF8.GetBytes(FounderTrainingPayload);
+        ArtifactVersionId founderTrainingVersionId = ids.ArtifactVersion("founder:training:v1");
+        if (await EnsureRecordAsync(
+                new RegisterArtifact(
+                    tenant,
+                    ids.Artifact("founder:training"),
+                    founderTrainingVersionId,
+                    ArtifactKind.TrainingRecord,
+                    null,
+                    "Principal Investigator Baseline GCP and Capture Qualification Record",
+                    new ArtifactContent(
+                        ContentHash.OfBytes(founderTrainingBytes),
+                        founderTrainingBytes.Length,
+                        "application/pdf",
+                        $"blob://trial/{tenantCode}/founder-gcp-training-v1.pdf"),
+                    ids.Key("artifact:founder:training:v1"),
+                    reason),
+                cancellationToken).ConfigureAwait(false) is { } trainingArtifactErr)
+        {
+            return trainingArtifactErr;
+        }
+
+        if (await EnsureRecordAsync(
+                new RecordQualification(
+                    tenant,
+                    ids.Qualification("founder:protocol-training"),
+                    Actor.Person(subject),
+                    QualificationKind.Training,
+                    CaptureQualificationCode,
+                    null,
+                    founderTrainingVersionId,
+                    GrantEpoch,
+                    null,
+                    ids.Key("qualification:founder:protocol-training"),
+                    reason),
+                cancellationToken).ConfigureAwait(false) is { } founderQualErr)
+        {
+            return founderQualErr;
         }
 
         foreach (var (consumer, roleCode, roleName, capabilities) in ModuleServiceAccounts)
@@ -765,6 +885,15 @@ public sealed partial class TrialOnboardingService(
         public RoleId Role(string code) => RoleId.FromGuid(Derive("role", code));
 
         public GrantId Grant(string name) => GrantId.FromGuid(Derive("grant", name));
+
+        public ArtifactId Artifact(string name) => ArtifactId.FromGuid(Derive("artifact", name));
+
+        public ArtifactVersionId ArtifactVersion(string name) => ArtifactVersionId.FromGuid(Derive("artifact-version", name));
+
+        public QualificationId Qualification(string name) => QualificationId.FromGuid(Derive("qualification", name));
+
+        public QualificationRequirementId QualificationRequirement(string name) =>
+            QualificationRequirementId.FromGuid(Derive("qualification-requirement", name));
 
         public WorkQueueDefinitionId WorkQueueDefinition(string code) =>
             WorkQueueDefinitionId.FromGuid(Derive("work-queue-definition", code));

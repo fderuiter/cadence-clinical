@@ -204,29 +204,91 @@ export function createCtmsAndFinancialsHandlers(store) {
     }),
     http.get(
       "*/api/v1/ctms/doa/sites/:siteId/export-pdf",
-      ({ params }) =>
-        new HttpResponse(
+      ({ params, request }) => {
+        if (!request.headers.get("X-Sig-Token")) {
+          return HttpResponse.json(
+            {
+              title: "Step-up signature token required",
+              status: 401,
+              detail: "X-Sig-Token header is required for DoA PDF export.",
+            },
+            { status: 401 }
+          );
+        }
+        return new HttpResponse(
           `%PDF-1.4\n% Demo Delegation of Authority Log ${params.siteId}\n`,
           {
             status: 200,
             headers: { "Content-Type": "application/pdf" },
           }
-        )
+        );
+      }
     ),
     http.post("*/api/v1/ctms/doa/:action", async ({ params, request }) => {
       const body = await readJsonBody(request);
-      const log = store.state.doaLogs.get("SITE-101");
+      const step = nextDemoStep("ctms-doa-mutation");
+      const siteId = body?.site_id || "SITE-101";
+      const log =
+        store.state.doaLogs.get(siteId) || store.state.doaLogs.get("SITE-101");
+
+      if (params.action === "sign-off") {
+        if (!request.headers.get("X-Sig-Token")) {
+          return HttpResponse.json(
+            {
+              title: "Step-up signature token required",
+              status: 401,
+              detail: "X-Sig-Token header is required for PI DoA sign-off.",
+            },
+            { status: 401 }
+          );
+        }
+        const found = log?.delegated_staff.find(
+          (r) => r.record_id === body?.record_id
+        );
+        if (found) {
+          found.signed_off = true;
+          found.status = "ACTIVE";
+          found.pi_signed_off_at = demoNowIso(step);
+        }
+        return HttpResponse.json(
+          found || {
+            record_id: body?.record_id || `doa-${step}`,
+            status: "ACTIVE",
+            signed_off: true,
+          }
+        );
+      }
+
       if (params.action === "delegate" && log) {
-        log.delegated_staff.push({
-          id: `doa-${Date.now()}`,
-          staff_id: body?.staff_id || "usr-crc-02",
+        const created = {
+          record_id: `doa-${step}`,
+          site_id: siteId,
+          staff_user_id: body?.staff_user_id || body?.staff_id || "usr-crc-03",
           staff_name: body?.staff_name || "Delegated Site Coordinator",
           role: body?.role || "CRC",
-          tasks: body?.tasks || ["CRF_DATA_ENTRY"],
+          task_codes: body?.task_codes || body?.tasks || ["CRF_DATA_ENTRY"],
+          start_date: body?.start_date || "2026-08-01", // deid-ignore
+          end_date: null,
+          is_active: true,
+          signed_off: false,
           status: "PENDING_PI_SIGNATURE",
-          signed_at: null,
-        });
+        };
+        log.delegated_staff.push(created);
+        return HttpResponse.json(created, { status: 201 });
       }
+
+      if (params.action === "revoke" && log) {
+        const staffId = body?.staff_user_id;
+        for (const rec of log.delegated_staff) {
+          if (rec.staff_user_id === staffId) {
+            rec.is_active = false;
+            rec.status = "REVOKED";
+            rec.end_date = "2026-08-15"; // deid-ignore
+          }
+        }
+        return HttpResponse.json({ status: "REVOKED", revoked_count: 1 });
+      }
+
       return HttpResponse.json({ status: "OK", action: params.action });
     }),
     http.get("*/api/v1/ctms/grants", () =>

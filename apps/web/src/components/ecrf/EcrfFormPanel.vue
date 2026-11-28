@@ -37,6 +37,49 @@
       />
 
       <div
+        v-if="formState.captureBlocked"
+        id="ecrf-qualification-gate-banner"
+        data-testid="ecrf-qualification-gate-banner"
+        class="ecrf-draft-banner ecrf-draft-banner--qualification"
+        role="alert"
+      >
+        <div class="ecrf-draft-banner-body">
+          <strong>
+            Data capture locked — Kernel delegation or qualification required
+          </strong>
+          <span>{{ captureGateMessage }}</span>
+          <ul
+            v-if="unmetCaptureConditions.length > 0"
+            class="ecrf-draft-banner-list"
+          >
+            <li
+              v-for="cond in unmetCaptureConditions"
+              :key="`${cond.code}-${cond.description}`"
+            >
+              <strong class="ecrf-gate-code">[{{ cond.code }}]</strong>
+              {{ cond.description }}
+            </li>
+          </ul>
+        </div>
+        <div v-if="trainingAvailable" class="ecrf-draft-banner-actions">
+          <component
+            :is="routerLinkTag"
+            id="ecrf-qualification-training-link"
+            data-testid="ecrf-qualification-training-link"
+            class="btn btn-primary ecrf-training-gate-link"
+            :to="trainingGateLocation"
+            :href="
+              typeof trainingGateLocation === 'string'
+                ? trainingGateLocation
+                : undefined
+            "
+          >
+            Complete pending training
+          </component>
+        </div>
+      </div>
+
+      <div
         v-if="formState.draftRestored"
         class="ecrf-draft-banner ecrf-draft-banner--restored"
         data-testid="ecrf-draft-restored-banner"
@@ -242,6 +285,8 @@ import { confirmDialog } from "../../composables/useConfirmDialog.js";
 import { useEcrfForm } from "../../composables/useEcrfForm";
 import { useEcrfSdv } from "../../composables/useEcrfSdv";
 import { useFormQueries } from "../../composables/useFormQueries";
+import { useScopedNavigation } from "../../composables/useScopedNavigation";
+import { isScreenAvailable } from "../../router/availability.js";
 import { useAuthStore } from "../../stores/auth.js";
 import {
   alignElementBelowStickyChrome,
@@ -259,6 +304,8 @@ import EcrfSignaturesSection from "./EcrfSignaturesSection.vue";
 const props = withDefaults(
   defineProps<{
     formId?: string | null;
+    studyCode?: string | null;
+    siteCode?: string | null;
     enrollmentId?: string | null;
     collectionSpecId?: string | null;
     plannedActivityId?: string | null;
@@ -292,13 +339,31 @@ const emit = defineEmits<{
   (e: "retry-schedule"): void;
 }>();
 
-const hasRouter = Boolean(
-  getCurrentInstance()?.appContext.config.globalProperties.$router
-);
+const instance = getCurrentInstance();
+const hasRouter = Boolean(instance?.appContext.config.globalProperties.$router);
+const routerLinkTag = instance?.appContext.components.RouterLink ?? "a";
 const authStore = useAuthStore();
+const { workspaceScope, scopedWorkflowPath } = useScopedNavigation();
+const trainingAvailable = computed(() => isScreenAvailable("training"));
 const rawForm = useEcrfForm();
 const { form, dirty, lastHydratedSave } = rawForm;
 const formState = reactive(rawForm);
+const captureGateMessage = computed(
+  () =>
+    formState.captureExplanation?.claim ||
+    "Active site delegation and completed protocol training qualification are required before recording values on this form."
+);
+const unmetCaptureConditions = computed(() =>
+  (formState.captureExplanation?.conditions ?? []).filter((c) => !c.met)
+);
+const trainingGateLocation = computed(() =>
+  scopedWorkflowPath("/training", {
+    studyCode: (props.studyCode || "").trim() || workspaceScope.value.studyCode,
+    siteId: (props.siteCode || "").trim() || workspaceScope.value.siteId,
+    subjectCode:
+      props.enrollmentContext?.subjectCode || workspaceScope.value.subjectCode,
+  })
+);
 const sdv = reactive(
   useEcrfSdv({ form, items: rawForm.items, reload: rawForm.reload })
 );
@@ -698,6 +763,22 @@ onUnmounted(() => {
   background-color: var(--semantic-color-surface-subtle);
   border: 1px solid var(--semantic-color-border-control);
   border-left: 4px solid var(--semantic-color-edited-row-border);
+}
+.ecrf-draft-banner--qualification {
+  background-color: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-border);
+  border-left: 4px solid var(--semantic-color-warning-border-strong);
+}
+.ecrf-gate-code {
+  font-family: var(--semantic-font-mono);
+}
+.ecrf-training-gate-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm, 6px);
+  font-weight: 600;
 }
 .ecrf-draft-banner-body {
   display: flex;

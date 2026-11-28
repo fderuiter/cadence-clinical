@@ -171,6 +171,18 @@ public sealed class ProductFamilyGuardMiddleware : IMiddleware
             return true;
         }
 
+        if ((string.Equals(principal.UserId, TrustOperators.KnowledgeTrainingOperator.Id, StringComparison.Ordinal)
+                || string.Equals(principal.UserId, TrustOperators.CtmsDelegationReader.Id, StringComparison.Ordinal))
+            && (StartsWithSegment(path, "/api/v1/kernel/grants")
+                || StartsWithSegment(path, "/api/v1/kernel/roles")
+                || StartsWithSegment(path, "/api/v1/kernel/qualifications")
+                || StartsWithSegment(path, "/api/v1/kernel/qualification-requirements")
+                || (StartsWithSegment(path, "/api/v1/kernel/studies")
+                    && path.TrimEnd('/').EndsWith("/artifacts", StringComparison.OrdinalIgnoreCase))))
+        {
+            return true;
+        }
+
         return string.Equals(principal.UserId, CommercialOperators.BillingOperator.Id, StringComparison.Ordinal)
             && StartsWithSegment(path, "/api/v1/kernel/entitlements");
     }
@@ -292,6 +304,10 @@ public sealed class ProductFamilyGuardMiddleware : IMiddleware
             || StartsWithSegment(path, "/api/v1/kernel/locks")
             || StartsWithSegment(path, "/api/v1/kernel/nodes")
             || StartsWithSegment(path, "/api/v1/kernel/authorization")
+            || StartsWithSegment(path, "/api/v1/kernel/roles")
+            || StartsWithSegment(path, "/api/v1/kernel/grants")
+            || StartsWithSegment(path, "/api/v1/kernel/qualifications")
+            || StartsWithSegment(path, "/api/v1/kernel/qualification-requirements")
             || StartsWithSegment(path, "/api/v1/kernel/search")
             || StartsWithSegment(path, "/api/v1/kernel/activity"))
         {

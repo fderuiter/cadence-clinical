@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Authorization;
+using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 
@@ -89,6 +90,40 @@ public sealed class KernelReadAccess(
 
         var decision = await probe.CanIAsync(tenant, capability, resource, cancellationToken).ConfigureAwait(false);
         return decision.Permitted;
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<(bool Permitted, ProblemExplanation? Explanation)> ExplainExerciseAsync(
+        TenantId tenant,
+        Capability capability,
+        NodeRef resource,
+        CancellationToken cancellationToken)
+    {
+        if (actor.Actor is null)
+        {
+            var unresolved = AuthorizationDecision.Deny("Sign in as an accountable person.").Explain(capability.Token, resource);
+            var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, ExplanationMasking.CollectNodes(unresolved), cancellationToken).ConfigureAwait(false);
+            return (false, ProblemExplanation.From(unresolved, masks));
+        }
+
+        if (probe is null)
+        {
+            var fallbackPermitted = !Capability.IsUnblinding(capability.Token);
+            return (fallbackPermitted, null);
+        }
+
+        var decision = await probe.CanIAsync(tenant, capability, resource, cancellationToken).ConfigureAwait(false);
+        if (decision.Permitted)
+        {
+            return (true, null);
+        }
+
+        var explanation = decision.Explain(capability.Token, resource);
+        var referencedNodes = ExplanationMasking.CollectNodes(explanation);
+        var nodeMasks = referencedNodes.Count == 0
+            ? null
+            : await KernelReadMasking.MaskAsync(visibility, actor, tenant, referencedNodes, cancellationToken).ConfigureAwait(false);
+        return (false, ProblemExplanation.From(explanation, nodeMasks));
     }
 
     /// <inheritdoc />

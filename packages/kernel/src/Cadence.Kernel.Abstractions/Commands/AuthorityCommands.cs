@@ -15,6 +15,14 @@ namespace Cadence.Kernel.Commands;
 /// <para><c>Capabilities</c>: The capability tokens the role bundles, at least one.</para>
 /// </remarks>
 [KernelCapability("role.define", VerbClass.Approve)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(AuthorityErrors),
+    nameof(AuthorityErrors.RoleCodeInvalid),
+    nameof(AuthorityErrors.RoleNameInvalid),
+    nameof(AuthorityErrors.RoleCodeTaken),
+    nameof(AuthorityErrors.CapabilityInvalid),
+    nameof(AuthorityErrors.UnblindingNotBundled))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 [BaselineKernelCommand]
 public sealed record DefineRole(
@@ -36,6 +44,15 @@ public sealed record DefineRole(
 /// <para><c>WithGrantOption</c>: Whether the grantee may delegate it (<see cref="DelegateGrant"/>).</para>
 /// </remarks>
 [KernelCapability("grant.issue", VerbClass.Approve)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(AuthorityErrors),
+    nameof(AuthorityErrors.GrantTargetInvalid),
+    nameof(AuthorityErrors.CapabilityInvalid),
+    nameof(AuthorityErrors.ScopeInvalid),
+    nameof(AuthorityErrors.ValidityInvalid),
+    nameof(AuthorityErrors.RoleUnknown),
+    nameof(AuthorityErrors.ScopeUnknown))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 [BaselineKernelCommand]
 public sealed record IssueGrant(
@@ -57,6 +74,19 @@ public sealed record IssueGrant(
 /// within the parent's, and it stops authorizing as soon as the parent does.
 /// </summary>
 [KernelCapability("grant.delegate", VerbClass.Execute, Resource = nameof(ParentGrantId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(
+    typeof(AuthorityErrors),
+    nameof(AuthorityErrors.ParentInactive),
+    nameof(AuthorityErrors.GrantOptionRequired),
+    nameof(AuthorityErrors.SelfDelegation),
+    nameof(AuthorityErrors.GrantTargetInvalid),
+    nameof(AuthorityErrors.CapabilityInvalid),
+    nameof(AuthorityErrors.ScopeInvalid),
+    nameof(AuthorityErrors.ValidityInvalid),
+    nameof(AuthorityErrors.RoleUnknown),
+    nameof(AuthorityErrors.ScopeUnknown),
+    nameof(AuthorityErrors.DelegationExceedsParent))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 [BaselineKernelCommand]
 public sealed record DelegateGrant(
@@ -79,6 +109,8 @@ public sealed record DelegateGrant(
 /// delegation it signed.
 /// </summary>
 [KernelCapability("grant.revoke", VerbClass.Approve, Resource = nameof(GrantId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(typeof(AuthorityErrors), nameof(AuthorityErrors.RevocationInvalid))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 [BaselineKernelCommand]
 public sealed record RevokeGrant(

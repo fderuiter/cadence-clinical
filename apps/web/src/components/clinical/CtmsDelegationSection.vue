@@ -20,7 +20,7 @@
         type="button"
         class="btn btn-secondary"
         :disabled="!siteInput.trim() || exporting"
-        @click="exportPdf"
+        @click="prepareExportPdf"
       >
         {{ exporting ? "Exporting..." : "Export PDF" }}
       </button>
@@ -132,6 +132,40 @@
         activate pending delegations.
       </p>
 
+      <div v-if="showExportPrompt" id="doa-export-card" class="mutation-card">
+        <h4>21 CFR Part 11 signed DoA PDF export ({{ siteInput.trim() }})</h4>
+        <div class="form-row">
+          <ClinicalInput
+            id="doa-export-credential"
+            v-model="exportCredential"
+            label="Step-up credential"
+            type="password"
+            autocomplete="current-password"
+            placeholder="Re-enter account credential"
+            density="compact"
+            :show-query-flag="false"
+          />
+          <button
+            id="btn-confirm-doa-export"
+            type="button"
+            class="btn btn-primary"
+            :disabled="!siteInput.trim() || !exportCredential || exporting"
+            @click="confirmExportPdf"
+          >
+            {{ exporting ? "Exporting..." : "Sign & export PDF" }}
+          </button>
+          <button
+            id="btn-cancel-doa-export"
+            type="button"
+            class="btn btn-secondary"
+            :disabled="exporting"
+            @click="cancelExportPdf"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+
       <div v-if="activeSignOffRecord && canSignOff" class="mutation-card">
         <h4>
           Principal Investigator sign-off for
@@ -147,11 +181,21 @@
             density="compact"
             :show-query-flag="false"
           />
+          <ClinicalInput
+            id="doa-signoff-credential"
+            v-model="signOffCredential"
+            label="Step-up credential"
+            type="password"
+            autocomplete="current-password"
+            placeholder="Re-enter account credential"
+            density="compact"
+            :show-query-flag="false"
+          />
           <button
             id="btn-confirm-doa-signoff"
             type="button"
             class="btn btn-primary"
-            :disabled="!signOffReason.trim() || saving"
+            :disabled="!signOffReason.trim() || !signOffCredential || saving"
             @click="confirmSignOff"
           >
             {{ saving ? "Signing..." : "Sign delegation" }}
@@ -270,7 +314,14 @@
 import { computed, onMounted, ref } from "vue";
 import { ClinicalDataTable, ClinicalInput, useInlineFocusHandoff } from "ui";
 import { ctmsApi, type DelegationRecord, type DoaLog } from "../../api/ctmsApi";
+import { requestStepUpSignature } from "../../api/signatureVerification";
 import { canManageDoa, canSignOffDoa } from "../../canvas/authority";
+import {
+  CTMS_DOA_EXPORT_PDF_SEMANTIC_ACTION,
+  CTMS_DOA_SIGN_OFF_ACTION,
+  CTMS_DOA_SIGN_OFF_SEMANTIC_ACTION,
+  ctmsDoaExportPdfAction,
+} from "../../utils/signatureBinding";
 import {
   scopedWorkspaceSectionProps,
   useScopedWorkspaceSection,
@@ -315,6 +366,13 @@ const doaColumns = [
   { key: "actions", label: "Actions" },
 ];
 const exporting = ref(false);
+const showExportPrompt = ref(false);
+const exportCredential = ref("");
+const exportHandoff = useInlineFocusHandoff({
+  openTarget: "#doa-export-credential",
+  closeFallback: "#btn-export-doa-pdf",
+  scrollIfOffscreen: true,
+});
 const doaLog = ref<DoaLog | null>(null);
 
 const newStaffUserId = ref("");
@@ -324,6 +382,7 @@ const newReason = ref("");
 
 const activeSignOffRecord = ref<DelegationRecord | null>(null);
 const signOffReason = ref("");
+const signOffCredential = ref("");
 const signOffHandoff = useInlineFocusHandoff({
   openTarget: "#doa-signoff-reason",
   closeFallback: "#ctms-delegation-title",
@@ -408,11 +467,22 @@ async function submitDelegation() {
   }
 }
 
+function resolveSignerUsername(): string {
+  return (
+    authStore.identity?.username ||
+    authStore.user?.username ||
+    authStore.userId ||
+    "principal_investigator"
+  );
+}
+
 function prepareSignOff(rec: DelegationRecord) {
   signOffHandoff.rememberTrigger(`[id="btn-doa-signoff-${rec.record_id}"]`);
   activeRevokeRecord.value = null;
+  showExportPrompt.value = false;
   activeSignOffRecord.value = rec;
   signOffReason.value = "";
+  signOffCredential.value = "";
   void signOffHandoff.handoff("#doa-signoff-reason", {
     scrollIfOffscreen: true,
   });
@@ -422,6 +492,7 @@ function cancelSignOff() {
   const recordId = activeSignOffRecord.value?.record_id;
   activeSignOffRecord.value = null;
   signOffReason.value = "";
+  signOffCredential.value = "";
   void signOffHandoff.restoreTrigger([
     recordId ? `[id="btn-doa-signoff-${recordId}"]` : null,
     "#ctms-delegation-title",
@@ -431,16 +502,26 @@ function cancelSignOff() {
 async function confirmSignOff() {
   const rec = activeSignOffRecord.value;
   const reason = signOffReason.value.trim();
-  if (!rec || !reason || !canSignOff.value) return;
+  const credential = signOffCredential.value;
+  signOffCredential.value = "";
+  if (!rec || !reason || !credential || !canSignOff.value) return;
 
   saving.value = true;
   try {
+    const verification = await requestStepUpSignature({
+      username: resolveSignerUsername(),
+      password: credential,
+      totp: null,
+      action: CTMS_DOA_SIGN_OFF_ACTION,
+      semanticAction: CTMS_DOA_SIGN_OFF_SEMANTIC_ACTION,
+    });
     await ctmsApi.signOffDelegation(
       {
         record_id: rec.record_id,
         reason_for_change: reason,
       },
-      reason
+      reason,
+      verification.sig_token
     );
     activeSignOffRecord.value = null;
     signOffReason.value = "";
@@ -523,12 +604,42 @@ async function confirmRevoke() {
   }
 }
 
-async function exportPdf() {
+function prepareExportPdf() {
+  if (!siteInput.value.trim()) return;
+  exportHandoff.rememberTrigger("#btn-export-doa-pdf");
+  activeSignOffRecord.value = null;
+  activeRevokeRecord.value = null;
+  exportCredential.value = "";
+  showExportPrompt.value = true;
+  void exportHandoff.handoff("#doa-export-credential", {
+    scrollIfOffscreen: true,
+  });
+}
+
+function cancelExportPdf() {
+  exportCredential.value = "";
+  showExportPrompt.value = false;
+  void exportHandoff.restoreTrigger([
+    "#btn-export-doa-pdf",
+    "#ctms-delegation-title",
+  ]);
+}
+
+async function confirmExportPdf() {
   const site = siteInput.value.trim();
-  if (!site) return;
+  const credential = exportCredential.value;
+  exportCredential.value = "";
+  if (!site || !credential) return;
   exporting.value = true;
   try {
-    const blob = await ctmsApi.exportSiteDoaPdf(site);
+    const verification = await requestStepUpSignature({
+      username: resolveSignerUsername(),
+      password: credential,
+      totp: null,
+      action: ctmsDoaExportPdfAction(site),
+      semanticAction: CTMS_DOA_EXPORT_PDF_SEMANTIC_ACTION,
+    });
+    const blob = await ctmsApi.exportSiteDoaPdf(site, verification.sig_token);
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -537,6 +648,12 @@ async function exportPdf() {
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
+    showExportPrompt.value = false;
+    exporting.value = false;
+    void exportHandoff.restoreTrigger([
+      "#btn-export-doa-pdf",
+      "#ctms-delegation-title",
+    ]);
   } catch (err) {
     toasts.apiError("PDF export failed", err);
   } finally {

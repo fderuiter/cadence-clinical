@@ -5,12 +5,26 @@ import type { components, paths } from "./generated/knowledge";
 type Schemas = components["schemas"];
 
 export type TrainingCurriculum = Schemas["Knowledge_TrainingCurriculumDto"];
+export type TrainingModule = Schemas["Knowledge_TrainingModuleDto"];
+export type TrainingQuizQuestion = Schemas["Knowledge_TrainingQuizQuestionDto"];
+export type TrainingQuizOption = Schemas["Knowledge_TrainingQuizOptionDto"];
 export type TrainingAssignment = Schemas["Knowledge_TrainingAssignmentDto"];
-export type DelegationSummary = Schemas["Knowledge_DelegationSummaryDto"];
+export type StudyStaffGrant = Schemas["Knowledge_StudyStaffGrantDto"];
+export type CreateTrainingCurriculumPayload =
+  Schemas["Knowledge_CreateTrainingCurriculumRequest"];
+export type CompleteTrainingAssignmentPayload =
+  Schemas["Knowledge_CompleteTrainingAssignmentRequest"];
+export type CompleteTrainingAssignmentResponse =
+  Schemas["Knowledge_CompleteTrainingAssignmentResponse"];
 
 export interface CurriculumQueryParams {
   study_id?: string;
   protocol_version?: string;
+}
+
+export interface StudyStaffQueryParams {
+  study_id: string;
+  site_id?: string;
 }
 
 export interface AssignmentQueryParams {
@@ -29,27 +43,10 @@ export interface BatchAssignCurriculumPayload {
   reason_for_change?: string | null;
 }
 
-export interface DelegationQueryParams {
-  study_id?: string;
-  site_id?: string;
-  status?: string;
-}
-
-export interface BulkDelegationSignOffPayload {
-  delegation_ids: string[];
-  study_id?: string | null;
-  site_id?: string | null;
-  /** The signer is the signed-in user; the credential check is the step-up token (ADR-2515). */
-  signature_payload: {
-    meaning: string;
-    reason_for_change?: string | null;
-  };
-}
-
 const client = createOpenApiClient<paths>();
 
 /**
- * Typed client for the .NET Knowledge training & delegation service,
+ * Typed client for the .NET Knowledge protocol training & qualification service,
  * generated from docs/openapi/knowledge_openapi.json.
  */
 export const trainingApi = {
@@ -72,6 +69,29 @@ export const trainingApi = {
   },
 
   /**
+   * Author a new protocol training curriculum with modules and verification quiz (POST /api/v1/training/curricula).
+   */
+  createCurriculum(
+    payload: CreateTrainingCurriculumPayload
+  ): Promise<TrainingCurriculum> {
+    const headers: Record<string, string> = {};
+    const reason =
+      payload.reason_for_change?.trim() ||
+      `Author protocol training curriculum ${payload.title}`;
+    headers["X-Change-Reason"] = encodeChangeReason(reason);
+
+    return unwrapResponse(
+      client.POST("/api/v1/training/curricula", {
+        body: {
+          ...payload,
+          reason_for_change: reason,
+        },
+        headers,
+      })
+    );
+  },
+
+  /**
    * Fetch specific curriculum details (GET /api/v1/training/curricula/{curriculum_id}).
    */
   getCurriculum(curriculumId: string): Promise<TrainingCurriculum> {
@@ -83,7 +103,8 @@ export const trainingApi = {
   },
 
   /**
-   * Synchronous batch assignment of curriculum to site personnel (POST /api/v1/training/curricula/batch-assign).
+   * Synchronous batch assignment of curriculum to site personnel resolved from canonical Kernel grants
+   * (POST /api/v1/training/curricula/batch-assign).
    */
   batchAssignCurriculum(
     payload: BatchAssignCurriculumPayload
@@ -106,6 +127,22 @@ export const trainingApi = {
           reason_for_change: payload.reason_for_change ?? null,
         },
         headers,
+      })
+    );
+  },
+
+  /**
+   * List study staff holding active canonical Kernel site grants (GET /api/v1/training/study-staff).
+   */
+  listStudyStaff(params: StudyStaffQueryParams): Promise<StudyStaffGrant[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/training/study-staff", {
+        params: {
+          query: {
+            study_id: params.study_id,
+            site_id: params.site_id,
+          },
+        },
       })
     );
   },
@@ -142,50 +179,32 @@ export const trainingApi = {
   },
 
   /**
-   * List site delegation records (GET /api/v1/training/delegations).
+   * Complete a personal training assignment with quiz answers and 21 CFR Part 11 step-up signature,
+   * filing a signed 05.02.04 PDF certificate in eTMF and recording a bitemporal Kernel Qualification
+   * (POST /api/v1/training/assignments/{assignment_id}/complete).
    */
-  listDelegations(
-    params: DelegationQueryParams = {}
-  ): Promise<DelegationSummary[]> {
-    return unwrapResponse(
-      client.GET("/api/v1/training/delegations", {
-        params: {
-          query: {
-            study_id: params.study_id,
-            site_id: params.site_id,
-            status: params.status,
-          },
-        },
-      })
-    );
-  },
-
-  /**
-   * Execute 21 CFR Part 11 bulk delegation sign-off (POST /api/v1/training/delegations/bulk-signoff).
-   */
-  bulkSignOffDelegations(
-    payload: BulkDelegationSignOffPayload,
+  completeAssignment(
+    assignmentId: string,
+    payload: CompleteTrainingAssignmentPayload,
     sigToken: string
-  ): Promise<Schemas["Knowledge_BulkDelegationSignOffResponse"]> {
+  ): Promise<CompleteTrainingAssignmentResponse> {
     const headers: Record<string, string> = {
       "X-Sig-Token": sigToken,
     };
-    if (payload.signature_payload.reason_for_change) {
-      headers["X-Change-Reason"] = encodeChangeReason(
-        payload.signature_payload.reason_for_change
-      );
-    }
+    const reason =
+      payload.signature_payload.reason_for_change?.trim() ||
+      "21 CFR Part 11 protocol training qualification attestation";
+    headers["X-Change-Reason"] = encodeChangeReason(reason);
 
     return unwrapResponse(
-      client.POST("/api/v1/training/delegations/bulk-signoff", {
+      client.POST("/api/v1/training/assignments/{assignment_id}/complete", {
+        params: { path: { assignment_id: assignmentId } },
         body: {
-          delegation_ids: payload.delegation_ids,
-          study_id: payload.study_id ?? null,
-          site_id: payload.site_id ?? null,
+          quiz_answers: payload.quiz_answers ?? null,
+          time_spent_seconds: payload.time_spent_seconds ?? null,
           signature_payload: {
             meaning: payload.signature_payload.meaning,
-            reason_for_change:
-              payload.signature_payload.reason_for_change ?? null,
+            reason_for_change: reason,
           },
         },
         headers,

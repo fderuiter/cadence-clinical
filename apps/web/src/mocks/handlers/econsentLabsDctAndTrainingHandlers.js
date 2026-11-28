@@ -2,25 +2,152 @@ import { http, HttpResponse } from "msw";
 import { demoNowIso, nextDemoStep } from "../../utils/demoMode.js";
 import { readJsonBody } from "./shared.js";
 
-function buildDemoCurriculum(id = "curr-demo-01", includeStatus = true) {
+function buildDemoCurriculum(id = "curr-demo-01") {
   return {
     id,
     study_id: "DEMO-01",
+    protocol_version: "2.0",
+    protocol_version_number: 2,
+    qualification_code: "protocol_training",
+    passing_score: 0.8,
     title: "DEMO-01 Protocol v2.0 Core Qualification",
-    version: "2.0",
-    ...(includeStatus ? { status: "ACTIVE" } : {}),
+    description:
+      "Protocol Amendment v2.0 procedural updates, eligibility criteria, and endpoint capture guidelines.",
+    is_active: true,
+    created_at: "2026-07-01T10:00:00Z", // deid-ignore
     modules: [
       {
         id: "mod-01",
-        title: "Protocol Synopsis & Eligibility",
-        content: "Synthetic protocol qualification module.",
-        quiz_questions: [],
+        title: "Eligibility & Screening Updates",
+        section_ref: "Section 4.1",
+        summary:
+          "Updated baseline eGFR inclusion threshold (>= 45 mL/min/1.73m2) and seated blood pressure stabilization window.",
+        key_changes: [
+          "Minimum 5-minute seated rest required prior to triplicate cuff readings.",
+          "Updated central laboratory eGFR eligibility cut-off documented prior to randomization.",
+        ],
+        estimated_minutes: 10,
+      },
+      {
+        id: "mod-02",
+        title: "Endpoint Capture & Safety Escalation",
+        section_ref: "Section 7.3",
+        summary:
+          "Mandatory Grade 3 CTCAE hepatotoxicity escalation workflow and CDASH vital signs recording tolerances.",
+        key_changes: [
+          "Report ALT > 3x ULN with concurrent bilirubin elevation within 24 hours.",
+          "Verify Part 11 qualification before recording or correcting visit eCRF observations.",
+        ],
+        estimated_minutes: 12,
+      },
+    ],
+    quiz_questions: [
+      {
+        id: "q-01",
+        prompt:
+          "What seated rest duration is required before recording baseline systolic blood pressure?",
+        options: [
+          { id: "opt-a", label: "At least 5 minutes of seated rest" },
+          { id: "opt-b", label: "Immediate standing measurement" },
+          { id: "opt-c", label: "Supine measurement after ambulation" },
+        ],
+        correct_option_id: "opt-a",
+      },
+      {
+        id: "q-02",
+        prompt:
+          "Within what timeframe must suspected Hy's Law laboratory elevations be escalated?",
+        options: [
+          { id: "opt-a", label: "Within 24 hours of laboratory notification" },
+          {
+            id: "opt-b",
+            label: "At the next routine interim monitoring visit",
+          },
+          { id: "opt-c", label: "At end-of-study database lock" },
+        ],
+        correct_option_id: "opt-a",
       },
     ],
   };
 }
 
-export function createEconsentLabsDctAndTrainingHandlers() {
+function createInitialTrainingState() {
+  return {
+    curricula: [buildDemoCurriculum("curr-demo-01")],
+    assignments: [
+      {
+        id: "asn-demo-pending-01",
+        study_id: "DEMO-01",
+        site_id: "SITE-101",
+        user_id: "usr-crc-01",
+        user_role: "CRC",
+        curriculum_id: "curr-demo-01",
+        status: "PENDING",
+        assigned_at: "2026-07-02T09:00:00Z", // deid-ignore
+        completed_at: null,
+        quiz_score: null,
+        etmf_artifact_id: null,
+        etmf_document_id: null,
+        kernel_artifact_version_ref: null,
+        kernel_qualification_ref: null,
+      },
+      {
+        id: "asn-demo-01",
+        study_id: "DEMO-01",
+        site_id: "SITE-101",
+        user_id: "usr-pi-01",
+        user_role: "Principal Investigator",
+        curriculum_id: "curr-demo-01",
+        status: "COMPLETED",
+        assigned_at: "2026-07-01T11:00:00Z", // deid-ignore
+        completed_at: "2026-07-02T12:00:00Z", // deid-ignore
+        quiz_score: 100,
+        etmf_artifact_id: "05.02.04",
+        etmf_document_id: "00000000-0000-0000-0000-000000009401", // deid-ignore
+        kernel_artifact_version_ref:
+          "artifact_version:00000000-0000-0000-0000-000000009501", // deid-ignore
+        kernel_qualification_ref:
+          "qualification:00000000-0000-0000-0000-000000009601", // deid-ignore
+      },
+    ],
+    studyStaff: [
+      {
+        user_id: "usr-crc-01",
+        user_name: "Site Coordinator 01",
+        site_id: "SITE-101",
+        role: "CRC",
+        grant_id: "00000000-0000-0000-0000-000000008101", // deid-ignore
+      },
+      {
+        user_id: "usr-subi-01",
+        user_name: "Sub-Investigator 01, MD",
+        site_id: "SITE-101",
+        role: "Sub-Investigator",
+        grant_id: "00000000-0000-0000-0000-000000008102", // deid-ignore
+      },
+      {
+        user_id: "usr-pi-01",
+        user_name: "Investigator Lead 01, MD",
+        site_id: "SITE-101",
+        role: "Principal Investigator",
+        grant_id: "00000000-0000-0000-0000-000000008103", // deid-ignore
+      },
+      {
+        user_id: "usr-crc-02",
+        user_name: "Site Coordinator 02",
+        site_id: "SITE-102",
+        role: "CRC",
+        grant_id: "00000000-0000-0000-0000-000000008104", // deid-ignore
+      },
+    ],
+  };
+}
+
+export function createEconsentLabsDctAndTrainingHandlers(store) {
+  let trainingState = createInitialTrainingState();
+  store?.onReset?.(() => {
+    trainingState = createInitialTrainingState();
+  });
   return [
     http.get("*/api/v1/econsent/templates", () =>
       HttpResponse.json([
@@ -397,96 +524,198 @@ export function createEconsentLabsDctAndTrainingHandlers() {
         temperature_excursion_alerts: 0,
       })
     ),
-    http.get("*/api/v1/training/curricula", () =>
-      HttpResponse.json([buildDemoCurriculum("curr-demo-01", true)])
-    ),
-    http.get("*/api/v1/training/assignments", () =>
-      HttpResponse.json([
-        {
-          id: "asn-demo-01",
+    http.get("*/api/v1/training/curricula", ({ request }) => {
+      const url = new URL(request.url);
+      const protocolVersion = url.searchParams.get("protocol_version");
+      const list = protocolVersion
+        ? trainingState.curricula.filter(
+            (c) => c.protocol_version === protocolVersion
+          )
+        : trainingState.curricula;
+      return HttpResponse.json(list);
+    }),
+    http.post("*/api/v1/training/curricula", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const step = nextDemoStep("training-curriculum-author");
+      const created = {
+        ...buildDemoCurriculum(`curr-demo-${step}`),
+        study_id: body?.study_id || "DEMO-01",
+        protocol_version: body?.protocol_version || "2.0",
+        protocol_version_number: Number(body?.protocol_version_number ?? 2),
+        qualification_code: body?.qualification_code || "protocol_training",
+        passing_score: Number(body?.passing_score ?? 0.8),
+        title: body?.title || `Protocol Curriculum ${step}`,
+        description: body?.description || "",
+        modules: Array.isArray(body?.modules) ? body.modules : [],
+        quiz_questions: Array.isArray(body?.quiz_questions)
+          ? body.quiz_questions
+          : [],
+        created_at: demoNowIso(step),
+      };
+      trainingState.curricula.unshift(created);
+      return HttpResponse.json(created, { status: 201 });
+    }),
+    http.get("*/api/v1/training/study-staff", ({ request }) => {
+      const url = new URL(request.url);
+      const siteId = url.searchParams.get("site_id");
+      const list = siteId
+        ? trainingState.studyStaff.filter((s) => s.site_id === siteId)
+        : trainingState.studyStaff;
+      return HttpResponse.json(list);
+    }),
+    http.get("*/api/v1/training/assignments", ({ request }) => {
+      const url = new URL(request.url);
+      const siteId = url.searchParams.get("site_id");
+      const list = siteId
+        ? trainingState.assignments.filter((a) => a.site_id === siteId)
+        : trainingState.assignments;
+      return HttpResponse.json(list);
+    }),
+    http.get("*/api/v1/training/assignments/:assignmentId", ({ params }) => {
+      const found = trainingState.assignments.find(
+        (a) => a.id === String(params.assignmentId)
+      );
+      const curriculum =
+        trainingState.curricula.find((c) => c.id === found?.curriculum_id) ||
+        trainingState.curricula[0] ||
+        buildDemoCurriculum("curr-demo-01");
+      return HttpResponse.json({
+        ...(found || {
+          id: String(params.assignmentId),
           study_id: "DEMO-01",
-          curriculum_id: "curr-demo-01",
           status: "COMPLETED",
-          time_spent_seconds: 180,
           quiz_score: 100,
-        },
-      ])
+        }),
+        curriculum,
+      });
+    }),
+    http.post(
+      "*/api/v1/training/assignments/:assignmentId/complete",
+      async ({ params, request }) => {
+        const sigToken = request.headers.get("X-Sig-Token");
+        if (!sigToken) {
+          return HttpResponse.json(
+            {
+              title: "Step-up signature token required",
+              status: 401,
+              detail: "X-Sig-Token header is required for Part 11 attestation.",
+            },
+            { status: 401 }
+          );
+        }
+        const body = await readJsonBody(request);
+        const step = nextDemoStep("training-assignment-complete");
+        const assignmentId = String(params.assignmentId);
+        const found = trainingState.assignments.find(
+          (a) => a.id === assignmentId
+        );
+        const curriculum =
+          trainingState.curricula.find((c) => c.id === found?.curriculum_id) ||
+          trainingState.curricula[0] ||
+          buildDemoCurriculum("curr-demo-01");
+        const answers = Array.isArray(body?.quiz_answers)
+          ? body.quiz_answers
+          : [];
+        const questions = Array.isArray(curriculum.quiz_questions)
+          ? curriculum.quiz_questions
+          : [];
+        let correct = 0;
+        for (const q of questions) {
+          const match = answers.find((a) => a.question_id === q.id);
+          if (match?.selected_option_id === q.correct_option_id) {
+            correct += 1;
+          }
+        }
+        const scoreRatio =
+          questions.length > 0 ? correct / questions.length : 1;
+        const passingRatio = Number(curriculum.passing_score ?? 0.8);
+        if (scoreRatio < passingRatio) {
+          return HttpResponse.json(
+            {
+              title: "Qualification quiz threshold not met",
+              status: 422,
+              detail: `Score ${Math.round(scoreRatio * 100)}% is below required ${Math.round(passingRatio * 100)}%.`,
+            },
+            { status: 422 }
+          );
+        }
+
+        const completedAt = demoNowIso(step);
+        const docId = `00000000-0000-0000-0000-0000000094${String(step).padStart(2, "0")}`; // deid-ignore
+        const artifactRef = `artifact_version:00000000-0000-0000-0000-0000000095${String(step).padStart(2, "0")}`; // deid-ignore
+        const qualRef = `qualification:00000000-0000-0000-0000-0000000096${String(step).padStart(2, "0")}`; // deid-ignore
+        if (found) {
+          found.status = "COMPLETED";
+          found.completed_at = completedAt;
+          found.quiz_score = scoreRatio;
+          found.etmf_artifact_id = "05.02.04";
+          found.etmf_document_id = docId;
+          found.kernel_artifact_version_ref = artifactRef;
+          found.kernel_qualification_ref = qualRef;
+        }
+        return HttpResponse.json({
+          assignment: found || {
+            id: assignmentId,
+            curriculum_id: curriculum.id,
+            study_id: curriculum.study_id,
+            site_id: "SITE-101",
+            user_id: "usr-crc-01",
+            user_name: "Site Coordinator 01",
+            user_role: "CRC",
+            status: "COMPLETED",
+            quiz_score: scoreRatio,
+            completed_at: completedAt,
+            etmf_artifact_id: "05.02.04",
+            etmf_document_id: docId,
+            kernel_artifact_version_ref: artifactRef,
+            kernel_qualification_ref: qualRef,
+          },
+          quiz_score: scoreRatio,
+          passing_score: passingRatio,
+          sha256_seal: `sha256-demo-trn-${step}`,
+          etmf_artifact_id: "05.02.04",
+          etmf_document_id: docId,
+          kernel_artifact_version_ref: artifactRef,
+          kernel_qualification_ref: qualRef,
+          executed_at: completedAt,
+        });
+      }
     ),
-    http.get(
-      "*/api/v1/training/assignments/:assignmentId/certificate",
-      ({ params }) =>
-        HttpResponse.json({
-          certificate_id: "cert-trn-01", // deid-ignore
-          assignment_id: params.assignmentId,
-          status: "ISSUED",
-          issued_at: "2026-07-02T12:00:00Z", // deid-ignore
-          sha256_hash: "sha256-demo-trn-cert",
-        })
-    ),
-    http.post("*/api/v1/training/assignments/:assignmentId/progress", () =>
-      HttpResponse.json({ status: "OK" })
-    ),
-    http.get("*/api/v1/training/assignments/:assignmentId", ({ params }) =>
-      HttpResponse.json({
-        id: params.assignmentId,
-        study_id: "DEMO-01",
-        status: "COMPLETED",
-        time_spent_seconds: 180,
-        quiz_score: 100,
-        curriculum: buildDemoCurriculum("curr-demo-01", false),
-      })
-    ),
-    http.get("*/api/v1/training/curricula/:curriculumId", ({ params }) =>
-      HttpResponse.json(buildDemoCurriculum(String(params.curriculumId), true))
-    ),
+    http.get("*/api/v1/training/curricula/:curriculumId", ({ params }) => {
+      const id = String(params.curriculumId);
+      const found = trainingState.curricula.find((c) => c.id === id);
+      return HttpResponse.json(found || buildDemoCurriculum(id));
+    }),
     http.post(
       "*/api/v1/training/curricula/batch-assign",
       async ({ request }) => {
         const body = await readJsonBody(request);
         const step = nextDemoStep("training-batch-assign");
-        return HttpResponse.json({
-          batch_transaction_id: `TRN-BATCH-${step}`,
+        const createdAssignment = {
+          id: `asn-batch-${step}`,
+          study_id: body?.study_id || "DEMO-01",
+          site_id: body?.site_ids?.[0] || "SITE-101",
+          user_id: "usr-crc-02",
+          user_role: "CRC",
           curriculum_id: body?.curriculum_id || "curr-demo-01",
-          study_id: body?.study_id || "CADENCE-101",
-          total_eligible: 1,
-          total_assigned: 1,
-          total_skipped: 0,
-          assignments: [
-            {
-              id: `asn-batch-${step}`,
-              study_id: body?.study_id || "CADENCE-101",
-              curriculum_id: body?.curriculum_id || "curr-demo-01",
-              status: "ASSIGNED",
-            },
-          ],
-          skipped_items: [],
-          executed_at: demoNowIso(step),
-        });
-      }
-    ),
-    http.get("*/api/v1/training/delegations", () => HttpResponse.json([])),
-    http.post(
-      "*/api/v1/training/delegations/bulk-signoff",
-      async ({ request }) => {
-        const body = await readJsonBody(request);
-        const step = nextDemoStep("training-delegations-signoff");
-        const ids = Array.isArray(body?.delegation_ids)
-          ? body.delegation_ids
-          : [];
-        return HttpResponse.json({
-          batch_transaction_id: `DLG-BATCH-${step}`,
-          total_requested: ids.length,
-          total_signed: ids.length,
-          total_failed: 0,
-          signed_delegations: ids.map((id) => ({
-            id,
-            status: "SIGNED",
-          })),
-          failed_items: [],
-          sha256_seal: `sha256-demo-dlg-${step}`,
-          etmf_artifact_id: `DOC-DLG-${step}`,
-          executed_at: demoNowIso(step),
-        });
+          status: "PENDING",
+          assigned_at: demoNowIso(step),
+        };
+        trainingState.assignments.push(createdAssignment);
+        return HttpResponse.json(
+          {
+            batch_transaction_id: `TRN-BATCH-${step}`,
+            curriculum_id: body?.curriculum_id || "curr-demo-01",
+            study_id: body?.study_id || "DEMO-01",
+            total_eligible: 1,
+            total_assigned: 1,
+            total_skipped: 0,
+            assignments: [createdAssignment],
+            skipped_items: [],
+            executed_at: demoNowIso(step),
+          },
+          { status: 201 }
+        );
       }
     ),
     http.get("*/api/v1/training/gating-status", () =>

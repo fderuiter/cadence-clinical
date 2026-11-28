@@ -1,9 +1,8 @@
 using System;
 
 using Cadence.Core.Domain;
-using Cadence.Database.Temporal;
-
-using NpgsqlTypes;
+using Cadence.Kernel;
+using Cadence.Kernel.Tenancy;
 
 namespace Cadence.Apps.Ctms.Domain;
 
@@ -93,14 +92,6 @@ public enum CtmsSiteMilestoneTrigger
     Cancel
 }
 
-public enum DoaDelegationStatus
-{
-    Pending,
-    Active,
-    Expired,
-    Revoked
-}
-
 public enum CtmsPaymentStatus
 {
     Pending,
@@ -181,37 +172,29 @@ public sealed class CtmsDefeatedMonitoringVisit : AggregateRoot<string>
     internal void SetStatusForTesting(CtmsDefeatedMonitoringVisitStatus status) => Status = status;
 }
 
-public sealed class CtmsDelegation : AggregateRoot<string>
+/// <summary>
+/// Operational site task endorsement worksheet row paired with a canonical bitemporal <c>Grant</c> in
+/// <c>Cadence.Kernel</c> upon Principal Investigator sign-off (ADR-2455).
+/// </summary>
+public sealed class CtmsDoaTaskEndorsement : AggregateRoot<string>
 {
-    public string StudyId { get; set; } = string.Empty;
-    public string SiteId { get; set; } = string.Empty;
+    public TenantId TenantId { get; set; }
+    public KernelStudyCode StudyId { get; set; }
+    public KernelSiteCode SiteId { get; set; }
+    public Guid? KernelGrantId { get; set; }
     public string StaffUserId { get; set; } = string.Empty;
     public string TaskCodes { get; set; } = "[]";
     public string StartDate { get; set; } = string.Empty;
     public string? EndDate { get; set; }
     public bool IsActive { get; set; } = true;
     public bool SignedOff { get; set; }
+    public DateTimeOffset? SignedOffAt { get; set; }
+    public string? SignedOffBy { get; set; }
+    public DateTimeOffset? RevokedAt { get; set; }
+    public string? RevokedBy { get; set; }
 
-    public CtmsDelegation() : base(Guid.NewGuid().ToString()) { }
-    public CtmsDelegation(string id) : base(id) { }
-}
-
-public sealed class CtmsDelegationPeriod : IBitemporalPeriodEntity
-{
-    public string Id { get; set; } = Guid.NewGuid().ToString();
-    public string DelegationId { get; set; } = string.Empty;
-    public string StudyCode { get; set; } = string.Empty;
-    public string SiteCode { get; set; } = string.Empty;
-    public string StaffUserId { get; set; } = string.Empty;
-    public string TaskCodes { get; set; } = "[]";
-    public string StartDate { get; set; } = string.Empty;
-    public string? EndDate { get; set; }
-    public bool IsActive { get; set; } = true;
-    public bool SignedOff { get; set; }
-    public string CreatedBy { get; set; } = string.Empty;
-    public string ReasonForChange { get; set; } = string.Empty;
-    public NpgsqlRange<DateTimeOffset> ValidPeriod { get; set; }
-    public NpgsqlRange<DateTimeOffset> RecordedPeriod { get; set; }
+    public CtmsDoaTaskEndorsement() : base(Guid.NewGuid().ToString()) { }
+    public CtmsDoaTaskEndorsement(string id) : base(id) { }
 }
 
 public sealed class CtmsGeneratedLetter : AggregateRoot<string>
@@ -429,46 +412,6 @@ public sealed class CtmsPaymentMilestone : AggregateRoot<string>
 
     public CtmsPaymentMilestone() : base(Guid.NewGuid().ToString()) { }
     public CtmsPaymentMilestone(string id) : base(id) { }
-}
-
-public sealed class DoaDelegationRecord : AggregateRoot<string>
-{
-    public string SiteId { get; set; } = string.Empty;
-    public string StaffUserId { get; set; } = string.Empty;
-    public string TaskCode { get; set; } = string.Empty;
-    public DateTimeOffset StartDate { get; set; }
-    public DateTimeOffset? EndDate { get; set; }
-    public DoaDelegationStatus Status { get; private set; } = DoaDelegationStatus.Pending;
-    public string? PiSignatureHash { get; set; }
-    public DateTimeOffset? PiApprovedAt { get; set; }
-    public bool IsActive { get; set; } = true;
-    public bool IsDeleted { get; set; }
-
-    public DoaDelegationRecord() : base(Guid.NewGuid().ToString()) { }
-    public DoaDelegationRecord(string id, DoaDelegationStatus initialStatus = DoaDelegationStatus.Pending) : base(id)
-    {
-        Status = initialStatus;
-    }
-    internal void SetStatusForTesting(DoaDelegationStatus status) => Status = status;
-}
-
-public sealed class DoaDelegationPeriod : IBitemporalPeriodEntity
-{
-    public string Id { get; set; } = Guid.NewGuid().ToString();
-    public string DelegationRecordId { get; set; } = string.Empty;
-    public string SiteCode { get; set; } = string.Empty;
-    public string StaffUserId { get; set; } = string.Empty;
-    public string TaskCode { get; set; } = string.Empty;
-    public DateTimeOffset StartDate { get; set; }
-    public DateTimeOffset? EndDate { get; set; }
-    public DoaDelegationStatus Status { get; set; } = DoaDelegationStatus.Pending;
-    public string? PiSignatureHash { get; set; }
-    public DateTimeOffset? PiApprovedAt { get; set; }
-    public bool IsActive { get; set; } = true;
-    public string CreatedBy { get; set; } = string.Empty;
-    public string ReasonForChange { get; set; } = string.Empty;
-    public NpgsqlRange<DateTimeOffset> ValidPeriod { get; set; }
-    public NpgsqlRange<DateTimeOffset> RecordedPeriod { get; set; }
 }
 
 public sealed class CtmsInvestigatorPayable : AggregateRoot<string>

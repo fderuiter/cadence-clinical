@@ -35,10 +35,22 @@ internal sealed class ClaimsCurrentActor(
                 return null;
             }
 
-            if (string.Equals(subject, CommercialOperators.BillingOperator.Id, StringComparison.Ordinal)
-                && (user.IsInRole("service") || user.IsInRole("Service")))
+            if (user.IsInRole("service") || user.IsInRole("Service"))
             {
-                return CommercialOperators.BillingOperator;
+                if (string.Equals(subject, CommercialOperators.BillingOperator.Id, StringComparison.Ordinal))
+                {
+                    return CommercialOperators.BillingOperator;
+                }
+
+                if (string.Equals(subject, TrustOperators.KnowledgeTrainingOperator.Id, StringComparison.Ordinal))
+                {
+                    return TrustOperators.KnowledgeTrainingOperator;
+                }
+
+                if (string.Equals(subject, TrustOperators.CtmsDelegationReader.Id, StringComparison.Ordinal))
+                {
+                    return TrustOperators.CtmsDelegationReader;
+                }
             }
 
             return PersonOrNull(subject);

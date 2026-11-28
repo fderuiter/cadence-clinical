@@ -143,7 +143,7 @@ export interface paths {
     };
     get: operations["ListCurricula"];
     put?: never;
-    post?: never;
+    post: operations["CreateCurriculum"];
     delete?: never;
     options?: never;
     head?: never;
@@ -182,6 +182,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/training/study-staff": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["ListStudyStaff"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/training/assignments": {
     parameters: {
       query?: never;
@@ -214,23 +230,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/training/delegations": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get: operations["ListDelegations"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/training/delegations/bulk-signoff": {
+  "/api/v1/training/assignments/{assignment_id}/complete": {
     parameters: {
       query?: never;
       header?: never;
@@ -239,7 +239,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: operations["BulkSignOffDelegations"];
+    post: operations["CompleteTrainingAssignment"];
     delete?: never;
     options?: never;
     head?: never;
@@ -256,8 +256,8 @@ export interface components {
     };
     Knowledge_BatchAssignCurriculumRequest: {
       curriculum_id: string;
-      study_id: string;
-      site_ids: null | string[];
+      study_id: components["schemas"]["Knowledge_KernelStudyCode"];
+      site_ids: null | unknown[];
       roles: null | string[];
       target_personnel_ids: null | string[];
       reason_for_change: null | string;
@@ -265,7 +265,7 @@ export interface components {
     Knowledge_BatchAssignmentResponse: {
       batch_transaction_id: string;
       curriculum_id: string;
-      study_id: string;
+      study_id: components["schemas"]["Knowledge_KernelStudyCode"];
       /** Format: int32 */
       total_eligible: number | string;
       /** Format: int32 */
@@ -277,24 +277,23 @@ export interface components {
       /** Format: date-time */
       executed_at: string;
     };
-    Knowledge_BulkDelegationSignOffRequest: {
-      delegation_ids: string[];
-      study_id: null | string;
-      site_id: null | string;
+    Knowledge_CompleteTrainingAssignmentRequest: {
+      quiz_answers: null | components["schemas"]["Knowledge_QuizAnswerDto"][];
+      /** Format: int32 */
+      time_spent_seconds: null | number | string;
       signature_payload: components["schemas"]["Knowledge_SignaturePayloadDto"];
     };
-    Knowledge_BulkDelegationSignOffResponse: {
-      batch_transaction_id: string;
-      /** Format: int32 */
-      total_requested: number | string;
-      /** Format: int32 */
-      total_signed: number | string;
-      /** Format: int32 */
-      total_failed: number | string;
-      signed_delegations: components["schemas"]["Knowledge_DelegationSummaryDto"][];
-      failed_items: components["schemas"]["Knowledge_FailedDelegationItemDto"][];
+    Knowledge_CompleteTrainingAssignmentResponse: {
+      assignment: components["schemas"]["Knowledge_TrainingAssignmentDto"];
+      /** Format: double */
+      quiz_score: number | string;
+      /** Format: double */
+      passing_score: number | string;
       sha256_seal: string;
       etmf_artifact_id: string;
+      etmf_document_id: string;
+      kernel_artifact_version_ref: string;
+      kernel_qualification_ref: string;
       /** Format: date-time */
       executed_at: string;
     };
@@ -318,26 +317,23 @@ export interface components {
       section_anchor: null | string;
       related_articles: components["schemas"]["Knowledge_KnowledgeArticleDto"][];
     };
-    Knowledge_DelegationSummaryDto: {
-      id: string;
-      study_id: string;
-      site_id: string;
-      staff_user_id: string;
-      staff_name: string;
-      role: string;
-      task_code: string;
-      duties: string;
-      status: string;
-      signed_off: boolean;
-      pi_signature_hash: null | string;
-      /** Format: date-time */
-      pi_approved_at: null | string;
-      batch_transaction_id: null | string;
+    Knowledge_CreateTrainingCurriculumRequest: {
+      study_id: components["schemas"]["Knowledge_KernelStudyCode"];
+      protocol_version: string;
+      /** Format: int32 */
+      protocol_version_number: null | number | string;
+      title: string;
+      description: null | string;
+      qualification_code: null | string;
+      /** Format: double */
+      passing_score: null | number | string;
+      modules: null | components["schemas"]["Knowledge_TrainingModuleDto"][];
+      quiz_questions:
+        null | components["schemas"]["Knowledge_TrainingQuizQuestionDto"][];
+      reason_for_change: null | string;
     };
-    Knowledge_FailedDelegationItemDto: {
-      delegation_id: string;
-      reason: string;
-    };
+    Knowledge_KernelSiteCode: string;
+    Knowledge_KernelStudyCode: string;
     Knowledge_KnowledgeArticleAuditEntryDto: {
       id: string;
       article_id: string;
@@ -410,21 +406,33 @@ export interface components {
       detail?: null | string;
       instance?: null | string;
     };
+    Knowledge_QuizAnswerDto: {
+      question_id: string;
+      selected_option_id: string;
+    };
     Knowledge_SignaturePayloadDto: {
       meaning: string;
       reason_for_change: null | string;
     };
     Knowledge_SkippedAssignmentItemDto: {
       user_id: string;
-      site_id: string;
+      site_id: components["schemas"]["Knowledge_KernelSiteCode"];
       user_role: string;
       reason: string;
+    };
+    Knowledge_StudyStaffGrantDto: {
+      user_id: string;
+      user_name: string;
+      site_id: components["schemas"]["Knowledge_KernelSiteCode"];
+      role: string;
+      /** Format: uuid */
+      grant_id: string;
     };
     Knowledge_TrainingAssignmentDto: {
       id: string;
       curriculum_id: string;
-      study_id: string;
-      site_id: string;
+      study_id: components["schemas"]["Knowledge_KernelStudyCode"];
+      site_id: components["schemas"]["Knowledge_KernelSiteCode"];
       user_id: string;
       user_name: string;
       user_role: string;
@@ -436,18 +444,47 @@ export interface components {
       time_spent_seconds: number | string;
       /** Format: date-time */
       completed_at: null | string;
+      etmf_document_id: null | string;
+      kernel_artifact_version_ref: null | string;
+      kernel_qualification_ref: null | string;
       /** Format: date-time */
       created_at: string;
     };
     Knowledge_TrainingCurriculumDto: {
       id: string;
-      study_id: string;
+      study_id: components["schemas"]["Knowledge_KernelStudyCode"];
       protocol_version: string;
+      /** Format: int32 */
+      protocol_version_number: number | string;
+      qualification_code: string;
+      /** Format: double */
+      passing_score: number | string;
       title: string;
       description: null | string;
+      modules: components["schemas"]["Knowledge_TrainingModuleDto"][];
+      quiz_questions: components["schemas"]["Knowledge_TrainingQuizQuestionDto"][];
       is_active: boolean;
       /** Format: date-time */
       created_at: string;
+    };
+    Knowledge_TrainingModuleDto: {
+      id: string;
+      title: string;
+      section_ref: null | string;
+      summary: string;
+      key_changes: null | string[];
+      /** Format: int32 */
+      estimated_minutes: number | string;
+    };
+    Knowledge_TrainingQuizOptionDto: {
+      id: string;
+      label: string;
+    };
+    Knowledge_TrainingQuizQuestionDto: {
+      id: string;
+      prompt: string;
+      options: components["schemas"]["Knowledge_TrainingQuizOptionDto"][];
+      correct_option_id: string;
     };
   };
   responses: never;
@@ -693,6 +730,48 @@ export interface operations {
       };
     };
   };
+  CreateCurriculum: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Knowledge_CreateTrainingCurriculumRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Knowledge_TrainingCurriculumDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
+        };
+      };
+    };
+  };
   GetCurriculum: {
     parameters: {
       query?: never;
@@ -802,6 +881,46 @@ export interface operations {
       };
     };
   };
+  ListStudyStaff: {
+    parameters: {
+      query: {
+        study_id: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Knowledge_StudyStaffGrantDto"][];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
+        };
+      };
+    };
+  };
   ListAssignments: {
     parameters: {
       query?: {
@@ -876,51 +995,18 @@ export interface operations {
       };
     };
   };
-  ListDelegations: {
-    parameters: {
-      query?: {
-        study_id?: string;
-        site_id?: string;
-        status?: string;
-        valid_at?: string;
-        known_at?: string;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Knowledge_DelegationSummaryDto"][];
-        };
-      };
-      /** @description Forbidden */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
-        };
-      };
-    };
-  };
-  BulkSignOffDelegations: {
+  CompleteTrainingAssignment: {
     parameters: {
       query?: never;
       header?: never;
-      path?: never;
+      path: {
+        assignment_id: string;
+      };
       cookie?: never;
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["Knowledge_BulkDelegationSignOffRequest"];
+        "application/json": components["schemas"]["Knowledge_CompleteTrainingAssignmentRequest"];
       };
     };
     responses: {
@@ -930,7 +1016,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Knowledge_BulkDelegationSignOffResponse"];
+          "application/json": components["schemas"]["Knowledge_CompleteTrainingAssignmentResponse"];
         };
       };
       /** @description Bad Request */
@@ -962,6 +1048,24 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Knowledge_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
         headers: {
           [name: string]: unknown;
         };

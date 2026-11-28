@@ -396,7 +396,7 @@ export interface components {
     };
     Ctms_DelegationResponseDto: {
       record_id: string;
-      site_id: string;
+      site_id: components["schemas"]["Ctms_KernelSiteCode"];
       staff_user_id: string;
       task_codes: string[];
       start_date: string;
@@ -407,9 +407,11 @@ export interface components {
       created_by: string;
       /** Format: int64 */
       version_index: number | string;
+      /** Format: uuid */
+      kernel_grant_id?: null | string;
     };
     Ctms_DelegationTaskRequest: {
-      site_id: string;
+      site_id: components["schemas"]["Ctms_KernelSiteCode"];
       staff_user_id: string;
       task_codes: string[];
       start_date: string;
@@ -426,7 +428,7 @@ export interface components {
       details: string;
     };
     Ctms_DoaLogResponseDto: {
-      site_id: string;
+      site_id: components["schemas"]["Ctms_KernelSiteCode"];
       pi_name: string;
       delegated_staff: components["schemas"]["Ctms_DelegationResponseDto"][];
       audit_history: components["schemas"]["Ctms_DoaAuditHistoryItemDto"][];
@@ -454,6 +456,7 @@ export interface components {
       /** Format: int64 */
       version_index: number | string;
     };
+    Ctms_KernelSiteCode: string;
     Ctms_MonitoringVisitCompleteDto: {
       /** Format: date-time */
       actual_date: string;

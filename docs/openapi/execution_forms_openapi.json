@@ -2373,6 +2373,7 @@
         "description": "One option in a collection item\u0027s governed codelist."
       },
       "ExecutionForms_CodeSystemVersionId": {
+        "type": "string",
         "description": "Strongly-typed UUIDv7 identifier for an immutable, checksum-verified release of a code system in the Concept Registry."
       },
       "ExecutionForms_DateTimePrecision": {
@@ -3234,6 +3235,20 @@
             "type": [
               "null",
               "string"
+            ]
+          },
+          "can_record": {
+            "type": "boolean",
+            "default": true
+          },
+          "capture_explanation": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ExecutionForms_ProblemExplanation"
+              }
             ]
           }
         }
@@ -4192,6 +4207,33 @@
           }
         }
       },
+      "ExecutionForms_ProblemCondition": {
+        "required": [
+          "code",
+          "description",
+          "met",
+          "evidence"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "met": {
+            "type": "boolean"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Wire representation of an EvaluatedCondition inside ProblemExplanation."
+      },
       "ExecutionForms_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -4229,6 +4271,95 @@
             ]
           }
         }
+      },
+      "ExecutionForms_ProblemExplanation": {
+        "required": [
+          "subject",
+          "claim",
+          "producer",
+          "steps",
+          "conditions",
+          "next_actions"
+        ],
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "claim": {
+            "type": "string"
+          },
+          "producer": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExecutionForms_ProblemExplanationStep"
+            }
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExecutionForms_ProblemCondition"
+            }
+          },
+          "next_actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExecutionForms_ProblemNextAction"
+            }
+          }
+        },
+        "description": "Canonical RFC 9457 \u0060ProblemDetails.extensions[\u0022explanation\u0022]\u0060 wire representation of an ADR-2482\nExplanation, shared across kernel error endpoints and standalone RBAC problem details."
+      },
+      "ExecutionForms_ProblemExplanationStep": {
+        "required": [
+          "claim",
+          "evidence"
+        ],
+        "type": "object",
+        "properties": {
+          "claim": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Wire representation of an ExplanationStep inside ProblemExplanation."
+      },
+      "ExecutionForms_ProblemNextAction": {
+        "required": [
+          "description",
+          "capability",
+          "target"
+        ],
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "capability": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "target": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Wire representation of a NextAction inside ProblemExplanation."
       },
       "ExecutionForms_QuantityComparator": {
         "enum": [

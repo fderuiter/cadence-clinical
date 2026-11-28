@@ -113,7 +113,7 @@ public static class DoaEndpoints
         out IResult? problem) =>
         MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, bodyReason, out reason, out problem);
 
-    public static DelegationResponseDto ToResponseDto(CtmsDelegation d) =>
+    public static DelegationResponseDto ToResponseDto(CtmsDoaTaskEndorsement d) =>
         DoaMutationService.ToResponseDto(d);
 
     public static DoaAuditHistoryItemDto ToAuditDto(CtmsAuditLog a) =>

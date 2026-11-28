@@ -7,3 +7,5 @@ Active Architectural Decision Records for **0. Clinical Kernel (K001–K037)**.
 - Entries below use `# ADR-KERNEL-YYYYMMDD-<slug>: <title>` and are sorted alphabetically by filename.
 
 ## Decisions
+
+- [ADR-KERNEL-20261128-consolidate-delegation-of-authority-onto-kernel-grants-and-unify-protocol-training-in-knowledge: Consolidate Delegation of Authority onto Kernel Grants and Unify Protocol Training in Knowledge](2026-11-28-consolidate-delegation-of-authority-onto-kernel-grants-and-unify-protocol-training-in-knowledge.md) (2026-11-28)

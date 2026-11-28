@@ -1,16 +1,66 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json.Serialization;
+
+using Cadence.Kernel.Tenancy;
 
 namespace Cadence.Apps.Knowledge.Endpoints;
 
+public sealed record TrainingModuleDto(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("section_ref")] string? SectionRef,
+    [property: JsonPropertyName("summary")] string Summary,
+    [property: JsonPropertyName("key_changes")] List<string>? KeyChanges,
+    [property: JsonPropertyName("estimated_minutes")] int EstimatedMinutes);
+
+public sealed record TrainingQuizOptionDto(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("label")] string Label);
+
+public sealed record TrainingQuizQuestionDto(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("prompt")] string Prompt,
+    [property: JsonPropertyName("options")] List<TrainingQuizOptionDto> Options,
+    [property: JsonPropertyName("correct_option_id")] string CorrectOptionId);
+
+public sealed record CreateTrainingCurriculumRequest(
+    [property: JsonPropertyName("study_id")] KernelStudyCode StudyId,
+    [property: JsonPropertyName("protocol_version")] string ProtocolVersion,
+    [property: JsonPropertyName("protocol_version_number")] int? ProtocolVersionNumber,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("description")] string? Description,
+    [property: JsonPropertyName("qualification_code")] string? QualificationCode,
+    [property: JsonPropertyName("passing_score")] double? PassingScore,
+    [property: JsonPropertyName("modules")] List<TrainingModuleDto>? Modules,
+    [property: JsonPropertyName("quiz_questions")] List<TrainingQuizQuestionDto>? QuizQuestions,
+    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange);
+
+public sealed record TrainingCurriculumDto(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("study_id")] KernelStudyCode StudyId,
+    [property: JsonPropertyName("protocol_version")] string ProtocolVersion,
+    [property: JsonPropertyName("protocol_version_number")] int ProtocolVersionNumber,
+    [property: JsonPropertyName("qualification_code")] string QualificationCode,
+    [property: JsonPropertyName("passing_score")] double PassingScore,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("description")] string? Description,
+    [property: JsonPropertyName("modules")] List<TrainingModuleDto> Modules,
+    [property: JsonPropertyName("quiz_questions")] List<TrainingQuizQuestionDto> QuizQuestions,
+    [property: JsonPropertyName("is_active")] bool IsActive,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt);
+
+public sealed record StudyStaffGrantDto(
+    [property: JsonPropertyName("user_id")] string UserId,
+    [property: JsonPropertyName("user_name")] string UserName,
+    [property: JsonPropertyName("site_id")] KernelSiteCode SiteId,
+    [property: JsonPropertyName("role")] string Role,
+    [property: JsonPropertyName("grant_id")] Guid GrantId);
+
 public sealed record BatchAssignCurriculumRequest(
     [property: JsonPropertyName("curriculum_id")] string CurriculumId,
-    [property: JsonPropertyName("study_id")] string StudyId,
-    [property: JsonPropertyName("site_ids")] List<string>? SiteIds,
+    [property: JsonPropertyName("study_id")] KernelStudyCode StudyId,
+    [property: JsonPropertyName("site_ids")] List<KernelSiteCode>? SiteIds,
     [property: JsonPropertyName("roles")] List<string>? Roles,
     [property: JsonPropertyName("target_personnel_ids")] List<string>? TargetPersonnelIds,
     [property: JsonPropertyName("reason_for_change")] string? ReasonForChange);
@@ -18,8 +68,8 @@ public sealed record BatchAssignCurriculumRequest(
 public sealed record TrainingAssignmentDto(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("curriculum_id")] string CurriculumId,
-    [property: JsonPropertyName("study_id")] string StudyId,
-    [property: JsonPropertyName("site_id")] string SiteId,
+    [property: JsonPropertyName("study_id")] KernelStudyCode StudyId,
+    [property: JsonPropertyName("site_id")] KernelSiteCode SiteId,
     [property: JsonPropertyName("user_id")] string UserId,
     [property: JsonPropertyName("user_name")] string UserName,
     [property: JsonPropertyName("user_role")] string UserRole,
@@ -28,18 +78,21 @@ public sealed record TrainingAssignmentDto(
     [property: JsonPropertyName("quiz_score")] double? QuizScore,
     [property: JsonPropertyName("time_spent_seconds")] int TimeSpentSeconds,
     [property: JsonPropertyName("completed_at")] DateTimeOffset? CompletedAt,
+    [property: JsonPropertyName("etmf_document_id")] string? EtmfDocumentId,
+    [property: JsonPropertyName("kernel_artifact_version_ref")] string? KernelArtifactVersionRef,
+    [property: JsonPropertyName("kernel_qualification_ref")] string? KernelQualificationRef,
     [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt);
 
 public sealed record SkippedAssignmentItemDto(
     [property: JsonPropertyName("user_id")] string UserId,
-    [property: JsonPropertyName("site_id")] string SiteId,
+    [property: JsonPropertyName("site_id")] KernelSiteCode SiteId,
     [property: JsonPropertyName("user_role")] string UserRole,
     [property: JsonPropertyName("reason")] string Reason);
 
 public sealed record BatchAssignmentResponse(
     [property: JsonPropertyName("batch_transaction_id")] string BatchTransactionId,
     [property: JsonPropertyName("curriculum_id")] string CurriculumId,
-    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("study_id")] KernelStudyCode StudyId,
     [property: JsonPropertyName("total_eligible")] int TotalEligible,
     [property: JsonPropertyName("total_assigned")] int TotalAssigned,
     [property: JsonPropertyName("total_skipped")] int TotalSkipped,
@@ -47,63 +100,26 @@ public sealed record BatchAssignmentResponse(
     [property: JsonPropertyName("skipped_items")] List<SkippedAssignmentItemDto> SkippedItems,
     [property: JsonPropertyName("executed_at")] DateTimeOffset ExecutedAt);
 
-/// <summary>
-/// The meaning and reason of a delegation sign-off. The signer is never taken from the body: it is the verified
-/// caller, and the credential check is the step-up token in <c>X-Sig-Token</c> (#5311).
-/// </summary>
 public sealed record SignaturePayloadDto(
     [property: JsonPropertyName("meaning")] string Meaning,
     [property: JsonPropertyName("reason_for_change")] string? ReasonForChange);
 
-public sealed record BulkDelegationSignOffRequest(
-    [property: JsonPropertyName("delegation_ids")] List<string> DelegationIds,
-    [property: JsonPropertyName("study_id")] string? StudyId,
-    [property: JsonPropertyName("site_id")] string? SiteId,
-    [property: JsonPropertyName("signature_payload")] SignaturePayloadDto SignaturePayload)
-{
-    /// <summary>
-    /// The step-up token's <c>batch_id</c> for this sign-off: the lower-case hex SHA-256 of the trimmed delegation
-    /// ids, sorted ordinally and joined with commas. The web client computes the same value.
-    /// </summary>
-    public string BatchBindingId() => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
-        string.Join(",", (DelegationIds ?? []).Select(id => id.Trim()).Order(StringComparer.Ordinal)))));
-}
+public sealed record QuizAnswerDto(
+    [property: JsonPropertyName("question_id")] string QuestionId,
+    [property: JsonPropertyName("selected_option_id")] string SelectedOptionId);
 
-public sealed record DelegationSummaryDto(
-    [property: JsonPropertyName("id")] string Id,
-    [property: JsonPropertyName("study_id")] string StudyId,
-    [property: JsonPropertyName("site_id")] string SiteId,
-    [property: JsonPropertyName("staff_user_id")] string StaffUserId,
-    [property: JsonPropertyName("staff_name")] string StaffName,
-    [property: JsonPropertyName("role")] string Role,
-    [property: JsonPropertyName("task_code")] string TaskCode,
-    [property: JsonPropertyName("duties")] string Duties,
-    [property: JsonPropertyName("status")] string Status,
-    [property: JsonPropertyName("signed_off")] bool SignedOff,
-    [property: JsonPropertyName("pi_signature_hash")] string? PiSignatureHash,
-    [property: JsonPropertyName("pi_approved_at")] DateTimeOffset? PiApprovedAt,
-    [property: JsonPropertyName("batch_transaction_id")] string? BatchTransactionId);
+public sealed record CompleteTrainingAssignmentRequest(
+    [property: JsonPropertyName("quiz_answers")] List<QuizAnswerDto>? QuizAnswers,
+    [property: JsonPropertyName("time_spent_seconds")] int? TimeSpentSeconds,
+    [property: JsonPropertyName("signature_payload")] SignaturePayloadDto SignaturePayload);
 
-public sealed record FailedDelegationItemDto(
-    [property: JsonPropertyName("delegation_id")] string DelegationId,
-    [property: JsonPropertyName("reason")] string Reason);
-
-public sealed record BulkDelegationSignOffResponse(
-    [property: JsonPropertyName("batch_transaction_id")] string BatchTransactionId,
-    [property: JsonPropertyName("total_requested")] int TotalRequested,
-    [property: JsonPropertyName("total_signed")] int TotalSigned,
-    [property: JsonPropertyName("total_failed")] int TotalFailed,
-    [property: JsonPropertyName("signed_delegations")] List<DelegationSummaryDto> SignedDelegations,
-    [property: JsonPropertyName("failed_items")] List<FailedDelegationItemDto> FailedItems,
+public sealed record CompleteTrainingAssignmentResponse(
+    [property: JsonPropertyName("assignment")] TrainingAssignmentDto Assignment,
+    [property: JsonPropertyName("quiz_score")] double QuizScore,
+    [property: JsonPropertyName("passing_score")] double PassingScore,
     [property: JsonPropertyName("sha256_seal")] string Sha256Seal,
     [property: JsonPropertyName("etmf_artifact_id")] string EtmfArtifactId,
+    [property: JsonPropertyName("etmf_document_id")] string EtmfDocumentId,
+    [property: JsonPropertyName("kernel_artifact_version_ref")] string KernelArtifactVersionRef,
+    [property: JsonPropertyName("kernel_qualification_ref")] string KernelQualificationRef,
     [property: JsonPropertyName("executed_at")] DateTimeOffset ExecutedAt);
-
-public sealed record TrainingCurriculumDto(
-    [property: JsonPropertyName("id")] string Id,
-    [property: JsonPropertyName("study_id")] string StudyId,
-    [property: JsonPropertyName("protocol_version")] string ProtocolVersion,
-    [property: JsonPropertyName("title")] string Title,
-    [property: JsonPropertyName("description")] string? Description,
-    [property: JsonPropertyName("is_active")] bool IsActive,
-    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt);
