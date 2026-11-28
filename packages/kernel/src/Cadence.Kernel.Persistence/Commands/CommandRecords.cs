@@ -88,10 +88,12 @@ internal sealed class OutboxMessageRecord
     public Guid Id { get; init; }
     public Guid EventId { get; init; }
     public TenantId TenantId { get; init; }
+    public string StreamKey { get; init; } = string.Empty;
     public string Type { get; init; } = string.Empty;
     public string Envelope { get; init; } = "{}";
     public DateTimeOffset EnqueuedAt { get; init; }
     public DateTimeOffset? DispatchedAt { get; set; }
+    public DateTimeOffset? QuarantinedAt { get; set; }
     public int Attempts { get; set; }
 
     /// <summary>Earliest time the relay retries a failed delivery; null until the first failure.</summary>
@@ -99,6 +101,54 @@ internal sealed class OutboxMessageRecord
 
     /// <summary>The last delivery error, truncated, for operators.</summary>
     public string? LastError { get; set; }
+}
+
+/// <summary>
+/// Dead-letter quarantine record for an outbox event that failed with a terminal poison exception or exhausted
+/// <see cref="Outbox.KernelOutboxRelay.MaxAttempts"/>. Isolates failure to its aggregate <see cref="StreamKey"/>
+/// so unrelated streams in the same tenant continue dispatching.
+/// </summary>
+internal sealed class OutboxQuarantineMessageRecord
+{
+    public Guid Id { get; init; }
+    public Guid OutboxMessageId { get; init; }
+    public Guid EventId { get; init; }
+    public TenantId TenantId { get; init; }
+    public string StreamKey { get; init; } = string.Empty;
+    public string Type { get; init; } = string.Empty;
+    public string Envelope { get; init; } = "{}";
+    public int Attempts { get; init; }
+    public string Reason { get; init; } = string.Empty;
+    public string? LastError { get; init; }
+    public DateTimeOffset EnqueuedAt { get; init; }
+    public DateTimeOffset QuarantinedAt { get; init; }
+}
+
+/// <summary>
+/// Persisted asymmetrically signed study <c>DatabaseLockCertificate</c> minted atomically when a study-level
+/// <c>Locked</c> assertion commits, and marked revoked in the same transaction when <c>ReleaseLock</c> commits.
+/// </summary>
+internal sealed class LockCertificateEntityRecord
+{
+    public Guid Id { get; init; }
+    public string CertificateId { get; init; } = string.Empty;
+    public TenantId TenantId { get; init; }
+    public StudyId StudyId { get; init; }
+    public string StudyCode { get; init; } = string.Empty;
+    public AssertionId LockId { get; init; }
+    public string Milestone { get; init; } = string.Empty;
+    public AttestationId AttestationId { get; init; }
+    public string SignedBy { get; init; } = string.Empty;
+    public DateTimeOffset IssuedAt { get; init; }
+    public string KeyId { get; init; } = string.Empty;
+    public string Algorithm { get; init; } = string.Empty;
+    public string PayloadSha256 { get; init; } = string.Empty;
+    public string FingerprintSha256 { get; init; } = string.Empty;
+    public string SignatureBase64 { get; init; } = string.Empty;
+    public string CertificateJson { get; set; } = "{}";
+    public bool Revoked { get; set; }
+    public DateTimeOffset? RevokedAt { get; set; }
+    public string? RevokedBy { get; set; }
 }
 
 /// <summary>

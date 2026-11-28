@@ -79,6 +79,8 @@ internal sealed class AssertionConfiguration : IEntityTypeConfiguration<Assertio
         builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(x => x.TargetKind).HasMaxLength(64).IsRequired();
         builder.Property(x => x.Text).HasMaxLength(AssertionText.MaxLength);
+        builder.Property(x => x.Milestone).HasConversion<string>().HasMaxLength(32);
+        builder.Property(x => x.CertificateJson).HasColumnType("jsonb");
         builder.Property(x => x.AssertedBy).HasMaxLength(255).IsRequired();
         builder.Ignore(x => x.Target);
         builder.Ignore(x => x.IsLock);

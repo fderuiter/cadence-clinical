@@ -415,4 +415,332 @@ public sealed class LockReadinessEvaluatorTests
         snapshot.OpenErrorFindingCount.Should().Be(0);
         snapshot.Explanation.Conditions.Should().HaveCount(6).And.OnlyContain(c => c.Met);
     }
+
+    [Fact]
+    [Cadence.Testing.GxPRequirement("PRD-CDR-006")]
+    public void BuildSnapshot_FinalDatabaseLock_EnforcesScreeningEnrollmentsNotYetOpenVisitsNotAskedFormsAndObservationReviews()
+    {
+        var rawSiteId = SiteId.New();
+        var studySiteId = StudySiteId.New();
+        var site = new Site(rawSiteId, Tenant, OrganizationId.New(), "SITE-DBL", "Final Lock Clinic", "US", "admin", "seed");
+        var studySite = new StudySite(studySiteId, Tenant, Study, rawSiteId, "Active", "admin", "seed");
+
+        var optionalNotes = new ConceptRef(ConceptId.New(), 1);
+        var design = ProtocolDesignSamples.MinimalDesign() with
+        {
+            Epochs = [new Epoch("ep.treatment", "Treatment", 1)],
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    "cs.vitals",
+                    "Vital Signs",
+                    [new CollectionItem("item.sbp", Systolic, "mm[Hg]", Prompt: "Systolic BP", Required: true)]),
+                new CollectionSpec(
+                    "cs.notes",
+                    "Optional Visit Notes",
+                    [new CollectionItem("item.note", optionalNotes, null, Prompt: "Optional note", Required: false)]),
+            ],
+            PlannedActivities =
+            [
+                new PlannedActivity("act.day1", "Day 1 Baseline", "ep.treatment", [ActivityLocation.Site], ["cs.vitals"], new ActivityTiming(1, 0, 1)),
+                new PlannedActivity("act.day84", "Day 84 Closeout", "ep.treatment", [ActivityLocation.Site], ["cs.vitals"], new ActivityTiming(84, 2, 2)),
+            ],
+        };
+
+        var version = ProtocolVersion.CreateFirst(
+            ProtocolVersionId.New(),
+            Tenant,
+            Study,
+            ProtocolDesignDocument.Write(design)).Value!;
+
+        var effectivity = Effectivity.Declare(
+            EffectivityId.New(),
+            Tenant,
+            Study,
+            version.Id,
+            EffectivityScope.Study(),
+            BaseInstant.AddDays(-5),
+            BaseInstant.AddDays(-5)).Value!;
+        effectivity.ChangeStatus(EffectivityStatus.Effective, [ArtifactVersionId.New()], BaseInstant.AddDays(-4), BaseInstant.AddDays(-4)).Should().BeNull();
+
+        // 1. Enrolled subject at Day 10: Day 1 form opened, verified, and signed (but NOT reviewed); Day 84 visit is still NotYetOpen.
+        //    Also has an opened optional form containing only a NotAsked placeholder without an investigator signature.
+        var enrolled = Enrollment.Screen(
+            EnrollmentId.New(),
+            Tenant,
+            ParticipantId.New(),
+            Study,
+            studySiteId,
+            SubjectCode.From("SUBJ-ENROLLED"),
+            BaseInstant,
+            BaseInstant).Value!;
+        enrolled.ChangeStatus(
+            EnrollmentStatus.Enrolled,
+            BaseInstant.AddHours(1),
+            BaseInstant.AddHours(1),
+            enrollmentNumber: 1).Should().BeNull();
+
+        // 2. Unresolved Screening subject.
+        var screening = Enrollment.Screen(
+            EnrollmentId.New(),
+            Tenant,
+            ParticipantId.New(),
+            Study,
+            studySiteId,
+            SubjectCode.From("SUBJ-SCREENING"),
+            BaseInstant,
+            BaseInstant).Value!;
+
+        var day1Form = CollectionInstance.Open(
+            CollectionInstanceId.New(),
+            enrolled,
+            version.Id,
+            "cs.vitals",
+            "act.day1",
+            BaseInstant.AddHours(2),
+            "crc@test.org",
+            BaseInstant.AddHours(2));
+        var sbpObs = Observation.Record(
+            ObservationId.New(),
+            Tenant,
+            enrolled.Id,
+            enrolled.ParticipantId,
+            Study,
+            Systolic,
+            new QuantityValue(118m, "mm[Hg]"),
+            BaseInstant.AddHours(2),
+            "Baseline vitals",
+            "crc@test.org",
+            BaseInstant.AddHours(2)).Value!;
+        day1Form.Join("item.sbp", sbpObs.Id, BaseInstant.AddHours(2));
+
+        var day1Hash = CollectionInstance.ContentHashOf([
+            new CollectionContentEntry(sbpObs.Id, sbpObs.Revision, sbpObs.Value),
+        ]);
+        var day1Sig = Attestation.Sign(
+            AttestationId.New(),
+            Tenant,
+            Actor.Person("pi@test.org"),
+            AttestationMeaning.Approved,
+            new AttestationTarget(NodeKinds.CollectionInstance, day1Form.Id.Value, day1Hash),
+            BaseInstant.AddHours(3),
+            "password",
+            BaseInstant.AddHours(3).AddMinutes(1),
+            "Sign Day 1").Value!;
+
+        var optionalNotAskedForm = CollectionInstance.Open(
+            CollectionInstanceId.New(),
+            enrolled,
+            version.Id,
+            "cs.notes",
+            null,
+            BaseInstant.AddHours(2),
+            "crc@test.org",
+            BaseInstant.AddHours(2));
+        var notAskedObs = Observation.Record(
+            ObservationId.New(),
+            Tenant,
+            enrolled.Id,
+            enrolled.ParticipantId,
+            Study,
+            optionalNotes,
+            new MissingValue(NullFlavor.NotAsked),
+            BaseInstant.AddHours(2),
+            "Blank placeholder",
+            "crc@test.org",
+            BaseInstant.AddHours(2)).Value!;
+        optionalNotAskedForm.Join("item.note", notAskedObs.Id, BaseInstant.AddHours(2));
+
+        var evaluatedAt = BaseInstant.AddDays(10);
+
+        // Under InterimCut: ReadyForLock is TRUE (future Day 84 visit, Screening subject, unreviewed observation, and blank NotAsked form do not block).
+        var interimSnapshot = LockReadinessEvaluator.BuildSnapshot(
+            Study,
+            StudyCode,
+            NodeRef.For(Study),
+            instances: [day1Form, optionalNotAskedForm],
+            observationsById: new Dictionary<ObservationId, Observation>
+            {
+                [sbpObs.Id] = sbpObs,
+                [notAskedObs.Id] = notAskedObs,
+            },
+            enrollmentsById: new Dictionary<EnrollmentId, Enrollment>
+            {
+                [enrolled.Id] = enrolled,
+                [screening.Id] = screening,
+            },
+            versionsById: new Dictionary<ProtocolVersionId, ProtocolVersion> { [version.Id] = version },
+            openQueries: [],
+            answeredQueryIds: new HashSet<AssertionId>(),
+            blindedObservationIds: new HashSet<ObservationId>(),
+            verifiedRevisions: new HashSet<(ObservationId, int)> { (sbpObs.Id, 1) },
+            formSignaturesByInstance: new Dictionary<CollectionInstanceId, IReadOnlyList<Attestation>>
+            {
+                [day1Form.Id] = [day1Sig],
+            },
+            evaluatedAt: evaluatedAt,
+            studySitesById: new Dictionary<StudySiteId, StudySite> { [studySiteId] = studySite },
+            sitesById: new Dictionary<SiteId, Site> { [rawSiteId] = site },
+            studyEffectivities: [effectivity],
+            milestone: LockMilestone.InterimCut,
+            reviewedRevisions: new HashSet<(ObservationId, int)>());
+
+        interimSnapshot.ReadyForLock.Should().BeTrue();
+        interimSnapshot.Blockers.Should().BeEmpty();
+        interimSnapshot.Explanation.Conditions.Should().HaveCount(6).And.OnlyContain(c => c.Met);
+
+        // Under FinalDatabaseLock: all four closeout gaps block ReadyForLock!
+        var finalBlocked = LockReadinessEvaluator.BuildSnapshot(
+            Study,
+            StudyCode,
+            NodeRef.For(Study),
+            instances: [day1Form, optionalNotAskedForm],
+            observationsById: new Dictionary<ObservationId, Observation>
+            {
+                [sbpObs.Id] = sbpObs,
+                [notAskedObs.Id] = notAskedObs,
+            },
+            enrollmentsById: new Dictionary<EnrollmentId, Enrollment>
+            {
+                [enrolled.Id] = enrolled,
+                [screening.Id] = screening,
+            },
+            versionsById: new Dictionary<ProtocolVersionId, ProtocolVersion> { [version.Id] = version },
+            openQueries: [],
+            answeredQueryIds: new HashSet<AssertionId>(),
+            blindedObservationIds: new HashSet<ObservationId>(),
+            verifiedRevisions: new HashSet<(ObservationId, int)> { (sbpObs.Id, 1) },
+            formSignaturesByInstance: new Dictionary<CollectionInstanceId, IReadOnlyList<Attestation>>
+            {
+                [day1Form.Id] = [day1Sig],
+            },
+            evaluatedAt: evaluatedAt,
+            studySitesById: new Dictionary<StudySiteId, StudySite> { [studySiteId] = studySite },
+            sitesById: new Dictionary<SiteId, Site> { [rawSiteId] = site },
+            studyEffectivities: [effectivity],
+            milestone: LockMilestone.FinalDatabaseLock,
+            reviewedRevisions: new HashSet<(ObservationId, int)>());
+
+        finalBlocked.ReadyForLock.Should().BeFalse();
+        finalBlocked.CanFreeze.Should().BeTrue();
+        finalBlocked.ScreeningEnrollmentCount.Should().Be(1);
+        finalBlocked.PendingScheduledVisitCount.Should().Be(1);
+        finalBlocked.UnopenedVisitCount.Should().Be(1);
+        finalBlocked.UnsignedFormCount.Should().Be(1);
+        finalBlocked.UnreviewedValueCount.Should().Be(1);
+
+        finalBlocked.Blockers.Should().ContainSingle(b =>
+            b.Kind == LockBlockerKind.ScreeningEnrollment
+            && b.SubjectCode == "SUBJ-SCREENING"
+            && b.NextCapability == "enrollment.change_status");
+        finalBlocked.Blockers.Should().ContainSingle(b =>
+            b.Kind == LockBlockerKind.UnopenedVisit
+            && b.SubjectCode == "SUBJ-ENROLLED"
+            && b.PlannedActivityId == "act.day84");
+        finalBlocked.Blockers.Should().ContainSingle(b =>
+            b.Kind == LockBlockerKind.UnsignedForm
+            && b.CollectionInstanceId == optionalNotAskedForm.Id);
+        finalBlocked.Blockers.Should().ContainSingle(b =>
+            b.Kind == LockBlockerKind.UnreviewedValue
+            && b.ObservationId == sbpObs.Id
+            && b.NextCapability == "observation.review");
+
+        finalBlocked.Explanation.Conditions.Where(c => !c.Met).Select(c => c.Code).Should().Contain([
+            LockReadinessEvaluator.ScreeningEnrollmentsResolvedCondition,
+            LockReadinessEvaluator.ScheduledVisitsOpenedCondition,
+            LockReadinessEvaluator.FormsSignedCondition,
+            LockReadinessEvaluator.ObservationsReviewedCondition,
+        ]);
+
+        // Resolve all four closeout blockers -> FinalDatabaseLock becomes ReadyForLock == true with all 8 conditions met.
+        screening.ChangeStatus(EnrollmentStatus.ScreenFailed, evaluatedAt, evaluatedAt).Should().BeNull();
+
+        var day84Form = CollectionInstance.Open(
+            CollectionInstanceId.New(),
+            enrolled,
+            version.Id,
+            "cs.vitals",
+            "act.day84",
+            evaluatedAt,
+            "crc@test.org",
+            evaluatedAt);
+        var day84Sbp = Observation.Record(
+            ObservationId.New(),
+            Tenant,
+            enrolled.Id,
+            enrolled.ParticipantId,
+            Study,
+            Systolic,
+            new QuantityValue(116m, "mm[Hg]"),
+            evaluatedAt,
+            "Closeout vitals",
+            "crc@test.org",
+            evaluatedAt).Value!;
+        day84Form.Join("item.sbp", day84Sbp.Id, evaluatedAt);
+        var day84Hash = CollectionInstance.ContentHashOf([
+            new CollectionContentEntry(day84Sbp.Id, day84Sbp.Revision, day84Sbp.Value),
+        ]);
+        var day84Sig = Attestation.Sign(
+            AttestationId.New(),
+            Tenant,
+            Actor.Person("pi@test.org"),
+            AttestationMeaning.Approved,
+            new AttestationTarget(NodeKinds.CollectionInstance, day84Form.Id.Value, day84Hash),
+            evaluatedAt.AddMinutes(5),
+            "password",
+            evaluatedAt.AddMinutes(6),
+            "Sign Day 84").Value!;
+
+        var notesHash = CollectionInstance.ContentHashOf([
+            new CollectionContentEntry(notAskedObs.Id, notAskedObs.Revision, notAskedObs.Value),
+        ]);
+        var notesSig = Attestation.Sign(
+            AttestationId.New(),
+            Tenant,
+            Actor.Person("pi@test.org"),
+            AttestationMeaning.Approved,
+            new AttestationTarget(NodeKinds.CollectionInstance, optionalNotAskedForm.Id.Value, notesHash),
+            evaluatedAt.AddMinutes(5),
+            "password",
+            evaluatedAt.AddMinutes(6),
+            "Sign blank optional notes").Value!;
+
+        var finalReady = LockReadinessEvaluator.BuildSnapshot(
+            Study,
+            StudyCode,
+            NodeRef.For(Study),
+            instances: [day1Form, optionalNotAskedForm, day84Form],
+            observationsById: new Dictionary<ObservationId, Observation>
+            {
+                [sbpObs.Id] = sbpObs,
+                [notAskedObs.Id] = notAskedObs,
+                [day84Sbp.Id] = day84Sbp,
+            },
+            enrollmentsById: new Dictionary<EnrollmentId, Enrollment>
+            {
+                [enrolled.Id] = enrolled,
+                [screening.Id] = screening,
+            },
+            versionsById: new Dictionary<ProtocolVersionId, ProtocolVersion> { [version.Id] = version },
+            openQueries: [],
+            answeredQueryIds: new HashSet<AssertionId>(),
+            blindedObservationIds: new HashSet<ObservationId>(),
+            verifiedRevisions: new HashSet<(ObservationId, int)> { (sbpObs.Id, 1), (day84Sbp.Id, 1) },
+            formSignaturesByInstance: new Dictionary<CollectionInstanceId, IReadOnlyList<Attestation>>
+            {
+                [day1Form.Id] = [day1Sig],
+                [optionalNotAskedForm.Id] = [notesSig],
+                [day84Form.Id] = [day84Sig],
+            },
+            evaluatedAt: evaluatedAt.AddMinutes(10),
+            studySitesById: new Dictionary<StudySiteId, StudySite> { [studySiteId] = studySite },
+            sitesById: new Dictionary<SiteId, Site> { [rawSiteId] = site },
+            studyEffectivities: [effectivity],
+            milestone: LockMilestone.FinalDatabaseLock,
+            reviewedRevisions: new HashSet<(ObservationId, int)> { (sbpObs.Id, 1), (day84Sbp.Id, 1) });
+
+        finalReady.ReadyForLock.Should().BeTrue();
+        finalReady.Blockers.Should().BeEmpty();
+        finalReady.Explanation.Conditions.Should().HaveCount(8).And.OnlyContain(c => c.Met);
+    }
 }

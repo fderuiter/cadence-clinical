@@ -69,11 +69,15 @@ string[] platformOperators =
     .. DevelopmentTenantBootstrap.Register(builder.Services, builder.Configuration, builder.Environment),
     KernelAuthorityOptions.TrialOnboardingOperator.Id,
     KernelAuthorityOptions.CommercialBillingOperator.Id,
+    KernelAuthorityOptions.ExecutionQueryProjectionOperator.Id,
 ];
 string? quoteSigningSecret = builder.Configuration["CommercialQuote:SigningSecret"]
     ?? builder.Configuration["Security:GatewaySecret"]
     ?? builder.Configuration["GATEWAY_SECRET"];
 builder.Services.AddSingleton(new CommercialQuoteOptions(quoteSigningSecret));
+builder.Services.AddKernelLockCertificateSigner(builder.Configuration);
+builder.Services.AddSingleton<InMemoryScopeLockEventSink>();
+builder.Services.AddSingleton<IScopeLockEventSink>(sp => sp.GetRequiredService<InMemoryScopeLockEventSink>());
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.Services.AddHttpContextAccessor();
 builder.Services
@@ -115,6 +119,7 @@ builder.Services
     // and the audit chains are verified and sealed. Each job takes a PostgreSQL leader lock per pass, so with several
     // replicas one runs it at a time.
     .AddKernelInProcessEvents()
+    .AddKernelEventConsumer<PublishScopeLockEventsConsumer>(PublishScopeLockEventsConsumer.Name)
     .AddKernelBackgroundJobs();
 builder.Services.AddScoped<ServiceActorScope>();
 builder.Services.AddScoped<ICurrentActor, ClaimsCurrentActor>();

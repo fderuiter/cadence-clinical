@@ -62,6 +62,7 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
     private const string BlindedMonitor = "cra.blinded@readiness-queues.test";
     private const string UnblindedReviewer = "pharm.unblinded@readiness-queues.test";
     private const string DataManager = "dm@readiness-queues.test";
+    private const string SponsorAdmin = "sponsor.admin@readiness-queues.test";
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -346,6 +347,7 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
         using var pi = CreateClient(seed.TenantCode, SiteAPi);
         using var monitor = CreateClient(seed.TenantCode, BlindedMonitor);
         using var dm = CreateClient(seed.TenantCode, DataManager);
+        using var sponsorAdmin = CreateClient(seed.TenantCode, SponsorAdmin);
 
         // Save violating Systolic (240 mm[Hg]) while leaving required Diastolic blank.
         var saved = await SendJsonAsync<FormSavedResponse>(
@@ -422,11 +424,11 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
             ct);
         frozenForm.Kind.Should().Be("Frozen");
         await SendJsonAsync<KernelLockResponse>(
-            dm,
+            sponsorAdmin,
             HttpMethod.Post,
             $"/api/v1/kernel/locks/{frozenForm.Ref}/release",
             "Release freeze to complete missing item",
-            TestSecurityContext.CreateSigToken(DataManager, KernelLockEndpoints.ReleaseLockAction(frozenForm.Ref!), KernelLockEndpoints.ReleaseLockSemanticAction),
+            TestSecurityContext.CreateSigToken(SponsorAdmin, KernelLockEndpoints.ReleaseLockAction(frozenForm.Ref!), KernelLockEndpoints.ReleaseLockSemanticAction),
             new { study_ref = studyRef, meaning = "Responsibility" },
             HttpStatusCode.OK,
             ct);
@@ -1300,13 +1302,13 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
                 "observation.query.answer",
                 "execution.query.answer",
                 "lock.apply",
-                "lock.release",
                 "protocol.approve",
                 "proposal.approve",
                 "proposal.reject",
                 "work_queue.define",
                 "attestation.sign"
             ], AuthorityScope.Tenant()),
+            (Actor.Person(SponsorAdmin), ["lock.release", "attestation.sign"], AuthorityScope.Tenant()),
             (Actor.ServiceAccount("execution-forms"), ["execution.form.open"], AuthorityScope.Tenant()),
             (Actor.ServiceAccount("execution-queries"), ["observation.query", "observation.query.answer", "assertion.retract"], AuthorityScope.Tenant()),
             (Actor.ServiceAccount(EvaluateEditChecksOnCollectionChanged.Name), ["validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage"], AuthorityScope.Tenant()),

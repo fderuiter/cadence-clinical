@@ -285,6 +285,31 @@ public class BiometricLivenessVerification
     public string ReasonForChange { get; set; } = string.Empty;
 }
 
+public class ReplicatedScopeLock
+{
+    public Cadence.Kernel.TenantId TenantId { get; set; }
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string LockId { get; set; } = string.Empty;
+    public string StudyRef { get; set; } = string.Empty;
+    public string StudyCode { get; set; } = string.Empty;
+    public string? SiteCode { get; set; }
+    public string? SubjectCode { get; set; }
+    public string ScopeKind { get; set; } = "study";
+    public string ScopeRef { get; set; } = string.Empty;
+    public string LockKind { get; set; } = "Locked";
+    public string Milestone { get; set; } = "InterimCut";
+    public bool IsActive { get; set; } = true;
+    public required DateTimeOffset AppliedAt { get; set; }
+    public string AppliedBy { get; set; } = string.Empty;
+    public DateTimeOffset? ReleasedAt { get; set; }
+    public string? ReleasedBy { get; set; }
+    public string? ReleaseReason { get; set; }
+    public required DateTimeOffset CreatedAt { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
+    public string ReasonForChange { get; set; } = string.Empty;
+    public int VersionIndex { get; set; } = 1;
+}
+
 /// <summary>
 /// Binds a captured e-signature to the content it signed (21 CFR 11.70 signature/record linking) without keeping the
 /// raw capture. The binding is SHA-256 over the UTF-8 bytes of

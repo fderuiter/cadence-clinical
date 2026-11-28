@@ -1424,6 +1424,82 @@
           },
           "is_revoked": {
             "type": "boolean"
+          },
+          "certificate_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "certificate_fingerprint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_DatabaseLockCertificateContract": {
+        "required": [
+          "certificate_id",
+          "tenant_code",
+          "study_ref",
+          "study_code",
+          "lock_id",
+          "milestone",
+          "attestation_id",
+          "signed_by",
+          "issued_at",
+          "key_id",
+          "algorithm",
+          "payload_sha256",
+          "fingerprint_sha256",
+          "signature_base64"
+        ],
+        "type": "object",
+        "properties": {
+          "certificate_id": {
+            "type": "string"
+          },
+          "tenant_code": {
+            "type": "string"
+          },
+          "study_ref": {
+            "type": "string"
+          },
+          "study_code": {
+            "type": "string"
+          },
+          "lock_id": {
+            "type": "string"
+          },
+          "milestone": {
+            "type": "string"
+          },
+          "attestation_id": {
+            "type": "string"
+          },
+          "signed_by": {
+            "type": "string"
+          },
+          "issued_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "key_id": {
+            "type": "string"
+          },
+          "algorithm": {
+            "type": "string"
+          },
+          "payload_sha256": {
+            "type": "string"
+          },
+          "fingerprint_sha256": {
+            "type": "string"
+          },
+          "signature_base64": {
+            "type": "string"
           }
         }
       },
@@ -2241,6 +2317,16 @@
           "reason_for_execution": {
             "type": "string",
             "default": "Statistical analysis execution run"
+          },
+          "lock_certificate": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Interop_DatabaseLockCertificateContract"
+              }
+            ]
           }
         }
       },
@@ -2617,6 +2703,16 @@
             ],
             "format": "double",
             "default": 24
+          },
+          "lock_certificate": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Interop_DatabaseLockCertificateContract"
+              }
+            ]
           }
         }
       },

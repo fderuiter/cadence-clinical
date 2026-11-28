@@ -5,7 +5,56 @@
     data-testid="study-locks-apply-form"
     @submit.prevent="emit('submit')"
   >
-    <h3>Apply signed freeze or lock</h3>
+    <header class="apply-card-header">
+      <div class="apply-card-title-row">
+        <h3>Milestone lock &amp; readiness</h3>
+        <span class="milestone-pill">Study Milestone</span>
+      </div>
+      <p class="apply-card-subtitle">
+        Enforce protocol gates before asserting immutable study closeout status
+      </p>
+    </header>
+
+    <div class="milestone-switch-group">
+      <span id="lock-milestone-label" class="picker-label">
+        Milestone Target
+      </span>
+      <div
+        class="milestone-segmented"
+        role="group"
+        aria-labelledby="lock-milestone-label"
+      >
+        <button
+          type="button"
+          data-testid="lock-milestone-interim"
+          :aria-pressed="selectedMilestone === 'InterimCut'"
+          :class="[
+            'milestone-segment-btn',
+            selectedMilestone === 'InterimCut'
+              ? 'milestone-segment-btn--active'
+              : '',
+          ]"
+          @click="emit('update:selectedMilestone', 'InterimCut')"
+        >
+          Interim Cut
+        </button>
+        <button
+          type="button"
+          data-testid="lock-milestone-final"
+          :aria-pressed="selectedMilestone === 'FinalDatabaseLock'"
+          :class="[
+            'milestone-segment-btn',
+            selectedMilestone === 'FinalDatabaseLock'
+              ? 'milestone-segment-btn--active'
+              : '',
+          ]"
+          @click="emit('update:selectedMilestone', 'FinalDatabaseLock')"
+        >
+          Final Database Lock
+        </button>
+      </div>
+    </div>
+
     <div class="apply-grid">
       <ClinicalInput
         id="lock-apply-scope-kind"
@@ -222,41 +271,43 @@
       aria-label="Study lock readiness"
     >
       <template #blockers>
-        <LockBlockerList
+        <LocksReadinessChecklist
           v-if="readiness && readiness.blockers.length > 0"
-          :blockers="readiness.blockers"
-          list-class="readiness-blockers"
-          list-test-id="study-locks-readiness-blockers"
-          badge-test-id-prefix="blocker-kind-"
+          :readiness="readiness"
         />
       </template>
     </ClinicalGovernanceBanner>
 
     <div class="apply-actions">
-      <button
-        id="btn-apply-study-lock"
-        type="submit"
-        class="btn btn-primary"
-        :disabled="isApplyDisabled"
-      >
-        Sign &amp; apply {{ applyKind }}
-      </button>
-      <button
-        type="button"
-        class="btn btn-secondary btn-mini-freeze"
-        :disabled="busy || !applyScopeRef.trim() || !canFreezeByReadiness"
-        @click="emit('quickApply', 'Frozen')"
-      >
-        Quick Freeze…
-      </button>
-      <button
-        type="button"
-        class="btn btn-secondary btn-mini-lock"
-        :disabled="busy || !applyScopeRef.trim() || isLockBlockedByReadiness"
-        @click="emit('quickApply', 'Locked')"
-      >
-        Quick Lock…
-      </button>
+      <div class="apply-actions-buttons">
+        <button
+          id="btn-apply-study-lock"
+          type="submit"
+          class="btn btn-primary"
+          :disabled="isApplyDisabled"
+        >
+          Sign &amp; apply {{ applyKind }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary btn-mini-freeze"
+          :disabled="busy || !applyScopeRef.trim() || !canFreezeByReadiness"
+          @click="emit('quickApply', 'Frozen')"
+        >
+          Quick Freeze…
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary btn-mini-lock"
+          :disabled="busy || !applyScopeRef.trim() || isLockBlockedByReadiness"
+          @click="emit('quickApply', 'Locked')"
+        >
+          Quick Lock…
+        </button>
+      </div>
+      <span class="oidc-role-badge" data-testid="locks-verified-oidc-role">
+        Verified OIDC Role: {{ verifiedSignerRole }}
+      </span>
     </div>
   </form>
 </template>
@@ -264,9 +315,13 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { ClinicalGovernanceBanner, ClinicalInput } from "ui";
-import type { KernelLockKind, KernelLockReadiness } from "../../api/kernelApi";
+import type {
+  KernelLockKind,
+  KernelLockMilestone,
+  KernelLockReadiness,
+} from "../../api/kernelApi";
 import type { useSignedKernelLock } from "../../composables/useSignedKernelLock";
-import LockBlockerList from "./LockBlockerList.vue";
+import LocksReadinessChecklist from "./LocksReadinessChecklist.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 import type { PickerOption } from "./useLockHierarchyPickers";
 
@@ -290,6 +345,8 @@ const props = defineProps<{
   formsLoading: boolean;
   observationsLoading: boolean;
   applyKind: KernelLockKind;
+  selectedMilestone: KernelLockMilestone;
+  verifiedSignerRole: string;
   applyReason: string;
   applyScopeRef: string;
   readiness: KernelLockReadiness | null;
@@ -310,6 +367,7 @@ const emit = defineEmits<{
   (e: "update:selectedFormRef", value: string): void;
   (e: "update:selectedObservationRef", value: string): void;
   (e: "update:applyKind", value: KernelLockKind): void;
+  (e: "update:selectedMilestone", value: KernelLockMilestone): void;
   (e: "update:applyReason", value: string): void;
   (e: "scopeKindChange"): void;
   (e: "sitePickerChange"): void;
@@ -318,7 +376,6 @@ const emit = defineEmits<{
   (e: "submit"): void;
   (e: "quickApply", kind: KernelLockKind): void;
 }>();
-
 const readinessBannerStatus = computed(() => {
   if (props.readinessLoading) return "loading";
   return props.readiness?.ready_for_lock ? "ready" : "blocked";

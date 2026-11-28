@@ -37,6 +37,7 @@ public sealed class InteropDbContext(DbContextOptions<InteropDbContext> options)
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
     public DbSet<StatisticalProgram> StatisticalPrograms => Set<StatisticalProgram>();
     public DbSet<DatabaseLockAuthToken> DatabaseLockAuthTokens => Set<DatabaseLockAuthToken>();
+    public DbSet<ReplicatedStudyLock> ReplicatedStudyLocks => Set<ReplicatedStudyLock>();
     public DbSet<ExecutionRunRecord> ExecutionRunRecords => Set<ExecutionRunRecord>();
     public DbSet<BiostatExportAuditLog> BiostatExportAuditLogs => Set<BiostatExportAuditLog>();
     public DbSet<TransactionalOutboxMessage> TransactionalOutbox => Set<TransactionalOutboxMessage>();
@@ -63,6 +64,7 @@ public sealed class InteropDbContext(DbContextOptions<InteropDbContext> options)
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
         modelBuilder.ApplyConfiguration(new StatisticalProgramConfiguration());
         modelBuilder.ApplyConfiguration(new DatabaseLockAuthTokenConfiguration());
+        modelBuilder.ApplyConfiguration(new ReplicatedStudyLockConfiguration());
         modelBuilder.ApplyConfiguration(new ExecutionRunRecordConfiguration());
         modelBuilder.ApplyConfiguration(new BiostatExportAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());

@@ -467,7 +467,10 @@ export function createKernelStudyAndGovernanceHandlers(store) {
           if (resolved.error) return problemResponse(resolved.error);
         }
         const scopeRef = url.searchParams.get("scope_ref") || undefined;
-        return HttpResponse.json(store.getLockReadiness(rawStudyRef, scopeRef));
+        const milestone = url.searchParams.get("milestone") || undefined;
+        return HttpResponse.json(
+          store.getLockReadiness(rawStudyRef, scopeRef, milestone)
+        );
       }
     ),
     http.post("*/api/v1/kernel/locks", async ({ request }) => {

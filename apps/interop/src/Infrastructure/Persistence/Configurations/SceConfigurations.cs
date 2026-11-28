@@ -43,6 +43,38 @@ public class DatabaseLockAuthTokenConfiguration : IEntityTypeConfiguration<Datab
         builder.Property(x => x.IssuedTo).HasMaxLength(255).IsRequired();
         builder.Property(x => x.AuthorizedRolesJson).HasColumnType("jsonb");
         builder.Property(x => x.SignatureHash).HasMaxLength(128).IsRequired();
+        builder.Property(x => x.CertificateId).HasMaxLength(128);
+        builder.HasIndex(x => x.CertificateId);
+        builder.Property(x => x.CertificateFingerprint).HasMaxLength(128);
+        builder.Property(x => x.LockCertificateJson).HasColumnType("jsonb");
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+    }
+}
+
+public class ReplicatedStudyLockConfiguration : IEntityTypeConfiguration<ReplicatedStudyLock>
+{
+    public void Configure(EntityTypeBuilder<ReplicatedStudyLock> builder)
+    {
+        builder.ToTable("sce_replicated_study_locks");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.LockId).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.LockId);
+        builder.Property(x => x.StudyRef).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.StudyRef);
+        builder.Property(x => x.StudyCode).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.StudyCode);
+        builder.Property(x => x.ScopeKind).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.LockKind).HasMaxLength(32).IsRequired();
+        builder.Property(x => x.Milestone).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.CertificateId).HasMaxLength(128);
+        builder.HasIndex(x => x.CertificateId);
+        builder.Property(x => x.CertificateFingerprint).HasMaxLength(128);
+        builder.Property(x => x.CertificateJson).HasColumnType("jsonb");
+        builder.Property(x => x.AppliedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.RevokedBy).HasMaxLength(255);
+        builder.Property(x => x.RevocationReason).HasMaxLength(1000);
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
     }

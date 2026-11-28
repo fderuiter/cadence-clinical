@@ -2,12 +2,14 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
+using Cadence.Contracts;
 using Cadence.Database.Audit;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
@@ -158,6 +160,28 @@ public sealed class SceStudyScopeTests(InteropPostgresApiFactory factory) : ICla
 
     private static string NewStudy() => $"STUDY-SCE-{Guid.NewGuid():N}";
 
+    private static JsonNode CreateSignedLockCertificateNode(string study)
+    {
+        string lockId = $"LOCK-{study}";
+        var signed = TestSecurityContext.SignTestLockCertificate(studyId: study, studyCode: study, lockId: lockId);
+        var contract = new DatabaseLockCertificateContract(
+            signed.CertificateId,
+            signed.TenantId,
+            signed.StudyId,
+            signed.StudyCode,
+            signed.LockId,
+            signed.Milestone.ToString(),
+            signed.AttestationId,
+            signed.SignedBy,
+            signed.IssuedAt,
+            signed.KeyId,
+            signed.Algorithm,
+            signed.PayloadSha256,
+            signed.FingerprintSha256,
+            signed.SignatureBase64);
+        return JsonSerializer.SerializeToNode(contract)!;
+    }
+
     private static JsonObject IssueBody(string study, string issuedTo) => new()
     {
         ["study_id"] = study,
@@ -165,6 +189,7 @@ public sealed class SceStudyScopeTests(InteropPostgresApiFactory factory) : ICla
         ["milestone"] = "DATABASE_LOCK",
         ["issued_to"] = issuedTo,
         ["reason"] = "Final analysis after database lock",
+        ["lock_certificate"] = CreateSignedLockCertificateNode(study),
     };
 
     private static object ExecuteBody(string study, string program, string? tokenId) => new

@@ -59,6 +59,12 @@ public static class KernelObservationEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesKernelCommand<VerifyObservation>();
 
+        group.MapPost("/{observationRef}/reviews", ReviewAsync)
+            .WithName("KernelReviewObservation")
+            .WithSummary("Records source data review completion for the current revision of an observation with the signed reason for change (observation.review).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesKernelCommand<ReviewObservation>();
+
         var assertions = kernel.MapGroup("/assertions").AddEndpointFilter<KernelTenantFilter>().WithTags("Kernel observations");
         assertions.MapPost("/{assertionRef}/retraction", RetractAssertionAsync)
             .WithName("KernelRetractAssertion")
@@ -203,6 +209,47 @@ public static class KernelObservationEndpoints
             : Problem(result.Error!);
     }
 
+    internal static async Task<Results<Created<KernelAssertionStateResponse>, ProblemHttpResult>> ReviewAsync(
+        string observationRef,
+        KernelReviewObservationRequest request,
+        HttpContext context,
+        IKernelCommandSender sender,
+        IKernelChangeReason changeReason,
+        CancellationToken cancellationToken)
+    {
+        if (ParseObservation(observationRef) is not { } observation)
+        {
+            return ObservationRefInvalid(observationRef);
+        }
+
+        if (request is null
+            || !NodeRef.TryParse(request.EnrollmentRef, out var enrollment)
+            || enrollment.Kind != NodeKinds.Enrollment
+            || request.Revision < 1)
+        {
+            return KernelProblems.BadRequest(
+                "Invalid review",
+                "Name the observation's enrollment as an enrollment NodeRef and the revision reviewed (from 1).");
+        }
+
+        var assertion = request.AssertionId is { } given && given != Guid.Empty ? AssertionId.FromGuid(given) : AssertionId.New();
+        var result = await sender.SendAsync(
+            new ReviewObservation(
+                KernelRequestTenant.Get(context),
+                assertion,
+                EnrollmentId.FromGuid(enrollment.Id),
+                observation,
+                request.Revision,
+                IdempotencyKey(context),
+                changeReason.Read(context) ?? string.Empty),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        return result.Value is { } state
+            ? TypedResults.Created(
+                $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/observations/{NodeRef.For(observation)}",
+                KernelAssertionStateResponse.From(state))
+            : Problem(result.Error!);
+    }
+
     internal static async Task<Results<Ok<KernelAssertionStateResponse>, ProblemHttpResult>> RetractAssertionAsync(
         string assertionRef,
         KernelRetractAssertionRequest request,
@@ -289,6 +336,12 @@ public sealed record KernelCorrectObservationRequest(string EnrollmentRef, Obser
 /// <param name="Revision">The current revision of the observation being verified against source.</param>
 /// <param name="AssertionId">The new assertion's id; the kernel assigns one when absent.</param>
 public sealed record KernelVerifyObservationRequest(string EnrollmentRef, int Revision, Guid? AssertionId = null);
+
+/// <summary>Body of <c>POST /observations/{ref}/reviews</c>.</summary>
+/// <param name="EnrollmentRef">The observation's enrollment, as a NodeRef; the source data review is authorized against it.</param>
+/// <param name="Revision">The current revision of the observation being reviewed.</param>
+/// <param name="AssertionId">The new assertion's id; the kernel assigns one when absent.</param>
+public sealed record KernelReviewObservationRequest(string EnrollmentRef, int Revision, Guid? AssertionId = null);
 
 /// <summary>Body of <c>POST /assertions/{ref}/retraction</c>.</summary>
 /// <param name="EnrollmentRef">The assertion's enrollment, as a NodeRef; the retraction is authorized against it.</param>

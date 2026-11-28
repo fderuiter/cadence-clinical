@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,15 +23,22 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Cadence.Kernel.Application.Evidence;
 
 /// <summary>
-/// Handles <see cref="ApplyLock"/> (spec §10.5, ADR-2621): it resolves the scope within the study, takes the scope's
-/// exclusive advisory lock, which waits for every covered write in flight, refuses a second lock of the same kind there,
-/// checks the signature over <see cref="LockStatement.Apply"/> and records the lock.
+/// Handles <see cref="ApplyLock"/> (spec §10.5, ADR-2621): resolves the scope and its covering ancestor chain within
+/// the study, takes the scope's exclusive advisory lock, refuses when a wider ancestor lock already covers the scope or
+/// when a lock of the same kind already holds there, evaluates milestone readiness, verifies the signature over
+/// <see cref="LockStatement.Apply"/>, mints an asymmetric <see cref="DatabaseLockCertificateRecord"/> for study hard
+/// locks, and records the lock.
 /// </summary>
-internal sealed class ApplyLockHandler(IAttestationVerifier verifier, IValidationFindings? findings = null) : ICommandHandler<ApplyLock, LockState>
+internal sealed class ApplyLockHandler(
+    IAttestationVerifier verifier,
+    IValidationFindings? findings = null,
+    ILockCertificateSigner? certificateSigner = null) : ICommandHandler<ApplyLock, LockState>
 {
     public async Task<CommandResult<LockState>> HandleAsync(ApplyLock command, ICommandContext context, CancellationToken cancellationToken)
     {
-        if (!LockScopes.IsScope(command.Scope) || !System.Enum.IsDefined(command.Kind))
+        if (!LockScopes.IsScope(command.Scope)
+            || !System.Enum.IsDefined(command.Kind)
+            || !System.Enum.IsDefined(command.Milestone))
         {
             return AssertionErrors.ScopeInvalid;
         }
@@ -40,15 +48,27 @@ internal sealed class ApplyLockHandler(IAttestationVerifier verifier, IValidatio
             return KernelErrors.AlreadyExists;
         }
 
-        var (found, enrollment) = await ScopeEnrollmentAsync(command.Scope, command.StudyId, context.Work, cancellationToken).ConfigureAwait(false);
+        var (found, enrollment, ancestors) = await AssertionScopes.ResolveScopeHierarchyAsync(
+            command.Scope, command.StudyId, context.Work, cancellationToken).ConfigureAwait(false);
         if (!found)
         {
             return AssertionErrors.ScopeUnknown;
         }
 
         await context.Work.LockScopeAsync(command.Scope, cancellationToken).ConfigureAwait(false);
-        var held = await LocksInForce.ReadAsync(context.Work, [command.Scope], cancellationToken).ConfigureAwait(false);
-        if (held.Any(l => l.Kind == (AssertionKind)command.Kind))
+        var held = await LocksInForce.ReadAsync(context.Work, [.. ancestors, command.Scope], cancellationToken).ConfigureAwait(false);
+        var ancestorLocks = held
+            .Where(l => l.Target != command.Scope)
+            .OrderBy(l => LockScopes.OrderOf(l.Target.Kind))
+            .ThenBy(l => l.AssertedAt)
+            .ThenBy(l => l.Id)
+            .ToList();
+        if (ancestorLocks.Count > 0)
+        {
+            return LocksInForce.BuildRefusal(ancestorLocks, AssertionErrors.AlreadyLocked, nameof(ApplyLock), command.Scope);
+        }
+
+        if (held.Any(l => l.Target == command.Scope && l.Kind == (AssertionKind)command.Kind))
         {
             return AssertionErrors.AlreadyLocked;
         }
@@ -61,7 +81,8 @@ internal sealed class ApplyLockHandler(IAttestationVerifier verifier, IValidatio
                 command.Scope,
                 findings,
                 cancellationToken,
-                context.RecordedAt).ConfigureAwait(false) is { } notReady)
+                context.RecordedAt,
+                command.Milestone).ConfigureAwait(false) is { } notReady)
         {
             return notReady;
         }
@@ -81,50 +102,71 @@ internal sealed class ApplyLockHandler(IAttestationVerifier verifier, IValidatio
             return rejected;
         }
 
+        DatabaseLockCertificateRecord? certificate = null;
+        string? certificateJson = null;
+        if (command.Kind == LockKind.Locked && command.Scope.Kind == NodeKinds.Study && certificateSigner is not null)
+        {
+            var study = await context.Work.ReadAsync<Study>(command.StudyId, cancellationToken).ConfigureAwait(false);
+            if (study is not null)
+            {
+                certificate = certificateSigner.Sign(
+                    context.TenantId,
+                    command.StudyId,
+                    study.StudyCode,
+                    command.AssertionId,
+                    command.Milestone,
+                    command.AttestationId,
+                    context.Actor.Id,
+                    context.RecordedAt);
+                certificateJson = DatabaseLockCertificateJson.Serialize(certificate);
+            }
+        }
+
         var scopeVersion = await AssertionScopes.VersionAsync(command.Scope, context.Work, cancellationToken).ConfigureAwait(false);
         var applied = Assertion.Lock(
-            command.AssertionId, context.TenantId, command.Kind, command.StudyId, enrollment, command.Scope, command.AttestationId,
-            context.Actor.Id, context.RecordedAt);
+            command.AssertionId,
+            context.TenantId,
+            command.Kind,
+            command.StudyId,
+            enrollment,
+            command.Scope,
+            command.AttestationId,
+            context.Actor.Id,
+            context.RecordedAt,
+            command.Milestone,
+            certificateJson);
         context.Work.Add(applied);
         if (scopeVersion is not null)
         {
             context.Work.LinkInput(scopeVersion, LineageEdgeKind.DefinedBy, target: NodeRef.For(applied.Id));
         }
 
-        context.Work.Raise(new LockApplied(context.TenantId, applied.Id, command.Kind, command.StudyId, command.Scope, command.AttestationId));
+        context.Work.Raise(new LockApplied(
+            context.TenantId,
+            applied.Id,
+            command.Kind,
+            command.StudyId,
+            command.Scope,
+            command.AttestationId,
+            command.Milestone,
+            certificate));
         return CommandResult<LockState>.Success(new LockState(
-            applied.Id, command.Kind, command.Scope, command.AttestationId, Released: false, applied.AssertedAt, applied.AssertedBy));
-    }
-
-    /// <summary>
-    /// Whether the scope exists in <paramref name="study"/>, and its enrollment: null for a study or study site.
-    /// </summary>
-    private static async Task<(bool Found, EnrollmentId? Enrollment)> ScopeEnrollmentAsync(
-        NodeRef scope, StudyId study, IKernelUnitOfWork work, CancellationToken cancellationToken)
-    {
-        switch (scope.Kind)
-        {
-            case NodeKinds.Study:
-                return (StudyId.FromGuid(scope.Id) == study, null);
-            case NodeKinds.StudySite:
-                var site = await work.ReadAsync<StudySite>(StudySiteId.FromGuid(scope.Id), cancellationToken).ConfigureAwait(false);
-                return (site?.StudyId == study, null);
-            case NodeKinds.Enrollment:
-                var enrollment = await work.ReadAsync<Enrollment>(EnrollmentId.FromGuid(scope.Id), cancellationToken).ConfigureAwait(false);
-                return (enrollment?.StudyId == study, enrollment?.Id);
-            case NodeKinds.CollectionInstance:
-                var instance = await work.ReadAsync<CollectionInstance>(CollectionInstanceId.FromGuid(scope.Id), cancellationToken).ConfigureAwait(false);
-                return (instance?.StudyId == study, instance?.EnrollmentId);
-            default:
-                var observation = await work.ReadAsync<Observation>(ObservationId.FromGuid(scope.Id), cancellationToken).ConfigureAwait(false);
-                return (observation?.StudyId == study, observation?.EnrollmentId);
-        }
+            applied.Id,
+            command.Kind,
+            command.Scope,
+            command.AttestationId,
+            Released: false,
+            applied.AssertedAt,
+            applied.AssertedBy,
+            command.Milestone,
+            certificate));
     }
 }
 
 /// <summary>
 /// Handles <see cref="ReleaseLock"/>: under the scope's exclusive advisory lock it refuses a lock already released,
-/// checks the signature over <see cref="LockStatement.Release"/> and records the retracting assertion.
+/// refuses self-release by the actor who applied the lock, refuses releasing a child lock while a covering ancestor lock
+/// remains active, checks the signature over <see cref="LockStatement.Release"/>, and records the retracting assertion.
 /// </summary>
 internal sealed class ReleaseLockHandler(IAttestationVerifier verifier) : ICommandHandler<ReleaseLock, LockState>
 {
@@ -141,10 +183,31 @@ internal sealed class ReleaseLockHandler(IAttestationVerifier verifier) : IComma
             return KernelErrors.NotFound;
         }
 
+        var (_, _, ancestors) = await AssertionScopes.ResolveScopeHierarchyAsync(
+            applied.Target, applied.StudyId, context.Work, cancellationToken).ConfigureAwait(false);
+
         await context.Work.LockScopeAsync(applied.Target, cancellationToken).ConfigureAwait(false);
         if ((await LocksInForce.RetractedAsync(context.Work, [applied.Id], cancellationToken).ConfigureAwait(false)).Count > 0)
         {
             return AssertionErrors.AlreadyRetracted;
+        }
+
+        if (string.Equals(applied.AssertedBy, context.Actor.Id, StringComparison.Ordinal))
+        {
+            return AssertionErrors.SelfReleaseDenied;
+        }
+
+        if (ancestors.Count > 0)
+        {
+            var ancestorLocks = (await LocksInForce.ReadAsync(context.Work, ancestors, cancellationToken).ConfigureAwait(false))
+                .OrderBy(l => LockScopes.OrderOf(l.Target.Kind))
+                .ThenBy(l => l.AssertedAt)
+                .ThenBy(l => l.Id)
+                .ToList();
+            if (ancestorLocks.Count > 0)
+            {
+                return LocksInForce.BuildRefusal(ancestorLocks, AssertionErrors.Locked, nameof(ReleaseLock), applied.Target);
+            }
         }
 
         var target = LockStatement.Target(command.AssertionId, LockStatement.Release(command.AssertionId, applied.Id));
@@ -165,6 +228,17 @@ internal sealed class ReleaseLockHandler(IAttestationVerifier verifier) : IComma
         var scopeVersion = await AssertionScopes.VersionAsync(applied.Target, context.Work, cancellationToken).ConfigureAwait(false);
         var release = Assertion.Retract(command.AssertionId, applied, command.AttestationId, context.Actor.Id, context.RecordedAt);
         var kind = (LockKind)applied.Kind;
+        var milestone = applied.Milestone ?? LockMilestone.InterimCut;
+        var priorCertificate = DatabaseLockCertificateJson.Deserialize(applied.CertificateJson);
+        var revokedCertificate = priorCertificate is null
+            ? null
+            : priorCertificate with
+            {
+                Revoked = true,
+                RevokedAt = release.AssertedAt,
+                RevokedBy = release.AssertedBy,
+            };
+
         var releaseTarget = NodeRef.For(release.Id);
         context.Work.Add(release);
         context.Work.LinkInput(NodeRef.For(applied.Id, Math.Max(1L, applied.VersionIndex)), LineageEdgeKind.DerivedFrom, target: releaseTarget);
@@ -173,9 +247,25 @@ internal sealed class ReleaseLockHandler(IAttestationVerifier verifier) : IComma
             context.Work.LinkInput(scopeVersion, LineageEdgeKind.DefinedBy, target: releaseTarget);
         }
 
-        context.Work.Raise(new LockReleased(context.TenantId, release.Id, applied.Id, kind, applied.StudyId, applied.Target, command.AttestationId));
+        context.Work.Raise(new LockReleased(
+            context.TenantId,
+            release.Id,
+            applied.Id,
+            kind,
+            applied.StudyId,
+            applied.Target,
+            command.AttestationId,
+            priorCertificate?.CertificateId));
         return CommandResult<LockState>.Success(new LockState(
-            applied.Id, kind, applied.Target, command.AttestationId, Released: true, release.AssertedAt, release.AssertedBy));
+            applied.Id,
+            kind,
+            applied.Target,
+            command.AttestationId,
+            Released: true,
+            release.AssertedAt,
+            release.AssertedBy,
+            milestone,
+            revokedCertificate));
     }
 }
 
@@ -186,43 +276,38 @@ internal sealed class ReleaseLockHandler(IAttestationVerifier verifier) : IComma
 /// </summary>
 internal sealed class VerifyObservationHandler : ICommandHandler<VerifyObservation, AssertionState>
 {
-    public async Task<CommandResult<AssertionState>> HandleAsync(VerifyObservation command, ICommandContext context, CancellationToken cancellationToken)
-    {
-        var (observation, refused) = await ObservationAssertions.OpenAsync(
-            context, command.AssertionId, command.EnrollmentId, command.ObservationId, cancellationToken, lockObservation: true).ConfigureAwait(false);
-        if (observation is null)
-        {
-            return refused!;
-        }
+    public Task<CommandResult<AssertionState>> HandleAsync(VerifyObservation command, ICommandContext context, CancellationToken cancellationToken) =>
+        ObservationAssertions.AssertRevisionAsync(
+            context,
+            command.AssertionId,
+            command.EnrollmentId,
+            command.ObservationId,
+            command.Revision,
+            AssertionKind.Verified,
+            AssertionErrors.AlreadyVerified,
+            "verify",
+            Assertion.Verify,
+            cancellationToken);
+}
 
-        if (command.Revision != observation.Revision)
-        {
-            return AssertionErrors.RevisionStale.WithMessage(
-                $"The observation's current revision is {observation.Revision}, not {command.Revision}; reload it and verify the current value.");
-        }
-
-        var assertions = await context.Work.ReadAllAsync<Assertion>(
-            a => a.TargetKind == NodeKinds.Observation && a.TargetId == observation.Id.Value,
-            cancellationToken).ConfigureAwait(false);
-        var retractedIds = assertions
-            .Where(a => a.RetractsId is not null)
-            .Select(a => a.RetractsId!.Value)
-            .ToHashSet();
-
-        if (assertions.Any(a => a.Kind == AssertionKind.Queried && a.RetractsId is null && !retractedIds.Contains(a.Id)))
-        {
-            return AssertionErrors.QueryOpen;
-        }
-
-        if (assertions.Any(a => a.Kind == AssertionKind.Verified && a.RetractsId is null && a.TargetRevision == command.Revision && !retractedIds.Contains(a.Id)))
-        {
-            return AssertionErrors.AlreadyVerified;
-        }
-
-        var verified = Assertion.Verify(command.AssertionId, observation, command.Revision, context.Actor.Id, context.RecordedAt);
-        context.Work.LinkInput(NodeRef.For(observation.Id, command.Revision), LineageEdgeKind.DerivedFrom, target: NodeRef.For(verified.Id));
-        return ObservationAssertions.Made(context, verified);
-    }
+/// <summary>
+/// Handles <see cref="ReviewObservation"/>: records an <see cref="AssertionKind.Reviewed"/> source data review assertion
+/// against the current revision of an observation when no open query or active review already holds.
+/// </summary>
+internal sealed class ReviewObservationHandler : ICommandHandler<ReviewObservation, AssertionState>
+{
+    public Task<CommandResult<AssertionState>> HandleAsync(ReviewObservation command, ICommandContext context, CancellationToken cancellationToken) =>
+        ObservationAssertions.AssertRevisionAsync(
+            context,
+            command.AssertionId,
+            command.EnrollmentId,
+            command.ObservationId,
+            command.Revision,
+            AssertionKind.Reviewed,
+            AssertionErrors.AlreadyReviewed,
+            "review",
+            Assertion.Review,
+            cancellationToken);
 }
 
 /// <summary>Handles <see cref="RaiseQuery"/> the way <see cref="VerifyObservationHandler"/> checks its observation.</summary>
@@ -351,9 +436,70 @@ internal sealed class RetractAssertionHandler : ICommandHandler<RetractAssertion
     }
 }
 
-/// <summary>Resolves the current versioned <see cref="NodeRef"/> of a lock scope.</summary>
+/// <summary>Resolves the current versioned <see cref="NodeRef"/> and covering hierarchy of a lock scope.</summary>
 internal static class AssertionScopes
 {
+    public static async Task<(bool Found, EnrollmentId? Enrollment, IReadOnlyList<NodeRef> Ancestors)> ResolveScopeHierarchyAsync(
+        NodeRef scope,
+        StudyId study,
+        IKernelUnitOfWork work,
+        CancellationToken cancellationToken)
+    {
+        switch (scope.Kind)
+        {
+            case NodeKinds.Study:
+                if (StudyId.FromGuid(scope.Id) != study
+                    || !await work.ExistsAsync<Study>(study, cancellationToken).ConfigureAwait(false))
+                {
+                    return (false, null, []);
+                }
+
+                return (true, null, []);
+
+            case NodeKinds.StudySite:
+                if (await work.ReadAsync<StudySite>(StudySiteId.FromGuid(scope.Id), cancellationToken).ConfigureAwait(false) is not { } site
+                    || site.StudyId != study)
+                {
+                    return (false, null, []);
+                }
+
+                return (true, null, [.. LockScopes.Covering(study, site.Id).Where(s => s != scope)]);
+
+            case NodeKinds.Enrollment:
+                if (await work.ReadAsync<Enrollment>(EnrollmentId.FromGuid(scope.Id), cancellationToken).ConfigureAwait(false) is not { } enrollment
+                    || enrollment.StudyId != study)
+                {
+                    return (false, null, []);
+                }
+
+                return (true, enrollment.Id, [.. LockScopes.Covering(study, enrollment.StudySiteId, enrollment.Id).Where(s => s != scope)]);
+
+            case NodeKinds.CollectionInstance:
+                if (await work.ReadAsync<CollectionInstance>(CollectionInstanceId.FromGuid(scope.Id), cancellationToken).ConfigureAwait(false) is not { } instance
+                    || instance.StudyId != study)
+                {
+                    return (false, null, []);
+                }
+
+                return (true, instance.EnrollmentId, [.. LockScopes.Covering(study, instance.StudySiteId, instance.EnrollmentId, instance: instance.Id).Where(s => s != scope)]);
+
+            case NodeKinds.Observation:
+                if (await work.ReadAsync<Observation>(ObservationId.FromGuid(scope.Id), cancellationToken).ConfigureAwait(false) is not { } observation
+                    || observation.StudyId != study
+                    || await work.ReadAsync<Enrollment>(observation.EnrollmentId, cancellationToken).ConfigureAwait(false) is not { } obsEnrollment)
+                {
+                    return (false, null, []);
+                }
+
+                var containingInstance = await CollectionMembership.InstanceOfAsync(work, observation.Id, cancellationToken).ConfigureAwait(false);
+                var covering = LockScopes.Covering(study, obsEnrollment.StudySiteId, obsEnrollment.Id, observation.Id, containingInstance);
+                return (true, observation.EnrollmentId, [.. covering.Where(s => s != scope)]);
+
+            default:
+                return (false, null, []);
+        }
+    }
+
     public static async Task<NodeRef?> VersionAsync(NodeRef scope, IKernelUnitOfWork work, CancellationToken cancellationToken)
     {
         switch (scope.Kind)
@@ -380,6 +526,54 @@ internal static class AssertionScopes
 /// <summary>Shared steps of the handlers that assert something about an observation.</summary>
 internal static class ObservationAssertions
 {
+    public static async Task<CommandResult<AssertionState>> AssertRevisionAsync(
+        ICommandContext context,
+        AssertionId assertionId,
+        EnrollmentId enrollmentId,
+        ObservationId observationId,
+        int revision,
+        AssertionKind kind,
+        KernelError duplicateError,
+        string verb,
+        Func<AssertionId, Observation, int, string, DateTimeOffset, Assertion> factory,
+        CancellationToken cancellationToken)
+    {
+        var (observation, refused) = await OpenAsync(
+            context, assertionId, enrollmentId, observationId, cancellationToken, lockObservation: true).ConfigureAwait(false);
+        if (observation is null)
+        {
+            return refused!;
+        }
+
+        if (revision != observation.Revision)
+        {
+            return AssertionErrors.RevisionStale.WithMessage(
+                $"The observation's current revision is {observation.Revision}, not {revision}; reload it and {verb} the current value.");
+        }
+
+        var assertions = await context.Work.ReadAllAsync<Assertion>(
+            a => a.TargetKind == NodeKinds.Observation && a.TargetId == observation.Id.Value,
+            cancellationToken).ConfigureAwait(false);
+        var retractedIds = assertions
+            .Where(a => a.RetractsId is not null)
+            .Select(a => a.RetractsId!.Value)
+            .ToHashSet();
+
+        if (assertions.Any(a => a.Kind == AssertionKind.Queried && a.RetractsId is null && !retractedIds.Contains(a.Id)))
+        {
+            return AssertionErrors.QueryOpen;
+        }
+
+        if (assertions.Any(a => a.Kind == kind && a.RetractsId is null && a.TargetRevision == revision && !retractedIds.Contains(a.Id)))
+        {
+            return duplicateError;
+        }
+
+        var recorded = factory(assertionId, observation, revision, context.Actor.Id, context.RecordedAt);
+        context.Work.LinkInput(NodeRef.For(observation.Id, revision), LineageEdgeKind.DerivedFrom, target: NodeRef.For(recorded.Id));
+        return Made(context, recorded);
+    }
+
     /// <summary>
     /// Checks that <paramref name="assertion"/> is new, then, under shared locks on the observation's covering scopes,
     /// that no <see cref="AssertionKind.Locked"/> lock holds and that the observation belongs to the enrollment.
@@ -536,6 +730,7 @@ public static class AssertionServiceCollectionExtensions
         services.AddTransient<ICommandHandler<ApplyLock, LockState>, ApplyLockHandler>();
         services.AddTransient<ICommandHandler<ReleaseLock, LockState>, ReleaseLockHandler>();
         services.AddTransient<ICommandHandler<VerifyObservation, AssertionState>, VerifyObservationHandler>();
+        services.AddTransient<ICommandHandler<ReviewObservation, AssertionState>, ReviewObservationHandler>();
         services.AddTransient<ICommandHandler<RaiseQuery, AssertionState>, RaiseQueryHandler>();
         services.AddTransient<ICommandHandler<AnswerQuery, AssertionState>, AnswerQueryHandler>();
         services.AddTransient<ICommandHandler<RetractAssertion, AssertionState>, RetractAssertionHandler>();

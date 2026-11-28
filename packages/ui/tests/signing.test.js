@@ -8,6 +8,7 @@ import {
   sha256,
   validateField,
   buildLedgerBlock,
+  deriveSignerRoleFromClaims,
 } from "../index.js";
 import { encryptAESGCM, decryptAESGCM, deriveSessionKey } from "../signing.js";
 
@@ -383,5 +384,17 @@ describe("buildLedgerBlock - Hardened Signatures Parity", () => {
 
     expect(block1.hash).toBe(block2.hash);
     expect(block1.hash).toBeDefined();
+  });
+});
+
+describe("deriveSignerRoleFromClaims lock governance roles", () => {
+  it("maps sponsor_admin to Sponsor Admin and trial_data_manager to Trial Data Manager", () => {
+    expect(deriveSignerRoleFromClaims(["sponsor_admin"])).toBe("Sponsor Admin");
+    expect(deriveSignerRoleFromClaims(["trial_data_manager"])).toBe(
+      "Trial Data Manager"
+    );
+    expect(deriveSignerRoleFromClaims({ roles: ["sponsor_dm"] })).toBe(
+      "Trial Data Manager"
+    );
   });
 });

@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
+using Cadence.Contracts;
 using Cadence.Database.Audit;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
@@ -22,6 +23,8 @@ using FluentAssertions;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+
+using NSubstitute;
 
 using Xunit;
 
@@ -163,10 +166,100 @@ public sealed class SceUnblindingAuthorizationTests(InteropPostgresApiFactory fa
         (await blinded.GetAsync($"{Base}/runs/{run.RunId}/artifacts/art-1", Ct)).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    [GxPRequirement("PRD-CDR-006")]
+    public async Task IssueLockToken_WithoutOrWithTamperedLockCertificate_Returns403AndMintsNothing()
+    {
+        factory.SkipIfUnavailable();
+        string study = NewStudy();
+        using var client = factory.CreateSignedClient(DataManager);
+
+        var withoutCert = IssueBody(study, "stat-a");
+        withoutCert.Remove("lock_certificate");
+        (await client.PostAsJsonAsync($"{Base}/lock-tokens", withoutCert, Ct))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var tamperedCert = IssueBody(study, "stat-a");
+        tamperedCert["lock_certificate"]!["signed_by"] = "forger";
+        (await client.PostAsJsonAsync($"{Base}/lock-tokens", tamperedCert, Ct))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        (await TokensForAsync(study)).Should().BeEmpty();
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-CDR-006")]
+    public async Task KernelScopeLockRelease_RevokesStudyLockAndInvalidatesIssuedSceTokens()
+    {
+        factory.SkipIfUnavailable();
+        string study = NewStudy();
+        string lockId = $"LOCK-{study}";
+        var recipient = UnblindedStatistician();
+        string program = await SeedProgramAsync(study);
+        string tokenId = await IssueAsync(study, recipient.UserId);
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var consumer = new Cadence.Apps.Interop.Infrastructure.Consumers.KernelScopeLockInteropConsumer(
+                scope.ServiceProvider.GetRequiredService<InteropDbContext>(),
+                scope.ServiceProvider.GetRequiredService<Cadence.Apps.Interop.Application.IInteropUnitOfWork>(),
+                scope.ServiceProvider.GetService<Cadence.Database.Tenancy.ITenantScope>());
+
+            var context = NSubstitute.Substitute.For<MassTransit.ConsumeContext<KernelScopeLockReleased>>();
+            context.Message.Returns(new KernelScopeLockReleased
+            {
+                TenantCode = TestSecurityContext.TenantCode,
+                ReleaseAssertionId = Guid.NewGuid().ToString("D"),
+                LockId = lockId,
+                StudyRef = study,
+                StudyCode = study,
+                ScopeKind = "study",
+                ScopeRef = $"study:{study}",
+                LockKind = "Locked",
+                ReleasedBy = "sponsor-admin",
+                ReleasedAt = SystemClock.Instance.UtcNow,
+                ReleaseReason = "Emergency data correction after interim review",
+            });
+            context.CancellationToken.Returns(Ct);
+            await consumer.Consume(context);
+        }
+
+        using var dmClient = factory.CreateSignedClient(DataManager);
+        (await dmClient.PostAsJsonAsync($"{Base}/lock-tokens", IssueBody(study, recipient.UserId), Ct))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden, "revoked study lock certificate cannot mint new SCE lock tokens");
+
+        using var statClient = factory.CreateSignedClient(recipient);
+        (await statClient.PostAsJsonAsync($"{Base}/execute", ExecuteBody(study, program, tokenId), Ct))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden, "revoked study lock invalidates previously issued SCE lock tokens");
+        (await RunsForAsync(study)).Should().BeEmpty();
+    }
+
     private static GatewayIdentity UnblindedStatistician() =>
         TestSecurityContext.Identity($"stat-unblinded-{Guid.NewGuid():N}", "unblinded_statistician");
 
     private static string NewStudy() => $"STUDY-SCE-{Guid.NewGuid():N}";
+
+    private static JsonNode CreateSignedLockCertificateNode(string study)
+    {
+        string lockId = $"LOCK-{study}";
+        var signed = TestSecurityContext.SignTestLockCertificate(studyId: study, studyCode: study, lockId: lockId);
+        var contract = new DatabaseLockCertificateContract(
+            signed.CertificateId,
+            signed.TenantId,
+            signed.StudyId,
+            signed.StudyCode,
+            signed.LockId,
+            signed.Milestone.ToString(),
+            signed.AttestationId,
+            signed.SignedBy,
+            signed.IssuedAt,
+            signed.KeyId,
+            signed.Algorithm,
+            signed.PayloadSha256,
+            signed.FingerprintSha256,
+            signed.SignatureBase64);
+        return JsonSerializer.SerializeToNode(contract)!;
+    }
 
     private static JsonObject IssueBody(string study, string issuedTo) => new()
     {
@@ -175,6 +268,7 @@ public sealed class SceUnblindingAuthorizationTests(InteropPostgresApiFactory fa
         ["milestone"] = "DATABASE_LOCK",
         ["issued_to"] = issuedTo,
         ["reason"] = "Final analysis after database lock",
+        ["lock_certificate"] = CreateSignedLockCertificateNode(study),
     };
 
     private static object ExecuteBody(string study, string program, string tokenId) => new

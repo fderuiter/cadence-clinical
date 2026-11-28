@@ -191,6 +191,7 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddSingleton<IProtocolFormCompiler, ProtocolFormCompiler>()
             .AddKernelIdentityVault()
             .AddKernelIdentityVaultPersistence(VaultMasterKey, VaultRegion);
+        Cadence.Security.DependencyInjection.CadenceSecurityServiceCollectionExtensions.AddKernelLockCertificateSigner(services);
         ConfigureServices(services);
         services.TryAddSingleton<IHostEnvironment>(new FixtureHostEnvironment());
         if (services.All(d => d.ServiceType != typeof(ITaskConfigurationCatalog)))
@@ -426,6 +427,9 @@ public sealed class TestEventPublisher : IKernelEventPublisher
     /// <summary>Return true to make delivery of that envelope throw.</summary>
     public Func<EventEnvelope, bool>? Fail { get; set; }
 
+    /// <summary>Return a specific exception (for example <see cref="Cadence.Kernel.Events.KernelOutboxPoisonMessageException"/>) to throw on delivery.</summary>
+    public Func<EventEnvelope, Exception?>? FailWith { get; set; }
+
     /// <summary>Delay applied to every delivery, to hold rows locked while a test runs a second relay.</summary>
     public TimeSpan Delay { get; set; }
 
@@ -436,6 +440,11 @@ public sealed class TestEventPublisher : IKernelEventPublisher
         if (Delay > TimeSpan.Zero)
         {
             await Task.Delay(Delay, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (FailWith?.Invoke(envelope) is { } customException)
+        {
+            throw customException;
         }
 
         if (Fail is { } fail && fail(envelope))
@@ -450,6 +459,7 @@ public sealed class TestEventPublisher : IKernelEventPublisher
     {
         _delivered.Clear();
         Fail = null;
+        FailWith = null;
         Delay = TimeSpan.Zero;
     }
 }

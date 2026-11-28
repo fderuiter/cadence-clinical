@@ -520,9 +520,7 @@ public sealed class KernelEnrollmentPostgresTests(KernelPostgresFixture fixture)
                 new LinkSiteToStudy(tenant, StudySiteId.New(), study, unlinkedSite, KernelProtocolScenario.Key(), "Attempt link while locked"),
                 cancellationToken: ct)).Error.Should().Be(ObservationErrors.Locked);
 
-            await _scenario.OkAsync(
-                await observations.ReleaseAsync(tenant, study, applied.LockId, ct),
-                ct);
+            await observations.OkReleaseAsync(tenant, study, applied.LockId, ct);
         }
 
         // Once unlocked, all operations proceed normally.

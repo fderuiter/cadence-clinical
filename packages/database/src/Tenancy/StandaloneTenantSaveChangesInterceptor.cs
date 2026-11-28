@@ -224,6 +224,13 @@ public sealed class StandaloneTenantSaveChangesInterceptor : SaveChangesIntercep
                 prop.CurrentValue = Guid.Empty.ToString("D");
             }
         }
+        else if (prop.Metadata.ClrType == typeof(Cadence.Kernel.TenantId))
+        {
+            if (targetTenantId != Guid.Empty || prop.CurrentValue is not Cadence.Kernel.TenantId existingTenant || existingTenant.IsEmpty)
+            {
+                prop.CurrentValue = Cadence.Kernel.TenantId.FromGuid(targetTenantId);
+            }
+        }
         else
         {
             if (targetTenantId != Guid.Empty || prop.CurrentValue is not Guid existingGuid || existingGuid == Guid.Empty)

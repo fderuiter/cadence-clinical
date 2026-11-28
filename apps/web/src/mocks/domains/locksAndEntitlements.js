@@ -7,6 +7,8 @@ import { demoNowIso, demoNowMs } from "../../utils/demoMode.js";
 import {
   DEMO_SUBSCRIPTION_UUID,
   DEMO_TENANT_UUID,
+  ENROLLMENT_1001_UUID,
+  SITE_101_UUID,
   STUDY_REF,
   cloneJson,
   resolveCollectionTitle,
@@ -33,7 +35,77 @@ export function createLocksAndEntitlementsDomain(ctx) {
       },
     ];
 
-    state.demoLocks = [];
+    const seededAt = demoNowIso();
+    state.demoLocks = [
+      {
+        ref: "assertion:01960000-0000-7000-8000-000000000201", // deid-ignore
+        study_ref: STUDY_REF,
+        scope_ref: `study_site:${SITE_101_UUID}`,
+        scope_kind: "study_site",
+        study_site_ref: `study_site:${SITE_101_UUID}`,
+        enrollment_ref: null,
+        subject_code: null,
+        kind: "Frozen",
+        milestone: "InterimCut",
+        certificate: {
+          certificate_id: "dblcert-cadence101-interim-001",
+          study_ref: STUDY_REF,
+          study_code: "CADENCE-101",
+          lock_ref: "assertion:01960000-0000-7000-8000-000000000201", // deid-ignore
+          milestone: "InterimCut",
+          attestation_ref: "attestation:01960000-0000-7000-8000-000000000099", // deid-ignore
+          signed_by: "dm.alice",
+          issued_at: seededAt,
+          key_id: "cadence-kernel-ecdsa-p256-v1",
+          algorithm: "ECDSA-P256-SHA256",
+          payload_sha256: "8f434346".repeat(8),
+          fingerprint_sha256: "e3b0c442".repeat(8),
+          signature_base64: globalThis.btoa(
+            "demo-ecdsa-p256-cadence101-interim-001"
+          ),
+          revoked: false,
+          revoked_at: null,
+          revoked_by: null,
+          tenant_code: "demo",
+        },
+        attestation_ref: "attestation:01960000-0000-7000-8000-000000000099", // deid-ignore
+        attestation_meaning: "Approved",
+        locked_at: seededAt,
+        locked_by: "dm.alice",
+        reason_for_change: "Interim analysis cut on SITE-01",
+        released: false,
+        release_ref: null,
+        released_at: null,
+        released_by: null,
+        release_reason: null,
+        masked: false,
+        mask: null,
+      },
+      {
+        ref: "assertion:01960000-0000-7000-8000-000000000202", // deid-ignore
+        study_ref: STUDY_REF,
+        scope_ref: `enrollment:${ENROLLMENT_1001_UUID}`,
+        scope_kind: "enrollment",
+        study_site_ref: `study_site:${SITE_101_UUID}`,
+        enrollment_ref: `enrollment:${ENROLLMENT_1001_UUID}`,
+        subject_code: "SUBJ-1001",
+        kind: "Frozen",
+        milestone: "InterimCut",
+        certificate: null,
+        attestation_ref: "attestation:01960000-0000-7000-8000-000000000098", // deid-ignore
+        attestation_meaning: "Approved",
+        locked_at: seededAt,
+        locked_by: "dm.alice",
+        reason_for_change: "Participant intake freeze",
+        released: false,
+        release_ref: null,
+        released_at: null,
+        released_by: null,
+        release_reason: null,
+        masked: false,
+        mask: null,
+      },
+    ];
 
     state.entitlements = {
       tenant_ref: `tenant:${DEMO_TENANT_UUID}`,
@@ -55,7 +127,9 @@ export function createLocksAndEntitlementsDomain(ctx) {
     };
   }
 
-  function getLockReadiness(studyRef, rawScopeRef) {
+  function getLockReadiness(studyRef, rawScopeRef, rawMilestone) {
+    const milestone =
+      rawMilestone === "FinalDatabaseLock" ? "FinalDatabaseLock" : "InterimCut";
     const study = ctx.getStudyByRefOrCode(studyRef);
     const cleanStudyRef = String(study?.ref || studyRef || STUDY_REF).split(
       "@"
@@ -84,7 +158,56 @@ export function createLocksAndEntitlementsDomain(ctx) {
     let openQueryCount = 0;
     let missingRequiredItemCount = 0;
     let unverifiedValueCount = 0;
+    let unreviewedValueCount = 0;
     let unsignedFormCount = 0;
+    let screeningEnrollmentCount = 0;
+
+    if (
+      milestone === "FinalDatabaseLock" &&
+      (scopeKind === "study" ||
+        scopeKind === "study_site" ||
+        scopeKind === "enrollment")
+    ) {
+      for (const subj of state.subjects.values()) {
+        if (
+          scopeKind === "study_site" &&
+          String(subj.study_site_id || "") !== scopeUuid
+        ) {
+          continue;
+        }
+        if (
+          scopeKind === "enrollment" &&
+          String(subj.enrollment_id || subj.id || "") !== scopeUuid
+        ) {
+          continue;
+        }
+        const statusNorm = String(subj.status || "").toLowerCase();
+        if (statusNorm === "screening") {
+          screeningEnrollmentCount += 1;
+          const enrollRef = `enrollment:${subj.enrollment_id || subj.id}`;
+          blockers.push({
+            kind: "ScreeningEnrollment",
+            owner: "Site Coordinator",
+            target_ref: enrollRef,
+            target_kind: "enrollment",
+            subject_code: subj.subject_id || null,
+            collection_spec_id: null,
+            collection_title: null,
+            item_id: null,
+            item_label: subj.subject_id || enrollRef,
+            query_ref: null,
+            query_text: null,
+            answered: false,
+            signature_superseded: false,
+            detail: `${subj.subject_id || enrollRef} requires enrollment or screen-failure disposition`,
+            next_action: `Site Coordinator: complete enrollment or screen-failure disposition for ${subj.subject_id || enrollRef} before Final Database Lock.`,
+            next_capability: "enrollment.transition",
+            masked: false,
+            mask: null,
+          });
+        }
+      }
+    }
 
     for (const q of state.queries.values()) {
       const status = String(q.status || "").toLowerCase();
@@ -242,6 +365,49 @@ export function createLocksAndEntitlementsDomain(ctx) {
             mask: null,
           });
         }
+        if (milestone === "FinalDatabaseLock") {
+          const isObsReviewed =
+            obsAssertions.some(
+              (a) =>
+                !a.retracted_at &&
+                String(a.kind).toLowerCase() === "reviewed" &&
+                (a.revision === undefined ||
+                  Number(a.revision) === currentRevision)
+            ) ||
+            formAssertions.some(
+              (a) =>
+                !a.retracted_at &&
+                String(a.kind).toLowerCase() === "reviewed" &&
+                a.target === obsRef &&
+                (a.revision === undefined ||
+                  Number(a.revision) === currentRevision)
+            );
+          if (!isObsReviewed) {
+            unreviewedValueCount += 1;
+            const itemLabel = it.concept || it.item_id || obsRef;
+            blockers.push({
+              kind: "UnreviewedValue",
+              owner: "Trial Data Manager",
+              target_ref: obsRef,
+              target_kind: "observation",
+              subject_code: subj?.subject_id || null,
+              collection_spec_id: f.collection_spec_id || null,
+              collection_title: collectionTitle,
+              item_id: it.item_id || null,
+              item_label: itemLabel,
+              query_ref: null,
+              query_text: null,
+              answered: false,
+              signature_superseded: false,
+              current_revision: currentRevision,
+              detail: `Revision ${currentRevision} awaiting source data review`,
+              next_action: `Trial Data Manager: record source data review on revision ${currentRevision} of '${itemLabel}' (${obsRef}).`,
+              next_capability: "observation.review",
+              masked: false,
+              mask: null,
+            });
+          }
+        }
       }
 
       if (scopeKind !== "observation" && recordedItemCount > 0) {
@@ -331,13 +497,17 @@ export function createLocksAndEntitlementsDomain(ctx) {
       study_code: study?.code || "DEMO-01",
       scope_ref: cleanScopeRef,
       scope_kind: scopeKind,
+      milestone,
       ready_for_lock: readyForLock,
       can_freeze: true,
       open_query_count: openQueryCount,
       missing_required_item_count: missingRequiredItemCount,
       unverified_value_count: unverifiedValueCount,
+      unreviewed_value_count: unreviewedValueCount,
       unsigned_form_count: unsignedFormCount,
       unopened_visit_count: 0,
+      screening_enrollment_count: screeningEnrollmentCount,
+      pending_scheduled_visit_count: 0,
       open_error_finding_count: 0,
       blocker_count: blockers.length,
       blockers,
@@ -409,12 +579,16 @@ export function createLocksAndEntitlementsDomain(ctx) {
     },
 
     commitKernelLock(body = {}, reasonHeader = "") {
-      const now = new Date().toISOString();
+      const now = demoNowIso();
       const studyRef = body?.study_ref || STUDY_REF;
       const scopeRef = body?.scope_ref || studyRef;
       const kind = body?.kind || "Frozen";
+      const milestone =
+        body?.milestone === "FinalDatabaseLock"
+          ? "FinalDatabaseLock"
+          : "InterimCut";
       if (String(kind).toLowerCase() === "locked") {
-        const readiness = getLockReadiness(studyRef, scopeRef);
+        const readiness = getLockReadiness(studyRef, scopeRef, milestone);
         if (!readiness.ready_for_lock) {
           return {
             conflict: true,
@@ -430,22 +604,54 @@ export function createLocksAndEntitlementsDomain(ctx) {
       }
       const scopeKind =
         body?.scope_kind || String(scopeRef).split(":")[0] || "study";
-      const suffix = String(Date.now()).slice(-12).padStart(12, "0");
+      const suffix = String(demoNowMs()).slice(-12).padStart(12, "0");
+      const lockRef = body?.lock_id
+        ? `assertion:${body.lock_id}`
+        : `assertion:01960000-0000-7000-8000-${suffix}`; // deid-ignore
+      const attestationRef = body?.attestation_id
+        ? `attestation:${body.attestation_id}`
+        : "attestation:01960000-0000-7000-8000-000000000099"; // deid-ignore
+      const study = ctx.getStudyByRefOrCode(studyRef);
+      const studyCode = study?.code || "DEMO-01";
+      const certificate =
+        scopeKind === "study" && String(kind).toLowerCase() === "locked"
+          ? {
+              certificate_id: `cert-${suffix}`,
+              study_ref: String(studyRef).split("@")[0],
+              study_code: studyCode,
+              lock_ref: lockRef,
+              milestone,
+              attestation_ref: attestationRef,
+              signed_by: "dm.alice",
+              issued_at: now,
+              key_id: "cadence-kernel-ecdsa-p256-v1",
+              algorithm: "ECDSA-P256-SHA256",
+              payload_sha256: "8f434346".repeat(8),
+              fingerprint_sha256: "e3b0c442".repeat(8),
+              signature_base64: globalThis.btoa(
+                `demo-ecdsa-p256-cert-${suffix}`
+              ),
+              revoked: false,
+              revoked_at: null,
+              revoked_by: null,
+              tenant_code: "demo",
+            }
+          : null;
       const record = {
-        ref: body?.lock_id
-          ? `assertion:${body.lock_id}`
-          : `assertion:01960000-0000-7000-8000-${suffix}`, // deid-ignore
+        ref: lockRef,
         study_ref: body?.study_ref || STUDY_REF,
         scope_ref: scopeRef,
         scope_kind: scopeKind,
+        study_site_ref: body?.study_site_ref || null,
+        enrollment_ref: body?.enrollment_ref || null,
         subject_code: null,
         kind: body?.kind || "Frozen",
-        attestation_ref: body?.attestation_id
-          ? `attestation:${body.attestation_id}`
-          : "attestation:01960000-0000-7000-8000-000000000099", // deid-ignore
+        milestone,
+        certificate,
+        attestation_ref: attestationRef,
         attestation_meaning: body?.meaning || "Approved",
         locked_at: now,
-        locked_by: "usr-demo-operator",
+        locked_by: "dm.alice",
         reason_for_change:
           reasonHeader || body?.reason_for_change || "Demo lock",
         released: false,
@@ -461,8 +667,8 @@ export function createLocksAndEntitlementsDomain(ctx) {
     },
 
     releaseKernelLock(lockRef, body = {}, reason = "Released in demo") {
-      const now = new Date().toISOString();
-      const suffix = String(Date.now()).slice(-12).padStart(12, "0");
+      const now = demoNowIso();
+      const suffix = String(demoNowMs()).slice(-12).padStart(12, "0");
       state.demoLocks = state.demoLocks.map((item) =>
         item.ref === lockRef
           ? {
@@ -472,8 +678,16 @@ export function createLocksAndEntitlementsDomain(ctx) {
                 ? `assertion:${body.assertion_id}`
                 : `assertion:01960000-0000-7000-8001-${suffix}`, // deid-ignore
               released_at: now,
-              released_by: "usr-demo-operator",
+              released_by: "sponsor.admin",
               release_reason: reason,
+              certificate: item.certificate
+                ? {
+                    ...item.certificate,
+                    revoked: true,
+                    revoked_at: now,
+                    revoked_by: "sponsor.admin",
+                  }
+                : null,
             }
           : item
       );

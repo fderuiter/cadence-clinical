@@ -21,7 +21,9 @@ namespace Cadence.Modules.Execution.Application;
 /// lock may cover it. Links the new derived <see cref="FormQuery"/> aggregate to its governing enrollment, form instance,
 /// and target observation revision (<c>K-LIN-1</c>).
 /// </summary>
-internal sealed class RaiseFormQueryHandler(ICollectionInstanceRecords records) : ICommandHandler<RaiseFormQuery, FormQueryState>
+internal sealed class RaiseFormQueryHandler(
+    ICollectionInstanceRecords records,
+    IFormQueryKernelProjector? projector = null) : ICommandHandler<RaiseFormQuery, FormQueryState>
 {
     public async Task<CommandResult<FormQueryState>> HandleAsync(RaiseFormQuery command, ICommandContext context, CancellationToken cancellationToken)
     {
@@ -75,6 +77,22 @@ internal sealed class RaiseFormQueryHandler(ICollectionInstanceRecords records) 
             command.OwnerRole,
             command.Priority,
             command.Assignee);
+        if (projector is not null
+            && await projector.ProjectAsync(
+                context.TenantId,
+                query.Id,
+                query.EnrollmentId,
+                command.ObservationId,
+                currentRevision,
+                query.Status,
+                context.Actor.Id,
+                command.ReasonForChange,
+                [step],
+                cancellationToken).ConfigureAwait(false) is { } projectionError)
+        {
+            return projectionError;
+        }
+
         context.Work.Add(query);
         context.Work.LinkInput(NodeRef.For(target.EnrollmentId, Math.Max(1L, target.EnrollmentVersion)), LineageEdgeKind.GovernedBy);
         context.Work.LinkInput(NodeRef.For(target.CollectionInstanceId, Math.Max(1L, target.Version)), LineageEdgeKind.CollectedBy);
@@ -92,7 +110,9 @@ internal sealed class RaiseFormQueryHandler(ICollectionInstanceRecords records) 
 }
 
 /// <summary>Handles <see cref="AnswerFormQuery"/>.</summary>
-internal sealed class AnswerFormQueryHandler(ICollectionInstanceRecords records) : ICommandHandler<AnswerFormQuery, FormQueryState>
+internal sealed class AnswerFormQueryHandler(
+    ICollectionInstanceRecords records,
+    IFormQueryKernelProjector? projector = null) : ICommandHandler<AnswerFormQuery, FormQueryState>
 {
     public Task<CommandResult<FormQueryState>> HandleAsync(AnswerFormQuery command, ICommandContext context, CancellationToken cancellationToken) =>
         FormQueryScopes.StepAsync(
@@ -111,13 +131,16 @@ internal sealed class AnswerFormQueryHandler(ICollectionInstanceRecords records)
                 int revision = target?.Revision ?? query.Revision;
                 return FormQueryScopes.StepAllowed([step], revision, context.Actor.Id, command.ReasonForChange);
             },
-            cancellationToken);
+            cancellationToken,
+            projector);
 }
 
 /// <summary>
 /// Handles <see cref="AutoAnswerFormQuery"/> when a queried observation is edited by a user.
 /// </summary>
-internal sealed class AutoAnswerFormQueryHandler(ICollectionInstanceRecords records) : ICommandHandler<AutoAnswerFormQuery, FormQueryState>
+internal sealed class AutoAnswerFormQueryHandler(
+    ICollectionInstanceRecords records,
+    IFormQueryKernelProjector? projector = null) : ICommandHandler<AutoAnswerFormQuery, FormQueryState>
 {
     public Task<CommandResult<FormQueryState>> HandleAsync(AutoAnswerFormQuery command, ICommandContext context, CancellationToken cancellationToken)
     {
@@ -148,12 +171,15 @@ internal sealed class AutoAnswerFormQueryHandler(ICollectionInstanceRecords reco
                 context.Work.LinkInput(NodeRef.For(command.ObservationId, command.NewRevision), LineageEdgeKind.DerivedFrom);
                 return FormQueryScopes.StepAllowed([step], command.NewRevision, command.AnsweredBy, command.ReasonForChange);
             },
-            cancellationToken);
+            cancellationToken,
+            projector);
     }
 }
 
 /// <summary>Handles <see cref="ReopenFormQuery"/>.</summary>
-internal sealed class ReopenFormQueryHandler(ICollectionInstanceRecords records) : ICommandHandler<ReopenFormQuery, FormQueryState>
+internal sealed class ReopenFormQueryHandler(
+    ICollectionInstanceRecords records,
+    IFormQueryKernelProjector? projector = null) : ICommandHandler<ReopenFormQuery, FormQueryState>
 {
     public Task<CommandResult<FormQueryState>> HandleAsync(ReopenFormQuery command, ICommandContext context, CancellationToken cancellationToken) =>
         FormQueryScopes.StepAsync(
@@ -172,7 +198,8 @@ internal sealed class ReopenFormQueryHandler(ICollectionInstanceRecords records)
                 int revision = target?.Revision ?? query.Revision;
                 return FormQueryScopes.StepAllowed([step], revision, context.Actor.Id, command.ReasonForChange);
             },
-            cancellationToken);
+            cancellationToken,
+            projector);
 }
 
 /// <summary>Handles <see cref="ReassignFormQuery"/>.</summary>
@@ -198,7 +225,9 @@ internal sealed class ReassignFormQueryHandler(ICollectionInstanceRecords record
 }
 
 /// <summary>Handles <see cref="CloseFormQuery"/>, enforcing manual query separation of duties.</summary>
-internal sealed class CloseFormQueryHandler(ICollectionInstanceRecords records) : ICommandHandler<CloseFormQuery, FormQueryState>
+internal sealed class CloseFormQueryHandler(
+    ICollectionInstanceRecords records,
+    IFormQueryKernelProjector? projector = null) : ICommandHandler<CloseFormQuery, FormQueryState>
 {
     public Task<CommandResult<FormQueryState>> HandleAsync(CloseFormQuery command, ICommandContext context, CancellationToken cancellationToken) =>
         FormQueryScopes.StepAsync(
@@ -228,11 +257,14 @@ internal sealed class CloseFormQueryHandler(ICollectionInstanceRecords records) 
                 int revision = target?.Revision ?? query.Revision;
                 return FormQueryScopes.StepAllowed([outcome.Step], revision, context.Actor.Id, command.ReasonForChange);
             },
-            cancellationToken);
+            cancellationToken,
+            projector);
 }
 
 /// <summary>Handles <see cref="CancelFormQuery"/>.</summary>
-internal sealed class CancelFormQueryHandler(ICollectionInstanceRecords records) : ICommandHandler<CancelFormQuery, FormQueryState>
+internal sealed class CancelFormQueryHandler(
+    ICollectionInstanceRecords records,
+    IFormQueryKernelProjector? projector = null) : ICommandHandler<CancelFormQuery, FormQueryState>
 {
     public Task<CommandResult<FormQueryState>> HandleAsync(CancelFormQuery command, ICommandContext context, CancellationToken cancellationToken) =>
         FormQueryScopes.StepAsync(
@@ -252,7 +284,8 @@ internal sealed class CancelFormQueryHandler(ICollectionInstanceRecords records)
                 int revision = target?.Revision ?? query.Revision;
                 return FormQueryScopes.StepAllowed([step], revision, context.Actor.Id, command.ReasonForChange);
             },
-            cancellationToken);
+            cancellationToken,
+            projector);
 }
 
 /// <summary>Handles <see cref="EscalateFormQuery"/> when an open query passes its 14-day SLA on <c>IClock</c>.</summary>
@@ -409,7 +442,8 @@ internal static class FormQueryScopes
         FormQueryId queryId,
         EnrollmentId enrollment,
         Func<FormQuery, CollectionQueryTarget?, (StepDecision? Allowed, KernelError? Error)> step,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IFormQueryKernelProjector? projector = null)
     {
         await context.Work.LockAsync<FormQuery>(queryId, cancellationToken).ConfigureAwait(false);
         if (await context.Work.FindAsync<FormQuery>(queryId, cancellationToken).ConfigureAwait(false) is not { } query
@@ -428,6 +462,23 @@ internal static class FormQueryScopes
         if (allowed is null)
         {
             return error ?? InvalidTransitionError(query.Status);
+        }
+
+        if (projector is not null
+            && allowed.Steps.Count > 0
+            && await projector.ProjectAsync(
+                context.TenantId,
+                query.Id,
+                query.EnrollmentId,
+                query.ObservationId,
+                allowed.Revision,
+                query.Status,
+                allowed.ActorId,
+                allowed.ReasonForChange,
+                allowed.Steps,
+                cancellationToken).ConfigureAwait(false) is { } projectionError)
+        {
+            return projectionError;
         }
 
         FormQueryScopeContext? scope = null;

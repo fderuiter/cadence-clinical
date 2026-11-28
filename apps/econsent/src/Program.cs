@@ -1,5 +1,6 @@
 using Cadence.Apps.Econsent.Application;
 using Cadence.Apps.Econsent.Endpoints;
+using Cadence.Apps.Econsent.Infrastructure.Consumers;
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Database.Signatures;
@@ -30,6 +31,7 @@ builder.Services.AddCadenceDurableSigTokenStore<EconsentDbContext>();
 
 builder.Services.AddMassTransit(x =>
 {
+    x.AddConsumer<KernelScopeLockEconsentConsumer>();
     x.AddEntityFrameworkOutbox<EconsentDbContext>(o =>
     {
         o.UsePostgres();

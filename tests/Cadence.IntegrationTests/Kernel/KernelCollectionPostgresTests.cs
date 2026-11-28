@@ -746,7 +746,7 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
             await _forms.Observations.LockAsync(tenant, formA.Subject.Study, NodeRef.For(formA.Subject.Enrollment), ct, LockKind.Frozen), ct);
         (await fixture.CollectionInstanceRecords.FindQueryTargetAsync(tenant, formA.Instance, observation: sbpA, cancellationToken: ct))!
             .IsLocked.Should().BeFalse();
-        await _forms.Protocol.OkAsync(await _forms.Observations.ReleaseAsync(tenant, formA.Subject.Study, frozen.LockId, ct), ct);
+        await _forms.Observations.OkReleaseAsync(tenant, formA.Subject.Study, frozen.LockId, ct);
 
         await _forms.Protocol.OkAsync(Save(formB, Value(Diastolic, Mmhg(76))), ct);
         await _forms.VerifyAndSignAsync(formA, ct);

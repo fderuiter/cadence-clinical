@@ -1,3 +1,4 @@
+import { deriveSignerRoleFromClaims } from "ui";
 import { computed, ref, watch } from "vue";
 import {
   describeLockError,
@@ -11,6 +12,7 @@ import {
   type KernelLockBlockerKind,
   type KernelLockKind,
   type KernelLockMeaning,
+  type KernelLockMilestone,
   type KernelLockReadiness,
 } from "../api/kernelApi";
 import { useAuthStore } from "../stores/auth.js";
@@ -23,7 +25,9 @@ export type LockReadinessGateKey =
   | "unverified_values"
   | "unsigned_forms"
   | "unopened_visits"
-  | "error_findings";
+  | "error_findings"
+  | "screening_enrollments"
+  | "unreviewed_values";
 
 export interface LockReadinessGateSummary {
   key: LockReadinessGateKey;
@@ -55,10 +59,14 @@ export function normalizeLockBlockerKind(
       return "MissingRequiredItem";
     case "unverifiedvalue":
       return "UnverifiedValue";
+    case "unreviewedvalue":
+      return "UnreviewedValue";
     case "unsignedform":
       return "UnsignedForm";
     case "unopenedvisit":
       return "UnopenedVisit";
+    case "screeningenrollment":
+      return "ScreeningEnrollment";
     case "errorfinding":
       return "ErrorFinding";
     default:
@@ -77,10 +85,14 @@ export function formatLockBlockerKindLabel(
       return "Missing required item";
     case "UnverifiedValue":
       return "Unverified value";
+    case "UnreviewedValue":
+      return "Unreviewed value (SDR)";
     case "UnsignedForm":
       return signatureSuperseded ? "Signature superseded" : "Unsigned form";
     case "UnopenedVisit":
       return "Unopened visit";
+    case "ScreeningEnrollment":
+      return "Screening disposition";
     case "ErrorFinding":
       return "Error finding";
   }
@@ -122,6 +134,18 @@ export function formatLockBlockerDetail(
     }
     return blocker.item_label ?? null;
   }
+  if (kind === "UnreviewedValue") {
+    if (blocker.current_revision != null) {
+      const itemPrefix = blocker.item_label ? `${blocker.item_label} · ` : "";
+      return `${itemPrefix}Revision ${blocker.current_revision} awaiting source data review`;
+    }
+    return blocker.item_label ?? null;
+  }
+  if (kind === "ScreeningEnrollment") {
+    return blocker.subject_code
+      ? `${blocker.subject_code} requires enrollment or screen-failure disposition`
+      : "Screening subject requires disposition";
+  }
   if (kind === "UnsignedForm") {
     const formTitle =
       blocker.collection_title || blocker.collection_spec_id || null;
@@ -157,9 +181,11 @@ export function formatMaskedBlockerOwner(
 }
 
 export function buildLockReadinessGates(
-  current: Partial<KernelLockReadiness> | null | undefined
+  current: Partial<KernelLockReadiness> | null | undefined,
+  milestone?: KernelLockMilestone
 ): LockReadinessGateSummary[] {
   if (!current) return [];
+  const effectiveMilestone = milestone ?? current.milestone;
   const specs: Array<{
     key: LockReadinessGateKey;
     kind: KernelLockBlockerKind;
@@ -210,6 +236,24 @@ export function buildLockReadinessGates(
       plural: "error findings",
     },
   ];
+  if (effectiveMilestone === "FinalDatabaseLock") {
+    specs.push(
+      {
+        key: "screening_enrollments",
+        kind: "ScreeningEnrollment",
+        count: toReadinessCount(current.screening_enrollment_count),
+        singular: "screening enrollment",
+        plural: "screening enrollments",
+      },
+      {
+        key: "unreviewed_values",
+        kind: "UnreviewedValue",
+        count: toReadinessCount(current.unreviewed_value_count),
+        singular: "unreviewed value",
+        plural: "unreviewed values",
+      }
+    );
+  }
   return specs.map((spec) => ({
     ...spec,
     label: `${spec.count} ${spec.count === 1 ? spec.singular : spec.plural}`,
@@ -226,6 +270,7 @@ export type SignedLockModalOperation =
       mode: "apply";
       scopeRef: string;
       lockKind: KernelLockKind;
+      milestone?: KernelLockMilestone;
       reason: string;
       targetLabel?: string | (() => string);
       idempotencyKey: string;
@@ -246,6 +291,7 @@ export type SignedLockModalOperation =
 export interface OpenApplyLockParams {
   scopeRef: string;
   kind: KernelLockKind;
+  milestone?: KernelLockMilestone;
   reason: string;
   targetLabel?: string | (() => string);
 }
@@ -260,6 +306,7 @@ export interface OpenReleaseLockParams {
 export interface UseSignedKernelLockOptions {
   studyRef: () => string | null;
   scopeRef?: () => string;
+  milestone?: () => KernelLockMilestone;
   watchPermissions?: boolean;
   onApplied?: (lock: KernelLock) => Promise<void> | void;
   onReleased?: (lock: KernelLock) => Promise<void> | void;
@@ -297,7 +344,7 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
     () => readiness.value === null || readiness.value.can_freeze !== false
   );
   const readinessGates = computed(() =>
-    buildLockReadinessGates(readiness.value)
+    buildLockReadinessGates(readiness.value, options.milestone?.())
   );
 
   const signerUsername = computed(
@@ -364,10 +411,15 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
 
     readinessLoading.value = true;
     try {
-      const result = await kernelApi.getStudyLockReadiness(
-        currentStudy,
-        targetScope
-      );
+      const targetMilestone = options.milestone?.();
+      const result =
+        targetMilestone && targetMilestone !== "InterimCut"
+          ? await kernelApi.getStudyLockReadiness(
+              currentStudy,
+              targetScope,
+              targetMilestone
+            )
+          : await kernelApi.getStudyLockReadiness(currentStudy, targetScope);
       if (seq !== readinessSeq) return;
       readiness.value = result ?? null;
     } catch {
@@ -435,6 +487,13 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
       },
       { immediate: true }
     );
+    if (options.milestone) {
+      watch(options.milestone, () => {
+        if (options.scopeRef && canApply.value) {
+          void reloadReadiness();
+        }
+      });
+    }
   }
 
   function openApply(params: OpenApplyLockParams): boolean {
@@ -444,11 +503,13 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
     if (params.kind === "Locked" && isLockBlockedByReadiness.value) {
       return false;
     }
+    const resolvedMilestone = params.milestone ?? options.milestone?.();
     outcome.value = null;
     modalOp.value = {
       mode: "apply",
       scopeRef: cleanScope,
       lockKind: params.kind,
+      ...(resolvedMilestone ? { milestone: resolvedMilestone } : {}),
       reason: cleanReason,
       targetLabel: params.targetLabel,
       idempotencyKey: globalThis.crypto.randomUUID(),
@@ -493,6 +554,7 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
           studyRef: currentStudyRef,
           scopeRef: op.scopeRef,
           kind: op.lockKind,
+          ...(op.milestone ? { milestone: op.milestone } : {}),
           meaning,
           lockId: op.lockId,
           attestationId: op.attestationId,
@@ -542,11 +604,105 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
     }
   }
 
+  const claimRoles = computed(() => {
+    const storeRecord = authStore as unknown as {
+      rawRoles?: unknown;
+      roles?: unknown;
+      user?: { roles?: unknown } | null;
+    };
+    const collected: string[] = [];
+    for (const candidate of [
+      storeRecord?.rawRoles,
+      storeRecord?.roles,
+      storeRecord?.user?.roles,
+    ]) {
+      if (Array.isArray(candidate)) {
+        for (const item of candidate) {
+          if (typeof item === "string" && item.trim()) {
+            collected.push(item.trim());
+          }
+        }
+      }
+    }
+    return collected;
+  });
+
+  const hasVerifiedOidcRole = computed(() => claimRoles.value.length > 0);
+
+  const verifiedSignerRole = computed(() => {
+    const storePersona = authStore as {
+      currentPersona?: string | null;
+      activePersona?: string | null;
+    } | null;
+    const activePersona =
+      storePersona?.currentPersona ?? storePersona?.activePersona ?? null;
+    const lowerRoles = claimRoles.value.map((r) => r.toLowerCase());
+    if (
+      activePersona === "super_admin" &&
+      lowerRoles.some((r) => r === "sponsor_admin" || r === "sponsor admin")
+    ) {
+      return "Sponsor Admin";
+    }
+    if (
+      activePersona === "data_manager" &&
+      lowerRoles.some(
+        (r) =>
+          r === "trial_data_manager" ||
+          r === "trial data manager" ||
+          r === "data_manager" ||
+          r === "data manager" ||
+          r === "sponsor_dm" ||
+          r === "sponsor dm"
+      )
+    ) {
+      return "Trial Data Manager";
+    }
+    const hasSponsorAdmin = lowerRoles.some(
+      (r) => r === "sponsor_admin" || r === "sponsor admin"
+    );
+    const hasTrialDm = lowerRoles.some(
+      (r) =>
+        r === "trial_data_manager" ||
+        r === "trial data manager" ||
+        r === "clinical_data_manager" ||
+        r === "clinical data manager" ||
+        r === "sponsor_dm" ||
+        r === "sponsor dm" ||
+        r === "data_manager" ||
+        r === "data manager"
+    );
+    if (
+      hasSponsorAdmin &&
+      (!hasTrialDm || (canRelease.value && !canApply.value))
+    ) {
+      return "Sponsor Admin";
+    }
+    if (
+      hasTrialDm &&
+      (!hasSponsorAdmin || (canApply.value && !canRelease.value))
+    ) {
+      return "Trial Data Manager";
+    }
+    const fallbackRole =
+      canRelease.value && !canApply.value
+        ? "Sponsor Admin"
+        : "Trial Data Manager";
+    const derived = deriveSignerRoleFromClaims(
+      {
+        roles: claimRoles.value,
+        username: signerUsername.value,
+      },
+      fallbackRole
+    );
+    return derived === "Data Manager" ? "Trial Data Manager" : derived;
+  });
+
   const signatureModalProps = computed(() => ({
     isOpen: Boolean(modalOp.value),
     username: signerUsername.value,
     signerName: signerFullName.value,
-    signerRole: "Data Manager",
+    signerRole: verifiedSignerRole.value,
+    ...(hasVerifiedOidcRole.value ? { lockSignerRole: true } : {}),
     reasons: LOCK_SIGNING_REASONS,
     actionUrl: modalActionUrl.value,
     semanticAction: modalSemanticAction.value,
@@ -569,6 +725,8 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
     modalOp,
     signerUsername,
     signerFullName,
+    verifiedSignerRole,
+    hasVerifiedOidcRole,
     modalActionUrl,
     modalSemanticAction,
     signatureModalProps,

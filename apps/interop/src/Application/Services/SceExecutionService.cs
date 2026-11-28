@@ -10,6 +10,7 @@ using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Endpoints;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
 using Cadence.Apps.Interop.Infrastructure.Security;
+using Cadence.Contracts;
 using Cadence.Kernel.Time;
 using Cadence.Security.Rbac;
 
@@ -33,6 +34,7 @@ public sealed class SceExecutionService(
     ISceDockerEngineDriver driver,
     ILockfileValidatorService lockfileValidator,
     SceTokenSigner signer,
+    IKernelLockCertificateVerifier certificateVerifier,
     IClock clock) : ISceExecutionService
 {
     public async Task<IResult> ExecuteProgramAsync(ExecuteProgramRequestDto req, HttpContext httpContext, CancellationToken ct)
@@ -88,7 +90,13 @@ public sealed class SceExecutionService(
 
             var authorizedRoles = JsonSerializer.Deserialize<List<string>>(lockToken.AuthorizedRolesJson) ?? [];
             bool genuine = signer.Verify(
-                SceProgramLockService.LockTokenPayload(lockToken.TokenId, lockToken.StudyId, lockToken.LockId, lockToken.IssuedTo, lockToken.ExpiresAt),
+                SceProgramLockService.LockTokenPayload(
+                    lockToken.TokenId,
+                    lockToken.StudyId,
+                    lockToken.LockId,
+                    lockToken.IssuedTo,
+                    lockToken.ExpiresAt,
+                    lockToken.CertificateFingerprint),
                 lockToken.SignatureHash);
             if (!genuine
                 || !string.Equals(lockToken.IssuedTo, userId, StringComparison.Ordinal)
@@ -96,6 +104,58 @@ public sealed class SceExecutionService(
             {
                 return Results.Json(
                     new { error = "UNBLINDED_ACCESS_DENIED", details = "The database lock token was not issued to this caller or is not genuine." },
+                    statusCode: 403);
+            }
+
+            string normalizedLockId = KernelLockCertificateVerifier.NormalizePrefix(lockToken.LockId, "assertion:");
+            var replicatedLocks = await db.ReplicatedStudyLocks
+                .AsNoTracking()
+                .Where(l => l.LockId == normalizedLockId
+                    || l.LockId == lockToken.LockId
+                    || (lockToken.CertificateId != null && l.CertificateId == lockToken.CertificateId))
+                .ToListAsync(ct);
+
+            if (replicatedLocks.Any(l => !l.IsActive || l.RevokedAt != null))
+            {
+                return Results.Json(
+                    new { error = "UNBLINDED_ACCESS_DENIED", details = "The study database lock has been released and its certificate revoked." },
+                    statusCode: 403);
+            }
+
+            DatabaseLockCertificateContract? certificate = req.LockCertificate;
+            if (certificate is null && !string.IsNullOrWhiteSpace(lockToken.LockCertificateJson))
+            {
+                certificate = JsonSerializer.Deserialize<DatabaseLockCertificateContract>(lockToken.LockCertificateJson);
+            }
+
+            if (certificate is null)
+            {
+                string? storedCertJson = replicatedLocks
+                    .FirstOrDefault(l => l.IsActive && l.RevokedAt == null && !string.IsNullOrWhiteSpace(l.CertificateJson))
+                    ?.CertificateJson;
+                if (!string.IsNullOrWhiteSpace(storedCertJson))
+                {
+                    certificate = JsonSerializer.Deserialize<DatabaseLockCertificateContract>(storedCertJson);
+                }
+            }
+
+            if (!certificateVerifier.TryVerifyForStudyLock(
+                    certificate,
+                    req.StudyId,
+                    lockToken.LockId,
+                    CallerScope.TenantId(httpContext),
+                    out string? certFailure))
+            {
+                return Results.Json(
+                    new { error = "UNBLINDED_ACCESS_DENIED", details = certFailure ?? "Unblinded analysis requires a valid kernel-signed DatabaseLockCertificate." },
+                    statusCode: 403);
+            }
+
+            if (!string.IsNullOrWhiteSpace(lockToken.CertificateFingerprint)
+                && !string.Equals(lockToken.CertificateFingerprint, certificate!.FingerprintSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.Json(
+                    new { error = "UNBLINDED_ACCESS_DENIED", details = "The database lock certificate fingerprint does not match the authorization token." },
                     statusCode: 403);
             }
         }

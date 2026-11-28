@@ -162,6 +162,10 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("attestation_id");
 
+                    b.Property<string>("CertificateJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("certificate_json");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -181,6 +185,11 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
                         .HasColumnName("kind");
+
+                    b.Property<string>("Milestone")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("milestone");
 
                     b.Property<string>("ReasonForChange")
                         .IsRequired()
@@ -4010,6 +4019,118 @@ namespace Cadence.Kernel.Persistence.Migrations
                     b.ToTable("idempotency_records", "kernel");
                 });
 
+            modelBuilder.Entity("Cadence.Kernel.Persistence.Commands.LockCertificateEntityRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Algorithm")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("algorithm");
+
+                    b.Property<Guid>("AttestationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("attestation_id");
+
+                    b.Property<string>("CertificateId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("certificate_id");
+
+                    b.Property<string>("CertificateJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("certificate_json");
+
+                    b.Property<string>("FingerprintSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("fingerprint_sha256");
+
+                    b.Property<DateTimeOffset>("IssuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("issued_at");
+
+                    b.Property<string>("KeyId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("key_id");
+
+                    b.Property<Guid>("LockId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lock_id");
+
+                    b.Property<string>("Milestone")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("milestone");
+
+                    b.Property<string>("PayloadSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("payload_sha256");
+
+                    b.Property<bool>("Revoked")
+                        .HasColumnType("boolean")
+                        .HasColumnName("revoked");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("RevokedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("revoked_by");
+
+                    b.Property<string>("SignatureBase64")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("signature_base64");
+
+                    b.Property<string>("SignedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("signed_by");
+
+                    b.Property<string>("StudyCode")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("study_code");
+
+                    b.Property<Guid>("StudyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("study_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "CertificateId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "LockId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "StudyId", "IssuedAt");
+
+                    b.ToTable("lock_certificates", "kernel");
+                });
+
             modelBuilder.Entity("Cadence.Kernel.Persistence.Commands.OutboxMessageRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4047,6 +4168,18 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("next_attempt_at");
 
+                    b.Property<DateTimeOffset?>("QuarantinedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("quarantined_at");
+
+                    b.Property<string>("StreamKey")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasDefaultValue("")
+                        .HasColumnName("stream_key");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
@@ -4068,7 +4201,79 @@ namespace Cadence.Kernel.Persistence.Migrations
                     b.HasIndex("TenantId", "EnqueuedAt")
                         .HasFilter("dispatched_at IS NULL");
 
+                    b.HasIndex("TenantId", "StreamKey", "EnqueuedAt")
+                        .HasFilter("dispatched_at IS NULL");
+
                     b.ToTable("outbox_messages", "kernel");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Persistence.Commands.OutboxQuarantineMessageRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<DateTimeOffset>("EnqueuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("enqueued_at");
+
+                    b.Property<string>("Envelope")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("envelope");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_id");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("last_error");
+
+                    b.Property<Guid>("OutboxMessageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("outbox_message_id");
+
+                    b.Property<DateTimeOffset>("QuarantinedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("quarantined_at");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("StreamKey")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("stream_key");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "OutboxMessageId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "StreamKey", "QuarantinedAt");
+
+                    b.ToTable("outbox_quarantine_messages", "kernel");
                 });
 
             modelBuilder.Entity("Cadence.Kernel.Persistence.Commands.ProvenanceActivityRecord", b =>

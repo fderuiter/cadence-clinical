@@ -480,4 +480,185 @@ describe("useSignedKernelLock", () => {
       })
     ).toContain("Blinded");
   });
+
+  it("evaluates FinalDatabaseLock readiness gates, formats screening and SDR blockers, and binds verified OIDC signer roles", async () => {
+    const auth = useAuthStore();
+    auth.user = {
+      username: "dm.alice",
+      roles: ["TRIAL_DATA_MANAGER"],
+    } as never;
+
+    const milestone = ref<"InterimCut" | "FinalDatabaseLock">("InterimCut");
+    mockGetStudyLockReadiness
+      .mockResolvedValueOnce({
+        study_ref: STUDY_A,
+        study_code: "CAD-101",
+        scope_ref: STUDY_A,
+        scope_kind: "study",
+        milestone: "InterimCut",
+        ready_for_lock: true,
+        can_freeze: true,
+        open_query_count: 0,
+        missing_required_item_count: 0,
+        unverified_value_count: 0,
+        unsigned_form_count: 0,
+        unopened_visit_count: 0,
+        open_error_finding_count: 0,
+        blocker_count: 0,
+        blockers: [],
+      })
+      .mockResolvedValueOnce({
+        study_ref: STUDY_A,
+        study_code: "CAD-101",
+        scope_ref: STUDY_A,
+        scope_kind: "study",
+        milestone: "FinalDatabaseLock",
+        ready_for_lock: false,
+        can_freeze: true,
+        open_query_count: 0,
+        missing_required_item_count: 0,
+        unverified_value_count: 0,
+        unreviewed_value_count: 2,
+        unsigned_form_count: 0,
+        unopened_visit_count: 0,
+        screening_enrollment_count: 1,
+        pending_scheduled_visit_count: 0,
+        open_error_finding_count: 0,
+        blocker_count: 3,
+        blockers: [],
+      })
+      .mockResolvedValueOnce({
+        study_ref: STUDY_A,
+        study_code: "CAD-101",
+        scope_ref: STUDY_A,
+        scope_kind: "study",
+        milestone: "FinalDatabaseLock",
+        ready_for_lock: true,
+        can_freeze: true,
+        open_query_count: 0,
+        missing_required_item_count: 0,
+        unverified_value_count: 0,
+        unreviewed_value_count: 0,
+        unsigned_form_count: 0,
+        unopened_visit_count: 0,
+        screening_enrollment_count: 0,
+        pending_scheduled_visit_count: 0,
+        open_error_finding_count: 0,
+        blocker_count: 0,
+        blockers: [],
+      });
+
+    const scope = effectScope();
+    const lock = scope.run(() =>
+      useSignedKernelLock({
+        studyRef: () => STUDY_A,
+        scopeRef: () => STUDY_A,
+        milestone: () => milestone.value,
+      })
+    )!;
+    await flushPromises();
+
+    expect(lock.verifiedSignerRole.value).toBe("Trial Data Manager");
+    expect(lock.hasVerifiedOidcRole.value).toBe(true);
+    expect(lock.signatureModalProps.value.signerRole).toBe(
+      "Trial Data Manager"
+    );
+    expect(lock.signatureModalProps.value.lockSignerRole).toBe(true);
+
+    milestone.value = "FinalDatabaseLock";
+    await nextTick();
+    await flushPromises();
+
+    expect(mockGetStudyLockReadiness).toHaveBeenLastCalledWith(
+      STUDY_A,
+      STUDY_A,
+      "FinalDatabaseLock"
+    );
+    expect(
+      lock.readinessGates.value.map((g) => [g.key, g.count])
+    ).toContainEqual(["screening_enrollments", 1]);
+    expect(
+      lock.readinessGates.value.map((g) => [g.key, g.count])
+    ).toContainEqual(["unreviewed_values", 2]);
+
+    expect(normalizeLockBlockerKind("screening_enrollment")).toBe(
+      "ScreeningEnrollment"
+    );
+    expect(normalizeLockBlockerKind("unreviewed_value")).toBe(
+      "UnreviewedValue"
+    );
+    expect(formatLockBlockerKindLabel("ScreeningEnrollment")).toBe(
+      "Screening disposition"
+    );
+    expect(formatLockBlockerKindLabel("UnreviewedValue")).toBe(
+      "Unreviewed value (SDR)"
+    );
+    expect(
+      formatLockBlockerDetail({
+        kind: "ScreeningEnrollment",
+        masked: false,
+        subject_code: "SUBJ-1009",
+      })
+    ).toContain("SUBJ-1009 requires enrollment or screen-failure disposition");
+    expect(
+      formatLockBlockerDetail({
+        kind: "UnreviewedValue",
+        masked: false,
+        item_label: "Diastolic BP",
+        current_revision: 1,
+      })
+    ).toContain("Revision 1 awaiting source data review");
+
+    // Refresh to clear FinalDatabaseLock readiness and apply with milestone
+    await lock.reloadReadiness();
+    expect(
+      lock.openApply({
+        scopeRef: STUDY_A,
+        kind: "Locked",
+        reason: "Final database lock closeout",
+      })
+    ).toBe(true);
+    mockApplyLock.mockResolvedValueOnce({
+      ref: "assertion:final-lock",
+      kind: "Locked",
+    });
+    await lock.executeSign("sig-tok-final", "Approved");
+    expect(mockApplyLock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        studyRef: STUDY_A,
+        scopeRef: STUDY_A,
+        kind: "Locked",
+        milestone: "FinalDatabaseLock",
+      })
+    );
+
+    // Sponsor Admin claim derives Sponsor Admin role even alongside multi-role claims
+    auth.currentPersona = "super_admin";
+    auth.rawRoles = [
+      "Sponsor Admin",
+      "Data Manager",
+      "Principal Investigator",
+    ] as never;
+    expect(lock.verifiedSignerRole.value).toBe("Sponsor Admin");
+    expect(lock.signatureModalProps.value.signerRole).toBe("Sponsor Admin");
+
+    // Switching currentPersona to data_manager binds Trial Data Manager
+    auth.currentPersona = "data_manager";
+    auth.rawRoles = ["Data Manager"] as never;
+    expect(lock.verifiedSignerRole.value).toBe("Trial Data Manager");
+    expect(lock.signatureModalProps.value.signerRole).toBe(
+      "Trial Data Manager"
+    );
+
+    auth.currentPersona = null;
+    auth.rawRoles = [] as never;
+    auth.user = {
+      username: "sponsor.admin",
+      roles: ["SPONSOR_ADMIN"],
+    } as never;
+    expect(lock.verifiedSignerRole.value).toBe("Sponsor Admin");
+    expect(lock.signatureModalProps.value.signerRole).toBe("Sponsor Admin");
+
+    scope.stop();
+  });
 });

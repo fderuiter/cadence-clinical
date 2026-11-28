@@ -1,5 +1,6 @@
 using System;
 
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Time;
 using Cadence.Security.Audit;
 using Cadence.Security.Authentication;
@@ -237,6 +238,29 @@ public static class CadenceSecurityServiceCollectionExtensions
     public static TBuilder RequireChangeJustification<TBuilder>(this TBuilder builder) where TBuilder : IEndpointConventionBuilder
     {
         return builder.RequireAuthorization("RequireChangeJustification");
+    }
+
+    /// <summary>
+    /// Registers the kernel-only asymmetric <see cref="ILockCertificateSigner"/> used to mint
+    /// <see cref="DatabaseLockCertificateRecord"/> envelopes on study hard locks. Must only be called in the
+    /// Clinical Kernel host so private signing PEMs are never distributed to downstream sandboxes.
+    /// </summary>
+    public static IServiceCollection AddKernelLockCertificateSigner(
+        this IServiceCollection services,
+        IConfiguration? configuration = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddSingleton<KernelLockCertificateSigner>(sp =>
+        {
+            var cfg = configuration ?? sp.GetService<IConfiguration>();
+            string? privateKeyPem = cfg?["KernelLockCertificates:PrivateKeyPem"]
+                ?? cfg?[KernelLockCertificateSignerOptions.PrivateKeyPemEnvironmentVariable];
+            string? keyId = cfg?["KernelLockCertificates:KeyId"]
+                ?? cfg?[KernelLockCertificateSignerOptions.KeyIdEnvironmentVariable];
+            return new KernelLockCertificateSigner(privateKeyPem, keyId);
+        });
+        services.TryAddSingleton<ILockCertificateSigner>(sp => sp.GetRequiredService<KernelLockCertificateSigner>());
+        return services;
     }
 
     /// <summary>

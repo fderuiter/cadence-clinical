@@ -1,6 +1,7 @@
 import type { KernelObservationValue } from "../observationValue";
 import {
   ASSERTION_ALREADY_RETRACTED,
+  ASSERTION_ALREADY_REVIEWED,
   ASSERTION_ALREADY_VERIFIED,
   ASSERTION_LOCKED,
   ASSERTION_QUERY_OPEN,
@@ -96,6 +97,9 @@ export function describeAssertionError(error: unknown): string {
   if (code === ASSERTION_ALREADY_VERIFIED) {
     return "This revision is already source data verified; reload to see the current verification.";
   }
+  if (code === ASSERTION_ALREADY_REVIEWED) {
+    return "This revision is already source data reviewed; reload to see the current review.";
+  }
   if (code === ASSERTION_REVISION_STALE || status === 409) {
     return "The value changed since you loaded the form; reload the form and verify the current revision.";
   }
@@ -126,6 +130,14 @@ export const kernelObservationsApi = {
   verifyObservation: lazyKernelAction(
     loadRouteTransport,
     "executeVerifyObservation"
+  ),
+
+  /**
+   * Records source data review (`AssertionKind.Reviewed`) for an observation's current revision (`POST /api/v1/kernel/observations/{observationRef}/reviews`).
+   */
+  reviewObservation: lazyKernelAction(
+    loadRouteTransport,
+    "executeReviewObservation"
   ),
 
   /**

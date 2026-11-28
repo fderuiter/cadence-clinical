@@ -19,4 +19,8 @@ public interface ITenantDirectory
     /// </summary>
     Task<IReadOnlyList<TenantId>> ListActiveAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<TenantId>>([]);
+
+    /// <summary>Reads the tenant's short code under <paramref name="tenant"/>'s Row-Level Security, or null when absent.</summary>
+    Task<string?> FindCodeAsync(TenantId tenant, CancellationToken cancellationToken = default) =>
+        Task.FromResult<string?>(null);
 }

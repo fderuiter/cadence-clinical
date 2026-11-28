@@ -64,11 +64,16 @@ internal static class LocksInForce
             .OrderBy(l => l.AssertedAt)
             .ThenBy(l => l.Id)
             .ToList();
-        if (blocking.Count == 0)
-        {
-            return null;
-        }
+        return blocking.Count == 0 ? null : BuildRefusal(blocking, baseError, commandName, subject);
+    }
 
+    /// <summary>Builds a structured refusal <see cref="Explanation"/> for active blocking lock assertions.</summary>
+    public static KernelError BuildRefusal(
+        IReadOnlyList<Assertion> blocking,
+        KernelError baseError,
+        string commandName,
+        NodeRef subject)
+    {
         var steps = blocking
             .Select(l => new ExplanationStep(
                 $"A {l.Kind} assertion covers this {l.Target.Kind}.",

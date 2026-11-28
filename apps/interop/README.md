@@ -38,7 +38,10 @@ Interoperability scaffold. It holds the ePRO submission, instrument, subject ass
 The statistical computing environment (`/api/v1/interop/sce/**`) needs an `sce_*` permission from the permission
 matrix on every route, and takes identity and roles only from the verified gateway principal. Only `sponsor_dm` (and
 `admin`) issues and revokes database-lock tokens; a token authorizes the roles the matrix lets run unblinded analyses,
-never roles from the request. An unblinded run needs `sce_run:execute_unblinded` and a token issued to the caller and
+never roles from the request. Issuing an unblinded database-lock token or executing an unblinded run also requires a
+valid kernel-signed asymmetric `DatabaseLockCertificate` verified offline against `CADENCE_DB_LOCK_CERT_PUBLIC_KEYS_PEM`
+and an active, unrevoked study lock in `interop.replicated_study_locks` (returning `409` or `423` otherwise;
+[ADR-KERNEL-20261128](../../docs/adr/kernel/2026-11-28-synchronous-query-projection-milestone-lock-readiness-and-asymmetric-database-lock-certificates.md)). An unblinded run needs `sce_run:execute_unblinded` and a token issued to the caller and
 signed with `CADENCE_SCE_SIGNING_KEY`. Unblinded runs and their artifacts are hidden from callers without
 `sce_run:read_unblinded` (#5382,
 [ADR-2515](../../docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)). Every SCE route

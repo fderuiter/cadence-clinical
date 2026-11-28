@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
+using Cadence.Contracts;
+
 namespace Cadence.Apps.Interop.Endpoints;
 
 public record CreateProgramRequestDto(
@@ -82,7 +84,8 @@ public record IssueLockTokenRequestDto(
     [property: JsonPropertyName("milestone")] string Milestone,
     [property: JsonPropertyName("issued_to")] string IssuedTo,
     [property: JsonPropertyName("reason")] string Reason,
-    [property: JsonPropertyName("expires_in_hours")] double ExpiresInHours = 24.0
+    [property: JsonPropertyName("expires_in_hours")] double ExpiresInHours = 24.0,
+    [property: JsonPropertyName("lock_certificate")] DatabaseLockCertificateContract? LockCertificate = null
 );
 
 public record DatabaseLockAuthTokenDto(
@@ -95,7 +98,9 @@ public record DatabaseLockAuthTokenDto(
     [property: JsonPropertyName("issued_at")] string IssuedAt,
     [property: JsonPropertyName("expires_at")] string ExpiresAt,
     [property: JsonPropertyName("signature_hash")] string SignatureHash,
-    [property: JsonPropertyName("is_revoked")] bool IsRevoked
+    [property: JsonPropertyName("is_revoked")] bool IsRevoked,
+    [property: JsonPropertyName("certificate_id")] string? CertificateId = null,
+    [property: JsonPropertyName("certificate_fingerprint")] string? CertificateFingerprint = null
 );
 
 public record LockTokenResponseDto(
@@ -126,7 +131,8 @@ public record ExecuteProgramRequestDto(
     [property: JsonPropertyName("is_unblinded")] bool IsUnblinded = false,
     [property: JsonPropertyName("database_lock_token_id")] string? DatabaseLockTokenId = null,
     [property: JsonPropertyName("sandbox_config")] ExecutionSandboxConfigDto? SandboxConfig = null,
-    [property: JsonPropertyName("reason_for_execution")] string ReasonForExecution = "Statistical analysis execution run"
+    [property: JsonPropertyName("reason_for_execution")] string ReasonForExecution = "Statistical analysis execution run",
+    [property: JsonPropertyName("lock_certificate")] DatabaseLockCertificateContract? LockCertificate = null
 );
 
 public record OutputArtifactSchemaDto(

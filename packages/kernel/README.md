@@ -337,8 +337,8 @@ replay.
 `AddKernelBackgroundJobs()` runs three jobs in the host (call it in exactly one host per deployment):
 
 - **Outbox relay** (`KernelOutboxRelay`): visits each tenant in turn and delivers up to `RelayBatchSize` of its
-  events' envelopes to the host's `IKernelEventPublisher`, at least once, oldest first per tenant. A failed delivery is retried after 2^attempts seconds (capped at one hour)
-  with the error in `outbox_messages.last_error`, and holds back only its own tenant's later events. Subscribers
+  events' envelopes to the host's `IKernelEventPublisher`, at least once, ordered per `(tenant_id, stream_key)` while keeping `TenantProvisioned` as a tenant-bootstrap barrier ([ADR-KERNEL-20261128](../../docs/adr/kernel/2026-11-28-synchronous-query-projection-milestone-lock-readiness-and-asymmetric-database-lock-certificates.md)). A failed delivery is retried after 2^attempts seconds (capped at one hour)
+  with the error in `outbox_messages.last_error`, holding back only later events of that `(tenant_id, stream_key)` stream, and terminal poison messages exceeding `MaxRelayAttempts` move to `kernel.outbox_quarantine_messages` (`FORCE ROW LEVEL SECURITY`) so sibling streams continue progressing. Subscribers
   deduplicate on `EventId`.
 - **Verify and seal** (`KernelAuditChainSealer`, hourly): verifies every tenant's chain and seals each intact one at
   its head in `audit_chain_seals`, as `svc:audit-sealer`. A broken chain is logged as critical and never sealed. A
@@ -449,14 +449,15 @@ scope (spec §8.2, §10.5). Nothing about the observation changes when something
 is never changed: a later assertion of the same kind retracts it (`RetractsId`, at most one retraction each). Commands
 in `Commands/AssertionCommands.cs`:
 
-| Command             | Does                                                                                                          |
-| ------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `ApplyLock`         | `Locked` or `Frozen` at a study, study site, enrollment, form or observation (`lock.apply`), with a signature |
-| `ReleaseLock`       | Releases a lock with its own reason and signature (`lock.release`, Approve)                                   |
-| `VerifyObservation` | SDV of one revision, `target = (ObservationId, Revision)`; refused for a revision that is not current (409)   |
-| `RaiseQuery`        | A query about an observation; it names the `ObservationId` only, so it stays open across corrections          |
-| `AnswerQuery`       | Answers an open query                                                                                         |
-| `RetractAssertion`  | Withdraws a verification or an answer, or closes a query; locks are released with `ReleaseLock` instead       |
+| Command             | Does                                                                                                                                                                                          |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ApplyLock`         | `Locked` or `Frozen` at a study, study site, enrollment, form or observation (`lock.apply`), with a signature                                                                                 |
+| `ReleaseLock`       | Releases a lock with its own reason and signature (`lock.release`, Approve; rejects self-release `K.Assertion.SelfReleaseDenied` and covered child release `K.Assertion.CoveredByParentLock`) |
+| `VerifyObservation` | SDV of one revision, `target = (ObservationId, Revision)`; refused for a revision that is not current (409)                                                                                   |
+| `ReviewObservation` | Source Data Review (`AssertionKind.Reviewed`, `observation.review`) of the current observation revision                                                                                       |
+| `RaiseQuery`        | A query about an observation; it names the `ObservationId` only, so it stays open across corrections                                                                                          |
+| `AnswerQuery`       | Answers an open query                                                                                                                                                                         |
+| `RetractAssertion`  | Withdraws a verification or an answer, or closes a query; locks are released with `ReleaseLock` instead                                                                                       |
 
 - A lock's signer attests the canonical `LockStatement.Apply` (or `.Release`) for the assertion id first, meaning
   `Approved` or `Responsibility`; the attestation targets `assertion:<id>` before it exists, the way a finding
@@ -466,13 +467,13 @@ in `Commands/AssertionCommands.cs`:
   `ActivateStudySite`, `DeclareEffectivity`, and `ChangeEffectivityStatus` in their covering scope (`423 K.Observation.Locked`);
   `Locked` also refuses new assertions (`423 K.Assertion.Locked`) and form signatures (`SignCollectionInstance`), while
   `Frozen` still allows queries, SDV verifications, retractions, and investigator form signing (`collection.sign`).
-  `ApplyLock` with `LockKind.Locked` evaluates scope readiness (`LockReadinessEvaluator`) and refuses with 409
+  `ApplyLock` with `LockKind.Locked` evaluates scope readiness (`LockReadinessEvaluator`) under `LockMilestone.InterimCut` or `LockMilestone.FinalDatabaseLock` and refuses with 409
   `K.Assertion.ScopeNotReady` (carrying a structured `Explanation` naming each blocker owner, target `NodeRef` and next
-  action) when any of the six readiness gates has unresolved blockers in the target scope: open queries (`OpenQuery`),
+  action) when any readiness gate has unresolved blockers in the target scope: open queries (`OpenQuery`, projected synchronously by Execution's form query handlers),
   missing required items (`MissingRequiredItem`), unverified observation revisions (`UnverifiedValue`), unsigned or
   signature-superseded forms (`UnsignedForm`), due/overdue scheduled visits without opened forms (`UnopenedVisit`,
   excluding `ScreenFailed` enrollments and post-withdrawal visits), or active `Error`-severity validation findings
-  (`ErrorFinding`). `Frozen` skips these gates (`can_freeze = true`) so review, SDV, query closure, and signing can
+  (`ErrorFinding`), plus for `FinalDatabaseLock` undecided `Screening` enrollments (`ScreeningEnrollment`), `NotYetOpen` planned visits on `Enrolled` participants, unsigned `NotAsked` forms, and unreviewed observation revisions (`UnreviewedValue`). Study-level `Locked` assertions also emit an asymmetric `DatabaseLockCertificate` (`kernel.database_lock_certificates`) signed via `AsymmetricSigner` and revoked atomically on `ReleaseLock` ([ADR-KERNEL-20261128](../../docs/adr/kernel/2026-11-28-synchronous-query-projection-milestone-lock-readiness-and-asymmetric-database-lock-certificates.md)). `Frozen` skips these gates (`can_freeze = true`) so review, SDV, query closure, and signing can
   proceed before hard lock.
 - Concurrency: a write that a lock can cover takes shared advisory locks on its covering scopes, widest first
   (`IKernelUnitOfWork.ShareScopesAsync`, `LockScopes.Covering`), then reads the locks in force; `ApplyLock` and
@@ -481,7 +482,7 @@ in `Commands/AssertionCommands.cs`:
   own exclusive lock, so two corrections of one value run one after another; a command that locks a scope exclusively
   shares none.
 - Events: `LockApplied` and `LockReleased` (Quality), `AssertionMade` and `AssertionRetracted` (Evidence).
-- The HTTP surface serves SDV (`POST /api/v1/kernel/observations/{ref}/verifications` and `POST /api/v1/kernel/assertions/{ref}/retraction`, #5465), Execution's queries (`/api/v1/execution/forms/…/queries`, #5461), signed scoped locks with `K-AUTH-4`-masked readiness checks (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`), synchronous covering write-lock queries for standalone services (`GET /api/v1/kernel/locks/in-force` and `POST /api/v1/kernel/locks/in-force/batch`, #5376, enforcing non-confirming `404` `INodeVisibility` checks for person and automation-agent callers while preserving tenant-wide lock evaluation for verified `svc:` `SYSTEM_SERVICE` consumers), and bitemporal exports (`KernelLockEndpoints`, `KernelExportEndpoints`, #5466, #5592), where study lock lists evaluate lock and release assertions up to `known_at`, omit hidden scopes behind a collapsed `hidden` indicator (ADR-2590), and mask `kind`, `scope_kind`, and `released` on blinded locks (ADR-2471).
+- The HTTP surface serves SDV and SDR (`POST /api/v1/kernel/observations/{ref}/verifications`, `POST /api/v1/kernel/observations/{ref}/reviews`, and `POST /api/v1/kernel/assertions/{ref}/retraction`, #5465), Execution's queries (`/api/v1/execution/forms/…/queries`, #5461), signed scoped locks with `K-AUTH-4`-masked milestone readiness checks (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness?milestone=InterimCut|FinalDatabaseLock`) and latest study lock certificate lookup (`GET /api/v1/kernel/studies/{studyRef}/locks/certificate`), synchronous covering write-lock queries for standalone services (`GET /api/v1/kernel/locks/in-force` and `POST /api/v1/kernel/locks/in-force/batch`, #5376, enforcing non-confirming `404` `INodeVisibility` checks for person and automation-agent callers while preserving tenant-wide lock evaluation for verified `svc:` `SYSTEM_SERVICE` consumers), and bitemporal exports (`KernelLockEndpoints`, `KernelExportEndpoints`, #5466, #5592), where study lock lists evaluate lock and release assertions up to `known_at`, omit hidden scopes behind a collapsed `hidden` indicator (ADR-2590), and mask `kind`, `scope_kind`, and `released` on blinded locks (ADR-2471).
 
 ## Form instances and page saves (ADR-2622)
 

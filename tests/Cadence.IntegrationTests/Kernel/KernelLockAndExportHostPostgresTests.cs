@@ -46,6 +46,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
@@ -63,6 +64,7 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
     : IClassFixture<ExecutionFormModulePostgresFixture>, IDisposable
 {
     private const string DataManager = "dm@kernel-lock-export.test";
+    private const string SponsorAdmin = "sponsor.admin@kernel-lock-export.test";
     private const string SiteACoordinator = "crc.site-a@kernel-lock-export.test";
     private const string Monitor = "cra@kernel-lock-export.test";
     private const string BlindedStatistician = "stat.blinded@kernel-lock-export.test";
@@ -203,6 +205,7 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         var studyRef = NodeRef.For(study).ToString();
 
         using var dm = Client(code, DataManager);
+        using var sponsorAdmin = Client(code, SponsorAdmin);
         using var crc = Client(code, SiteACoordinator);
 
         var scopes = new (string ExpectedKind, NodeRef Scope)[]
@@ -265,8 +268,8 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
 
                 Tick();
                 var released = await SendAsync<KernelLockResponse>(
-                    dm,
-                    BuildRequest(HttpMethod.Post, $"locks/{created.Ref}/release", $"Release {kind} on {scopeKind}", ReleaseToken(DataManager, created.Ref!), KernelProtocolScenario.Key(), new
+                    sponsorAdmin,
+                    BuildRequest(HttpMethod.Post, $"locks/{created.Ref}/release", $"Release {kind} on {scopeKind}", ReleaseToken(SponsorAdmin, created.Ref!), KernelProtocolScenario.Key(), new
                     {
                         study_ref = studyRef,
                         meaning = "Responsibility",
@@ -274,7 +277,7 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
                     HttpStatusCode.OK,
                     ct);
                 released.Released.Should().BeTrue();
-                released.ReleasedBy.Should().Be(DataManager);
+                released.ReleasedBy.Should().Be(SponsorAdmin);
             }
         }
 
@@ -343,6 +346,7 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         }
 
         using var dm = Client(code, DataManager);
+        using var sponsorAdmin = Client(code, SponsorAdmin);
         using var crc = Client(code, SiteACoordinator);
         using var monitor = Client(code, Monitor);
 
@@ -435,8 +439,8 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         // Release Lock 1, correct systolic to 132.75, and apply Lock 2 strictly after tLock1.
         await Task.Delay(15, ct);
         await SendAsync<KernelLockResponse>(
-            dm,
-            BuildRequest(HttpMethod.Post, $"locks/{lock1.Ref}/release", ReleaseReason, ReleaseToken(DataManager, lock1.Ref!), KernelProtocolScenario.Key(), new
+            sponsorAdmin,
+            BuildRequest(HttpMethod.Post, $"locks/{lock1.Ref}/release", ReleaseReason, ReleaseToken(SponsorAdmin, lock1.Ref!), KernelProtocolScenario.Key(), new
             {
                 study_ref = studyRef,
                 meaning = "Responsibility",
@@ -911,9 +915,10 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         var tValidBeforeRelease = SystemClock.Instance.UtcNow;
         await Task.Delay(20, ct);
 
+        using var sponsorAdmin = Client(code, SponsorAdmin);
         var releasedLock = await SendAsync<KernelLockResponse>(
-            dm,
-            BuildRequest(HttpMethod.Post, $"locks/{appliedLock.Ref}/release", ReleaseReason, ReleaseToken(DataManager, appliedLock.Ref!), KernelProtocolScenario.Key(), new
+            sponsorAdmin,
+            BuildRequest(HttpMethod.Post, $"locks/{appliedLock.Ref}/release", ReleaseReason, ReleaseToken(SponsorAdmin, appliedLock.Ref!), KernelProtocolScenario.Key(), new
             {
                 study_ref = studyRef,
                 meaning = "Responsibility",
@@ -986,10 +991,13 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         var obsARef = NodeRef.For(sbpObservationA).ToString();
 
         const string studyScopedDm = "dm.study-only@kernel-lock-export.test";
+        const string studyScopedSponsor = "sponsor.study-only@kernel-lock-export.test";
         await IssueAsync(tenant, studyScopedDm, "lock.apply", AuthorityScope.Study(study), ct);
         await IssueAsync(tenant, studyScopedDm, "lock.release", AuthorityScope.Study(study), ct);
+        await IssueAsync(tenant, studyScopedSponsor, "lock.release", AuthorityScope.Study(study), ct);
 
         using var studyDm = Client(code, studyScopedDm);
+        using var studySponsor = Client(code, studyScopedSponsor);
         using var siteACrc = Client(code, SiteACoordinator);
 
         // Apply Frozen lock on observation A as study-scoped DM (no tenant attestation.sign grant).
@@ -1062,10 +1070,22 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         crcList.Hidden.MoreExist.Should().BeTrue();
         crcList.Hidden.Reasons.Should().Equal("NotPermitted");
 
-        // Release observation A lock as study-scoped DM without tenant attestation.sign grant.
-        var releasedObs = await SendAsync<KernelLockResponse>(
-            studyDm,
+        // Self-release by studyScopedDm fails with 409 K.Assertion.SelfReleaseDenied; study-scoped sponsor releases without tenant attestation.sign grant.
+        using (var selfRelease = await studyDm.SendAsync(
             BuildRequest(HttpMethod.Post, $"locks/{appliedObs.Ref}/release", ReleaseReason, ReleaseToken(studyScopedDm, appliedObs.Ref!), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                meaning = "Responsibility",
+            }),
+            ct))
+        {
+            selfRelease.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await ProblemCodeAsync(selfRelease, ct)).Should().Be(AssertionErrors.SelfReleaseDenied.Code);
+        }
+
+        var releasedObs = await SendAsync<KernelLockResponse>(
+            studySponsor,
+            BuildRequest(HttpMethod.Post, $"locks/{appliedObs.Ref}/release", ReleaseReason, ReleaseToken(studyScopedSponsor, appliedObs.Ref!), KernelProtocolScenario.Key(), new
             {
                 study_ref = studyRef,
                 meaning = "Responsibility",
@@ -1411,9 +1431,10 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             ct);
 
         // Release Frozen, verify enrollmentA readiness is now ready_for_lock == true, and apply Locked!
+        using var sponsorAdmin = Client(code, SponsorAdmin);
         await SendAsync<KernelLockResponse>(
-            dm,
-            BuildRequest(HttpMethod.Post, $"locks/{frozen.Ref}/release", "Release freeze for hard lock", ReleaseToken(DataManager, frozen.Ref!), KernelProtocolScenario.Key(), new
+            sponsorAdmin,
+            BuildRequest(HttpMethod.Post, $"locks/{frozen.Ref}/release", "Release freeze for hard lock", ReleaseToken(SponsorAdmin, frozen.Ref!), KernelProtocolScenario.Key(), new
             {
                 study_ref = studyRef,
                 meaning = "Responsibility",
@@ -1677,11 +1698,15 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
 
         // Issue scoped grants:
         // - DataManager: attestation.sign at Tenant(), plus lock.apply, lock.release, collection.sign at Study(study)
+        // - SponsorAdmin: attestation.sign at Tenant(), plus lock.release at Study(study) for four-eyes release
         await IssueAsync(tenant, DataManager, "attestation.sign", AuthorityScope.Tenant(), ct);
         foreach (var cap in new[] { "lock.apply", "lock.release", "collection.sign", "study.export", "enrollment.export" })
         {
             await IssueAsync(tenant, DataManager, cap, AuthorityScope.Study(study), ct);
         }
+
+        await IssueAsync(tenant, SponsorAdmin, "attestation.sign", AuthorityScope.Tenant(), ct);
+        await IssueAsync(tenant, SponsorAdmin, "lock.release", AuthorityScope.Study(study), ct);
 
         // - SiteACoordinator: observation.record, observation.correct, study.export, enrollment.export ONLY at StudySite(siteA) (no tenant/study grant!)
         foreach (var cap in new[] { "observation.record", "observation.correct", "study.export", "enrollment.export" })
@@ -1740,7 +1765,16 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             .UseTestGatewaySecret()
             .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
-            .ConfigureTestServices(services => services.AddDeclaredKernelErrorsCheck()));
+            .ConfigureTestServices(services =>
+            {
+                services.AddDeclaredKernelErrorsCheck();
+                Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.Replace(
+                    services,
+                    ServiceDescriptor.Singleton(TestSecurityContext.TestLockCertificateSigner));
+                Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.Replace(
+                    services,
+                    ServiceDescriptor.Singleton<ILockCertificateSigner>(TestSecurityContext.TestLockCertificateSigner));
+            }));
         return _host.CreateSignedClient(new GatewayIdentity(userId, roles, [], TenantId: tenantCode, TenantReadOnly: tenantReadOnly));
     }
 
@@ -1862,13 +1896,14 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             ct);
         appliedLock.Ref.Should().StartWith("assertion:");
 
+        using var expiredSponsor = Client(code, SponsorAdmin, tenantReadOnly: true);
         var releasedLock = await SendAsync<KernelLockResponse>(
-            expiredDm,
+            expiredSponsor,
             BuildRequest(
                 HttpMethod.Post,
                 $"locks/{appliedLock.Ref}/release",
                 ReleaseReason,
-                ReleaseToken(DataManager, appliedLock.Ref!),
+                ReleaseToken(SponsorAdmin, appliedLock.Ref!),
                 KernelProtocolScenario.Key(),
                 new { study_ref = studyRef, meaning = "Responsibility" }),
             HttpStatusCode.OK,
@@ -1917,9 +1952,10 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         // Advance clock, release the enrollment lock, record a post-valid_at observation, and freeze that post-valid_at observation.
         await Task.Delay(20, ct);
         Tick();
+        using var sponsorAdmin = Client(code, SponsorAdmin);
         var releasedPostVisitLock = await SendAsync<KernelLockResponse>(
-            dm,
-            BuildRequest(HttpMethod.Post, $"locks/{postVisitLock.Ref}/release", ReleaseReason, ReleaseToken(DataManager, postVisitLock.Ref!), KernelProtocolScenario.Key(), new
+            sponsorAdmin,
+            BuildRequest(HttpMethod.Post, $"locks/{postVisitLock.Ref}/release", ReleaseReason, ReleaseToken(SponsorAdmin, postVisitLock.Ref!), KernelProtocolScenario.Key(), new
             {
                 study_ref = studyRef,
                 meaning = "Responsibility",
@@ -2500,9 +2536,10 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         }
 
         // Release Site A freeze -> screening succeeds!
+        using var sponsorAdmin = Client(code, SponsorAdmin);
         await SendAsync<KernelLockResponse>(
-            dm,
-            BuildRequest(HttpMethod.Post, $"locks/{frozenSiteA.Ref}/release", ReleaseReason, ReleaseToken(DataManager, frozenSiteA.Ref!), KernelProtocolScenario.Key(), new
+            sponsorAdmin,
+            BuildRequest(HttpMethod.Post, $"locks/{frozenSiteA.Ref}/release", ReleaseReason, ReleaseToken(SponsorAdmin, frozenSiteA.Ref!), KernelProtocolScenario.Key(), new
             {
                 study_ref = studyRef,
                 meaning = "Responsibility",
@@ -2560,13 +2597,13 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
 
         var studyRef = NodeRef.For(study).ToString();
 
-        // Freeze Site B and SUBJ-B so cross-site locks exist in PostgreSQL.
+        // Freeze SUBJ-B first and then covering Site B (bottom-up per LockScopes.Covering) so cross-site locks exist in PostgreSQL.
         await SendAsync<KernelLockResponse>(
             dm,
-            BuildRequest(HttpMethod.Post, "locks", "Freeze Site B", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            BuildRequest(HttpMethod.Post, "locks", "Freeze SUBJ-B", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
             {
                 study_ref = studyRef,
-                scope_ref = NodeRef.For(siteB).ToString(),
+                scope_ref = NodeRef.For(enrollmentB).ToString(),
                 kind = "Frozen",
                 meaning = "Approved",
             }),
@@ -2574,10 +2611,10 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             ct);
         await SendAsync<KernelLockResponse>(
             dm,
-            BuildRequest(HttpMethod.Post, "locks", "Freeze SUBJ-B", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            BuildRequest(HttpMethod.Post, "locks", "Freeze Site B", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
             {
                 study_ref = studyRef,
-                scope_ref = NodeRef.For(enrollmentB).ToString(),
+                scope_ref = NodeRef.For(siteB).ToString(),
                 kind = "Frozen",
                 meaning = "Approved",
             }),
@@ -2642,6 +2679,269 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         using var unprivRes = await unprivilegedSvc.GetAsync(
             new Uri($"/api/v1/kernel/locks/in-force?study_code={Uri.EscapeDataString(studyCode)}", UriKind.Relative), ct);
         unprivRes.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    /// <summary>
+    /// Validates end-to-end milestone lock governance on PostgreSQL:
+    /// 1. <c>POST /api/v1/kernel/observations/{observationRef}/reviews</c> records <c>Reviewed</c> assertions.
+    /// 2. <c>FinalDatabaseLock</c> blocks <c>Screening</c> enrollments and unreviewed observations while <c>InterimCut</c> permits lock.
+    /// 3. <c>LockScopes.Covering</c> refuses applying or releasing a child enrollment lock under an active parent site lock.
+    /// 4. Study-level <c>Locked</c> mints an asymmetric ECDSA <c>DatabaseLockCertificate</c> (isolated by PostgreSQL RLS and verifiable offline with the public PEM), and four-eyes release revokes the certificate and emits <c>KernelScopeLockReleased</c>.
+    /// </summary>
+    [Fact(DisplayName = "HostMilestoneGovernance_EnforcesObservationReviewsAncestorHierarchyAndMintsRevocableLockCertificates")]
+    [GxPRequirement("PRD-CDR-006")]
+    public async Task HostMilestoneGovernanceEnforcesObservationReviewsAncestorHierarchyAndMintsRevocableLockCertificates()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, code, study, studyCode, siteA, siteB, enrollmentA, enrollmentB, _, sbpObsA) = await SeedStudyAsync(ct);
+        var otherTenant = TenantId.New();
+        await _scenario.Protocol.OkAsync(
+            new ProvisionTenant(otherTenant, $"T-OTHER-{Guid.NewGuid():N}"[..16], "Other tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
+
+        await IssueAsync(tenant, DataManager, "observation.review", AuthorityScope.Study(study), ct);
+        await IssueAsync(tenant, DataManager, "enrollment.change_status", AuthorityScope.Study(study), ct);
+
+        using var dm = Client(code, DataManager);
+        using var sponsorAdmin = Client(code, SponsorAdmin);
+        var studyRef = NodeRef.For(study).ToString();
+        var siteARef = NodeRef.For(siteA).ToString();
+        var siteBRef = NodeRef.For(siteB).ToString();
+        var enrollmentARef = NodeRef.For(enrollmentA).ToString();
+        var enrollmentBRef = NodeRef.For(enrollmentB).ToString();
+
+        // 1. Ancestor lock hierarchy:
+        //    - Lock enrollmentB first, then freeze parent siteB -> attempting to release enrollmentB while siteB is frozen fails with 423 K.Assertion.Locked!
+        //    - Freeze siteA -> attempting to apply a child lock on enrollmentA fails with 409 K.Assertion.AlreadyLocked!
+        var childLockB = await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, "locks", "Lock SUBJ-B", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = enrollmentBRef,
+                kind = "Frozen",
+                meaning = "Approved",
+            }),
+            HttpStatusCode.Created,
+            ct);
+        var parentLockSiteB = await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, "locks", "Freeze Site B", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = siteBRef,
+                kind = "Frozen",
+                meaning = "Approved",
+            }),
+            HttpStatusCode.Created,
+            ct);
+
+        using (var blockedChildRelease = await sponsorAdmin.SendAsync(
+            BuildRequest(HttpMethod.Post, $"locks/{childLockB.Ref}/release", ReleaseReason, ReleaseToken(SponsorAdmin, childLockB.Ref!), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                meaning = "Responsibility",
+            }),
+            ct))
+        {
+            blockedChildRelease.StatusCode.Should().Be((HttpStatusCode)423);
+            (await ProblemCodeAsync(blockedChildRelease, ct)).Should().Be(AssertionErrors.Locked.Code);
+        }
+
+        var parentLockSiteA = await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, "locks", "Freeze Site A", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = siteARef,
+                kind = "Frozen",
+                meaning = "Approved",
+            }),
+            HttpStatusCode.Created,
+            ct);
+
+        using (var blockedChildApply = await dm.SendAsync(
+            BuildRequest(HttpMethod.Post, "locks", "Attempt child lock under frozen Site A", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = enrollmentARef,
+                kind = "Frozen",
+                meaning = "Approved",
+            }),
+            ct))
+        {
+            blockedChildApply.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await ProblemCodeAsync(blockedChildApply, ct)).Should().Be(AssertionErrors.AlreadyLocked.Code);
+        }
+
+        // Release parent locks then child lock so study scope is unlocked for FinalDatabaseLock evaluation.
+        foreach (var lockRef in new[] { parentLockSiteA.Ref!, parentLockSiteB.Ref!, childLockB.Ref! })
+        {
+            await SendAsync<KernelLockResponse>(
+                sponsorAdmin,
+                BuildRequest(HttpMethod.Post, $"locks/{lockRef}/release", ReleaseReason, ReleaseToken(SponsorAdmin, lockRef), KernelProtocolScenario.Key(), new
+                {
+                    study_ref = studyRef,
+                    meaning = "Responsibility",
+                }),
+                HttpStatusCode.OK,
+                ct);
+        }
+
+        // 2. InterimCut is ReadyForLock == true, whereas FinalDatabaseLock is ReadyForLock == false because enrollments are still Screening and observations are unreviewed.
+        var interimReadiness = await SendAsync<KernelLockReadinessResponse>(
+            dm,
+            BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(studyRef)}&milestone=InterimCut", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        interimReadiness.ReadyForLock.Should().BeTrue();
+        interimReadiness.Milestone.Should().Be("InterimCut");
+
+        var finalBlockedReadiness = await SendAsync<KernelLockReadinessResponse>(
+            dm,
+            BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(studyRef)}&milestone=FinalDatabaseLock", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        finalBlockedReadiness.ReadyForLock.Should().BeFalse();
+        finalBlockedReadiness.Milestone.Should().Be("FinalDatabaseLock");
+        finalBlockedReadiness.ScreeningEnrollmentCount.Should().Be(2);
+        finalBlockedReadiness.UnreviewedValueCount.Should().Be(4);
+
+        // Transition both enrollments to Enrolled and review all 4 observations via POST /api/v1/kernel/observations/{obsRef}/reviews!
+        await _scenario.Protocol.OkAsync(
+            new ChangeEnrollmentStatus(tenant, enrollmentA, EnrollmentStatus.Enrolled, Tick(), KernelProtocolScenario.Key(), "Enroll SUBJ-A"), ct);
+        await _scenario.Protocol.OkAsync(
+            new ChangeEnrollmentStatus(tenant, enrollmentB, EnrollmentStatus.Enrolled, Tick(), KernelProtocolScenario.Key(), "Enroll SUBJ-B"), ct);
+
+        System.Collections.Generic.List<(ObservationId Id, EnrollmentId EnrollmentId, int Revision)> allObservations;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            allObservations = await db.Observations
+                .AsNoTracking()
+                .Where(o => o.StudyId == study)
+                .Select(o => new ValueTuple<ObservationId, EnrollmentId, int>(o.Id, o.EnrollmentId, o.Revision))
+                .ToListAsync(ct);
+        }
+
+        allObservations.Should().Contain(o => o.Id == sbpObsA);
+        foreach (var (obsId, obsEnrollmentId, revision) in allObservations)
+        {
+            var obsRef = NodeRef.For(obsId).ToString();
+            var reviewRes = await SendAsync<KernelAssertionStateResponse>(
+                dm,
+                BuildRequest(HttpMethod.Post, $"observations/{obsRef}/reviews", "Source data review completed", null, KernelProtocolScenario.Key(), new
+                {
+                    enrollment_ref = NodeRef.For(obsEnrollmentId).ToString(),
+                    revision,
+                }),
+                HttpStatusCode.Created,
+                ct);
+            reviewRes.Kind.Should().Be("Reviewed");
+        }
+
+        var finalReady = await SendAsync<KernelLockReadinessResponse>(
+            dm,
+            BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(studyRef)}&milestone=FinalDatabaseLock", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        finalReady.ReadyForLock.Should().BeTrue();
+        finalReady.ScreeningEnrollmentCount.Should().Be(0);
+        finalReady.UnreviewedValueCount.Should().Be(0);
+
+        // 3. Apply study hard lock with FinalDatabaseLock -> mints asymmetric ECDSA DatabaseLockCertificate, isolated by RLS and verifiable offline!
+        var finalStudyLock = await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, "locks", "Final database lock for regulatory submission", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = studyRef,
+                kind = "Locked",
+                milestone = "FinalDatabaseLock",
+                meaning = "Approved",
+            }),
+            HttpStatusCode.Created,
+            ct);
+        finalStudyLock.Milestone.Should().Be("FinalDatabaseLock");
+        finalStudyLock.Certificate.Should().NotBeNull();
+        finalStudyLock.Certificate!.StudyCode.Should().Be(studyCode);
+        finalStudyLock.Certificate.Milestone.Should().Be("FinalDatabaseLock");
+        finalStudyLock.Certificate.KeyId.Should().Be(TestSecurityContext.TestLockCertificateSigner.KeyId);
+        finalStudyLock.Certificate.Revoked.Should().BeFalse();
+
+        string rawLockId = finalStudyLock.Ref!["assertion:".Length..];
+        string rawAttestationId = finalStudyLock.Certificate.AttestationRef["attestation:".Length..];
+        bool verifiedOffline = Cadence.Security.DatabaseLockCertificateCrypto.VerifyCertificate(
+            new Cadence.Kernel.Evidence.DatabaseLockCertificateRecord(
+                CertificateId: finalStudyLock.Certificate.CertificateId,
+                TenantId: finalStudyLock.Certificate.TenantCode,
+                StudyId: study.Value.ToString("D"),
+                StudyCode: studyCode,
+                LockId: rawLockId,
+                Milestone: LockMilestone.FinalDatabaseLock,
+                AttestationId: rawAttestationId,
+                SignedBy: DataManager,
+                IssuedAt: finalStudyLock.Certificate.IssuedAt,
+                KeyId: finalStudyLock.Certificate.KeyId,
+                Algorithm: finalStudyLock.Certificate.Algorithm,
+                PayloadSha256: finalStudyLock.Certificate.PayloadSha256,
+                FingerprintSha256: finalStudyLock.Certificate.FingerprintSha256,
+                SignatureBase64: finalStudyLock.Certificate.SignatureBase64,
+                Revoked: finalStudyLock.Certificate.Revoked,
+                RevokedAt: finalStudyLock.Certificate.RevokedAt,
+                RevokedBy: finalStudyLock.Certificate.RevokedBy),
+            TestSecurityContext.KernelLockCertPublicKeyPem,
+            out string? verifyFailureReason);
+        verifiedOffline.Should().BeTrue($"SCE verifies kernel-minted DatabaseLockCertificate offline using only the public PEM ({verifyFailureReason})");
+
+        // Verify PostgreSQL RLS on kernel.lock_certificates: tenant sees 1 unrevoked certificate; otherTenant sees 0.
+        await using (var dbTenant = fixture.CreateContext(tenant))
+        {
+            var certs = await dbTenant.LockCertificates.AsNoTracking().Where(c => c.StudyId == study).ToListAsync(ct);
+            certs.Should().ContainSingle().Which.Revoked.Should().BeFalse();
+        }
+
+        await using (var dbOther = fixture.CreateContext(otherTenant))
+        {
+            (await dbOther.LockCertificates.AsNoTracking().CountAsync(ct))
+                .Should().Be(0, "FORCE ROW LEVEL SECURITY on kernel.lock_certificates must isolate tenants");
+        }
+
+        // 4. Four-eyes release by SponsorAdmin marks the certificate revoked and emits KernelScopeLockApplied + KernelScopeLockReleased via outbox!
+        var releasedFinalLock = await SendAsync<KernelLockResponse>(
+            sponsorAdmin,
+            BuildRequest(HttpMethod.Post, $"locks/{finalStudyLock.Ref}/release", ReleaseReason, ReleaseToken(SponsorAdmin, finalStudyLock.Ref!), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                meaning = "Responsibility",
+            }),
+            HttpStatusCode.OK,
+            ct);
+        releasedFinalLock.Released.Should().BeTrue();
+        releasedFinalLock.Certificate.Should().NotBeNull();
+        releasedFinalLock.Certificate!.Revoked.Should().BeTrue();
+        releasedFinalLock.Certificate.RevokedBy.Should().Be(SponsorAdmin);
+
+        var hostRelay = _host!.Services.GetRequiredService<Cadence.Kernel.Persistence.Outbox.KernelOutboxRelay>();
+        var sink = _host.Services.GetRequiredService<Cadence.Kernel.Host.InMemoryScopeLockEventSink>();
+        var expectedCertId = finalStudyLock.Certificate.CertificateId;
+        for (var attempt = 0; attempt < 200; attempt++)
+        {
+            while ((await hostRelay.RelayBatchAsync(500, ct)).MoreDue)
+            {
+                // Drain all queued outbox messages in the shared fixture.
+            }
+
+            if (sink.Applied.Any(e => e.LockId == rawLockId && e.Certificate != null && e.Certificate.CertificateId == expectedCertId)
+                && sink.Released.Any(e => e.LockId == rawLockId && e.RevokedCertificateId == expectedCertId && e.ReleasedBy == SponsorAdmin))
+            {
+                break;
+            }
+
+            await Task.Delay(25, ct);
+        }
+
+        sink.Applied.Should().Contain(e => e.LockId == rawLockId && e.Certificate != null && e.Certificate.CertificateId == expectedCertId);
+        sink.Released.Should().Contain(e => e.LockId == rawLockId && e.RevokedCertificateId == expectedCertId && e.ReleasedBy == SponsorAdmin);
     }
 
     private static HttpRequestMessage BuildRequest(

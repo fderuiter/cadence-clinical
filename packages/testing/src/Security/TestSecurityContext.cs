@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Time;
+using Cadence.Security;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 
@@ -40,6 +41,43 @@ public static class TestSecurityContext
 
     /// <summary>Test-only SCE lock-token signing key (base64 of 32 ASCII bytes) for the interop host (#5382).</summary>
     public const string SceSigningKeyBase64 = "Y2FkZW5jZS10ZXN0LXNjZS1zaWduaW5nLWtleS0wMDE="; // pragma: allowlist secret
+
+    private static readonly string s_testLockCertPrivateKeyPem = CreateTestEcdsaPrivateKeyPem();
+
+    /// <summary>Shared test-only asymmetric kernel lock certificate signer; interop hosts receive only <see cref="KernelLockCertPublicKeyPem"/>.</summary>
+    public static KernelLockCertificateSigner TestLockCertificateSigner { get; } = new(s_testLockCertPrivateKeyPem, keyId: "kernel-lock-test");
+
+    /// <summary>SubjectPublicKeyInfo PEM corresponding to <see cref="TestLockCertificateSigner"/>.</summary>
+    public static string KernelLockCertPublicKeyPem => TestLockCertificateSigner.PublicKeyPem;
+
+    /// <summary>Signs a <see cref="Cadence.Kernel.Evidence.DatabaseLockCertificateRecord"/> with the shared test ECDSA P-256 signing key.</summary>
+    public static Cadence.Kernel.Evidence.DatabaseLockCertificateRecord SignTestLockCertificate(
+        string studyId,
+        string? studyCode = null,
+        string? lockId = null,
+        Cadence.Kernel.Evidence.LockMilestone milestone = Cadence.Kernel.Evidence.LockMilestone.FinalDatabaseLock,
+        string tenantId = TenantCode,
+        string signedBy = "dm-sce",
+        DateTimeOffset? issuedAt = null,
+        string? attestationId = null) =>
+        DatabaseLockCertificateCrypto.SignCertificate(
+            certificateId: $"dblcert-{Guid.NewGuid():N}",
+            tenantId: tenantId,
+            studyId: studyId,
+            studyCode: studyCode ?? studyId,
+            lockId: lockId ?? $"LOCK-{studyId}",
+            milestone: milestone,
+            attestationId: attestationId ?? Guid.Empty.ToString("D"),
+            signedBy: signedBy,
+            issuedAt: issuedAt ?? new DateTimeOffset(2026, 5, 14, 16, 32, 0, TimeSpan.Zero),
+            keyId: TestLockCertificateSigner.KeyId,
+            privateKeyPem: s_testLockCertPrivateKeyPem);
+
+    private static string CreateTestEcdsaPrivateKeyPem()
+    {
+        using var ecdsa = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        return ecdsa.ExportPkcs8PrivateKeyPem();
+    }
 
     /// <summary>Test-only imaging certificate and manifest signing key (base64 of 32 ASCII bytes) (#5399).</summary>
     public const string ImagingDeidSigningKeyBase64 = "Y2FkZW5jZS10ZXN0LWltYWdpbmctZGVpZC1zaWduLTA="; // pragma: allowlist secret
@@ -236,9 +274,11 @@ public static class SignedClientExtensions
     public static IWebHostBuilder UseTestCgtBarcodeKey(this IWebHostBuilder builder) =>
         builder.UseSetting("CGT_BARCODE_HMAC_KEY", TestSecurityContext.CgtBarcodeKeyBase64);
 
-    /// <summary>Supplies the test SCE signing key (<c>CADENCE_SCE_SIGNING_KEY</c>) so the interop host's startup validation passes.</summary>
+    /// <summary>Supplies the test SCE signing key (<c>CADENCE_SCE_SIGNING_KEY</c>) and kernel lock-certificate public key PEM so the interop host's startup validation passes.</summary>
     public static IWebHostBuilder UseTestSceSigningKey(this IWebHostBuilder builder) =>
-        builder.UseSetting("CADENCE_SCE_SIGNING_KEY", TestSecurityContext.SceSigningKeyBase64);
+        builder
+            .UseSetting("CADENCE_SCE_SIGNING_KEY", TestSecurityContext.SceSigningKeyBase64)
+            .UseSetting("CADENCE_KERNEL_LOCK_CERT_PUBLIC_KEY_PEM", TestSecurityContext.KernelLockCertPublicKeyPem);
 
     /// <summary>
     /// Supplies the test imaging de-identification keys (<c>CADENCE_IMAGING_DEID_SIGNING_KEY</c> and

@@ -34,17 +34,30 @@
 
       <div class="form-group">
         <label for="sig-role">Signer Role</label>
-        <select id="sig-role" v-model="signerRoleVal" :disabled="busy">
+        <select
+          id="sig-role"
+          v-model="signerRoleVal"
+          :disabled="busy || lockSignerRole"
+        >
           <option value="Subject">Subject / Participant</option>
           <option value="PI">PI / Principal Investigator</option>
           <option value="Site CRC">Site CRC</option>
           <option value="Investigator">Investigator</option>
+          <option value="Sponsor Admin">Sponsor Admin</option>
+          <option value="Trial Data Manager">Trial Data Manager</option>
           <option value="Sponsor Designer">Sponsor Designer</option>
           <option value="Unblinded Statistician">Unblinded Statistician</option>
           <option value="Pharmacist">Pharmacist</option>
           <option value="Data Manager">Data Manager</option>
           <option value="Auditor">Auditor</option>
         </select>
+        <span
+          v-if="lockSignerRole"
+          class="verified-role-hint"
+          data-testid="sig-verified-oidc-role"
+        >
+          Bound to verified OIDC role ({{ signerRoleVal }})
+        </span>
       </div>
 
       <!-- Reuse GxpCredentialsInput -->
@@ -112,6 +125,7 @@ export const SHARED_SIGNATURE_MODAL_PROPS = {
   signerName: { type: String, default: "" },
   signerRole: { type: String, default: "" },
   role: { type: String, default: "" },
+  lockSignerRole: { type: Boolean, default: false },
   semanticAction: { type: String, default: "" },
   onSign: { type: Function, default: null },
   reasons: { type: Array, default: null },
@@ -147,10 +161,15 @@ function resolveDefaultSignerRole() {
   }
   try {
     const authStore = useAuthStore();
+    const roles = [
+      ...(Array.isArray(authStore.rawRoles) ? authStore.rawRoles : []),
+      ...(Array.isArray(authStore.roles) ? authStore.roles : []),
+      ...(Array.isArray(authStore.user?.roles) ? authStore.user.roles : []),
+    ];
     return deriveSignerRoleFromClaims(
       {
         username: authStore.user?.username || props.username || "",
-        roles: authStore.rawRoles || [],
+        roles,
       },
       "Subject"
     );
@@ -472,6 +491,13 @@ defineExpose({
   margin-bottom: 16px;
 }
 
+.verified-role-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--font-size-2xs);
+  color: var(--semantic-color-text-secondary);
+}
+
 label {
   display: block;
   font-weight: 500;
@@ -546,6 +572,6 @@ button:focus-visible {
 }
 
 :deep(.signature-capture-backdrop) {
-  z-index: 10010;
+  z-index: 10010; /* deid-ignore */
 }
 </style>

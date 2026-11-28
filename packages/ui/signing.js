@@ -876,20 +876,37 @@ const CLAIM_TO_SIGNER_ROLE_PRIORITY = [
     signerRole: "Site CRC",
   },
   {
+    matches: ["sponsor_admin", "sponsor admin"],
+    signerRole: "Sponsor Admin",
+  },
+  {
+    matches: [
+      "trial_data_manager",
+      "trial data manager",
+      "clinical_data_manager",
+      "clinical data manager",
+      "sponsor_dm",
+      "sponsor dm",
+    ],
+    signerRole: "Trial Data Manager",
+  },
+  {
     matches: [
       "sponsor_designer",
       "sponsor designer",
       "study_designer",
       "study designer",
       "designer",
-      "sponsor_admin",
-      "sponsor admin",
     ],
     signerRole: "Sponsor Designer",
   },
   {
     matches: ["data_manager", "data manager"],
     signerRole: "Data Manager",
+  },
+  {
+    matches: ["unblinded_statistician", "unblinded statistician"],
+    signerRole: "Unblinded Statistician",
   },
   {
     matches: ["auditor", "cra", "monitor"],

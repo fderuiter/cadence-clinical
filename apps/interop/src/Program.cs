@@ -1,6 +1,7 @@
 using Cadence.Apps.Interop.Application;
 using Cadence.Apps.Interop.Application.Services;
 using Cadence.Apps.Interop.Endpoints;
+using Cadence.Apps.Interop.Infrastructure.Consumers;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
 using Cadence.Apps.Interop.Infrastructure.Security;
 using Cadence.Database;
@@ -9,6 +10,8 @@ using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.FieldProtection;
 using Cadence.Telemetry;
+
+using MassTransit;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +24,7 @@ builder.Services.AddCadenceLookupHashing();
 builder.Services.AddSingleton<DeviceTokenHasher>();
 // SCE lock tokens and run signatures are keyed by CADENCE_SCE_SIGNING_KEY, required and validated at startup (#5382).
 builder.Services.AddSceSigning();
+builder.Services.AddKernelLockCertificateVerification();
 builder.Services.AddSingleton<ILockfileValidatorService, LockfileValidatorService>();
 builder.Services.AddSingleton<ISceDockerEngineDriver, SceDockerEngineDriver>();
 // SMART client assertions are signed with server-side keys named per endpoint, never keys from a request (#5436).
@@ -33,6 +37,15 @@ builder.Services.AddScoped<IEsourceIngestionService, EsourceIngestionService>();
 builder.Services.AddScoped<IEsourceReconciliationService, EsourceReconciliationService>();
 builder.Services.AddScoped<ISceProgramLockService, SceProgramLockService>();
 builder.Services.AddScoped<ISceExecutionService, SceExecutionService>();
+
+builder.Services.AddMassTransit(x =>
+{
+    x.AddConsumer<KernelScopeLockInteropConsumer>();
+    x.UsingInMemory((context, cfg) =>
+    {
+        cfg.ConfigureEndpoints(context);
+    });
+});
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();

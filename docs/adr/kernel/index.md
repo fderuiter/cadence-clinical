@@ -7,3 +7,5 @@ Active Architectural Decision Records for **0. Clinical Kernel (K001–K037)**.
 - Entries below use `# ADR-KERNEL-YYYYMMDD-<slug>: <title>` and are sorted alphabetically by filename.
 
 ## Decisions
+
+- [ADR-KERNEL-20261128-synchronous-query-projection-milestone-lock-readiness-and-asymmetric-database-lock-certificates: Synchronous Query Projection, Milestone Lock Readiness, and Asymmetric Database Lock Certificates](2026-11-28-synchronous-query-projection-milestone-lock-readiness-and-asymmetric-database-lock-certificates.md) (2026-11-28)

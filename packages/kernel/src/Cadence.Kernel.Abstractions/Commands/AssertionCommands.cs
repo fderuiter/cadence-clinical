@@ -48,7 +48,8 @@ public sealed record ApplyLock(
     string ReasonForChange,
     AttestationMeaning? Meaning = null,
     DateTimeOffset? AuthenticatedAt = null,
-    string? Method = null) : ICommand<LockState>;
+    string? Method = null,
+    LockMilestone Milestone = LockMilestone.InterimCut) : ICommand<LockState>;
 
 /// <summary>
 /// Releases a lock (spec §10.5): a retracting Assertion with its own reason and attestation, recording an
@@ -65,7 +66,9 @@ public sealed record ApplyLock(
 [RaisesKernelErrors(
     typeof(AssertionErrors),
     nameof(AssertionErrors.AlreadyRetracted),
-    nameof(AssertionErrors.AttestationRejected))]
+    nameof(AssertionErrors.AttestationRejected),
+    nameof(AssertionErrors.SelfReleaseDenied),
+    nameof(AssertionErrors.Locked))]
 [RaisesKernelErrors(
     typeof(TrustErrors),
     nameof(TrustErrors.PersonRequired),
@@ -101,6 +104,30 @@ public sealed record ReleaseLock(
     nameof(AssertionErrors.Locked))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record VerifyObservation(
+    TenantId TenantId,
+    AssertionId AssertionId,
+    EnrollmentId EnrollmentId,
+    ObservationId ObservationId,
+    int Revision,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<AssertionState>;
+
+/// <summary>
+/// Records source data review completion (<see cref="AssertionKind.Reviewed"/>) for one revision of an observation's
+/// value before closeout (SDR, spec §8.2). Targets <c>(ObservationId, Revision)</c>, so a later correction supersedes
+/// the review. Refused when the revision is not the current one, when an open query holds on the observation, when the
+/// revision is already reviewed, or when a <see cref="LockKind.Locked"/> lock covers the observation.
+/// </summary>
+[KernelCapability("observation.review", VerbClass.Execute, Resource = nameof(ReviewObservation.EnrollmentId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(
+    typeof(AssertionErrors),
+    nameof(AssertionErrors.RevisionStale),
+    nameof(AssertionErrors.QueryOpen),
+    nameof(AssertionErrors.AlreadyReviewed),
+    nameof(AssertionErrors.Locked))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+public sealed record ReviewObservation(
     TenantId TenantId,
     AssertionId AssertionId,
     EnrollmentId EnrollmentId,
@@ -208,7 +235,9 @@ public sealed record LockState(
     AttestationId AttestationId,
     bool Released,
     DateTimeOffset At,
-    string By);
+    string By,
+    LockMilestone Milestone = LockMilestone.InterimCut,
+    DatabaseLockCertificateRecord? Certificate = null);
 
 /// <summary>Errors raised by the assertion and lock commands (spec §8.2, §10.5, ADR-2621).</summary>
 public static class AssertionErrors
@@ -229,7 +258,7 @@ public static class AssertionErrors
         new("K.Assertion.AlreadyRetracted", 409, "The assertion is already retracted.");
 
     public static readonly KernelError NotRetractable =
-        new("K.Assertion.NotRetractable", 422, "Only a verification, query or answer about an observation is retracted this way; release a lock instead.");
+        new("K.Assertion.NotRetractable", 422, "Only a verification, review, query or answer about an observation is retracted this way; release a lock instead.");
 
     public static readonly KernelError NotAQuery =
         new("K.Assertion.NotAQuery", 422, "The assertion answered is not a query.");
@@ -238,10 +267,16 @@ public static class AssertionErrors
         new("K.Assertion.RevisionStale", 409, "The revision is not the observation's current one; reload it and judge the current value.");
 
     public static readonly KernelError QueryOpen =
-        new("K.Assertion.QueryOpen", 409, "An open query holds on this observation; resolve and close the query before source data verification.");
+        new("K.Assertion.QueryOpen", 409, "An open query holds on this observation; resolve and close the query before source data verification or review.");
 
     public static readonly KernelError AlreadyVerified =
         new("K.Assertion.AlreadyVerified", 409, "This observation revision is already verified against source.");
+
+    public static readonly KernelError AlreadyReviewed =
+        new("K.Assertion.AlreadyReviewed", 409, "This observation revision has already completed source data review.");
+
+    public static readonly KernelError SelfReleaseDenied =
+        new("K.Assertion.SelfReleaseDenied", 409, "A lock cannot be released by the same actor who applied it; an independent authorized signer must release the lock.");
 
     public static readonly KernelError TextInvalid =
         new("K.Assertion.TextInvalid", 422, $"The text is required and at most {AssertionText.MaxLength} characters.");
@@ -265,6 +300,8 @@ public static class AssertionErrors
         RevisionStale,
         QueryOpen,
         AlreadyVerified,
+        AlreadyReviewed,
+        SelfReleaseDenied,
         TextInvalid,
         Locked,
         AttestationRejected,
