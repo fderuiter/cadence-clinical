@@ -1006,7 +1006,7 @@ describe("Targeted SDV flags, medical review (SDR), open-query exclusion, and cr
       });
       await flushPromises();
 
-      // Readiness card loads even though lock.apply is denied, and apply form stays hidden
+      // Readiness banner loads even though lock.apply is denied, and apply actions stay hidden
       expect(mockGetStudyLockReadiness).toHaveBeenCalled();
       expect(locks.find('[data-testid="study-locks-readiness"]').exists()).toBe(
         true
@@ -1015,9 +1015,19 @@ describe("Targeted SDV flags, medical review (SDR), open-query exclusion, and cr
       expect(
         locks.find('[data-testid="readiness-gate-unreviewed_values"]').text()
       ).toContain("2 unreviewed values");
+      expect(
+        locks.find('[data-testid="study-locks-readiness-blockers"]').exists()
+      ).toBe(false);
+
+      // Open the governance blocker drawer to inspect itemized blockers & role filter pills
+      await locks
+        .find('[data-testid="study-locks-review-blockers"]')
+        .trigger("click");
+      await flushPromises();
 
       // Blinded blocker preserves K-AUTH-4 masking with no workspace button
       expect(locks.text()).toContain("Masked (Blinded)");
+      await expectNoAxeViolations(locks.element);
 
       // Filter by Medical Monitor (SDR) role pill -> shows only the 2 UnreviewedValue blockers (1 unmasked + 1 masked)
       await locks
@@ -1030,14 +1040,21 @@ describe("Targeted SDV flags, medical review (SDR), open-query exclusion, and cr
         "Review observation"
       );
 
-      // Clicking the unmasked Medical Monitor blocker opens the standalone observation in conduct workspace
+      // Clicking the unmasked Medical Monitor blocker opens the standalone observation in conduct workspace and closes drawer
       await locks.find('[data-testid="blocker-open-0"]').trigger("click");
       await flushPromises();
       expect(router.currentRoute.value.query.observation).toBe(
         OBS_STANDALONE_REF
       );
+      expect(
+        locks.find('[data-testid="study-locks-readiness-blockers"]').exists()
+      ).toBe(false);
 
-      // Switch to All and click the form-backed UnverifiedValue blocker -> opens CanvasFormWorkspace on SYSBP
+      // Re-open drawer, switch to All, and click the form-backed UnverifiedValue blocker -> opens CanvasFormWorkspace on SYSBP
+      await locks
+        .find('[data-testid="study-locks-review-blockers"]')
+        .trigger("click");
+      await flushPromises();
       await locks
         .find('[data-testid="blocker-role-filter-all"]')
         .trigger("click");
@@ -1055,7 +1072,7 @@ describe("Targeted SDV flags, medical review (SDR), open-query exclusion, and cr
       locks.unmount();
     }
 
-    // Also verify ScopeLockControls renders readiness & :to blocker chips when canApply is false,
+    // Also verify ScopeLockControls renders readiness & :to blocker chips inside its governance drawer when canApply is false,
     // and CanvasInspector genericDisplay renders #inspector-open-workspace for blocker NodeRefs!
     const pinia = createPinia();
     setActivePinia(pinia);
@@ -1078,11 +1095,14 @@ describe("Targeted SDV flags, medical review (SDR), open-query exclusion, and cr
     expect(
       scopeControls.find('[data-testid="cra-scope-readiness"]').exists()
     ).toBe(true);
+    await scopeControls.find("#cra-scope-review-blockers").trigger("click");
+    await flushPromises();
     const scopeBlockerLink = scopeControls.find(
       '[data-testid="cra-scope-readiness-blockers"] a.node-ref-chip'
     );
     expect(scopeBlockerLink.exists()).toBe(true);
     expect(scopeBlockerLink.attributes("href")).toContain(`form=${FORM_REF}`);
+    scopeControls.unmount();
 
     const inspector = mountAttached(CanvasInspector, {
       props: {

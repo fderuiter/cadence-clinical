@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
+
+using Cadence.ToolingCore.Primitives;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -38,7 +39,7 @@ public static class ApiClientValidatorService
             return 0;
         }
 
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
 
         if (preCommit || explicitFiles is not null)
         {
@@ -113,22 +114,10 @@ public static class ApiClientValidatorService
 
     private static int RunCommand(string workingDir, string fileName, string[] arguments, string subject)
     {
-        var psi = new ProcessStartInfo(fileName)
-        {
-            WorkingDirectory = workingDir,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false
-        };
-        foreach (string arg in arguments)
-        {
-            psi.ArgumentList.Add(arg);
-        }
-
-        Process? process;
+        ProcessOutput output;
         try
         {
-            process = PosixProcessLauncher.Start(psi);
+            output = ProcessPrimitives.RunCaptured(ProcessPrimitives.CreateStartInfo(fileName, workingDir, arguments));
         }
         catch (Win32Exception ex)
         {
@@ -136,41 +125,20 @@ public static class ApiClientValidatorService
             return 1;
         }
 
-        if (process == null)
+        if (output.ExitCode < 0)
         {
             Console.WriteLine($"[ERROR] Could not start '{fileName} {string.Join(' ', arguments)}'.");
             return 1;
         }
 
-        using (process)
+        if (output.ExitCode != 0)
         {
-            var stderrTask = process.StandardError.ReadToEndAsync();
-            string stdout = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
-            string stderr = stderrTask.GetAwaiter().GetResult();
-
-            if (process.ExitCode != 0)
-            {
-                Console.WriteLine($"[ERROR] Check failed for {subject}:");
-                Console.WriteLine(stdout);
-                Console.WriteLine(stderr);
-                return 1;
-            }
+            Console.WriteLine($"[ERROR] Check failed for {subject}:");
+            Console.WriteLine(output.Stdout);
+            Console.WriteLine(output.Stderr);
+            return 1;
         }
 
         return 0;
-    }
-
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
     }
 }

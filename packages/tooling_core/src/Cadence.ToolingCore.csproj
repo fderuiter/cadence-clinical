@@ -19,4 +19,13 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Spectre.Console" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="cadence" />
+    <InternalsVisibleTo Include="Cadence.OpenApiExporter" />
+    <InternalsVisibleTo Include="Cadence.SchemaDocExporter" />
+    <InternalsVisibleTo Include="Cadence.DatabaseMigrator" />
+    <InternalsVisibleTo Include="Cadence.UnitTests" />
+    <InternalsVisibleTo Include="Cadence.ArchitectureTests" />
+  </ItemGroup>
 </Project>

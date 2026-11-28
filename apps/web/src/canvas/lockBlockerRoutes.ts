@@ -10,7 +10,40 @@ import {
   buildScopedStudyLocation,
   type WorkspaceScopeSnapshot,
 } from "./palette";
-import { normalizeLockBlockerKind } from "../composables/useSignedKernelLock";
+import {
+  formatLockBlockerFallbackTitle,
+  normalizeLockBlockerKind,
+} from "../composables/useSignedKernelLock";
+
+export interface LockBlockerChipDescriptor {
+  key: string;
+  ref: string;
+  fallback?: string;
+}
+
+export function getLockBlockerChips(
+  blocker: Partial<KernelLockBlocker>
+): LockBlockerChipDescriptor[] {
+  const chips: LockBlockerChipDescriptor[] = [];
+  if (blocker.target_ref) {
+    chips.push({
+      key: `t-${blocker.target_ref}`,
+      ref: blocker.target_ref,
+      fallback: formatLockBlockerFallbackTitle(blocker),
+    });
+  }
+  if (blocker.query_ref && blocker.query_ref !== blocker.target_ref) {
+    chips.push({ key: `q-${blocker.query_ref}`, ref: blocker.query_ref });
+  }
+  if (blocker.finding_ref && blocker.finding_ref !== blocker.target_ref) {
+    chips.push({
+      key: `f-${blocker.finding_ref}`,
+      ref: blocker.finding_ref,
+      fallback: blocker.rule_id ?? undefined,
+    });
+  }
+  return chips;
+}
 
 export type LockBlockerRoleFilter = "all" | "monitor" | "medical" | "site";
 

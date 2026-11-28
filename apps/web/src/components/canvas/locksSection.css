@@ -1,7 +1,7 @@
 .study-locks {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   min-width: 0;
   max-width: 100%;
 }
@@ -51,7 +51,7 @@
 }
 
 .apply-card {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border: 1px solid var(--semantic-color-border-muted);
   border-radius: 8px;
   background: var(--semantic-color-surface-muted);
@@ -61,14 +61,14 @@
 }
 
 .apply-card h3 {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   font-size: 0.95rem;
 }
 
 .apply-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -142,39 +142,21 @@
   min-height: 32px;
 }
 
-.readiness-card {
-  border-radius: 8px;
-  border: 1px solid var(--semantic-color-border);
-  background: var(--semantic-color-surface);
-  overflow: hidden;
+.study-locks-governance-banner {
+  margin-top: 10px;
+}
+
+.readiness-drawer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  max-width: 100%;
   font-size: 0.83rem;
 }
 
-.readiness-card-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--semantic-color-border-muted);
-  background: var(--semantic-color-surface-muted);
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
-
-.readiness-card-header h3 {
-  margin: 0;
-  font-size: 0.95rem;
-  color: var(--semantic-color-text-dark);
-}
-
-.readiness-card-subtitle {
-  margin: 2px 0 0;
-  font-size: 0.78rem;
-  color: var(--semantic-color-text-muted);
-}
-
-.readiness-card-status {
-  padding: 10px 16px;
+.readiness-drawer-empty {
+  padding: 6px 0;
   margin: 0;
 }
 
@@ -250,13 +232,16 @@
 }
 
 .readiness-blocker-item {
-  padding: 10px 16px;
+  padding: 10px 0;
   border-top: 1px solid var(--semantic-color-border-muted);
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .readiness-blocker-item:first-child {
@@ -264,8 +249,9 @@
 }
 
 .readiness-blocker-main {
-  flex: 1 1 280px;
+  flex: 1 1 220px;
   min-width: 0;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -317,6 +303,7 @@
 
 .readiness-filter-pill {
   min-height: var(--semantic-control-target-min, 24px);
+  max-width: 100%;
   padding: 2px 10px;
   border-radius: 999px;
   border: 1px solid var(--semantic-color-border-control);
@@ -324,6 +311,8 @@
   color: var(--semantic-color-text-dark);
   font-size: 0.78rem;
   font-weight: 600;
+  white-space: normal;
+  overflow-wrap: anywhere;
   cursor: pointer;
 }
 
@@ -334,16 +323,20 @@
 }
 
 .readiness-blocker-cta {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   align-items: center;
 }
 
 .blocker-workspace-link {
+  max-width: 100%;
   font-size: 0.78rem;
   font-weight: 600;
   text-decoration: none;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .apply-actions {

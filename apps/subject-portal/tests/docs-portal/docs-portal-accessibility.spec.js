@@ -193,10 +193,83 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
       docIndexHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
       (m) => m[1]
     );
-    const dataRowCount = tbodyBlocks.reduce(
+    expect(tbodyBlocks.length).toBeGreaterThanOrEqual(2);
+    const topLevelRowCount = tbodyBlocks.reduce(
       (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
       0
     );
+    expect(topLevelRowCount).toBeGreaterThanOrEqual(28);
+
+    const extractShardHrefs = (tbody) =>
+      Array.from(
+        tbody.matchAll(
+          /<tr(?:\s[^>]*)?>[\s\S]*?<td(?:\s[^>]*)?>[\s\S]*?<a\s+[^>]*href="([^"]+)"/gi
+        ),
+        (m) => m[1]
+      );
+    const resolveShardPath = (href) => {
+      const clean = href
+        .split("#")[0]
+        .split("?")[0]
+        .replace(/^\.\//, "")
+        .replace(/^\/cadence-clinical\//, "");
+      const candidates = clean.endsWith("/")
+        ? [
+            path.join(docsDistDir, clean, "index.html"),
+            path.join(docsDistDir, clean, "INDEX.html"),
+          ]
+        : [path.join(docsDistDir, clean)];
+      return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+    };
+    const extractDocBody = (pageHtml) => {
+      const match = pageHtml.match(
+        /<div\s+class="vp-doc[^"]*"[^>]*>([\s\S]*?)<\/main>/i
+      );
+      return match ? match[1] : pageHtml;
+    };
+
+    const categoryShardHrefs = extractShardHrefs(tbodyBlocks[0]);
+    const adrShardHrefs = extractShardHrefs(tbodyBlocks[1]);
+    const missingShards = [];
+
+    let categoryRowCount = 0;
+    for (const href of categoryShardHrefs) {
+      const shardPath = resolveShardPath(href);
+      if (!shardPath) {
+        missingShards.push(href);
+        continue;
+      }
+      const shardDoc = extractDocBody(fs.readFileSync(shardPath, "utf8"));
+      const shardTbodies = Array.from(
+        shardDoc.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
+        (m) => m[1]
+      );
+      categoryRowCount += shardTbodies.reduce(
+        (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
+        0
+      );
+    }
+
+    let adrEntryCount = 0;
+    for (const href of adrShardHrefs) {
+      const shardPath = resolveShardPath(href);
+      if (!shardPath) {
+        missingShards.push(href);
+        continue;
+      }
+      if (href.endsWith("TEMPLATE.html") || href === "./adr/") {
+        continue;
+      }
+      const shardDoc = extractDocBody(fs.readFileSync(shardPath, "utf8"));
+      adrEntryCount += (
+        shardDoc.match(
+          /<li(?:\s[^>]*)?>\s*<a\s+[^>]*href="[^"]+"\s*>\s*ADR-/gi
+        ) || []
+      ).length;
+    }
+
+    expect(missingShards).toEqual([]);
+    const dataRowCount = categoryRowCount + adrEntryCount;
     expect(dataRowCount).toBeGreaterThanOrEqual(715);
   });
 

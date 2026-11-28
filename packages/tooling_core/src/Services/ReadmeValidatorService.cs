@@ -2,13 +2,15 @@ using System;
 using System.IO;
 using System.Linq;
 
+using Cadence.ToolingCore.Primitives;
+
 namespace Cadence.ToolingCore.Services;
 
 public static class ReadmeValidatorService
 {
     public static int ValidateReadmes(string? repoRoot = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         Console.WriteLine("Validating README documentation coverage across packages and apps...");
 
         int missing = 0;
@@ -68,17 +70,4 @@ public static class ReadmeValidatorService
         !Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)
             .Select(f => Path.GetRelativePath(directory, f).Replace('\\', '/'))
             .Any(f => !f.Split('/').Any(part => part is "bin" or "obj" or "node_modules"));
-
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
 }

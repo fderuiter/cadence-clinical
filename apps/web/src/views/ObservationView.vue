@@ -508,3 +508,22 @@ watch(
 </script>
 
 <style scoped src="../components/observation/observationView.css"></style>
+<style scoped>
+[data-testid="observation-concept"],
+[data-testid="observation-value"],
+[data-testid="observation-version"],
+.observation-timestamp,
+#observation-new-value,
+[data-testid="observation-unit"] {
+  font-family: var(--semantic-font-mono);
+}
+
+[data-testid="observation-value"],
+[data-testid="observation-version"],
+.observation-timestamp,
+.observation-lock,
+#observation-new-value,
+.observation-outcome {
+  font-variant-numeric: tabular-nums;
+}
+</style>

@@ -3264,7 +3264,13 @@ const workspaceBranch = computed<WorkspaceBranchSnapshot>(() => {
         ...baseContext,
       };
     }
-    const formTargetKey = openFormId.value || "new";
+    const formTargetKey = openFormId.value
+      ? openFormId.value
+      : `new:spec:${initialSpecId.value || "none"}:visit:${initialVisitId.value || "none"}`;
+    const preselectedNewFormTargets =
+      isNewForm.value && Boolean(initialSpecId.value)
+        ? ["#ecrf-collected-at"]
+        : [];
     return {
       key: `study:${code}:form:${formTargetKey}`,
       groupKey: `study:${code}:form`,
@@ -3273,6 +3279,7 @@ const workspaceBranch = computed<WorkspaceBranchSnapshot>(() => {
         ...(highlightItemQuery.value
           ? [`#ecrf-item-${highlightItemQuery.value}`]
           : []),
+        ...preselectedNewFormTargets,
         "#canvas-form-workspace-title",
       ],
       ...baseContext,
@@ -3460,7 +3467,14 @@ watch(
     }
 
     void (async () => {
-      const focused = await handoffFocus([...returnSelectors, ...next.targets]);
+      const isPreselectedNewForm =
+        !isZoomOut && next.isNewForm && Boolean(next.specId);
+      const focused = await handoffFocus(
+        [...returnSelectors, ...next.targets],
+        isPreselectedNewForm
+          ? { scrollIfOffscreen: true, scrollTarget: "#ecrf-form-new" }
+          : undefined
+      );
       if (
         !isZoomOut ||
         returnSelectors.length === 0 ||

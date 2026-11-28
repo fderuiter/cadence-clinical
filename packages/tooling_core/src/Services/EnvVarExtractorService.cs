@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
+using Cadence.ToolingCore.Primitives;
+
 namespace Cadence.ToolingCore.Services;
 
 public static partial class EnvVarExtractorService
@@ -60,7 +62,7 @@ public static partial class EnvVarExtractorService
 
     public static int ExtractAndValidateEnvVars(bool checkOnly = true, string? repoRoot = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         Console.WriteLine("Extracting and verifying environment variable declarations...");
 
         var envVars = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -354,18 +356,5 @@ public static partial class EnvVarExtractorService
         }
 
         return missing;
-    }
-
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
     }
 }

@@ -208,6 +208,34 @@
       />
     </div>
 
+    <ClinicalGovernanceBanner
+      v-if="readinessLoading || readiness"
+      data-testid="study-locks-readiness"
+      class="study-locks-governance-banner"
+      :status="readinessBannerStatus"
+      :status-label="readinessBannerStatusLabel"
+      status-test-id="study-locks-readiness-status"
+      :gates="mappedReadinessGates"
+      gates-test-id="study-locks-readiness-counts"
+      :blocker-count="readiness?.blockers.length ?? 0"
+      blocker-action-id="btn-review-study-lock-blockers"
+      blocker-action-test-id="study-locks-review-blockers"
+      blocker-drawer-title="Study lock readiness blockers"
+      :blocker-drawer-subtitle="studyCode"
+      :teleport="false"
+      aria-label="Study lock readiness"
+    >
+      <template #blockers="{ close }">
+        <LocksCloseoutReadinessCard
+          v-if="readiness && readiness.blockers.length > 0"
+          :study-code="studyCode"
+          :apply-scope-ref="applyScopeRef"
+          :readiness="readiness"
+          @navigate="close"
+        />
+      </template>
+    </ClinicalGovernanceBanner>
+
     <div v-if="canApply" class="apply-actions">
       <button
         id="btn-apply-study-lock"
@@ -238,12 +266,15 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalInput } from "ui";
-import type { KernelLockKind } from "../../api/kernelApi";
+import { computed } from "vue";
+import { ClinicalGovernanceBanner, ClinicalInput } from "ui";
+import type { KernelLockKind, KernelLockReadiness } from "../../api/kernelApi";
+import type { useSignedKernelLock } from "../../composables/useSignedKernelLock";
+import LocksCloseoutReadinessCard from "./LocksCloseoutReadinessCard.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 import type { PickerOption } from "./useLockHierarchyPickers";
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     canApply?: boolean;
     studyCode: string;
@@ -267,6 +298,11 @@ withDefaults(
     applyKind: KernelLockKind;
     applyReason: string;
     applyScopeRef: string;
+    readiness: KernelLockReadiness | null;
+    readinessLoading: boolean;
+    readinessGates: ReturnType<
+      typeof useSignedKernelLock
+    >["readinessGates"]["value"];
     isApplyDisabled: boolean;
     busy: boolean;
     canFreezeByReadiness: boolean;
@@ -290,6 +326,28 @@ const emit = defineEmits<{
   (e: "submit"): void;
   (e: "quickApply", kind: KernelLockKind): void;
 }>();
+const readinessBannerStatus = computed(() => {
+  if (props.readinessLoading) return "loading";
+  return props.readiness?.ready_for_lock ? "ready" : "blocked";
+});
+
+const readinessBannerStatusLabel = computed(() => {
+  if (props.readinessLoading) return "Checking lock readiness…";
+  if (props.readiness?.ready_for_lock) return "Ready for Locked";
+  return props.canApply
+    ? "Blocked for Locked · Frozen available"
+    : "Blocked for Locked";
+});
+
+const mappedReadinessGates = computed(() => {
+  if (props.readinessLoading || !props.readiness) return [];
+  return props.readinessGates.map((gate) => ({
+    key: gate.key,
+    label: gate.label,
+    count: gate.count,
+    testId: `readiness-gate-${gate.key}`,
+  }));
+});
 </script>
 
 <style scoped src="./locksSection.css"></style>
