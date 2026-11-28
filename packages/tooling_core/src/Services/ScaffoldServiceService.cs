@@ -1,13 +1,15 @@
 using System;
 using System.IO;
 
+using Cadence.ToolingCore.Primitives;
+
 namespace Cadence.ToolingCore.Services;
 
 public static class ScaffoldServiceService
 {
     public static int ScaffoldService(string serviceName, string? repoRoot = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         Console.WriteLine($"Scaffolding new Clean Architecture C# microservice '{serviceName}'...");
 
         string appDir = Path.Combine(repoRoot, "apps", serviceName, "src");
@@ -49,17 +51,4 @@ public partial class Program { }
 
     private static string Capitalize(string str) =>
         string.IsNullOrEmpty(str) ? str : char.ToUpper(str[0]) + str[1..];
-
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
 }
