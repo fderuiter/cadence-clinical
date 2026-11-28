@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -44,6 +45,28 @@ public sealed class EtmfQcService(
     IEtmfCompletenessWebhookPublisher? completenessPublisher = null,
     IStoragePort<byte[]>? storage = null) : IEtmfQcService
 {
+    private static readonly JsonSerializerOptions QcMetadataJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    private sealed record QcMetadataEnvelope(
+        [property: JsonPropertyName("document_intelligence")] DocumentIntelligenceReport? DocumentIntelligence,
+        [property: JsonPropertyName("assigned_cra")] string? AssignedCra = null);
+
+    private sealed record QcQueueRowProjection(
+        string Id,
+        string StudyCode,
+        string? SiteCode,
+        string Filename,
+        string MimeType,
+        string ArtifactType,
+        string Status,
+        DateTime CreatedAt,
+        string CreatedBy,
+        string? ContentChecksum,
+        string? MetadataJson,
+        string FallbackContent);
     public async Task<IResult> StageQcDocumentAsync(
         StageDocumentQCRequest request,
         HttpContext httpContext,
@@ -181,80 +204,68 @@ public sealed class EtmfQcService(
         HttpContext httpContext,
         CancellationToken ct)
     {
-        if (!string.IsNullOrWhiteSpace(studyId) && !ClinicalScopeGuard.CanAccessStudy(httpContext, studyId))
+        if (EtmfClassificationEngine.TryScopeDocumentsQuery(
+            dbContext.TmfDocuments.AsNoTracking(),
+            httpContext,
+            studyId,
+            siteId,
+            out var scopedDocs) is { } scopeDenied)
         {
-            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.StudyAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
+            return scopeDenied;
         }
 
-        var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
-        if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
-        {
-            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
-        }
+        var query = scopedDocs.Where(d => d.Status == "TECHNICAL_QC");
 
-        string? requestedSiteId = !string.IsNullOrWhiteSpace(siteId)
-            ? siteId
-            : httpContext.Request.Query["site_id"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(requestedSiteId) && !ClinicalScopeGuard.CanAccessSite(httpContext, requestedSiteId))
-        {
-            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
-        }
+        var docs = await query
+            .Select(d => new QcQueueRowProjection(
+                d.Id,
+                d.StudyId,
+                d.SiteId,
+                d.Filename,
+                d.MimeType,
+                d.ArtifactType,
+                d.Status,
+                d.CreatedAt,
+                d.CreatedBy,
+                d.ContentChecksum,
+                d.MetadataJson,
+                d.MetadataJson == null ? d.Content : string.Empty))
+            .ToListAsync(ct);
 
-        var query = ClinicalScopeGuard.NarrowToStudyScope(dbContext.TmfDocuments.AsNoTracking(), httpContext, d => d.StudyId)
-            .Where(d => d.Status == "TECHNICAL_QC");
-        if (!string.IsNullOrWhiteSpace(studyId))
-        {
-            query = query.Where(d => d.StudyId == studyId);
-        }
-
-        if (!string.IsNullOrWhiteSpace(requestedSiteId))
-        {
-            query = query.Where(d => d.SiteId == requestedSiteId);
-        }
-
-        var docs = (await query.ToListAsync(ct))
-            .Where(d => string.IsNullOrWhiteSpace(d.SiteId) || ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteId))
-            .ToList();
         var stagingItems = docs.Select(doc =>
         {
-            DocumentIntelligenceReport report;
-            try
+            DocumentIntelligenceReport? report = null;
+            string? assignedCra = null;
+            if (!string.IsNullOrEmpty(doc.MetadataJson))
             {
-                if (!string.IsNullOrEmpty(doc.MetadataJson))
+                try
                 {
-                    using var jsonDoc = JsonDocument.Parse(doc.MetadataJson);
-                    if (jsonDoc.RootElement.TryGetProperty("document_intelligence", out var intelElem))
+                    var envelope = JsonSerializer.Deserialize<QcMetadataEnvelope>(doc.MetadataJson, QcMetadataJsonOptions);
+                    report = envelope?.DocumentIntelligence;
+                    if (!string.IsNullOrWhiteSpace(envelope?.AssignedCra))
                     {
-                        report = JsonSerializer.Deserialize<DocumentIntelligenceReport>(intelElem.GetRawText())!;
-                    }
-                    else
-                    {
-                        report = EtmfClassificationEngine.PerformClassification(
-                            doc.Id, doc.Filename, doc.MimeType, doc.Content, doc.ArtifactType, clock.UtcNow, doc.ContentChecksum);
+                        assignedCra = envelope.AssignedCra;
                     }
                 }
-                else
+                catch (JsonException)
                 {
-                    report = EtmfClassificationEngine.PerformClassification(
-                        doc.Id, doc.Filename, doc.MimeType, doc.Content, doc.ArtifactType, clock.UtcNow, doc.ContentChecksum);
+                    report = null;
                 }
             }
-            catch
-            {
-                report = EtmfClassificationEngine.PerformClassification(
-                    doc.Id, doc.Filename, doc.MimeType, doc.Content, doc.ArtifactType, clock.UtcNow, doc.ContentChecksum);
-            }
+
+            report ??= EtmfClassificationEngine.PerformClassification(
+                doc.Id, doc.Filename, doc.MimeType, doc.FallbackContent, doc.ArtifactType, clock.UtcNow, doc.ContentChecksum);
 
             return new CraqcStagingItem(
                 DocumentId: doc.Id,
-                StudyId: doc.StudyId,
-                SiteId: doc.SiteId,
+                StudyId: doc.StudyCode,
+                SiteId: doc.SiteCode,
                 Filename: doc.Filename,
                 Status: doc.Status,
                 IntelligenceReport: report,
                 StagedAt: new DateTimeOffset(doc.CreatedAt, TimeSpan.Zero),
                 StagedBy: doc.CreatedBy,
-                QcAssignedTo: null,
+                QcAssignedTo: assignedCra,
                 DiscrepancyNotes: report.ConfidenceTier == "LOW" ? ["Low classification confidence score"] : []
             );
         }).ToList();

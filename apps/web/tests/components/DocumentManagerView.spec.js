@@ -192,15 +192,11 @@ describe("DocumentManagerView.vue Component Integration Tests", () => {
     expect(wrapper.vm.inspectedDoc.status).toBe("TECHNICAL_QC");
     expect(useToastStore().toasts.some((t) => t.tone === "error")).toBe(true);
 
-    // Subsequent 200 OK updates status from backend response
-    vi.mocked(etmfService.getDocuments).mockResolvedValueOnce([
-      {
-        ...store.documentsList[0],
-        status: "APPROVED",
-      },
-    ]);
+    // Subsequent 200 OK reconciles status directly from submitQcReview response without re-fetching documents
+    vi.mocked(etmfService.getDocuments).mockClear();
     await wrapper.find("#btn-accept-ai-classification").trigger("click");
     await flushPromises();
+    expect(etmfService.getDocuments).not.toHaveBeenCalled();
     expect(store.documentsList[0].status).toBe("APPROVED");
     expect(wrapper.vm.inspectedDoc.status).toBe("APPROVED");
   });

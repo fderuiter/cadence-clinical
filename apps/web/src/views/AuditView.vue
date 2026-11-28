@@ -1774,6 +1774,20 @@ async function previewDocument(doc) {
     previewDoc.value = doc;
     previewContent.value = "Loading secure watermarked content...";
 
+    if (doc?.id && typeof etmfService.getDocumentById === "function") {
+      try {
+        const detail = await etmfService.getDocumentById(doc.id);
+        if (detail && typeof detail === "object") {
+          previewDoc.value = {
+            ...doc,
+            ...detail,
+          };
+        }
+      } catch {
+        // Summary fields stay available if single-document detail lookup is unavailable.
+      }
+    }
+
     // Fetch watermarked preview content using auth helper
     const url = auditorService.getWatermarkedDownloadUrl(doc.id);
     const token = authStore.token || authStore.accessToken;

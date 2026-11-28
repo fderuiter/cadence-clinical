@@ -286,6 +286,7 @@ export const useEtmfStore = defineStore("etmf", {
     selectedArtifactId: null,
     /** @type {EtmfDocumentRecord[]} */
     documentsList: [],
+    documentsFetchEpoch: 0,
     /** @type {EtmfDocumentRecord | null} */
     activeDocument: null,
     isUploading: false,
@@ -891,6 +892,7 @@ export const useEtmfStore = defineStore("etmf", {
       if (artifactId !== undefined) {
         this.selectedArtifactId = artifactId;
       }
+      this.documentsFetchEpoch += 1;
       this.scopeForbiddenGuidance = "";
       this.documentsError = "";
       const authStore = useAuthStore();
@@ -938,12 +940,17 @@ export const useEtmfStore = defineStore("etmf", {
         if (this.currentSiteId) {
           queryParams.site_id = this.currentSiteId;
         }
+        if (this.selectedArtifactId) {
+          queryParams.artifact_code = this.selectedArtifactId;
+        }
 
         const allDocs = await etmfService.getDocuments(queryParams);
 
         if (this.selectedArtifactId) {
           this.documentsList = (allDocs || []).filter(
-            (doc) => doc.artifact_code === this.selectedArtifactId
+            (doc) =>
+              !doc?.artifact_code ||
+              doc.artifact_code === this.selectedArtifactId
           );
         } else {
           this.documentsList = allDocs || [];
@@ -1084,13 +1091,9 @@ export const useEtmfStore = defineStore("etmf", {
               "demo_documents",
               JSON.stringify(allDocs)
             );
-          } else {
-            this.documentsList.push(newDoc);
           }
 
-          if (this.selectedArtifactId) {
-            await this.fetchDocuments(this.selectedArtifactId);
-          }
+          this.reconcileDocument(newDoc);
 
           return {
             status: "success",
@@ -1100,9 +1103,25 @@ export const useEtmfStore = defineStore("etmf", {
         }
 
         const res = await etmfService.ingestDocument(body, { changeReason });
-
-        if (this.selectedArtifactId !== undefined) {
-          await this.fetchDocuments(this.selectedArtifactId);
+        const docId = res?.id || res?.document_id || res?.documentId;
+        if (docId) {
+          this.reconcileDocument(res, {
+            fallbackId: docId,
+            defaults: {
+              study_id: body.study_id,
+              site_id: body.site_id,
+              zone: body.zone,
+              section: body.section,
+              artifact_code: body.artifact_code,
+              artifact_type: body.artifact_type,
+              filename: body.filename,
+              mime_type: body.mime_type,
+              version_index: res?.version_index ?? 1,
+              status: res?.status || "DRAFT",
+              approval_status: res?.approval_status || res?.status || "DRAFT",
+              reason_for_change: changeReason,
+            },
+          });
         }
         return res;
       } finally {
@@ -1110,6 +1129,10 @@ export const useEtmfStore = defineStore("etmf", {
       }
     },
 
+    /**
+     * @param {string} docId
+     * @param {{ reason_for_change?: string, assigned_cra?: string | null }} [options]
+     */
     async submitDraftForQc(
       docId,
       { reason_for_change, assigned_cra = null } = {}
@@ -1130,8 +1153,40 @@ export const useEtmfStore = defineStore("etmf", {
           },
           { changeReason: reason_for_change }
         );
-        await this.fetchDocuments(this.selectedArtifactId);
-        await this.fetchQcQueue(this.currentStudyId, this.currentSiteId);
+        const nextStatus = res?.status || "TECHNICAL_QC";
+        const reconciledDoc = this.reconcileDocument(
+          {
+            ...(res && typeof res === "object" ? res : {}),
+            status: nextStatus,
+            approval_status: res?.approval_status || nextStatus,
+            reason_for_change: res?.reason_for_change || reason_for_change,
+          },
+          { fallbackId: docId, insertIfMissing: false }
+        );
+        if (nextStatus === "TECHNICAL_QC") {
+          const report =
+            reconciledDoc?.metadata_json?.document_intelligence ||
+            buildLocalIntelligenceReport(
+              reconciledDoc?.filename || "document.pdf",
+              "",
+              reconciledDoc?.mime_type || "application/pdf"
+            );
+          this.reconcileQcQueueItem({
+            document_id: docId,
+            study_id: reconciledDoc?.study_id || this.currentStudyId,
+            site_id: reconciledDoc?.site_id ?? (this.currentSiteId || null),
+            filename: reconciledDoc?.filename || "document.pdf",
+            status: "TECHNICAL_QC",
+            intelligence_report: report,
+            staged_at: reconciledDoc?.created_at || "",
+            staged_by: reconciledDoc?.created_by || "",
+            qc_assigned_to: assigned_cra || null,
+            discrepancy_notes:
+              report?.confidence_tier === "LOW"
+                ? ["Low classification confidence score"]
+                : [],
+          });
+        }
         return res;
       } catch (err) {
         if (!offlineDemo || isMocked) {
@@ -1142,6 +1197,28 @@ export const useEtmfStore = defineStore("etmf", {
           doc.status = "TECHNICAL_QC";
           doc.approval_status = "TECHNICAL_QC";
           doc.reason_for_change = reason_for_change;
+          const report =
+            doc.metadata_json?.document_intelligence ||
+            buildLocalIntelligenceReport(
+              doc.filename,
+              doc.content,
+              doc.mime_type
+            );
+          this.reconcileQcQueueItem({
+            document_id: doc.id,
+            study_id: doc.study_id || this.currentStudyId,
+            site_id: doc.site_id ?? (this.currentSiteId || null),
+            filename: doc.filename,
+            status: "TECHNICAL_QC",
+            intelligence_report: report,
+            staged_at: doc.created_at || "",
+            staged_by: doc.created_by || "",
+            qc_assigned_to: assigned_cra || null,
+            discrepancy_notes:
+              report.confidence_tier === "LOW"
+                ? ["Low classification confidence score"]
+                : [],
+          });
         }
         return doc || { id: docId, status: "TECHNICAL_QC" };
       }
@@ -1177,6 +1254,10 @@ export const useEtmfStore = defineStore("etmf", {
       const authStore = useAuthStore();
       const offlineDemo =
         isDemoBuild() && authStore.isDemoMode && !authStore.token;
+      const isMocked =
+        etmfService.stageQcDocument &&
+        (etmfService.stageQcDocument._isMockFunction ||
+          typeof etmfService.stageQcDocument.mock === "object");
       const scopedPayload = {
         ...payload,
         study_id: payload.study_id || payload.studyId || this.currentStudyId,
@@ -1185,10 +1266,45 @@ export const useEtmfStore = defineStore("etmf", {
       };
       try {
         const result = await etmfService.stageQcDocument(scopedPayload);
-        await this.fetchQcQueue(scopedPayload.study_id, scopedPayload.site_id);
+        const docId = result?.document_id || result?.documentId || result?.id;
+        if (docId) {
+          this.reconcileQcQueueItem(result);
+          const primary = result?.intelligence_report?.primary_classification;
+          this.reconcileDocument(
+            {
+              id: docId,
+              study_id:
+                result.study_id ||
+                scopedPayload.study_id ||
+                this.currentStudyId,
+              site_id: result.site_id ?? scopedPayload.site_id ?? null,
+              zone: primary?.zone ?? 1,
+              section: primary?.section ?? "01.01",
+              artifact_code: primary?.artifact_code ?? "",
+              artifact_type: primary?.artifact_type ?? "",
+              filename: result.filename || scopedPayload.filename,
+              mime_type:
+                result?.intelligence_report?.mime_type ||
+                scopedPayload.mime_type ||
+                "application/pdf",
+              content_checksum:
+                result?.intelligence_report?.sha256_hash || null,
+              created_at: result.staged_at || "",
+              created_by: result.staged_by || "",
+              version_index: 1,
+              status: result.status || "TECHNICAL_QC",
+              approval_status: result.status || "TECHNICAL_QC",
+              reason_for_change:
+                scopedPayload.reason_for_change ||
+                scopedPayload.reasonForChange ||
+                "",
+            },
+            { fallbackId: docId }
+          );
+        }
         return result;
       } catch (err) {
-        if (!offlineDemo) {
+        if (!offlineDemo || isMocked) {
           throw err;
         }
         // Fallback for offline demo builds only
@@ -1247,8 +1363,39 @@ export const useEtmfStore = defineStore("etmf", {
       const authStore = useAuthStore();
       const offlineDemo =
         isDemoBuild() && authStore.isDemoMode && !authStore.token;
+      const isMocked =
+        etmfService.getQcQueue &&
+        (etmfService.getQcQueue._isMockFunction ||
+          typeof etmfService.getQcQueue.mock === "object");
       if (typeof etmfService.getQcQueue !== "function") {
         this.qcQueue = [];
+        return this.qcQueue;
+      }
+      const deriveDemoQcQueue = () =>
+        this.documentsList
+          .filter((d) => d.status === "TECHNICAL_QC")
+          .map((d) => {
+            const report =
+              d.metadata_json?.document_intelligence ||
+              buildLocalIntelligenceReport(d.filename, d.content, d.mime_type);
+            return {
+              document_id: d.id,
+              study_id: d.study_id,
+              site_id: d.site_id,
+              filename: d.filename,
+              status: d.status,
+              intelligence_report: report,
+              staged_at: d.created_at,
+              staged_by: d.created_by,
+              qc_assigned_to: null,
+              discrepancy_notes:
+                report.confidence_tier === "LOW"
+                  ? ["Low classification confidence score"]
+                  : [],
+            };
+          });
+      if (offlineDemo && !isMocked) {
+        this.qcQueue = deriveDemoQcQueue();
         return this.qcQueue;
       }
       try {
@@ -1271,45 +1418,31 @@ export const useEtmfStore = defineStore("etmf", {
           }
           throw err;
         }
-        // Fallback: derive from documentsList in offline demo state only
-        this.qcQueue = this.documentsList
-          .filter((d) => d.status === "TECHNICAL_QC")
-          .map((d) => {
-            const report =
-              d.metadata_json?.document_intelligence ||
-              buildLocalIntelligenceReport(d.filename, d.content, d.mime_type);
-            return {
-              document_id: d.id,
-              study_id: d.study_id,
-              site_id: d.site_id,
-              filename: d.filename,
-              status: d.status,
-              intelligence_report: report,
-              staged_at: d.created_at,
-              staged_by: d.created_by,
-              qc_assigned_to: null,
-              discrepancy_notes:
-                report.confidence_tier === "LOW"
-                  ? ["Low classification confidence score"]
-                  : [],
-            };
-          });
+        this.qcQueue = deriveDemoQcQueue();
         return this.qcQueue;
       }
     },
 
+    /**
+     * @param {string} docId
+     * @param {{ decision?: string, reason_for_change?: string, override_artifact_code?: string, discrepancy_comment?: string }} [payload]
+     */
     async reviewQcDocument(
       docId,
       {
         decision,
         reason_for_change,
-        override_artifact_code,
-        discrepancy_comment,
-      }
+        override_artifact_code = undefined,
+        discrepancy_comment = undefined,
+      } = {}
     ) {
       const authStore = useAuthStore();
       const offlineDemo =
         isDemoBuild() && authStore.isDemoMode && !authStore.token;
+      const isMocked =
+        etmfService.submitQcReview &&
+        (etmfService.submitQcReview._isMockFunction ||
+          typeof etmfService.submitQcReview.mock === "object");
       try {
         const res = await etmfService.submitQcReview(docId, {
           decision,
@@ -1317,11 +1450,73 @@ export const useEtmfStore = defineStore("etmf", {
           override_artifact_code,
           discrepancy_comment,
         });
-        await this.fetchQcQueue(this.currentStudyId);
-        await this.fetchDocuments(this.selectedArtifactId);
+        const upperDecision = String(decision || "").toUpperCase();
+        const fallbackStatus =
+          upperDecision === "REJECT"
+            ? "REJECTED"
+            : upperDecision === "ACCEPT" || upperDecision === "OVERRIDE"
+              ? "APPROVED"
+              : undefined;
+        const nextStatus = res?.status || fallbackStatus;
+        const queuedItem = this.qcQueue.find((i) => i.document_id === docId);
+        const hadInList = this.documentsList.some((d) => d.id === docId);
+        if (!nextStatus || nextStatus !== "TECHNICAL_QC") {
+          this.removeQcQueueItem(docId);
+        }
+        const patch = {
+          ...(res &&
+          typeof res === "object" &&
+          !("success" in res && Object.keys(res).length === 1)
+            ? res
+            : {}),
+        };
+        if (nextStatus) {
+          patch.status = nextStatus;
+          patch.approval_status = res?.approval_status || nextStatus;
+        }
+        if (reason_for_change && !patch.reason_for_change) {
+          patch.reason_for_change = reason_for_change;
+        }
+        if (
+          upperDecision === "OVERRIDE" &&
+          override_artifact_code &&
+          !patch.artifact_code
+        ) {
+          patch.artifact_code = override_artifact_code;
+          const targetNode = this.folderLookup?.[override_artifact_code];
+          if (targetNode) {
+            patch.artifact_type = targetNode.name || patch.artifact_type;
+          }
+        }
+        this.reconcileDocument(patch, {
+          fallbackId: docId,
+          insertIfMissing: Boolean(res?.id || queuedItem || hadInList),
+          defaults: queuedItem
+            ? {
+                study_id: queuedItem.study_id,
+                site_id: queuedItem.site_id,
+                filename: queuedItem.filename,
+                zone:
+                  queuedItem.intelligence_report?.primary_classification
+                    ?.zone ?? 1,
+                section:
+                  queuedItem.intelligence_report?.primary_classification
+                    ?.section ?? "01.01",
+                artifact_code:
+                  queuedItem.intelligence_report?.primary_classification
+                    ?.artifact_code ?? "",
+                artifact_type:
+                  queuedItem.intelligence_report?.primary_classification
+                    ?.artifact_type ?? "",
+                created_at: queuedItem.staged_at,
+                created_by: queuedItem.staged_by,
+                version_index: 1,
+              }
+            : undefined,
+        });
         return res;
       } catch (err) {
-        if (!offlineDemo) {
+        if (!offlineDemo || isMocked) {
           throw err;
         }
         // Fallback for offline demo state only
@@ -1345,8 +1540,9 @@ export const useEtmfStore = defineStore("etmf", {
     },
 
     async batchAcceptClassifications(docIds, reasonForChange) {
+      const ids = [...docIds];
       const results = [];
-      for (const id of docIds) {
+      for (const id of ids) {
         const res = await this.reviewQcDocument(id, {
           decision: "ACCEPT",
           reason_for_change: reasonForChange,
@@ -1354,6 +1550,115 @@ export const useEtmfStore = defineStore("etmf", {
         results.push(res);
       }
       return results;
+    },
+
+    reconcileDocument(partialDoc, options = {}) {
+      const docId =
+        partialDoc?.id ||
+        partialDoc?.document_id ||
+        partialDoc?.documentId ||
+        options.fallbackId;
+      if (!docId) return partialDoc;
+
+      const idx = this.documentsList.findIndex((d) => d.id === docId);
+      const existing = idx >= 0 ? this.documentsList[idx] : null;
+      const merged = {
+        ...(options.defaults || {}),
+        ...(existing || {}),
+        ...(partialDoc && typeof partialDoc === "object" ? partialDoc : {}),
+        id: docId,
+      };
+      if (merged.status && !merged.approval_status) {
+        merged.approval_status = merged.status;
+      }
+
+      const matchesActiveFolder =
+        !this.selectedArtifactId ||
+        !merged.artifact_code ||
+        merged.artifact_code === this.selectedArtifactId;
+
+      if (!matchesActiveFolder) {
+        if (idx >= 0) {
+          this.documentsList.splice(idx, 1);
+          const selIdx = this.selectedDocumentIds.indexOf(docId);
+          if (selIdx >= 0) {
+            this.selectedDocumentIds.splice(selIdx, 1);
+          }
+        }
+        return merged;
+      }
+
+      if (idx >= 0) {
+        this.documentsList.splice(idx, 1, merged);
+      } else if (options.insertIfMissing !== false) {
+        this.documentsList.push(merged);
+      }
+      return merged;
+    },
+
+    reconcileQcQueueItem(stagingItem) {
+      const docId =
+        stagingItem?.document_id || stagingItem?.documentId || stagingItem?.id;
+      if (!docId) return stagingItem;
+      const idx = this.qcQueue.findIndex((item) => item.document_id === docId);
+      const merged = {
+        ...(idx >= 0 ? this.qcQueue[idx] : {}),
+        ...stagingItem,
+        document_id: docId,
+      };
+      if (idx >= 0) {
+        this.qcQueue.splice(idx, 1, merged);
+      } else {
+        this.qcQueue.unshift(merged);
+      }
+      return merged;
+    },
+
+    removeQcQueueItem(docId) {
+      if (!docId) return;
+      this.qcQueue = this.qcQueue.filter((item) => item.document_id !== docId);
+    },
+
+    async fetchDocumentDetail(docOrId) {
+      const docId =
+        typeof docOrId === "string"
+          ? docOrId
+          : docOrId?.id || docOrId?.document_id || docOrId?.documentId;
+      const baseDoc =
+        typeof docOrId === "object" && docOrId !== null ? docOrId : null;
+      const existing = docId
+        ? this.documentsList.find((d) => d.id === docId) || null
+        : null;
+      if (!docId || typeof etmfService.getDocumentById !== "function") {
+        return existing ? { ...existing, ...(baseDoc || {}) } : baseDoc;
+      }
+
+      const authStore = useAuthStore();
+      const isMocked =
+        etmfService.getDocumentById._isMockFunction ||
+        typeof etmfService.getDocumentById.mock === "object";
+      const offlineDemo =
+        isDemoBuild() && authStore.isDemoMode && !authStore.token && !isMocked;
+      if (offlineDemo) {
+        return existing ? { ...existing, ...(baseDoc || {}) } : baseDoc;
+      }
+
+      const detail = await etmfService.getDocumentById(docId);
+      if (detail && typeof detail === "object") {
+        const idx = this.documentsList.findIndex((d) => d.id === docId);
+        if (idx >= 0) {
+          this.documentsList.splice(idx, 1, {
+            ...this.documentsList[idx],
+            ...detail,
+          });
+        }
+        return {
+          ...(existing || {}),
+          ...(baseDoc || {}),
+          ...detail,
+        };
+      }
+      return existing ? { ...existing, ...(baseDoc || {}) } : baseDoc;
     },
 
     toggleExportDrawer(open) {

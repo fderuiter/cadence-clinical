@@ -769,10 +769,10 @@ public class EtmfExportTests
         var download = await EtmfExportEndpoints.DownloadExportJob("JOB-B", exportService, Caller("STUDY-A"), ct);
         var unassigned = await EtmfDocumentEndpoints.GetDocuments(null, null, docService, Caller(), ct);
 
-        documents.Should().BeOfType<Ok<List<TmfDocument>>>().Which.Value!.Select(d => d.Id).Should().Equal("DOC-A");
+        documents.Should().BeOfType<Ok<List<TmfDocumentSummaryDto>>>().Which.Value!.Select(d => d.Id).Should().Equal("DOC-A");
         other.GetType().Name.Should().StartWith("NotFound");
         download.GetType().Name.Should().StartWith("NotFound");
-        unassigned.Should().BeOfType<Ok<List<TmfDocument>>>().Which.Value.Should().BeEmpty();
+        unassigned.Should().BeOfType<Ok<List<TmfDocumentSummaryDto>>>().Which.Value.Should().BeEmpty();
     }
 
     [Fact]

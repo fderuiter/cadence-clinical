@@ -10,6 +10,8 @@ export interface EtmfDocumentParams {
   study_id?: string;
   site_id?: string;
   zone?: string;
+  section?: string;
+  artifact_code?: string;
   search?: string;
 }
 
@@ -183,26 +185,38 @@ function normalizeIntelligenceReport(raw: unknown) {
   };
 }
 
+function parseJsonIfString(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
 function normalizeTmfDocument<T>(raw: T): T {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
   const d = raw as Record<string, unknown>;
   if (
     !("studyId" in d) &&
+    !("studyCode" in d) &&
+    !("siteCode" in d) &&
     !("artifactCode" in d) &&
     !("createdAt" in d) &&
     !("contentChecksum" in d) &&
-    !("objectKey" in d)
+    !("objectKey" in d) &&
+    !("metadataJson" in d) &&
+    !("signatureManifestation" in d) &&
+    !("redactionManifestJson" in d) &&
+    !("isRedacted" in d) &&
+    !("documentOwnerId" in d) &&
+    typeof d.metadata_json !== "string" &&
+    typeof d.signature_manifestation !== "string" &&
+    typeof d.redaction_manifest_json !== "string"
   ) {
     return raw;
   }
-  let parsedMeta = d.metadata_json ?? d.metadataJson ?? null;
-  if (typeof parsedMeta === "string") {
-    try {
-      parsedMeta = JSON.parse(parsedMeta);
-    } catch {
-      // leave string if non-JSON
-    }
-  }
+  let parsedMeta = parseJsonIfString(d.metadata_json ?? d.metadataJson ?? null);
   if (
     parsedMeta &&
     typeof parsedMeta === "object" &&
@@ -216,11 +230,17 @@ function normalizeTmfDocument<T>(raw: T): T {
       ),
     };
   }
+  const parsedSignature = parseJsonIfString(
+    d.signature_manifestation ?? d.signatureManifestation ?? null
+  );
+  const parsedRedaction = parseJsonIfString(
+    d.redaction_manifest_json ?? d.redactionManifestJson ?? null
+  );
   return {
     ...d,
     id: d.id,
-    study_id: d.study_id ?? d.studyId ?? "",
-    site_id: d.site_id ?? d.siteId ?? null,
+    study_id: d.study_id ?? d.studyCode ?? d.studyId ?? "",
+    site_id: d.site_id ?? d.siteCode ?? d.siteId ?? null,
     zone: d.zone,
     section: d.section,
     artifact_code: d.artifact_code ?? d.artifactCode ?? "",
@@ -233,12 +253,15 @@ function normalizeTmfDocument<T>(raw: T): T {
     created_by: d.created_by ?? d.createdBy ?? "",
     version_index: d.version_index ?? d.versionIndex ?? 1,
     status: d.status,
-    approval_status: d.approval_status ?? d.status,
+    approval_status: d.approval_status ?? d.approvalStatus ?? d.status,
     reason_for_change: d.reason_for_change ?? d.reasonForChange ?? "",
     signer: d.signer ?? null,
     signing_timestamp: d.signing_timestamp ?? d.signingTimestamp ?? null,
-    signature_manifestation:
-      d.signature_manifestation ?? d.signatureManifestation ?? null,
+    is_redacted: Boolean(d.is_redacted ?? d.isRedacted ?? false),
+    document_owner_id: d.document_owner_id ?? d.documentOwnerId ?? null,
+    redaction_source_id: d.redaction_source_id ?? d.redactionSourceId ?? null,
+    signature_manifestation: parsedSignature,
+    redaction_manifest_json: parsedRedaction,
     metadata_json: parsedMeta,
   } as unknown as T;
 }
@@ -339,7 +362,13 @@ export const etmfService = {
     params: EtmfDocumentParams = {},
     options: Record<string, unknown> = {}
   ) {
-    const query: { study_id?: string; site_id?: string; zone?: number } = {};
+    const query: {
+      study_id?: string;
+      site_id?: string;
+      zone?: number;
+      artifact_code?: string;
+      section?: string;
+    } = {};
     if (params.study_id) {
       query.study_id = params.study_id;
     }
@@ -352,6 +381,12 @@ export const etmfService = {
         query.zone = parsedZone;
       }
     }
+    if (params.artifact_code) {
+      query.artifact_code = params.artifact_code;
+    }
+    if (params.section) {
+      query.section = params.section;
+    }
     const data: unknown = await unwrapResponse(
       etmfClient.GET("/api/v1/etmf/documents", {
         params: Object.keys(query).length > 0 ? { query } : {},
@@ -361,6 +396,19 @@ export const etmfService = {
     return Array.isArray(data)
       ? data.map((doc: unknown) => normalizeTmfDocument(doc))
       : data;
+  },
+
+  async getDocumentById(
+    documentId: string,
+    options: Record<string, unknown> = {}
+  ) {
+    const data = await unwrapResponse(
+      etmfClient.GET("/api/v1/etmf/documents/{document_id}", {
+        params: { path: { document_id: documentId } },
+        ...options,
+      })
+    );
+    return normalizeTmfDocument(data);
   },
 
   async downloadDocumentContent(

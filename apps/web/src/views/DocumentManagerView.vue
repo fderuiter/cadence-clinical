@@ -764,17 +764,41 @@ function handleArtifactSelect(artifactCode) {
   etmfStore.fetchDocuments(artifactCode);
 }
 
+async function hydrateDocumentForOverlay(doc, targetRef) {
+  if (!doc) return;
+  const docId = doc.id || doc.document_id || doc.documentId;
+  if (!docId || typeof etmfStore.fetchDocumentDetail !== "function") return;
+  try {
+    const detail = await etmfStore.fetchDocumentDetail(doc);
+    const currentId =
+      targetRef.value?.id ||
+      targetRef.value?.document_id ||
+      targetRef.value?.documentId;
+    if (detail && currentId === docId) {
+      targetRef.value = {
+        ...targetRef.value,
+        ...detail,
+      };
+    }
+  } catch {
+    // Summary metadata stays visible if single-document detail lookup fails.
+  }
+}
+
 function handlePreviewDocument(doc) {
   selectedDoc.value = doc;
+  void hydrateDocumentForOverlay(doc, selectedDoc);
 }
 
 function handleInspectDocument(doc) {
   qcReviewError.value = "";
   inspectedDoc.value = doc;
+  void hydrateDocumentForOverlay(doc, inspectedDoc);
 }
 
 function handlePreviewFromDrawer(doc) {
   selectedDoc.value = doc;
+  void hydrateDocumentForOverlay(doc, selectedDoc);
 }
 
 function getDocSha256(doc) {
@@ -1006,9 +1030,14 @@ onMounted(async () => {
     return;
   }
 
+  const fetchEpochAtMount = etmfStore.documentsFetchEpoch;
   await etmfStore.fetchBinderTree(initialStudy || undefined);
 
-  if (initialStudy && etmfStore.documentsList.length === 0) {
+  if (
+    initialStudy &&
+    etmfStore.documentsFetchEpoch === fetchEpochAtMount &&
+    (etmfStore.documentsList.length === 0 || etmfStore.documentsFetchEpoch > 0)
+  ) {
     await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
   }
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,8 +19,14 @@ public static class EtmfDocumentEndpoints
         var group = routes.MapGroup("/api/v1/etmf")
             .WithTags("EtmfIntelligenceEndpoints");
 
-        group.MapGet("/documents", GetDocuments).RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
-        group.MapGet("/documents/{document_id}", GetDocumentById).RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
+        group.MapGet("/documents", GetDocuments)
+            .Produces<List<TmfDocumentSummaryDto>>(StatusCodes.Status200OK)
+            .RequirePermission("etmf_document:read")
+            .RequireCallerStudyAndSiteScope();
+        group.MapGet("/documents/{document_id}", GetDocumentById)
+            .Produces<TmfDocumentDetailDto>(StatusCodes.Status200OK)
+            .RequirePermission("etmf_document:read")
+            .RequireCallerStudyAndSiteScope();
         group.MapGet("/documents/{document_id}/content", DownloadDocumentContent).RequirePermission("etmf_document:read").RequireCallerStudyAndSiteScope();
         group.MapPost("/documents/{document_id}/submit-qc", SubmitDocumentForQc).RequirePermission("etmf_document:create").RequireCallerStudyAndSiteScope();
         group.MapPatch("/documents/{document_id}/taxonomy", UpdateDocumentTaxonomy).RequirePermission("etmf_document:tag").RequireCallerStudyAndSiteScope();
@@ -34,8 +41,10 @@ public static class EtmfDocumentEndpoints
         [FromServices] IEtmfDocumentService documentService,
         HttpContext httpContext,
         CancellationToken ct,
-        [FromQuery] string? site_id = null) =>
-        documentService.GetDocumentsAsync(study_id, zone, site_id, httpContext, ct);
+        [FromQuery] string? site_id = null,
+        [FromQuery] string? artifact_code = null,
+        [FromQuery] string? section = null) =>
+        documentService.GetDocumentsAsync(study_id, zone, site_id, httpContext, ct, artifact_code, section);
 
     public static Task<IResult> GetDocumentById(
         [FromRoute] string document_id,

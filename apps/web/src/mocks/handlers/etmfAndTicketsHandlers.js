@@ -26,9 +26,100 @@ export function createEtmfAndTicketsHandlers(store) {
         ],
       })
     ),
-    http.get("*/api/v1/etmf/documents", () =>
-      HttpResponse.json(store.state.etmfDocuments)
+    http.get("*/api/v1/etmf/documents", ({ request }) => {
+      const url = new URL(request.url);
+      const studyId = url.searchParams.get("study_id");
+      const siteId = url.searchParams.get("site_id");
+      const zoneParam = url.searchParams.get("zone");
+      const sectionParam = url.searchParams.get("section");
+      const artifactCode = url.searchParams.get("artifact_code");
+
+      const filtered = (store.state.etmfDocuments || []).filter((doc) => {
+        if (studyId && doc.study_id && doc.study_id !== studyId) return false;
+        if (siteId && doc.site_id !== siteId) return false;
+        if (zoneParam && String(doc.zone) !== String(parseInt(zoneParam, 10))) {
+          return false;
+        }
+        if (sectionParam && doc.section !== sectionParam) return false;
+        if (artifactCode && doc.artifact_code !== artifactCode) return false;
+        return true;
+      });
+
+      const summaries = filtered.map((doc) => {
+        const summary = { ...doc };
+        delete summary.content;
+        delete summary.metadata_json;
+        delete summary.metadataJson;
+        delete summary.signature_manifestation;
+        delete summary.signatureManifestation;
+        delete summary.redaction_manifest_json;
+        delete summary.redactionManifestJson;
+        return summary;
+      });
+
+      return HttpResponse.json(summaries);
+    }),
+    http.get("*/api/v1/etmf/documents/:documentId/content", ({ params }) => {
+      const docId = decodeURIComponent(String(params.documentId));
+      const found = (store.state.etmfDocuments || []).find(
+        (doc) => doc.id === docId
+      );
+      if (!found) {
+        return HttpResponse.json(
+          { error: `Document '${docId}' not found.` },
+          { status: 404 }
+        );
+      }
+      return new HttpResponse(
+        found.content || `%PDF-1.4 mock binary stream for ${docId}`,
+        {
+          status: 200,
+          headers: {
+            "Content-Type": found.mime_type || "application/pdf",
+            "X-Content-SHA256": found.content_checksum || "0".repeat(64),
+          },
+        }
+      );
+    }),
+    http.post(
+      "*/api/v1/etmf/documents/:documentId/submit-qc",
+      async ({ params, request }) => {
+        const docId = decodeURIComponent(String(params.documentId));
+        const body = await readJsonBody(request);
+        const found = (store.state.etmfDocuments || []).find(
+          (doc) => doc.id === docId
+        );
+        if (!found) {
+          return HttpResponse.json(
+            { error: `Document '${docId}' not found.` },
+            { status: 404 }
+          );
+        }
+        found.status = "TECHNICAL_QC";
+        found.approval_status = "TECHNICAL_QC";
+        found.reason_for_change =
+          body?.reasonForChange ||
+          body?.reason_for_change ||
+          decodeReasonHeader(request) ||
+          found.reason_for_change;
+        return HttpResponse.json({ ...found });
+      }
     ),
+    http.get("*/api/v1/etmf/documents/:documentId", ({ params }) => {
+      const docId = decodeURIComponent(String(params.documentId));
+      const found = (store.state.etmfDocuments || []).find(
+        (doc) => doc.id === docId
+      );
+      if (!found) {
+        return HttpResponse.json(
+          { error: `Document '${docId}' not found.` },
+          { status: 404 }
+        );
+      }
+      const detail = { ...found };
+      delete detail.content;
+      return HttpResponse.json(detail);
+    }),
     http.get(
       "*/api/v1/etmf/documents/:documentId/watermark",
       ({ params }) =>
