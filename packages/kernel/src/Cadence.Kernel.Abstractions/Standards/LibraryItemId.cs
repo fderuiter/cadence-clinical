@@ -10,8 +10,8 @@ namespace Cadence.Kernel.Standards;
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for one version of a governed Metadata Registry (MDR) library item (spec §6.3).
 /// </summary>
-[TypeConverter(typeof(LibraryItemIdTypeConverter))]
-[JsonConverter(typeof(LibraryItemIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<LibraryItemId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<LibraryItemId>))]
 public readonly record struct LibraryItemId(Guid Value) : IEntityId<LibraryItemId>
 {
     public static LibraryItemId New() => new(Guid.CreateVersion7());
@@ -34,62 +34,28 @@ public readonly record struct LibraryItemId(Guid Value) : IEntityId<LibraryItemI
 
     public int CompareTo(LibraryItemId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        LibraryItemId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(LibraryItemId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(LibraryItemId left, LibraryItemId right) => left.CompareTo(right) < 0;
     public static bool operator <=(LibraryItemId left, LibraryItemId right) => left.CompareTo(right) <= 0;
     public static bool operator >(LibraryItemId left, LibraryItemId right) => left.CompareTo(right) > 0;
     public static bool operator >=(LibraryItemId left, LibraryItemId right) => left.CompareTo(right) >= 0;
 
-    public static LibraryItemId Parse(string s) => Parse(s, null);
+    public static LibraryItemId Parse(string s) => EntityIdOperations.Parse<LibraryItemId>(s);
 
-    public static LibraryItemId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new LibraryItemId(Guid.Parse(s, provider));
-    }
+    public static LibraryItemId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<LibraryItemId>(s, provider);
 
-    public static LibraryItemId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static LibraryItemId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<LibraryItemId>(s);
 
-    public static LibraryItemId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static LibraryItemId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<LibraryItemId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out LibraryItemId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out LibraryItemId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out LibraryItemId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out LibraryItemId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out LibraryItemId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new LibraryItemId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out LibraryItemId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out LibraryItemId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new LibraryItemId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out LibraryItemId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class LibraryItemIdTypeConverter : EntityIdTypeConverter<LibraryItemId>;
-
-public sealed class LibraryItemIdJsonConverter : EntityIdJsonConverter<LibraryItemId>;

@@ -9,63 +9,13 @@ public static partial class DocIndexSyncService
     public static List<string> ValidateMarkdownTableLines(IReadOnlyList<string> lines, string displayPath)
     {
         var errors = new List<string>();
-        char fenceChar = '\0';
-        int fenceLen = 0;
-        bool inHtmlComment = false;
+        var scan = new MarkdownTableScanState();
         bool inTable = false;
 
         for (int i = 0; i < lines.Count; i++)
         {
-            string rawLine = lines[i].TrimEnd('\r');
-            string trimmed = rawLine.Trim();
-
-            if (TryMatchFenceLine(rawLine, out char markerChar, out int markerLen, out bool hasInfo))
+            if (!scan.TryReadCandidateTableRow(lines[i], ref inTable, out string trimmed))
             {
-                if (fenceChar == '\0')
-                {
-                    fenceChar = markerChar;
-                    fenceLen = markerLen;
-                    inTable = false;
-                    continue;
-                }
-
-                if (markerChar == fenceChar && markerLen >= fenceLen && !hasInfo)
-                {
-                    fenceChar = '\0';
-                    fenceLen = 0;
-                    continue;
-                }
-            }
-
-            if (fenceChar != '\0')
-            {
-                continue;
-            }
-
-            if (inHtmlComment)
-            {
-                if (trimmed.Contains("-->", StringComparison.Ordinal))
-                {
-                    inHtmlComment = false;
-                }
-
-                continue;
-            }
-
-            if (trimmed.StartsWith("<!--", StringComparison.Ordinal) && !trimmed.StartsWith('|'))
-            {
-                if (!trimmed.Contains("-->", StringComparison.Ordinal))
-                {
-                    inHtmlComment = true;
-                }
-
-                inTable = false;
-                continue;
-            }
-
-            if (!IsPipeTableRowCandidate(trimmed))
-            {
-                inTable = false;
                 continue;
             }
 
@@ -103,68 +53,21 @@ public static partial class DocIndexSyncService
     public static List<string> ValidateTableRowSorting(IReadOnlyList<string> lines, string displayPath)
     {
         var errors = new List<string>();
-        char fenceChar = '\0';
-        int fenceLen = 0;
-        bool inHtmlComment = false;
+        var scan = new MarkdownTableScanState();
         bool inTable = false;
         int tableRowIndex = 0;
         string? prevSortKey = null;
 
         for (int i = 0; i < lines.Count; i++)
         {
-            string rawLine = lines[i].TrimEnd('\r');
-            string trimmed = rawLine.Trim();
-
-            if (TryMatchFenceLine(rawLine, out char markerChar, out int markerLen, out bool hasInfo))
+            bool wasInTable = inTable;
+            if (!scan.TryReadCandidateTableRow(lines[i], ref inTable, out string trimmed))
             {
-                if (fenceChar == '\0')
+                if (wasInTable && !inTable)
                 {
-                    fenceChar = markerChar;
-                    fenceLen = markerLen;
-                    inTable = false;
                     prevSortKey = null;
-                    continue;
                 }
 
-                if (markerChar == fenceChar && markerLen >= fenceLen && !hasInfo)
-                {
-                    fenceChar = '\0';
-                    fenceLen = 0;
-                    continue;
-                }
-            }
-
-            if (fenceChar != '\0')
-            {
-                continue;
-            }
-
-            if (inHtmlComment)
-            {
-                if (trimmed.Contains("-->", StringComparison.Ordinal))
-                {
-                    inHtmlComment = false;
-                }
-
-                continue;
-            }
-
-            if (trimmed.StartsWith("<!--", StringComparison.Ordinal) && !trimmed.StartsWith('|'))
-            {
-                if (!trimmed.Contains("-->", StringComparison.Ordinal))
-                {
-                    inHtmlComment = true;
-                }
-
-                inTable = false;
-                prevSortKey = null;
-                continue;
-            }
-
-            if (!IsPipeTableRowCandidate(trimmed))
-            {
-                inTable = false;
-                prevSortKey = null;
                 continue;
             }
 
@@ -202,6 +105,71 @@ public static partial class DocIndexSyncService
         }
 
         return errors;
+    }
+
+    private struct MarkdownTableScanState
+    {
+        private char _fenceChar;
+        private int _fenceLen;
+        private bool _inHtmlComment;
+
+        public bool TryReadCandidateTableRow(string line, ref bool inTable, out string trimmed)
+        {
+            string rawLine = line.TrimEnd('\r');
+            trimmed = rawLine.Trim();
+
+            if (TryMatchFenceLine(rawLine, out char markerChar, out int markerLen, out bool hasInfo))
+            {
+                if (_fenceChar == '\0')
+                {
+                    _fenceChar = markerChar;
+                    _fenceLen = markerLen;
+                    inTable = false;
+                    return false;
+                }
+
+                if (markerChar == _fenceChar && markerLen >= _fenceLen && !hasInfo)
+                {
+                    _fenceChar = '\0';
+                    _fenceLen = 0;
+                    return false;
+                }
+            }
+
+            if (_fenceChar != '\0')
+            {
+                return false;
+            }
+
+            if (_inHtmlComment)
+            {
+                if (trimmed.Contains("-->", StringComparison.Ordinal))
+                {
+                    _inHtmlComment = false;
+                }
+
+                return false;
+            }
+
+            if (trimmed.StartsWith("<!--", StringComparison.Ordinal) && !trimmed.StartsWith('|'))
+            {
+                if (!trimmed.Contains("-->", StringComparison.Ordinal))
+                {
+                    _inHtmlComment = true;
+                }
+
+                inTable = false;
+                return false;
+            }
+
+            if (!IsPipeTableRowCandidate(trimmed))
+            {
+                inTable = false;
+                return false;
+            }
+
+            return true;
+        }
     }
 
     private static List<string> FindForbiddenPerAdrRowsInHub(IReadOnlyList<string> hubLines)

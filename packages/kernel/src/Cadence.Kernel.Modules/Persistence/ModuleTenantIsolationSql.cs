@@ -1,5 +1,4 @@
-using System;
-using System.Text.RegularExpressions;
+using Cadence.Kernel.Sql;
 
 namespace Cadence.Kernel.Modules;
 
@@ -9,40 +8,23 @@ namespace Cadence.Kernel.Modules;
 /// <c>tenant_id</c> equals <c>kernel.current_tenant_id()</c>, the tenant the kernel sets on the command's connection.
 /// A module migration calls <see cref="EnableForTenantColumn"/> for each table it creates.
 /// </summary>
-public static partial class ModuleTenantIsolationSql
+public static class ModuleTenantIsolationSql
 {
     /// <summary>The policy name, the same as on kernel tables.</summary>
-    public const string IsolationPolicy = "tenant_isolation";
+    public const string IsolationPolicy = PostgresTenantRlsSql.IsolationPolicy;
 
     /// <summary>
     /// The session setting the kernel function reads: the same one the kernel's connections set. Module contexts made by
     /// <see cref="IModuleTenantContextFactory{TContext}"/> set it the same way.
     /// </summary>
-    public const string TenantSetting = "cadence.tenant_id";
+    public const string TenantSetting = PostgresTenantRlsSql.TenantSetting;
 
     /// <summary>The kernel function that returns the connection's tenant, or <c>NULL</c> when none is set.</summary>
-    public const string CurrentTenantFunction = "kernel.current_tenant_id()";
+    public const string CurrentTenantFunction = PostgresTenantRlsSql.KernelCurrentTenantExpression;
 
     /// <summary>Enables and forces RLS on <paramref name="schema"/>.<paramref name="table"/>, keyed by its <c>tenant_id</c> column.</summary>
     /// <param name="schema">The module's schema, lower snake case.</param>
     /// <param name="table">The table, lower snake case.</param>
-    public static string EnableForTenantColumn(string schema, string table)
-    {
-        var qualified = $"{Quote(schema)}.{Quote(table)}";
-        return $"""
-            ALTER TABLE {qualified} ENABLE ROW LEVEL SECURITY;
-            ALTER TABLE {qualified} FORCE ROW LEVEL SECURITY;
-            CREATE POLICY {IsolationPolicy} ON {qualified}
-                USING (tenant_id = {CurrentTenantFunction})
-                WITH CHECK (tenant_id = {CurrentTenantFunction});
-            """;
-    }
-
-    private static string Quote(string identifier) =>
-        identifier is not null && SafeIdentifier().IsMatch(identifier)
-            ? $"\"{identifier}\""
-            : throw new ArgumentException($"'{identifier}' is not a lower-case snake_case identifier.", nameof(identifier));
-
-    [GeneratedRegex("^[a-z_][a-z0-9_]{0,62}$", RegexOptions.CultureInvariant)]
-    private static partial Regex SafeIdentifier();
+    public static string EnableForTenantColumn(string schema, string table) =>
+        PostgresTenantRlsSql.EnableForTenantColumnSql(schema, table, CurrentTenantFunction);
 }

@@ -10,8 +10,8 @@ namespace Cadence.Kernel.Validation;
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for one validation run (spec §10.3): one evaluation of rule packs at one stage.
 /// </summary>
-[TypeConverter(typeof(ValidationRunIdTypeConverter))]
-[JsonConverter(typeof(ValidationRunIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<ValidationRunId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<ValidationRunId>))]
 public readonly record struct ValidationRunId(Guid Value) : IEntityId<ValidationRunId>
 {
     public static ValidationRunId New() => new(Guid.CreateVersion7());
@@ -34,62 +34,28 @@ public readonly record struct ValidationRunId(Guid Value) : IEntityId<Validation
 
     public int CompareTo(ValidationRunId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        ValidationRunId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(ValidationRunId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(ValidationRunId left, ValidationRunId right) => left.CompareTo(right) < 0;
     public static bool operator <=(ValidationRunId left, ValidationRunId right) => left.CompareTo(right) <= 0;
     public static bool operator >(ValidationRunId left, ValidationRunId right) => left.CompareTo(right) > 0;
     public static bool operator >=(ValidationRunId left, ValidationRunId right) => left.CompareTo(right) >= 0;
 
-    public static ValidationRunId Parse(string s) => Parse(s, null);
+    public static ValidationRunId Parse(string s) => EntityIdOperations.Parse<ValidationRunId>(s);
 
-    public static ValidationRunId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new ValidationRunId(Guid.Parse(s, provider));
-    }
+    public static ValidationRunId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<ValidationRunId>(s, provider);
 
-    public static ValidationRunId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static ValidationRunId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<ValidationRunId>(s);
 
-    public static ValidationRunId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static ValidationRunId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<ValidationRunId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out ValidationRunId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out ValidationRunId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out ValidationRunId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out ValidationRunId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out ValidationRunId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new ValidationRunId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out ValidationRunId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out ValidationRunId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new ValidationRunId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out ValidationRunId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class ValidationRunIdTypeConverter : EntityIdTypeConverter<ValidationRunId>;
-
-public sealed class ValidationRunIdJsonConverter : EntityIdJsonConverter<ValidationRunId>;

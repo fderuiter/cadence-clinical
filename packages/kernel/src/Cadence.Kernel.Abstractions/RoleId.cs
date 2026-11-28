@@ -11,8 +11,8 @@ namespace Cadence.Kernel;
 /// Strongly-typed UUIDv7 identifier for a Role: a tenant's named bundle of capabilities, an administrative
 /// convenience for issuing grants (spec §9.3).
 /// </summary>
-[TypeConverter(typeof(RoleIdTypeConverter))]
-[JsonConverter(typeof(RoleIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<RoleId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<RoleId>))]
 public readonly record struct RoleId(Guid Value) : IEntityId<RoleId>
 {
     public static RoleId New() => new(Guid.CreateVersion7());
@@ -35,62 +35,28 @@ public readonly record struct RoleId(Guid Value) : IEntityId<RoleId>
 
     public int CompareTo(RoleId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        RoleId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(RoleId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(RoleId left, RoleId right) => left.CompareTo(right) < 0;
     public static bool operator <=(RoleId left, RoleId right) => left.CompareTo(right) <= 0;
     public static bool operator >(RoleId left, RoleId right) => left.CompareTo(right) > 0;
     public static bool operator >=(RoleId left, RoleId right) => left.CompareTo(right) >= 0;
 
-    public static RoleId Parse(string s) => Parse(s, null);
+    public static RoleId Parse(string s) => EntityIdOperations.Parse<RoleId>(s);
 
-    public static RoleId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new RoleId(Guid.Parse(s, provider));
-    }
+    public static RoleId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<RoleId>(s, provider);
 
-    public static RoleId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static RoleId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<RoleId>(s);
 
-    public static RoleId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static RoleId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<RoleId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out RoleId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out RoleId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out RoleId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out RoleId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out RoleId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new RoleId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out RoleId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out RoleId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new RoleId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out RoleId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class RoleIdTypeConverter : EntityIdTypeConverter<RoleId>;
-
-public sealed class RoleIdJsonConverter : EntityIdJsonConverter<RoleId>;

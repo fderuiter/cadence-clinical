@@ -313,64 +313,50 @@ internal sealed partial class HttpKeycloakOnboardingClient(
         }
     }
 
-    private async Task AppendUserStudyScopeAsync(
+    private Task AppendUserStudyScopeAsync(
         string baseUrl,
         string realm,
         string accessToken,
         string subjectId,
         string? tenantCode,
         string studyCode,
-        CancellationToken cancellationToken)
-    {
-        string userUrl = $"{baseUrl}/admin/realms/{Uri.EscapeDataString(realm)}/users/{Uri.EscapeDataString(subjectId)}";
-        using var getRequest = Authorized(HttpMethod.Get, userUrl, accessToken);
-        using var getResponse = await httpClient.SendAsync(getRequest, cancellationToken).ConfigureAwait(false);
-        if (!getResponse.IsSuccessStatusCode)
-        {
-            throw new KeycloakOnboardingException($"Keycloak user lookup returned HTTP {(int)getResponse.StatusCode}.");
-        }
+        CancellationToken cancellationToken) =>
+        AppendUserScopeAttributeAsync(
+            baseUrl,
+            realm,
+            accessToken,
+            subjectId,
+            tenantCode,
+            attributeKey: "study_ids",
+            scopeValue: studyCode,
+            cancellationToken);
 
-        if (JsonNode.Parse(await getResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false)) is not JsonObject user)
-        {
-            throw new KeycloakOnboardingException("Keycloak user representation was invalid JSON.");
-        }
-
-        if (user["attributes"] is not JsonObject attributes)
-        {
-            attributes = new JsonObject();
-            user["attributes"] = attributes;
-        }
-
-        var existingTenants = ReadAttributeStrings(attributes, "tenant_id");
-        if (existingTenants.Count > 0 && !string.IsNullOrWhiteSpace(tenantCode)
-            && !existingTenants.Any(t => string.Equals(t, tenantCode.Trim(), StringComparison.Ordinal)))
-        {
-            return;
-        }
-
-        if (existingTenants.Count == 0 && !string.IsNullOrWhiteSpace(tenantCode))
-        {
-            attributes["tenant_id"] = new JsonArray(tenantCode.Trim());
-        }
-
-        var mergedStudies = MergeExplicitScopeValues(ReadAttributeStrings(attributes, "study_ids"), [studyCode]);
-        WriteOrRemoveScopeAttribute(attributes, "study_ids", mergedStudies);
-
-        using var putRequest = AuthorizedJson(HttpMethod.Put, userUrl, accessToken, user);
-        using var putResponse = await httpClient.SendAsync(putRequest, cancellationToken).ConfigureAwait(false);
-        if (!putResponse.IsSuccessStatusCode)
-        {
-            throw new KeycloakOnboardingException($"Keycloak user attribute update returned HTTP {(int)putResponse.StatusCode}.");
-        }
-    }
-
-    private async Task AppendUserSiteScopeAsync(
+    private Task AppendUserSiteScopeAsync(
         string baseUrl,
         string realm,
         string accessToken,
         string subjectId,
         string? tenantCode,
         string siteCode,
+        CancellationToken cancellationToken) =>
+        AppendUserScopeAttributeAsync(
+            baseUrl,
+            realm,
+            accessToken,
+            subjectId,
+            tenantCode,
+            attributeKey: "site_id",
+            scopeValue: siteCode,
+            cancellationToken);
+
+    private async Task AppendUserScopeAttributeAsync(
+        string baseUrl,
+        string realm,
+        string accessToken,
+        string subjectId,
+        string? tenantCode,
+        string attributeKey,
+        string scopeValue,
         CancellationToken cancellationToken)
     {
         string userUrl = $"{baseUrl}/admin/realms/{Uri.EscapeDataString(realm)}/users/{Uri.EscapeDataString(subjectId)}";
@@ -404,8 +390,8 @@ internal sealed partial class HttpKeycloakOnboardingClient(
             attributes["tenant_id"] = new JsonArray(tenantCode.Trim());
         }
 
-        var mergedSites = MergeExplicitScopeValues(ReadAttributeStrings(attributes, "site_id"), [siteCode]);
-        WriteOrRemoveScopeAttribute(attributes, "site_id", mergedSites);
+        var mergedValues = MergeExplicitScopeValues(ReadAttributeStrings(attributes, attributeKey), [scopeValue]);
+        WriteOrRemoveScopeAttribute(attributes, attributeKey, mergedValues);
 
         using var putRequest = AuthorizedJson(HttpMethod.Put, userUrl, accessToken, user);
         using var putResponse = await httpClient.SendAsync(putRequest, cancellationToken).ConfigureAwait(false);

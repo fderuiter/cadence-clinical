@@ -465,41 +465,16 @@ public sealed class SubjectApplicationService(
     public async Task<Result<SubjectListResponse>> ListAsync(string? studyId, string? siteId, string? status, int? limit,
         int? offset, CancellationToken ct, IReadOnlyCollection<string>? allowedSiteIds = null, string? query = null)
     {
-        if (string.IsNullOrWhiteSpace(studyId))
+        if (TryParseSubjectScope(
+                studyId,
+                siteId,
+                allowedSiteIds,
+                "study_id is required to list subjects.",
+                out var studyCode,
+                out var siteCode,
+                out var allowedSites) is { } scopeError)
         {
-            return DomainError.Validation("STUDY_ID_REQUIRED", "study_id is required to list subjects.");
-        }
-
-        StudyCode studyCode;
-        try
-        {
-            studyCode = new StudyCode(studyId);
-        }
-        catch (ArgumentException ex)
-        {
-            return DomainError.Validation("INVALID_STUDY_CODE", ex.Message);
-        }
-
-        SiteCode? siteCode = null;
-        if (!string.IsNullOrWhiteSpace(siteId))
-        {
-            try
-            {
-                siteCode = new SiteCode(siteId);
-            }
-            catch (ArgumentException ex)
-            {
-                return DomainError.Validation("INVALID_SITE_CODE", ex.Message);
-            }
-        }
-
-        IReadOnlyCollection<SiteCode>? allowedSites = null;
-        if (siteCode is null && allowedSiteIds is not null)
-        {
-            allowedSites = allowedSiteIds
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .Select(s => new SiteCode(s.Trim()))
-                .ToList();
+            return scopeError;
         }
 
         SubjectState? state = null;
@@ -542,41 +517,16 @@ public sealed class SubjectApplicationService(
         CancellationToken ct,
         IReadOnlyCollection<string>? allowedSiteIds = null)
     {
-        if (string.IsNullOrWhiteSpace(studyId))
+        if (TryParseSubjectScope(
+                studyId,
+                siteId,
+                allowedSiteIds,
+                "study_id is required to count subjects.",
+                out var studyCode,
+                out var siteCode,
+                out var allowedSites) is { } scopeError)
         {
-            return DomainError.Validation("STUDY_ID_REQUIRED", "study_id is required to count subjects.");
-        }
-
-        StudyCode studyCode;
-        try
-        {
-            studyCode = new StudyCode(studyId);
-        }
-        catch (ArgumentException ex)
-        {
-            return DomainError.Validation("INVALID_STUDY_CODE", ex.Message);
-        }
-
-        SiteCode? siteCode = null;
-        if (!string.IsNullOrWhiteSpace(siteId))
-        {
-            try
-            {
-                siteCode = new SiteCode(siteId);
-            }
-            catch (ArgumentException ex)
-            {
-                return DomainError.Validation("INVALID_SITE_CODE", ex.Message);
-            }
-        }
-
-        IReadOnlyCollection<SiteCode>? allowedSites = null;
-        if (siteCode is null && allowedSiteIds is not null)
-        {
-            allowedSites = allowedSiteIds
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .Select(s => new SiteCode(s.Trim()))
-                .ToList();
+            return scopeError;
         }
 
         var grouped = await subjects
@@ -592,6 +542,56 @@ public sealed class SubjectApplicationService(
         }
 
         return new SubjectCountsResponse(total, counts);
+    }
+
+    private static DomainError? TryParseSubjectScope(
+        string? studyId,
+        string? siteId,
+        IReadOnlyCollection<string>? allowedSiteIds,
+        string missingStudyMessage,
+        out StudyCode studyCode,
+        out SiteCode? siteCode,
+        out IReadOnlyCollection<SiteCode>? allowedSites)
+    {
+        studyCode = default!;
+        siteCode = null;
+        allowedSites = null;
+
+        if (string.IsNullOrWhiteSpace(studyId))
+        {
+            return DomainError.Validation("STUDY_ID_REQUIRED", missingStudyMessage);
+        }
+
+        try
+        {
+            studyCode = new StudyCode(studyId);
+        }
+        catch (ArgumentException ex)
+        {
+            return DomainError.Validation("INVALID_STUDY_CODE", ex.Message);
+        }
+
+        if (!string.IsNullOrWhiteSpace(siteId))
+        {
+            try
+            {
+                siteCode = new SiteCode(siteId);
+            }
+            catch (ArgumentException ex)
+            {
+                return DomainError.Validation("INVALID_SITE_CODE", ex.Message);
+            }
+        }
+
+        if (siteCode is null && allowedSiteIds is not null)
+        {
+            allowedSites = allowedSiteIds
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => new SiteCode(s.Trim()))
+                .ToList();
+        }
+
+        return null;
     }
 
     /// <inheritdoc />

@@ -425,7 +425,7 @@ public class DomainEngineUnitTests
     }
 
     [Fact]
-    public void DuplicationDetectorService_EnforcesIntraFileClonesForJsTsAndVue_WhileKeepingCsAndCssCrossFileOnly()
+    public void DuplicationDetectorService_EnforcesIntraFileClonesForCsJsTsAndVue_WhileKeepingCssCrossFileOnly()
     {
         string tempRoot = Path.Combine(Path.GetTempPath(), $"cadence-dup-intra-{Guid.NewGuid():N}");
         try
@@ -455,19 +455,53 @@ public class DomainEngineUnitTests
             File.WriteAllText(singleCss, $":root {{\n{cssLines}\n}}\n[data-theme=\"dark\"] {{\n{cssLines}\n}}\n");
             DuplicationDetectorService.DetectDuplication([singleCss], tempRoot, preCommit: true).Should().Be(0);
 
-            string singleCs = Path.Combine(execDir, "IntraAllowed.cs");
+            string singleCs = Path.Combine(execDir, "IntraClone.cs");
             string csLines = string.Join("\n", Enumerable.Range(1, 16).Select(i => $"        int acc{i} = input + {i};"));
             File.WriteAllText(
                 singleCs,
-                $"namespace Probe;\npublic static class IntraAllowed {{\n    public static int First(int input) {{\n{csLines}\n        return acc16;\n    }}\n" +
+                $"namespace Probe;\npublic static class IntraClone {{\n    public static int First(int input) {{\n{csLines}\n        return acc16;\n    }}\n" +
                 $"    public static int Second(int input) {{\n{csLines}\n        return acc16;\n    }}\n}}\n");
-            DuplicationDetectorService.DetectDuplication([singleCs], tempRoot, preCommit: true).Should().Be(0);
+            DuplicationDetectorService.DetectDuplication([singleCs], tempRoot, preCommit: false).Should().Be(1);
+
+            var summary = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(tempRoot, "duplication_summary.json")))!;
+            var firstDup = summary["duplicates"]!.AsArray()[0]!;
+            firstDup["loc1"]!["file"]!.GetValue<string>().Should().Be("apps/execution/src/IntraClone.cs");
+            firstDup["loc2"]!["file"]!.GetValue<string>().Should().Be("apps/execution/src/IntraClone.cs");
+            firstDup["loc1"]!["start"]!.GetValue<int>().Should().BeLessThan(firstDup["loc2"]!["start"]!.GetValue<int>());
+
+            string shortCs = Path.Combine(execDir, "IntraShort.cs");
+            string shortLines = string.Join("\n", Enumerable.Range(1, 10).Select(i => $"        int acc{i} = input + {i};"));
+            File.WriteAllText(
+                shortCs,
+                $"namespace Probe;\npublic static class IntraShort {{\n    public static int First(int input) {{\n{shortLines}\n        return acc10;\n    }}\n" +
+                $"    public static int Second(int input) {{\n{shortLines}\n        return acc10;\n    }}\n}}\n");
+            DuplicationDetectorService.DetectDuplication([shortCs], tempRoot, preCommit: true).Should().Be(0);
         }
         finally
         {
             if (Directory.Exists(tempRoot))
             {
                 Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void DuplicationDetectorService_DetectsZeroClonesAcrossRepository_WithoutBaselineFile()
+    {
+        string repoRoot = FindRepoRoot();
+        string summaryPath = Path.Combine(repoRoot, "duplication_summary.json");
+        bool hadSummary = File.Exists(summaryPath);
+        try
+        {
+            File.Exists(Path.Combine(repoRoot, DuplicationDetectorService.BaselineFileName)).Should().BeFalse();
+            DuplicationDetectorService.DetectDuplication(repoRoot: repoRoot, preCommit: false).Should().Be(0);
+        }
+        finally
+        {
+            if (!hadSummary && File.Exists(summaryPath))
+            {
+                File.Delete(summaryPath);
             }
         }
     }

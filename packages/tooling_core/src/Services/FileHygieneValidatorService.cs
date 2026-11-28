@@ -17,32 +17,15 @@ public static class FileHygieneValidatorService
         string[]? targetFiles = null,
         string? repoRoot = null,
         bool preCommit = false,
-        GitIndexReader? indexReader = null)
-    {
-        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
-        if (targetFiles is { Length: 0 })
-        {
-            return 0;
-        }
-
-        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
-        using (ownedReader)
-        {
-            var files = ResolveCandidateFiles(repoRoot, targetFiles, preCommit, reader);
-            if (files.Count == 0)
+        GitIndexReader? indexReader = null) =>
+        RunTextHygieneValidation(
+            targetFiles,
+            repoRoot,
+            preCommit,
+            indexReader,
+            headerMessage: "[TRAILING WHITESPACE] Violations detected:",
+            inspectFile: static (relPath, text, errors) =>
             {
-                return 0;
-            }
-
-            var errors = new List<string>();
-            foreach (var (fullPath, relPath) in files)
-            {
-                string? text = WorkspacePrimitives.TryReadUtf8Text(fullPath, relPath, reader, rejectBinaryNullBytes: true);
-                if (text is null || text.Length == 0)
-                {
-                    continue;
-                }
-
                 string[] lines = text.Split('\n');
                 for (int i = 0; i < lines.Length; i++)
                 {
@@ -57,33 +40,34 @@ public static class FileHygieneValidatorService
                         errors.Add($"{relPath}:{i + 1}: Trailing whitespace.");
                     }
                 }
-            }
-
-            if (errors.Count > 0)
-            {
-                Console.WriteLine("[TRAILING WHITESPACE] Violations detected:");
-                foreach (string error in errors.Take(50))
-                {
-                    Console.WriteLine($"  - {error}");
-                }
-
-                if (errors.Count > 50)
-                {
-                    Console.WriteLine($"  ... and {errors.Count - 50} more.");
-                }
-
-                return 1;
-            }
-
-            return 0;
-        }
-    }
+            });
 
     public static int ValidateEndOfFileNewline(
         string[]? targetFiles = null,
         string? repoRoot = null,
         bool preCommit = false,
-        GitIndexReader? indexReader = null)
+        GitIndexReader? indexReader = null) =>
+        RunTextHygieneValidation(
+            targetFiles,
+            repoRoot,
+            preCommit,
+            indexReader,
+            headerMessage: "[EOF NEWLINE] Files missing a final newline:",
+            inspectFile: static (relPath, text, errors) =>
+            {
+                if (!text.EndsWith('\n'))
+                {
+                    errors.Add($"{relPath}: File does not end with a newline.");
+                }
+            });
+
+    private static int RunTextHygieneValidation(
+        string[]? targetFiles,
+        string? repoRoot,
+        bool preCommit,
+        GitIndexReader? indexReader,
+        string headerMessage,
+        Action<string, string, List<string>> inspectFile)
     {
         repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         if (targetFiles is { Length: 0 })
@@ -104,34 +88,31 @@ public static class FileHygieneValidatorService
             foreach (var (fullPath, relPath) in files)
             {
                 string? text = WorkspacePrimitives.TryReadUtf8Text(fullPath, relPath, reader, rejectBinaryNullBytes: true);
-                if (text is null || text.Length == 0)
+                if (string.IsNullOrEmpty(text))
                 {
                     continue;
                 }
 
-                if (!text.EndsWith('\n'))
-                {
-                    errors.Add($"{relPath}: File does not end with a newline.");
-                }
+                inspectFile(relPath, text, errors);
             }
 
-            if (errors.Count > 0)
+            if (errors.Count == 0)
             {
-                Console.WriteLine("[EOF NEWLINE] Files missing a final newline:");
-                foreach (string error in errors.Take(50))
-                {
-                    Console.WriteLine($"  - {error}");
-                }
-
-                if (errors.Count > 50)
-                {
-                    Console.WriteLine($"  ... and {errors.Count - 50} more.");
-                }
-
-                return 1;
+                return 0;
             }
 
-            return 0;
+            Console.WriteLine(headerMessage);
+            foreach (string error in errors.Take(50))
+            {
+                Console.WriteLine($"  - {error}");
+            }
+
+            if (errors.Count > 50)
+            {
+                Console.WriteLine($"  ... and {errors.Count - 50} more.");
+            }
+
+            return 1;
         }
     }
 

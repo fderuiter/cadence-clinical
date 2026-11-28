@@ -1,9 +1,10 @@
 using System;
-using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Cadence.Kernel.Sql;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -75,57 +76,25 @@ internal sealed class ModuleTenantContextFactory<TContext>(
 /// <summary>Sets one tenant on every connection a module read context opens, and clears it on close (K-ID-2).</summary>
 internal sealed class ModuleTenantConnectionInterceptor(TenantId tenant) : DbConnectionInterceptor
 {
-    private const string SetTenantSql = $"SELECT pg_catalog.set_config('{ModuleTenantIsolationSql.TenantSetting}', @tenant, false)";
-
-    public override void ConnectionOpened(DbConnection connection, ConnectionEndEventData eventData)
-    {
-        ArgumentNullException.ThrowIfNull(connection);
-        using var command = SetTenantCommand(connection, tenant.Value.ToString());
-        command.ExecuteNonQuery();
-    }
+    public override void ConnectionOpened(DbConnection connection, ConnectionEndEventData eventData) =>
+        PostgresTenantSession.ExecuteSetTenant(connection, tenant.Value.ToString());
 
     public override async Task ConnectionOpenedAsync(
-        DbConnection connection, ConnectionEndEventData eventData, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(connection);
-        await using var command = SetTenantCommand(connection, tenant.Value.ToString());
-        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-    }
+        DbConnection connection, ConnectionEndEventData eventData, CancellationToken cancellationToken = default) =>
+        await PostgresTenantSession.ExecuteSetTenantAsync(connection, tenant.Value.ToString(), cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
 
     public override InterceptionResult ConnectionClosing(
         DbConnection connection, ConnectionEventData eventData, InterceptionResult result)
     {
-        ArgumentNullException.ThrowIfNull(connection);
-        if (connection.State == ConnectionState.Open)
-        {
-            using var command = SetTenantCommand(connection, string.Empty);
-            command.ExecuteNonQuery();
-        }
-
+        PostgresTenantSession.ResetTenantIfOpen(connection);
         return result;
     }
 
     public override async ValueTask<InterceptionResult> ConnectionClosingAsync(
         DbConnection connection, ConnectionEventData eventData, InterceptionResult result)
     {
-        ArgumentNullException.ThrowIfNull(connection);
-        if (connection.State == ConnectionState.Open)
-        {
-            await using var command = SetTenantCommand(connection, string.Empty);
-            await command.ExecuteNonQueryAsync().ConfigureAwait(false);
-        }
-
+        await PostgresTenantSession.ResetTenantIfOpenAsync(connection).ConfigureAwait(false);
         return result;
-    }
-
-    private static DbCommand SetTenantCommand(DbConnection connection, string value)
-    {
-        var command = connection.CreateCommand();
-        command.CommandText = SetTenantSql;
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = "tenant";
-        parameter.Value = value;
-        command.Parameters.Add(parameter);
-        return command;
     }
 }

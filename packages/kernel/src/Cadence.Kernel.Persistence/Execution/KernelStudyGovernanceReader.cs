@@ -167,15 +167,7 @@ internal sealed class KernelStudyGovernanceReader(KernelTenantDbContextFactory c
         return [.. siteRows.Select(row =>
         {
             var deciding = EffectivityResolution.EffectiveAt(effectivities, row.Id, row.Country, validAt, knownAt);
-            var effectiveVersions = deciding
-                .Select(e => new EffectiveVersion(
-                    e.ProtocolVersionId,
-                    versionNumbers.GetValueOrDefault(e.ProtocolVersionId),
-                    e.Id,
-                    e.ScopeLevel))
-                .OrderByDescending(v => v.Number)
-                .ToList();
-            return new StudySiteGovernanceSummary(
+            return BuildStudySiteSummary(
                 row.Id,
                 row.StudyId,
                 row.SiteId,
@@ -183,7 +175,8 @@ internal sealed class KernelStudyGovernanceReader(KernelTenantDbContextFactory c
                 row.Name,
                 row.Country,
                 row.Status,
-                effectiveVersions);
+                deciding,
+                versionNumbers);
         })];
     }
 
@@ -231,6 +224,29 @@ internal sealed class KernelStudyGovernanceReader(KernelTenantDbContextFactory c
                 .ConfigureAwait(false)
             : [];
 
+        return BuildStudySiteSummary(
+            row.Id,
+            row.StudyId,
+            row.SiteId,
+            row.Code,
+            row.Name,
+            row.Country,
+            row.Status,
+            deciding,
+            versionNumbers);
+    }
+
+    private static StudySiteGovernanceSummary BuildStudySiteSummary(
+        StudySiteId id,
+        StudyId studyId,
+        SiteId siteId,
+        string code,
+        string name,
+        string country,
+        string status,
+        IEnumerable<Effectivity> deciding,
+        IReadOnlyDictionary<ProtocolVersionId, int> versionNumbers)
+    {
         var effectiveVersions = deciding
             .Select(e => new EffectiveVersion(
                 e.ProtocolVersionId,
@@ -239,15 +255,14 @@ internal sealed class KernelStudyGovernanceReader(KernelTenantDbContextFactory c
                 e.ScopeLevel))
             .OrderByDescending(v => v.Number)
             .ToList();
-
         return new StudySiteGovernanceSummary(
-            row.Id,
-            row.StudyId,
-            row.SiteId,
-            row.Code,
-            row.Name,
-            row.Country,
-            row.Status,
+            id,
+            studyId,
+            siteId,
+            code,
+            name,
+            country,
+            status,
             effectiveVersions);
     }
 

@@ -10,8 +10,8 @@ namespace Cadence.Kernel;
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for a Participant (pseudonymous clinical trial subject across EDC, eCOA, RTSM).
 /// </summary>
-[TypeConverter(typeof(ParticipantIdTypeConverter))]
-[JsonConverter(typeof(ParticipantIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<ParticipantId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<ParticipantId>))]
 public readonly record struct ParticipantId(Guid Value) : IEntityId<ParticipantId>
 {
     public static ParticipantId New() => new(Guid.CreateVersion7());
@@ -34,62 +34,28 @@ public readonly record struct ParticipantId(Guid Value) : IEntityId<ParticipantI
 
     public int CompareTo(ParticipantId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        ParticipantId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(ParticipantId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(ParticipantId left, ParticipantId right) => left.CompareTo(right) < 0;
     public static bool operator <=(ParticipantId left, ParticipantId right) => left.CompareTo(right) <= 0;
     public static bool operator >(ParticipantId left, ParticipantId right) => left.CompareTo(right) > 0;
     public static bool operator >=(ParticipantId left, ParticipantId right) => left.CompareTo(right) >= 0;
 
-    public static ParticipantId Parse(string s) => Parse(s, null);
+    public static ParticipantId Parse(string s) => EntityIdOperations.Parse<ParticipantId>(s);
 
-    public static ParticipantId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new ParticipantId(Guid.Parse(s, provider));
-    }
+    public static ParticipantId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<ParticipantId>(s, provider);
 
-    public static ParticipantId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static ParticipantId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<ParticipantId>(s);
 
-    public static ParticipantId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static ParticipantId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<ParticipantId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out ParticipantId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out ParticipantId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out ParticipantId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out ParticipantId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out ParticipantId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new ParticipantId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out ParticipantId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out ParticipantId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new ParticipantId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out ParticipantId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class ParticipantIdTypeConverter : EntityIdTypeConverter<ParticipantId>;
-
-public sealed class ParticipantIdJsonConverter : EntityIdJsonConverter<ParticipantId>;

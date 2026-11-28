@@ -18,11 +18,36 @@ public static partial class PermissionMatrix
     private static partial void AddExecutionGrants()
     {
         AddEdcGrants();
+        AddEcoaGrants();
         AddRandomizationGrants();
         AddLaboratoryGrants();
         AddSupplyGrants();
         AddSiteComplianceGrants();
         AddAdjudicationGrants();
+    }
+
+    /// <summary>Participant assessment schedules, diaries, and questionnaire submissions for clinical and design staff.</summary>
+    private static void AddEcoaGrants()
+    {
+        foreach (string role in new[]
+        {
+            RoleNormalization.ROLE_SYSADMIN,
+            RoleNormalization.ROLE_SPONSOR_DM,
+            RoleNormalization.ROLE_INVESTIGATOR,
+            RoleNormalization.ROLE_CRC,
+            RoleNormalization.ROLE_TRIAL_COORDINATOR,
+            RoleNormalization.ROLE_CRA_CANONICAL,
+            "monitor",
+        })
+        {
+            Grant(role, "ecoa_schedule", "create", "read");
+            Grant(role, "ecoa_diary", "create", "read", "alert");
+            Grant(role, "ecoa_submission", "create", "read");
+        }
+
+        Grant(RoleNormalization.ROLE_SPONSOR_DESIGNER, "ecoa_schedule", "create", "read");
+        Grant(RoleNormalization.ROLE_SPONSOR_DESIGNER, "ecoa_diary", "create", "read");
+        Grant(RoleNormalization.ROLE_SPONSOR_DESIGNER, "ecoa_submission", "create", "read");
     }
 
     /// <summary>Subjects, eCRF forms, observations, SDV and medical-coding synonyms.</summary>

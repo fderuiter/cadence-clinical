@@ -5,6 +5,8 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Sql;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -23,7 +25,7 @@ public sealed class StandaloneTenantConnectionInterceptor : DbConnectionIntercep
 {
     public static readonly StandaloneTenantConnectionInterceptor Instance = new();
 
-    private const string SetTenantSql = $"SELECT pg_catalog.set_config('{StandaloneTenantIsolationSql.TenantSetting}', @tenant, false)";
+    private const string SetTenantSql = PostgresTenantSession.SetTenantSql;
     private const string InvalidTenantBindingMessage =
         "K-ID-2: cannot bind standalone database connection to an empty, unknown, or inactive tenant.";
 
@@ -339,21 +341,15 @@ public sealed class StandaloneTenantConnectionInterceptor : DbConnectionIntercep
             : (string.Empty, false);
     }
 
-    private static void ExecuteSetTenant(DbConnection connection, DbTransaction? transaction, string tenant)
-    {
-        using var command = CreateSetTenantCommand(connection, transaction, tenant);
-        command.ExecuteNonQuery();
-    }
+    private static void ExecuteSetTenant(DbConnection connection, DbTransaction? transaction, string tenant) =>
+        PostgresTenantSession.ExecuteSetTenant(connection, tenant, transaction);
 
-    private static async ValueTask ExecuteSetTenantAsync(
+    private static ValueTask ExecuteSetTenantAsync(
         DbConnection connection,
         DbTransaction? transaction,
         string tenant,
-        CancellationToken cancellationToken)
-    {
-        await using var command = CreateSetTenantCommand(connection, transaction, tenant);
-        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-    }
+        CancellationToken cancellationToken) =>
+        PostgresTenantSession.ExecuteSetTenantAsync(connection, tenant, transaction, cancellationToken);
 
     private static void ResetAndCloseOnInvalidBinding(DbConnection connection)
     {
@@ -412,17 +408,5 @@ public sealed class StandaloneTenantConnectionInterceptor : DbConnectionIntercep
                 // Best-effort pool eviction when session reset fails; connection may be unpooled or already disposed.
             }
         }
-    }
-
-    private static DbCommand CreateSetTenantCommand(DbConnection connection, DbTransaction? transaction, string tenant)
-    {
-        var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = SetTenantSql;
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = "tenant";
-        parameter.Value = tenant;
-        command.Parameters.Add(parameter);
-        return command;
     }
 }

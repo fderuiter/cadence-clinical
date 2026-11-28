@@ -1,7 +1,5 @@
-using System;
-using System.Text.RegularExpressions;
-
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Sql;
 
 namespace Cadence.Modules.Execution.Infrastructure;
 
@@ -10,29 +8,17 @@ namespace Cadence.Modules.Execution.Infrastructure;
 /// host applies the module's migrations after the kernel's (<c>AddModuleMigrations</c>); a deployment that connects as
 /// the application role runs this grant after them.
 /// </summary>
-public static partial class ExecutionModuleDatabase
+public static class ExecutionModuleDatabase
 {
     /// <summary>
     /// SQL that grants <paramref name="role"/> read, insert and update on the module's tables, delete only on the used
     /// e-signature tokens (whose expired rows the token store removes), and nothing on the migration history. Re-run it after every module migration that adds a table.
     /// </summary>
     /// <param name="role">An existing lower-case role name, for example <c>cadence_app</c>.</param>
-    public static string GrantAppRoleSql(string role)
-    {
-        if (role is null || !RoleName().IsMatch(role))
-        {
-            throw new ArgumentException($"'{role}' is not a lower-case role name.", nameof(role));
-        }
-
-        const string schema = ExecutionModuleDbContext.Schema;
-        return $"""
-            GRANT USAGE ON SCHEMA "{schema}" TO "{role}";
-            GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA "{schema}" TO "{role}";
-            GRANT DELETE ON "{schema}"."consumed_signature_tokens" TO "{role}";
-            REVOKE ALL ON "{schema}"."{ModuleMigrationServiceCollectionExtensions.MigrationsHistoryTable}" FROM "{role}";
-            """;
-    }
-
-    [GeneratedRegex("^[a-z_][a-z0-9_]{0,62}$", RegexOptions.CultureInvariant)]
-    private static partial Regex RoleName();
+    public static string GrantAppRoleSql(string role) =>
+        PostgresTenantRlsSql.GrantStrictSchemaRoleSql(
+            ExecutionModuleDbContext.Schema,
+            role,
+            ModuleMigrationServiceCollectionExtensions.MigrationsHistoryTable,
+            deletableTables: ["consumed_signature_tokens"]);
 }

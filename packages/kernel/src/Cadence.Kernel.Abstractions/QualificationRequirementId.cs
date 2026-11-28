@@ -11,8 +11,8 @@ namespace Cadence.Kernel;
 /// Strongly-typed UUIDv7 identifier for a QualificationRequirement: a rule that exercising a capability within a scope
 /// needs a current qualification of a given code (spec §9.3, K-AUTH-5).
 /// </summary>
-[TypeConverter(typeof(QualificationRequirementIdTypeConverter))]
-[JsonConverter(typeof(QualificationRequirementIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<QualificationRequirementId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<QualificationRequirementId>))]
 public readonly record struct QualificationRequirementId(Guid Value) : IEntityId<QualificationRequirementId>
 {
     public static QualificationRequirementId New() => new(Guid.CreateVersion7());
@@ -35,62 +35,28 @@ public readonly record struct QualificationRequirementId(Guid Value) : IEntityId
 
     public int CompareTo(QualificationRequirementId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        QualificationRequirementId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(QualificationRequirementId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(QualificationRequirementId left, QualificationRequirementId right) => left.CompareTo(right) < 0;
     public static bool operator <=(QualificationRequirementId left, QualificationRequirementId right) => left.CompareTo(right) <= 0;
     public static bool operator >(QualificationRequirementId left, QualificationRequirementId right) => left.CompareTo(right) > 0;
     public static bool operator >=(QualificationRequirementId left, QualificationRequirementId right) => left.CompareTo(right) >= 0;
 
-    public static QualificationRequirementId Parse(string s) => Parse(s, null);
+    public static QualificationRequirementId Parse(string s) => EntityIdOperations.Parse<QualificationRequirementId>(s);
 
-    public static QualificationRequirementId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new QualificationRequirementId(Guid.Parse(s, provider));
-    }
+    public static QualificationRequirementId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<QualificationRequirementId>(s, provider);
 
-    public static QualificationRequirementId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static QualificationRequirementId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<QualificationRequirementId>(s);
 
-    public static QualificationRequirementId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static QualificationRequirementId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<QualificationRequirementId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out QualificationRequirementId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out QualificationRequirementId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out QualificationRequirementId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out QualificationRequirementId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out QualificationRequirementId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new QualificationRequirementId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out QualificationRequirementId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out QualificationRequirementId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new QualificationRequirementId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out QualificationRequirementId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class QualificationRequirementIdTypeConverter : EntityIdTypeConverter<QualificationRequirementId>;
-
-public sealed class QualificationRequirementIdJsonConverter : EntityIdJsonConverter<QualificationRequirementId>;

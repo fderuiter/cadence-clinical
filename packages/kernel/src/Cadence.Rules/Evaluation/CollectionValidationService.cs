@@ -668,67 +668,45 @@ public sealed class CollectionValidationService(
     private static Dictionary<string, RuleValue> BuildStaticOwnItemValues(
         CollectionInstanceRecord form,
         IReadOnlyDictionary<string, ObservationValue?>? draftOverlay,
-        Func<CollectionInstanceRecord, string, ObservationValue?, bool>? isBlindedVariable)
-    {
-        var recordedByItem = new Dictionary<string, ObservationValue?>(
-            form.Values.Count + (draftOverlay?.Count ?? 0),
-            StringComparer.Ordinal);
-        for (var i = 0; i < form.Values.Count; i++)
-        {
-            var recorded = form.Values[i];
-            recordedByItem[recorded.ItemId] = recorded.Value;
-        }
-
-        if (draftOverlay is not null)
-        {
-            foreach (var (itemId, draftValue) in draftOverlay)
-            {
-                recordedByItem[itemId] = draftValue;
-            }
-        }
-
-        var ownValues = new Dictionary<string, RuleValue>(form.Items.Count + recordedByItem.Count, StringComparer.Ordinal);
-        for (var i = 0; i < form.Items.Count; i++)
-        {
-            var itemId = form.Items[i].Id;
-            if (ownValues.ContainsKey(itemId))
-            {
-                continue;
-            }
-
-            recordedByItem.TryGetValue(itemId, out var raw);
-            ownValues.Add(
-                itemId,
-                isBlindedVariable is not null && isBlindedVariable(form, itemId, raw) ? RuleValue.Null : ToRuleValue(raw));
-        }
-
-        foreach (var (itemId, raw) in recordedByItem)
-        {
-            if (ownValues.ContainsKey(itemId))
-            {
-                continue;
-            }
-
-            ownValues.Add(
-                itemId,
-                isBlindedVariable is not null && isBlindedVariable(form, itemId, raw) ? RuleValue.Null : ToRuleValue(raw));
-        }
-
-        return ownValues;
-    }
+        Func<CollectionInstanceRecord, string, ObservationValue?, bool>? isBlindedVariable) =>
+        BuildStaticOwnItemValuesCore(
+            form,
+            form.Items,
+            static item => item.Id,
+            form.Values,
+            static recorded => (recorded.ItemId, recorded.Value),
+            draftOverlay,
+            isBlindedVariable);
 
     private static Dictionary<string, RuleValue> BuildStaticOwnItemValues(
         CollectionRuleInput form,
         IReadOnlyDictionary<string, ObservationValue?>? draftOverlay,
-        Func<CollectionRuleInput, string, ObservationValue?, bool>? isBlindedVariable)
+        Func<CollectionRuleInput, string, ObservationValue?, bool>? isBlindedVariable) =>
+        BuildStaticOwnItemValuesCore(
+            form,
+            form.Items,
+            static item => item.Id,
+            form.Values,
+            static recorded => (recorded.ItemId, recorded.Value),
+            draftOverlay,
+            isBlindedVariable);
+
+    private static Dictionary<string, RuleValue> BuildStaticOwnItemValuesCore<TForm, TItem, TRecorded>(
+        TForm form,
+        IReadOnlyList<TItem> items,
+        Func<TItem, string> readItemId,
+        IReadOnlyList<TRecorded> values,
+        Func<TRecorded, (string ItemId, ObservationValue? Value)> readRecorded,
+        IReadOnlyDictionary<string, ObservationValue?>? draftOverlay,
+        Func<TForm, string, ObservationValue?, bool>? isBlindedVariable)
     {
         var recordedByItem = new Dictionary<string, ObservationValue?>(
-            form.Values.Count + (draftOverlay?.Count ?? 0),
+            values.Count + (draftOverlay?.Count ?? 0),
             StringComparer.Ordinal);
-        for (var i = 0; i < form.Values.Count; i++)
+        for (var i = 0; i < values.Count; i++)
         {
-            var recorded = form.Values[i];
-            recordedByItem[recorded.ItemId] = recorded.Value;
+            var (recordedItemId, recordedValue) = readRecorded(values[i]);
+            recordedByItem[recordedItemId] = recordedValue;
         }
 
         if (draftOverlay is not null)
@@ -739,10 +717,10 @@ public sealed class CollectionValidationService(
             }
         }
 
-        var ownValues = new Dictionary<string, RuleValue>(form.Items.Count + recordedByItem.Count, StringComparer.Ordinal);
-        for (var i = 0; i < form.Items.Count; i++)
+        var ownValues = new Dictionary<string, RuleValue>(items.Count + recordedByItem.Count, StringComparer.Ordinal);
+        for (var i = 0; i < items.Count; i++)
         {
-            var itemId = form.Items[i].Id;
+            var itemId = readItemId(items[i]);
             if (ownValues.ContainsKey(itemId))
             {
                 continue;

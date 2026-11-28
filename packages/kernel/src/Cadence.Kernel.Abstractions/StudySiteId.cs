@@ -10,8 +10,8 @@ namespace Cadence.Kernel;
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for a StudySite (association of Study x Site with lifecycle and protocol version effectivity).
 /// </summary>
-[TypeConverter(typeof(StudySiteIdTypeConverter))]
-[JsonConverter(typeof(StudySiteIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<StudySiteId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<StudySiteId>))]
 public readonly record struct StudySiteId(Guid Value) : IEntityId<StudySiteId>
 {
     public static StudySiteId New() => new(Guid.CreateVersion7());
@@ -34,62 +34,28 @@ public readonly record struct StudySiteId(Guid Value) : IEntityId<StudySiteId>
 
     public int CompareTo(StudySiteId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        StudySiteId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(StudySiteId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(StudySiteId left, StudySiteId right) => left.CompareTo(right) < 0;
     public static bool operator <=(StudySiteId left, StudySiteId right) => left.CompareTo(right) <= 0;
     public static bool operator >(StudySiteId left, StudySiteId right) => left.CompareTo(right) > 0;
     public static bool operator >=(StudySiteId left, StudySiteId right) => left.CompareTo(right) >= 0;
 
-    public static StudySiteId Parse(string s) => Parse(s, null);
+    public static StudySiteId Parse(string s) => EntityIdOperations.Parse<StudySiteId>(s);
 
-    public static StudySiteId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new StudySiteId(Guid.Parse(s, provider));
-    }
+    public static StudySiteId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<StudySiteId>(s, provider);
 
-    public static StudySiteId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static StudySiteId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<StudySiteId>(s);
 
-    public static StudySiteId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static StudySiteId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<StudySiteId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out StudySiteId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out StudySiteId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out StudySiteId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out StudySiteId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out StudySiteId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new StudySiteId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out StudySiteId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out StudySiteId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new StudySiteId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out StudySiteId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class StudySiteIdTypeConverter : EntityIdTypeConverter<StudySiteId>;
-
-public sealed class StudySiteIdJsonConverter : EntityIdJsonConverter<StudySiteId>;

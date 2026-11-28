@@ -29,7 +29,7 @@ public static partial class DuplicationDetectorService
 
     private static readonly HashSet<string> IntraFileDuplicationExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts", ".vue",
+        ".cs", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts", ".vue",
     };
 
     public static string BaselineKey(string fileA, string fileB, string blockSha256Hex)

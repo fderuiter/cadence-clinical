@@ -391,35 +391,22 @@ public sealed class SimulationEngine(
         }
 
         var explicitBaseRef = explicitBaseItem is null ? null : NodeRefForItem(explicitBaseItem);
+        var mappingMaskedEngines = new[]
+        {
+            SimulationSpecificationDiff.MappingDiffEngine,
+            SimulationProjectionAndValidationEvaluator.MappingEngineVersion,
+        };
+        var mappingWithheldParts = new[] { DependentsPart, ProjectionChangesPart, StructuralDiffPart };
         var topLevelMask = await CheckTopLevelMaskAsync(tenant, actor, [scope, candRef, explicitBaseRef], cancellationToken).ConfigureAwait(false);
         if (topLevelMask is { } reason)
         {
-            var maskedEngines = new List<EngineVersion>
-            {
-                SimulationSpecificationDiff.MappingDiffEngine,
-                SimulationProjectionAndValidationEvaluator.MappingEngineVersion,
-            };
-            maskedEngines.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
-            IReadOnlyList<MaskedPart> withheld =
-            [
-                new MaskedPart(DependentsPart, reason),
-                new MaskedPart(ProjectionChangesPart, reason),
-                new MaskedPart(StructuralDiffPart, reason),
-            ];
-            return SealResult(
+            return SealMaskedCandidateResult(
                 scope,
                 asOf,
-                new CandidateSummary(CandidateKind.MappingSpecification, null, null, null, null),
-                maskedEngines,
-                visibleStateDigest: null,
-                diff: [],
-                schedule: [],
-                withheld,
-                dependents: null,
-                matrixGaps: null,
-                operationalImpact: null,
-                projectionChanges: null,
-                validationDelta: null);
+                CandidateKind.MappingSpecification,
+                mappingMaskedEngines,
+                mappingWithheldParts,
+                reason);
         }
 
         var rawSnapshot = await inputs.LoadStudySnapshotAsync(tenant, studyId, asOf, cancellationToken).ConfigureAwait(false);
@@ -442,122 +429,37 @@ public sealed class SimulationEngine(
             var inferredBaseMask = await CheckTopLevelMaskAsync(tenant, actor, [baseRef], cancellationToken).ConfigureAwait(false);
             if (inferredBaseMask is { } baseReason)
             {
-                var maskedEngines = new List<EngineVersion>
-                {
-                    SimulationSpecificationDiff.MappingDiffEngine,
-                    SimulationProjectionAndValidationEvaluator.MappingEngineVersion,
-                };
-                maskedEngines.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
-                return SealResult(
+                return SealMaskedCandidateResult(
                     scope,
                     asOf,
-                    new CandidateSummary(CandidateKind.MappingSpecification, null, null, null, null),
-                    maskedEngines,
-                    visibleStateDigest: null,
-                    diff: [],
-                    schedule: [],
-                    [
-                        new MaskedPart(DependentsPart, baseReason),
-                        new MaskedPart(ProjectionChangesPart, baseReason),
-                        new MaskedPart(StructuralDiffPart, baseReason),
-                    ],
-                    dependents: null,
-                    matrixGaps: null,
-                    operationalImpact: null,
-                    projectionChanges: null,
-                    validationDelta: null);
+                    CandidateKind.MappingSpecification,
+                    mappingMaskedEngines,
+                    mappingWithheldParts,
+                    baseReason);
             }
         }
 
-        var summary = new CandidateSummary(
-            CandidateKind.MappingSpecification,
-            candRef,
-            baseRef,
-            candHash,
-            baseItem?.ContentHash);
         var diff = SimulationSpecificationDiff.CompareMappingSpecifications(baseSpec, candSpec);
-        var engines = new List<EngineVersion>
-        {
-            SimulationSpecificationDiff.MappingDiffEngine,
-            SimulationProjectionAndValidationEvaluator.MappingEngineVersion,
-            SimulationProjectionAndValidationEvaluator.RuleEvaluatorVersion,
-            SimulationOperationalEvaluator.Engine,
-        };
-
-        DependentsReport? dependents = null;
-        IReadOnlyList<MaskReason> dependentMaskReasons = [];
-        if (diff.Count > 0 && baseItem is not null)
-        {
-            dependents = await inputs.DependentsOfNodeAsync(
-                tenant,
-                actor,
-                NodeRef.For(baseItem.Id),
-                candRef?.Unversioned(),
-                asOf,
-                cancellationToken).ConfigureAwait(false);
-            (dependents, dependentMaskReasons) = SimulationSnapshotMasking.OmitMaskedDependents(dependents);
-            engines.Add(DependentsEngine);
-        }
-
-        var (baselineSpecs, candidateSpecs) = BuildMappingSpecStacks(maskedSnapshot.PinnedLibraryItems, baseItem, baseSpec, candSpec);
-        var activeDesign = SelectActiveProtocolDesign(maskedSnapshot);
-        var pinnedPacks = ParsePinnedRulePacks(maskedSnapshot.PinnedRulePacks);
-
-        var (projectionChanges, baseProjected, candProjected, projImpacted) =
-            SimulationProjectionAndValidationEvaluator.EvaluateProjections(
-                _mappingEngine,
-                maskedSnapshot,
-                baselineSpecs,
-                candidateSpecs,
-                activeDesign,
-                activeDesign);
-
-        var asOfDate = DateOnly.FromDateTime(asOf.ValidAt.UtcDateTime);
-        var (validationDelta, ruleImpacted, maskedBlindedFinding) =
-            SimulationProjectionAndValidationEvaluator.EvaluateValidationDelta(
-                _ruleEvaluator,
-                _blinding,
-                maskedSnapshot,
-                asOfDate,
-                pinnedPacks,
-                pinnedPacks,
-                activeDesign,
-                activeDesign,
-                baseProjected,
-                candProjected);
-
-        var combinedImpacted = new HashSet<EnrollmentId>(projImpacted);
-        combinedImpacted.UnionWith(ruleImpacted);
-
-        var mergedHidden = SimulationSnapshotMasking.MergeHidden(
-            maskedSnapshot.Hidden,
-            dependentMaskReasons.Concat(maskedBlindedFinding ? [MaskReason.Blinded] : []));
-        var operational = SimulationOperationalEvaluator.Evaluate(
-            maskedSnapshot with { Hidden = mergedHidden },
-            asOf,
-            activeDesign,
-            activeDesign,
-            amendment: null,
-            soaDiff: null,
-            combinedImpacted);
-
-        var maskedParts = CombineMaskedParts(maskedSnapshot.MaskedParts, dependentMaskReasons, maskedBlindedFinding);
-        engines.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
-
-        return SealResult(
+        return await EvaluateLibraryCandidateImpactAsync(
+            tenant,
+            actor,
             scope,
             asOf,
-            summary,
-            engines,
-            maskedSnapshot.VisibleStateDigest,
+            CandidateKind.MappingSpecification,
+            candRef,
+            candHash,
+            baseItem,
+            baseRef,
             diff,
-            schedule: [],
-            maskedParts,
-            dependents,
-            matrixGaps: null,
-            operational,
-            projectionChanges,
-            validationDelta);
+            SimulationSpecificationDiff.MappingDiffEngine,
+            maskedSnapshot,
+            snap =>
+            {
+                var (baselineSpecs, candidateSpecs) = BuildMappingSpecStacks(snap.PinnedLibraryItems, baseItem, baseSpec, candSpec);
+                var pinnedPacks = ParsePinnedRulePacks(snap.PinnedRulePacks);
+                return (baselineSpecs, candidateSpecs, pinnedPacks, pinnedPacks);
+            },
+            cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<CommandResult<SimulationResult>> SimulateRulePackAsync(
@@ -587,35 +489,22 @@ public sealed class SimulationEngine(
         }
 
         var explicitBaseRef = explicitBaseItem is null ? null : NodeRefForItem(explicitBaseItem);
+        var rulePackMaskedEngines = new[]
+        {
+            SimulationSpecificationDiff.RulePackDiffEngine,
+            SimulationProjectionAndValidationEvaluator.RuleEvaluatorVersion,
+        };
+        var rulePackWithheldParts = new[] { DependentsPart, StructuralDiffPart, ValidationDeltaPart };
         var topLevelMask = await CheckTopLevelMaskAsync(tenant, actor, [scope, candRef, explicitBaseRef], cancellationToken).ConfigureAwait(false);
         if (topLevelMask is { } reason)
         {
-            var maskedEngines = new List<EngineVersion>
-            {
-                SimulationSpecificationDiff.RulePackDiffEngine,
-                SimulationProjectionAndValidationEvaluator.RuleEvaluatorVersion,
-            };
-            maskedEngines.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
-            IReadOnlyList<MaskedPart> withheld =
-            [
-                new MaskedPart(DependentsPart, reason),
-                new MaskedPart(StructuralDiffPart, reason),
-                new MaskedPart(ValidationDeltaPart, reason),
-            ];
-            return SealResult(
+            return SealMaskedCandidateResult(
                 scope,
                 asOf,
-                new CandidateSummary(CandidateKind.RulePack, null, null, null, null),
-                maskedEngines,
-                visibleStateDigest: null,
-                diff: [],
-                schedule: [],
-                withheld,
-                dependents: null,
-                matrixGaps: null,
-                operationalImpact: null,
-                projectionChanges: null,
-                validationDelta: null);
+                CandidateKind.RulePack,
+                rulePackMaskedEngines,
+                rulePackWithheldParts,
+                reason);
         }
 
         var rawSnapshot = await inputs.LoadStudySnapshotAsync(tenant, studyId, asOf, cancellationToken).ConfigureAwait(false);
@@ -638,43 +527,91 @@ public sealed class SimulationEngine(
             var inferredBaseMask = await CheckTopLevelMaskAsync(tenant, actor, [baseRef], cancellationToken).ConfigureAwait(false);
             if (inferredBaseMask is { } baseReason)
             {
-                var maskedEngines = new List<EngineVersion>
-                {
-                    SimulationSpecificationDiff.RulePackDiffEngine,
-                    SimulationProjectionAndValidationEvaluator.RuleEvaluatorVersion,
-                };
-                maskedEngines.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
-                return SealResult(
+                return SealMaskedCandidateResult(
                     scope,
                     asOf,
-                    new CandidateSummary(CandidateKind.RulePack, null, null, null, null),
-                    maskedEngines,
-                    visibleStateDigest: null,
-                    diff: [],
-                    schedule: [],
-                    [
-                        new MaskedPart(DependentsPart, baseReason),
-                        new MaskedPart(StructuralDiffPart, baseReason),
-                        new MaskedPart(ValidationDeltaPart, baseReason),
-                    ],
-                    dependents: null,
-                    matrixGaps: null,
-                    operationalImpact: null,
-                    projectionChanges: null,
-                    validationDelta: null);
+                    CandidateKind.RulePack,
+                    rulePackMaskedEngines,
+                    rulePackWithheldParts,
+                    baseReason);
             }
         }
 
-        var summary = new CandidateSummary(
+        var diff = SimulationSpecificationDiff.CompareRulePacks(basePack, candPack);
+        return await EvaluateLibraryCandidateImpactAsync(
+            tenant,
+            actor,
+            scope,
+            asOf,
             CandidateKind.RulePack,
+            candRef,
+            candHash,
+            baseItem,
+            baseRef,
+            diff,
+            SimulationSpecificationDiff.RulePackDiffEngine,
+            maskedSnapshot,
+            snap =>
+            {
+                var pinnedSpecs = ParsePinnedMappingSpecs(snap.PinnedLibraryItems);
+                var (baselinePacks, candidatePacks) = BuildRulePackStacks(snap.PinnedRulePacks, baseItem, basePack, candPack);
+                return (pinnedSpecs, pinnedSpecs, baselinePacks, candidatePacks);
+            },
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static CommandResult<SimulationResult> SealMaskedCandidateResult(
+        NodeRef scope,
+        SimulationAsOf asOf,
+        CandidateKind kind,
+        IReadOnlyList<EngineVersion> rawEngines,
+        IReadOnlyList<string> withheldPartNames,
+        MaskReason reason)
+    {
+        var maskedEngines = rawEngines.ToList();
+        maskedEngines.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
+        IReadOnlyList<MaskedPart> withheld = [.. withheldPartNames.Select(part => new MaskedPart(part, reason))];
+        return SealResult(
+            scope,
+            asOf,
+            new CandidateSummary(kind, null, null, null, null),
+            maskedEngines,
+            visibleStateDigest: null,
+            diff: [],
+            schedule: [],
+            withheld,
+            dependents: null,
+            matrixGaps: null,
+            operationalImpact: null,
+            projectionChanges: null,
+            validationDelta: null);
+    }
+
+    private async Task<CommandResult<SimulationResult>> EvaluateLibraryCandidateImpactAsync(
+        TenantId tenant,
+        Actor actor,
+        NodeRef scope,
+        SimulationAsOf asOf,
+        CandidateKind kind,
+        NodeRef? candRef,
+        string candHash,
+        LibraryItemView? baseItem,
+        NodeRef? baseRef,
+        IReadOnlyList<ElementChange> diff,
+        EngineVersion diffEngine,
+        MaskedSimulationSnapshot maskedSnapshot,
+        Func<MaskedSimulationSnapshot, (IReadOnlyList<MappingSpecification> BaselineSpecs, IReadOnlyList<MappingSpecification> CandidateSpecs, IReadOnlyList<RulePack> BaselinePacks, IReadOnlyList<RulePack> CandidatePacks)> buildStacks,
+        CancellationToken cancellationToken)
+    {
+        var summary = new CandidateSummary(
+            kind,
             candRef,
             baseRef,
             candHash,
             baseItem?.ContentHash);
-        var diff = SimulationSpecificationDiff.CompareRulePacks(basePack, candPack);
         var engines = new List<EngineVersion>
         {
-            SimulationSpecificationDiff.RulePackDiffEngine,
+            diffEngine,
             SimulationProjectionAndValidationEvaluator.MappingEngineVersion,
             SimulationProjectionAndValidationEvaluator.RuleEvaluatorVersion,
             SimulationOperationalEvaluator.Engine,
@@ -695,16 +632,15 @@ public sealed class SimulationEngine(
             engines.Add(DependentsEngine);
         }
 
-        var pinnedSpecs = ParsePinnedMappingSpecs(maskedSnapshot.PinnedLibraryItems);
+        var (baselineSpecs, candidateSpecs, baselinePacks, candidatePacks) = buildStacks(maskedSnapshot);
         var activeDesign = SelectActiveProtocolDesign(maskedSnapshot);
-        var (baselinePacks, candidatePacks) = BuildRulePackStacks(maskedSnapshot.PinnedRulePacks, baseItem, basePack, candPack);
 
         var (projectionChanges, baseProjected, candProjected, projImpacted) =
             SimulationProjectionAndValidationEvaluator.EvaluateProjections(
                 _mappingEngine,
                 maskedSnapshot,
-                pinnedSpecs,
-                pinnedSpecs,
+                baselineSpecs,
+                candidateSpecs,
                 activeDesign,
                 activeDesign);
 

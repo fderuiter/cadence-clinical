@@ -69,79 +69,37 @@ public static class CgtEndpoints
         .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope()
         .RequireChangeReasonHeader();
 
-        group.MapPost("/milestone", async (
+        group.MapPost("/milestone", (
             CgtMilestoneCreateRequest request,
             HttpContext httpContext,
             ICgtApplicationService service,
             CancellationToken ct,
             [FromServices] IKernelLockGuard? lockGuard = null) =>
-        {
-            var (denied, cocLockScope) = await GuardStudyAndLoadCocLockScopeAsync(httpContext, service, request.StudyId, request.ChainOfCustodyId, ct).ConfigureAwait(false);
-            if (denied is not null)
-            {
-                return denied;
-            }
-
-            if (await ExecutionLockGuard.EnsureUnlockedAsync(
-                    lockGuard,
-                    cocLockScope?.StudyCode ?? request.StudyId,
-                    cocLockScope?.SiteCode,
-                    cocLockScope?.SubjectCode,
-                    ct).ConfigureAwait(false) is { } locked)
-            {
-                return locked;
-            }
-
-            string? callerUserId = CallerScope.UserId(httpContext);
-
-            try
-            {
-                var result = await service.RecordMilestoneAsync(request, callerUserId, ct);
-                return Results.Ok(result);
-            }
-            catch (ChainOfCustodyNotFoundException ex)
-            {
-                return Results.NotFound(new { detail = ex.Message });
-            }
-        })
+            ExecuteGuardedCocMutationAsync(
+                httpContext,
+                service,
+                lockGuard,
+                request.StudyId,
+                request.ChainOfCustodyId,
+                (callerUserId, token) => service.RecordMilestoneAsync(request, callerUserId, token),
+                ct))
         .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyScope()
         .RequireChangeReasonHeader();
 
-        group.MapPost("/manufacturing-bind", async (
+        group.MapPost("/manufacturing-bind", (
             CgtManufacturingBindRequest request,
             HttpContext httpContext,
             ICgtApplicationService service,
             CancellationToken ct,
             [FromServices] IKernelLockGuard? lockGuard = null) =>
-        {
-            var (denied, cocLockScope) = await GuardStudyAndLoadCocLockScopeAsync(httpContext, service, request.StudyId, request.ChainOfCustodyId, ct).ConfigureAwait(false);
-            if (denied is not null)
-            {
-                return denied;
-            }
-
-            if (await ExecutionLockGuard.EnsureUnlockedAsync(
-                    lockGuard,
-                    cocLockScope?.StudyCode ?? request.StudyId,
-                    cocLockScope?.SiteCode,
-                    cocLockScope?.SubjectCode,
-                    ct).ConfigureAwait(false) is { } locked)
-            {
-                return locked;
-            }
-
-            string? callerUserId = CallerScope.UserId(httpContext);
-
-            try
-            {
-                var result = await service.BindManufacturingBatchAsync(request, callerUserId, ct);
-                return Results.Ok(result);
-            }
-            catch (ChainOfCustodyNotFoundException ex)
-            {
-                return Results.NotFound(new { detail = ex.Message });
-            }
-        })
+            ExecuteGuardedCocMutationAsync(
+                httpContext,
+                service,
+                lockGuard,
+                request.StudyId,
+                request.ChainOfCustodyId,
+                (callerUserId, token) => service.BindManufacturingBatchAsync(request, callerUserId, token),
+                ct))
         .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyScope()
         .RequireChangeReasonHeader();
 
@@ -501,6 +459,43 @@ public static class CgtEndpoints
     private static string ResolveDestructionCertificateSemanticAction(HttpContext _)
     {
         return DestructionCertificateSemanticAction;
+    }
+
+    private static async Task<IResult> ExecuteGuardedCocMutationAsync<TResponse>(
+        HttpContext httpContext,
+        ICgtApplicationService service,
+        IKernelLockGuard? lockGuard,
+        string studyId,
+        Guid chainOfCustodyId,
+        Func<string?, CancellationToken, Task<TResponse>> action,
+        CancellationToken ct)
+    {
+        var (denied, cocLockScope) = await GuardStudyAndLoadCocLockScopeAsync(httpContext, service, studyId, chainOfCustodyId, ct).ConfigureAwait(false);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        if (await ExecutionLockGuard.EnsureUnlockedAsync(
+                lockGuard,
+                cocLockScope?.StudyCode ?? studyId,
+                cocLockScope?.SiteCode,
+                cocLockScope?.SubjectCode,
+                ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
+        }
+
+        string? callerUserId = CallerScope.UserId(httpContext);
+        try
+        {
+            var result = await action(callerUserId, ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        }
+        catch (ChainOfCustodyNotFoundException ex)
+        {
+            return Results.NotFound(new { detail = ex.Message });
+        }
     }
 
     private static IResult SignerMismatch(string detail) =>

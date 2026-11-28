@@ -263,39 +263,17 @@ public sealed class EsourceReconciliationService(
         HttpContext httpContext,
         CancellationToken ct)
     {
-        if (request.CandidateIds == null || request.CandidateIds.Count == 0)
+        var (problem, batch) = await LoadAuthorizedBatchCandidatesAsync(
+            request.CandidateIds,
+            emptyError: "CandidateIds array cannot be empty for batch accept.",
+            httpContext,
+            ct).ConfigureAwait(false);
+        if (problem is not null)
         {
-            return Results.Problem("CandidateIds array cannot be empty for batch accept.", statusCode: StatusCodes.Status400BadRequest);
+            return problem;
         }
 
-        if (request.CandidateIds.Count > 100)
-        {
-            return Results.Problem("Batch size exceeds maximum limit of 100 candidate items.", statusCode: StatusCodes.Status400BadRequest);
-        }
-
-        var distinctIds = request.CandidateIds.Distinct().ToList();
-
-        var items = await db.EhrReconciliationCandidateRecords
-            .Where(c => distinctIds.Contains(c.Id))
-            .ToListAsync(ct)
-            .ConfigureAwait(false);
-
-        if (items.Count != distinctIds.Count)
-        {
-            var missingIds = distinctIds.Except(items.Select(i => i.Id)).ToList();
-            return Results.Problem(
-                $"Batch operation aborted. Candidate record(s) not found: {string.Join(", ", missingIds)}",
-                statusCode: StatusCodes.Status404NotFound);
-        }
-
-        if (items.Exists(i => ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, i.StudyId, i.SiteId) is not null))
-        {
-            return ClinicalScopeGuard.OutsideStudy();
-        }
-
-        var callerUser = CallerScope.RequiredUserId(httpContext, "An admitted eSource request has no signed caller.");
-        var callerRole = CallerScope.Roles(httpContext);
-        var now = clock.UtcNow;
+        var (items, callerUser, callerRole, now) = batch!.Value;
         var commitReason = string.IsNullOrWhiteSpace(request.CommitReason)
             ? "CRC batch accepted candidate data from hospital EHR"
             : request.CommitReason;
@@ -348,46 +326,24 @@ public sealed class EsourceReconciliationService(
         HttpContext httpContext,
         CancellationToken ct)
     {
-        if (request.CandidateIds == null || request.CandidateIds.Count == 0)
-        {
-            return Results.Problem("CandidateIds array cannot be empty for batch reject.", statusCode: StatusCodes.Status400BadRequest);
-        }
-
-        if (request.CandidateIds.Count > 100)
-        {
-            return Results.Problem("Batch size exceeds maximum limit of 100 candidate items.", statusCode: StatusCodes.Status400BadRequest);
-        }
-
-        if (string.IsNullOrWhiteSpace(request.RejectionReason))
+        if (request.CandidateIds is { Count: > 0 and <= 100 } && string.IsNullOrWhiteSpace(request.RejectionReason))
         {
             return Results.Problem(
                 "Mandatory clinical rationale is required when batch rejecting candidate EHR records under GxP rules.",
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var distinctIds = request.CandidateIds.Distinct().ToList();
-
-        var items = await db.EhrReconciliationCandidateRecords
-            .Where(c => distinctIds.Contains(c.Id))
-            .ToListAsync(ct)
-            .ConfigureAwait(false);
-
-        if (items.Count != distinctIds.Count)
+        var (problem, batch) = await LoadAuthorizedBatchCandidatesAsync(
+            request.CandidateIds,
+            emptyError: "CandidateIds array cannot be empty for batch reject.",
+            httpContext,
+            ct).ConfigureAwait(false);
+        if (problem is not null)
         {
-            var missingIds = distinctIds.Except(items.Select(i => i.Id)).ToList();
-            return Results.Problem(
-                $"Batch operation aborted. Candidate record(s) not found: {string.Join(", ", missingIds)}",
-                statusCode: StatusCodes.Status404NotFound);
+            return problem;
         }
 
-        if (items.Exists(i => ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, i.StudyId, i.SiteId) is not null))
-        {
-            return ClinicalScopeGuard.OutsideStudy();
-        }
-
-        var callerUser = CallerScope.RequiredUserId(httpContext, "An admitted eSource request has no signed caller.");
-        var callerRole = CallerScope.Roles(httpContext);
-        var now = clock.UtcNow;
+        var (items, callerUser, callerRole, now) = batch!.Value;
 
         foreach (var item in items)
         {
@@ -427,6 +383,49 @@ public sealed class EsourceReconciliationService(
             ActionCount: dtos.Count,
             Candidates: dtos,
             Message: $"Successfully batch rejected {dtos.Count} candidate items."));
+    }
+
+    private async Task<(IResult? Problem, (List<EhrReconciliationCandidateRecord> Items, string CallerUser, string CallerRole, DateTimeOffset Now)? Batch)>
+        LoadAuthorizedBatchCandidatesAsync(
+            IReadOnlyList<string>? candidateIds,
+            string emptyError,
+            HttpContext httpContext,
+            CancellationToken ct)
+    {
+        if (candidateIds == null || candidateIds.Count == 0)
+        {
+            return (Results.Problem(emptyError, statusCode: StatusCodes.Status400BadRequest), null);
+        }
+
+        if (candidateIds.Count > 100)
+        {
+            return (Results.Problem("Batch size exceeds maximum limit of 100 candidate items.", statusCode: StatusCodes.Status400BadRequest), null);
+        }
+
+        var distinctIds = candidateIds.Distinct().ToList();
+        var items = await db.EhrReconciliationCandidateRecords
+            .Where(c => distinctIds.Contains(c.Id))
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        if (items.Count != distinctIds.Count)
+        {
+            var missingIds = distinctIds.Except(items.Select(i => i.Id)).ToList();
+            return (
+                Results.Problem(
+                    $"Batch operation aborted. Candidate record(s) not found: {string.Join(", ", missingIds)}",
+                    statusCode: StatusCodes.Status404NotFound),
+                null);
+        }
+
+        if (items.Exists(i => ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, i.StudyId, i.SiteId) is not null))
+        {
+            return (ClinicalScopeGuard.OutsideStudy(), null);
+        }
+
+        var callerUser = CallerScope.RequiredUserId(httpContext, "An admitted eSource request has no signed caller.");
+        var callerRole = CallerScope.Roles(httpContext);
+        return (null, (items, callerUser, callerRole, clock.UtcNow));
     }
 
     public Task<IResult> RaiseClinicalQueryAsync(

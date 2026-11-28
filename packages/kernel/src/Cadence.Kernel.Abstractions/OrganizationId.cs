@@ -10,8 +10,8 @@ namespace Cadence.Kernel;
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for an Organization (Sponsor, CRO, Site institution, Vendor, Regulator, IRB/EC, Lab).
 /// </summary>
-[TypeConverter(typeof(OrganizationIdTypeConverter))]
-[JsonConverter(typeof(OrganizationIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<OrganizationId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<OrganizationId>))]
 public readonly record struct OrganizationId(Guid Value) : IEntityId<OrganizationId>
 {
     public static OrganizationId New() => new(Guid.CreateVersion7());
@@ -34,62 +34,28 @@ public readonly record struct OrganizationId(Guid Value) : IEntityId<Organizatio
 
     public int CompareTo(OrganizationId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        OrganizationId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(OrganizationId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(OrganizationId left, OrganizationId right) => left.CompareTo(right) < 0;
     public static bool operator <=(OrganizationId left, OrganizationId right) => left.CompareTo(right) <= 0;
     public static bool operator >(OrganizationId left, OrganizationId right) => left.CompareTo(right) > 0;
     public static bool operator >=(OrganizationId left, OrganizationId right) => left.CompareTo(right) >= 0;
 
-    public static OrganizationId Parse(string s) => Parse(s, null);
+    public static OrganizationId Parse(string s) => EntityIdOperations.Parse<OrganizationId>(s);
 
-    public static OrganizationId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new OrganizationId(Guid.Parse(s, provider));
-    }
+    public static OrganizationId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<OrganizationId>(s, provider);
 
-    public static OrganizationId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static OrganizationId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<OrganizationId>(s);
 
-    public static OrganizationId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static OrganizationId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<OrganizationId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out OrganizationId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out OrganizationId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out OrganizationId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out OrganizationId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out OrganizationId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new OrganizationId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out OrganizationId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out OrganizationId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new OrganizationId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out OrganizationId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class OrganizationIdTypeConverter : EntityIdTypeConverter<OrganizationId>;
-
-public sealed class OrganizationIdJsonConverter : EntityIdJsonConverter<OrganizationId>;

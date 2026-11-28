@@ -216,35 +216,21 @@ internal sealed class GrantProductEntitlementHandler(CommercialQuoteOptions? quo
             return CommercialErrors.EntitlementRequired;
         }
 
-        if (command.SubscriptionId.IsEmpty)
+        var (subscription, authError) = await CommercialEntitlementEvents.LoadAuthorizedSubscriptionAsync(
+            context,
+            command.TenantId,
+            command.SubscriptionId,
+            command.QuoteToken,
+            quoteOptions,
+            nameof(GrantProductEntitlement),
+            "Direct product-entitlement overrides require CommercialOperators.BillingOperator or a verified commercial quote token.",
+            cancellationToken).ConfigureAwait(false);
+        if (authError is not null)
         {
-            return CommercialErrors.SubscriptionRequired;
+            return authError;
         }
 
-        await context.Work.LockAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false);
-        if (await context.Work.FindAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false) is not { } subscription
-            || subscription.TenantId != command.TenantId)
-        {
-            return CommercialErrors.SubscriptionUnknown;
-        }
-
-        if (context.Actor != CommercialOperators.BillingOperator
-            && !SubscriptionQuoteToken.TryVerify(
-                command.QuoteToken,
-                quoteOptions?.SigningSecret,
-                command.TenantId,
-                subscription.Tier,
-                subscription.GetScoping(),
-                context.RecordedAt,
-                out _))
-        {
-            return CommercialQuoteRefusal.Create(
-                NodeRef.For(command.SubscriptionId),
-                nameof(GrantProductEntitlement),
-                "Direct product-entitlement overrides require CommercialOperators.BillingOperator or a verified commercial quote token.");
-        }
-
-        var (entitlementId, granted) = subscription.GrantFamily(
+        var (entitlementId, granted) = subscription!.GrantFamily(
             command.ProductEntitlementId,
             command.Family,
             context.RecordedAt,
@@ -272,35 +258,21 @@ internal sealed class RevokeProductEntitlementHandler(CommercialQuoteOptions? qu
         ICommandContext context,
         CancellationToken cancellationToken)
     {
-        if (command.SubscriptionId.IsEmpty)
+        var (subscription, authError) = await CommercialEntitlementEvents.LoadAuthorizedSubscriptionAsync(
+            context,
+            command.TenantId,
+            command.SubscriptionId,
+            command.QuoteToken,
+            quoteOptions,
+            nameof(RevokeProductEntitlement),
+            "Direct product-entitlement revocations require CommercialOperators.BillingOperator or a verified commercial quote token.",
+            cancellationToken).ConfigureAwait(false);
+        if (authError is not null)
         {
-            return CommercialErrors.SubscriptionRequired;
+            return authError;
         }
 
-        await context.Work.LockAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false);
-        if (await context.Work.FindAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false) is not { } subscription
-            || subscription.TenantId != command.TenantId)
-        {
-            return CommercialErrors.SubscriptionUnknown;
-        }
-
-        if (context.Actor != CommercialOperators.BillingOperator
-            && !SubscriptionQuoteToken.TryVerify(
-                command.QuoteToken,
-                quoteOptions?.SigningSecret,
-                command.TenantId,
-                subscription.Tier,
-                subscription.GetScoping(),
-                context.RecordedAt,
-                out _))
-        {
-            return CommercialQuoteRefusal.Create(
-                NodeRef.For(command.SubscriptionId),
-                nameof(RevokeProductEntitlement),
-                "Direct product-entitlement revocations require CommercialOperators.BillingOperator or a verified commercial quote token.");
-        }
-
-        if (subscription.RevokeFamily(command.Family, context.RecordedAt, context.Actor.Id, command.ReasonForChange) is { } revokedId)
+        if (subscription!.RevokeFamily(command.Family, context.RecordedAt, context.Actor.Id, command.ReasonForChange) is { } revokedId)
         {
             context.Work.Raise(new ProductEntitlementRevoked(
                 command.TenantId,
@@ -315,6 +287,46 @@ internal sealed class RevokeProductEntitlementHandler(CommercialQuoteOptions? qu
 
 internal static class CommercialEntitlementEvents
 {
+    public static async Task<(Subscription? Subscription, KernelError? Error)> LoadAuthorizedSubscriptionAsync(
+        ICommandContext context,
+        TenantId tenantId,
+        SubscriptionId subscriptionId,
+        string? quoteToken,
+        CommercialQuoteOptions? quoteOptions,
+        string commandName,
+        string refusalReason,
+        CancellationToken cancellationToken)
+    {
+        if (subscriptionId.IsEmpty)
+        {
+            return (null, CommercialErrors.SubscriptionRequired);
+        }
+
+        await context.Work.LockAsync<Subscription>(subscriptionId, cancellationToken).ConfigureAwait(false);
+        if (await context.Work.FindAsync<Subscription>(subscriptionId, cancellationToken).ConfigureAwait(false) is not { } subscription
+            || subscription.TenantId != tenantId)
+        {
+            return (null, CommercialErrors.SubscriptionUnknown);
+        }
+
+        if (context.Actor != CommercialOperators.BillingOperator
+            && !SubscriptionQuoteToken.TryVerify(
+                quoteToken,
+                quoteOptions?.SigningSecret,
+                tenantId,
+                subscription.Tier,
+                subscription.GetScoping(),
+                context.RecordedAt,
+                out _))
+        {
+            return (null, CommercialQuoteRefusal.Create(
+                NodeRef.For(subscriptionId),
+                commandName,
+                refusalReason));
+        }
+
+        return (subscription, null);
+    }
     public static void RaiseDiff(
         IKernelUnitOfWork work,
         TenantId tenantId,

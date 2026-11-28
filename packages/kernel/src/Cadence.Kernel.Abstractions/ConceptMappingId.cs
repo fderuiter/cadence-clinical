@@ -10,8 +10,8 @@ namespace Cadence.Kernel;
 /// <summary>
 /// Strongly-typed UUIDv7 identifier for a mapping from a Concept to a code in a pinned code-system version.
 /// </summary>
-[TypeConverter(typeof(ConceptMappingIdTypeConverter))]
-[JsonConverter(typeof(ConceptMappingIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<ConceptMappingId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<ConceptMappingId>))]
 public readonly record struct ConceptMappingId(Guid Value) : IEntityId<ConceptMappingId>
 {
     public static ConceptMappingId New() => new(Guid.CreateVersion7());
@@ -34,62 +34,28 @@ public readonly record struct ConceptMappingId(Guid Value) : IEntityId<ConceptMa
 
     public int CompareTo(ConceptMappingId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        ConceptMappingId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(ConceptMappingId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(ConceptMappingId left, ConceptMappingId right) => left.CompareTo(right) < 0;
     public static bool operator <=(ConceptMappingId left, ConceptMappingId right) => left.CompareTo(right) <= 0;
     public static bool operator >(ConceptMappingId left, ConceptMappingId right) => left.CompareTo(right) > 0;
     public static bool operator >=(ConceptMappingId left, ConceptMappingId right) => left.CompareTo(right) >= 0;
 
-    public static ConceptMappingId Parse(string s) => Parse(s, null);
+    public static ConceptMappingId Parse(string s) => EntityIdOperations.Parse<ConceptMappingId>(s);
 
-    public static ConceptMappingId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new ConceptMappingId(Guid.Parse(s, provider));
-    }
+    public static ConceptMappingId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<ConceptMappingId>(s, provider);
 
-    public static ConceptMappingId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static ConceptMappingId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<ConceptMappingId>(s);
 
-    public static ConceptMappingId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static ConceptMappingId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<ConceptMappingId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out ConceptMappingId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out ConceptMappingId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out ConceptMappingId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out ConceptMappingId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out ConceptMappingId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new ConceptMappingId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out ConceptMappingId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out ConceptMappingId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new ConceptMappingId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out ConceptMappingId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class ConceptMappingIdTypeConverter : EntityIdTypeConverter<ConceptMappingId>;
-
-public sealed class ConceptMappingIdJsonConverter : EntityIdJsonConverter<ConceptMappingId>;

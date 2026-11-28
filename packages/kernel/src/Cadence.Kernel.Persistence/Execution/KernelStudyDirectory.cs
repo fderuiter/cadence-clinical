@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Persistence.Tenancy;
 
@@ -232,30 +233,9 @@ internal sealed class KernelStudyDirectory(KernelTenantDbContextFactory contexts
         CancellationToken cancellationToken = default)
     {
         await using var db = contexts.Create(tenant);
-        return await (
-                from ss in db.StudySites.AsNoTracking()
-                join st in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { st.TenantId, st.Id }
-                join s in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { s.TenantId, s.Id }
-                join o in db.Organizations.AsNoTracking() on new { s.TenantId, Id = s.InstitutionId } equals new { o.TenantId, o.Id }
-                where ss.TenantId == tenant && ss.StudyId == studyId && ss.IsActive
-                orderby s.SiteCode, o.Code
-                select new StudySiteDirectoryEntry(
-                    ss.Id,
-                    ss.VersionIndex,
-                    st.Id,
-                    s.Id,
-                    s.VersionIndex,
-                    s.SiteCode,
-                    s.Name,
-                    s.Country,
-                    o.Id,
-                    o.VersionIndex,
-                    o.Code,
-                    o.Name,
-                    ss.Status,
-                    st.StudyCode,
-                    st.VersionIndex,
-                    ss.IsActive))
+        var matching = db.StudySites.AsNoTracking()
+            .Where(ss => ss.TenantId == tenant && ss.StudyId == studyId && ss.IsActive);
+        return await ProjectStudySites(db, matching, orderByCode: true)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }
@@ -266,29 +246,9 @@ internal sealed class KernelStudyDirectory(KernelTenantDbContextFactory contexts
         CancellationToken cancellationToken = default)
     {
         await using var db = contexts.Create(tenant);
-        return await (
-                from ss in db.StudySites.AsNoTracking()
-                join st in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { st.TenantId, st.Id }
-                join s in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { s.TenantId, s.Id }
-                join o in db.Organizations.AsNoTracking() on new { s.TenantId, Id = s.InstitutionId } equals new { o.TenantId, o.Id }
-                where ss.TenantId == tenant && ss.Id == studySiteId && ss.IsActive
-                select new StudySiteDirectoryEntry(
-                    ss.Id,
-                    ss.VersionIndex,
-                    st.Id,
-                    s.Id,
-                    s.VersionIndex,
-                    s.SiteCode,
-                    s.Name,
-                    s.Country,
-                    o.Id,
-                    o.VersionIndex,
-                    o.Code,
-                    o.Name,
-                    ss.Status,
-                    st.StudyCode,
-                    st.VersionIndex,
-                    ss.IsActive))
+        var matching = db.StudySites.AsNoTracking()
+            .Where(ss => ss.TenantId == tenant && ss.Id == studySiteId && ss.IsActive);
+        return await ProjectStudySites(db, matching)
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
     }
@@ -300,30 +260,45 @@ internal sealed class KernelStudyDirectory(KernelTenantDbContextFactory contexts
         CancellationToken cancellationToken = default)
     {
         await using var db = contexts.Create(tenant);
-        return await (
-                from ss in db.StudySites.AsNoTracking()
-                join st in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { st.TenantId, st.Id }
-                join s in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { s.TenantId, s.Id }
-                join o in db.Organizations.AsNoTracking() on new { s.TenantId, Id = s.InstitutionId } equals new { o.TenantId, o.Id }
-                where ss.TenantId == tenant && ss.StudyId == studyId && ss.SiteId == siteId && ss.IsActive
-                select new StudySiteDirectoryEntry(
-                    ss.Id,
-                    ss.VersionIndex,
-                    st.Id,
-                    s.Id,
-                    s.VersionIndex,
-                    s.SiteCode,
-                    s.Name,
-                    s.Country,
-                    o.Id,
-                    o.VersionIndex,
-                    o.Code,
-                    o.Name,
-                    ss.Status,
-                    st.StudyCode,
-                    st.VersionIndex,
-                    ss.IsActive))
+        var matching = db.StudySites.AsNoTracking()
+            .Where(ss => ss.TenantId == tenant && ss.StudyId == studyId && ss.SiteId == siteId && ss.IsActive);
+        return await ProjectStudySites(db, matching)
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    private static IQueryable<StudySiteDirectoryEntry> ProjectStudySites(
+        KernelDbContext db,
+        IQueryable<StudySite> matchingStudySites,
+        bool orderByCode = false)
+    {
+        var query =
+            from ss in matchingStudySites
+            join st in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { st.TenantId, st.Id }
+            join s in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { s.TenantId, s.Id }
+            join o in db.Organizations.AsNoTracking() on new { s.TenantId, Id = s.InstitutionId } equals new { o.TenantId, o.Id }
+            select new { ss, st, s, o };
+        if (orderByCode)
+        {
+            query = query.OrderBy(x => x.s.SiteCode).ThenBy(x => x.o.Code);
+        }
+
+        return query.Select(x => new StudySiteDirectoryEntry(
+            x.ss.Id,
+            x.ss.VersionIndex,
+            x.st.Id,
+            x.s.Id,
+            x.s.VersionIndex,
+            x.s.SiteCode,
+            x.s.Name,
+            x.s.Country,
+            x.o.Id,
+            x.o.VersionIndex,
+            x.o.Code,
+            x.o.Name,
+            x.ss.Status,
+            x.st.StudyCode,
+            x.st.VersionIndex,
+            x.ss.IsActive));
     }
 }

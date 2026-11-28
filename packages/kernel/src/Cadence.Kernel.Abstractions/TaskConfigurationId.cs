@@ -11,8 +11,8 @@ namespace Cadence.Kernel;
 /// Strongly-typed deterministic UUID identifier for a shipped intelligence task configuration version (ADR-2631),
 /// allowing <see cref="References.NodeRef"/> and attestations to name a signed task configuration.
 /// </summary>
-[TypeConverter(typeof(TaskConfigurationIdTypeConverter))]
-[JsonConverter(typeof(TaskConfigurationIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<TaskConfigurationId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<TaskConfigurationId>))]
 public readonly record struct TaskConfigurationId(Guid Value) : IEntityId<TaskConfigurationId>
 {
     public static TaskConfigurationId New() => new(Guid.CreateVersion7());
@@ -35,62 +35,28 @@ public readonly record struct TaskConfigurationId(Guid Value) : IEntityId<TaskCo
 
     public int CompareTo(TaskConfigurationId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        TaskConfigurationId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(TaskConfigurationId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(TaskConfigurationId left, TaskConfigurationId right) => left.CompareTo(right) < 0;
     public static bool operator <=(TaskConfigurationId left, TaskConfigurationId right) => left.CompareTo(right) <= 0;
     public static bool operator >(TaskConfigurationId left, TaskConfigurationId right) => left.CompareTo(right) > 0;
     public static bool operator >=(TaskConfigurationId left, TaskConfigurationId right) => left.CompareTo(right) >= 0;
 
-    public static TaskConfigurationId Parse(string s) => Parse(s, null);
+    public static TaskConfigurationId Parse(string s) => EntityIdOperations.Parse<TaskConfigurationId>(s);
 
-    public static TaskConfigurationId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new TaskConfigurationId(Guid.Parse(s, provider));
-    }
+    public static TaskConfigurationId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<TaskConfigurationId>(s, provider);
 
-    public static TaskConfigurationId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static TaskConfigurationId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<TaskConfigurationId>(s);
 
-    public static TaskConfigurationId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static TaskConfigurationId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<TaskConfigurationId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out TaskConfigurationId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out TaskConfigurationId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out TaskConfigurationId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out TaskConfigurationId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out TaskConfigurationId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new TaskConfigurationId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out TaskConfigurationId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out TaskConfigurationId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new TaskConfigurationId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out TaskConfigurationId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class TaskConfigurationIdTypeConverter : EntityIdTypeConverter<TaskConfigurationId>;
-
-public sealed class TaskConfigurationIdJsonConverter : EntityIdJsonConverter<TaskConfigurationId>;

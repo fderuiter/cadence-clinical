@@ -7,6 +7,7 @@ using Cadence.Apps.Execution.Application.Randomization;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
+using Cadence.Core.Domain;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 
@@ -186,44 +187,22 @@ public static partial class SubjectEndpoints
     /// non-whitespace before this delegate ever runs — matching that filter's own doc comment and
     /// `02_technical_design.md` §3.3's reference implementation for this exact route.
     /// </summary>
-    public static async Task<IResult> UpdateSubjectDemographicsAsync(
+    public static Task<IResult> UpdateSubjectDemographicsAsync(
         string subjectId,
         SubjectDemographicsUpdateRequest request,
         HttpContext http,
         ISubjectApplicationService svc,
         CancellationToken ct,
         [FromServices] ILogger? logger = null,
-        [FromServices] IKernelLockGuard? lockGuard = null)
-    {
-        ct.ThrowIfCancellationRequested();
-
-        string changeReason = ChangeReasonHeader.Read(http.Request)!;
-
-        if (SubjectAuthority.AuthorizeParticipantChange(ResolveCaller(http)) is { } forbidden)
-        {
-            return forbidden.ToProblemResult();
-        }
-
-        var (scopeDenied, resolvedScope) = await GuardSubjectAndResolveLockScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false);
-        if (scopeDenied is not null)
-        {
-            return scopeDenied;
-        }
-
-        if (resolvedScope is { } ls
-            && await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, ls.StudyCode, ls.SiteCode, ls.SubjectCode, ct).ConfigureAwait(false) is { } locked)
-        {
-            return locked;
-        }
-
-        if (logger != null)
-        {
-            logger.LogUpdatingSubjectDemographics(subjectId, changeReason);
-        }
-
-        var result = await svc.UpdateDemographicsAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
-        return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
-    }
+        [FromServices] IKernelLockGuard? lockGuard = null) =>
+        ExecuteDemographicsMutationAsync(
+            subjectId,
+            http,
+            svc,
+            lockGuard,
+            changeReason => logger?.LogUpdatingSubjectDemographics(subjectId, changeReason),
+            (changeReason, token) => svc.UpdateDemographicsAsync(subjectId, request, changeReason, token),
+            ct);
 
     /// <summary>
     /// <c>DELETE /api/v1/execution/subjects/{subjectId}/demographics</c>, closing MIG-SUBJ-022's noted
@@ -231,13 +210,30 @@ public static partial class SubjectEndpoints
     /// is applied here for the first time rather than retrofitted. The null-forgiving <c>!</c> below has the
     /// exact same justification as <see cref="UpdateSubjectDemographicsAsync"/>'s.
     /// </summary>
-    public static async Task<IResult> DeleteSubjectDemographicsAsync(
+    public static Task<IResult> DeleteSubjectDemographicsAsync(
         string subjectId,
         HttpContext http,
         ISubjectApplicationService svc,
         CancellationToken ct,
         [FromServices] ILogger? logger = null,
-        [FromServices] IKernelLockGuard? lockGuard = null)
+        [FromServices] IKernelLockGuard? lockGuard = null) =>
+        ExecuteDemographicsMutationAsync(
+            subjectId,
+            http,
+            svc,
+            lockGuard,
+            changeReason => logger?.LogDeletingSubjectDemographics(subjectId, changeReason),
+            (changeReason, token) => svc.DeleteDemographicsAsync(subjectId, changeReason, token),
+            ct);
+
+    private static async Task<IResult> ExecuteDemographicsMutationAsync<TResponse>(
+        string subjectId,
+        HttpContext http,
+        ISubjectApplicationService svc,
+        IKernelLockGuard? lockGuard,
+        Action<string> logAction,
+        Func<string, CancellationToken, Task<Result<TResponse>>> executeAsync,
+        CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -260,12 +256,9 @@ public static partial class SubjectEndpoints
             return locked;
         }
 
-        if (logger != null)
-        {
-            logger.LogDeletingSubjectDemographics(subjectId, changeReason);
-        }
+        logAction(changeReason);
 
-        var result = await svc.DeleteDemographicsAsync(subjectId, changeReason, ct).ConfigureAwait(false);
+        var result = await executeAsync(changeReason, ct).ConfigureAwait(false);
         return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
     }
 

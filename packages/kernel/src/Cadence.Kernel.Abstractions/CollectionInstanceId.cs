@@ -11,8 +11,8 @@ namespace Cadence.Kernel;
 /// Strongly-typed identifier for a CollectionInstance (spec §8.1, K-FACT-6): the observations collected together for one
 /// participant under one CollectionSpec version, the kernel side of an eCRF form instance (ADR-2622).
 /// </summary>
-[TypeConverter(typeof(CollectionInstanceIdTypeConverter))]
-[JsonConverter(typeof(CollectionInstanceIdJsonConverter))]
+[TypeConverter(typeof(EntityIdTypeConverter<CollectionInstanceId>))]
+[JsonConverter(typeof(EntityIdJsonConverter<CollectionInstanceId>))]
 public readonly record struct CollectionInstanceId(Guid Value) : IEntityId<CollectionInstanceId>
 {
     public static CollectionInstanceId New() => new(Guid.CreateVersion7());
@@ -35,62 +35,28 @@ public readonly record struct CollectionInstanceId(Guid Value) : IEntityId<Colle
 
     public int CompareTo(CollectionInstanceId other) => Value.CompareTo(other.Value);
 
-    public int CompareTo(object? obj) => obj switch
-    {
-        null => 1,
-        CollectionInstanceId other => CompareTo(other),
-        _ => throw new ArgumentException($"Object must be of type {nameof(CollectionInstanceId)}", nameof(obj))
-    };
+    public int CompareTo(object? obj) => EntityIdOperations.CompareTo(this, obj);
 
     public static bool operator <(CollectionInstanceId left, CollectionInstanceId right) => left.CompareTo(right) < 0;
     public static bool operator <=(CollectionInstanceId left, CollectionInstanceId right) => left.CompareTo(right) <= 0;
     public static bool operator >(CollectionInstanceId left, CollectionInstanceId right) => left.CompareTo(right) > 0;
     public static bool operator >=(CollectionInstanceId left, CollectionInstanceId right) => left.CompareTo(right) >= 0;
 
-    public static CollectionInstanceId Parse(string s) => Parse(s, null);
+    public static CollectionInstanceId Parse(string s) => EntityIdOperations.Parse<CollectionInstanceId>(s);
 
-    public static CollectionInstanceId Parse(string s, IFormatProvider? provider)
-    {
-        ArgumentNullException.ThrowIfNull(s);
-        return new CollectionInstanceId(Guid.Parse(s, provider));
-    }
+    public static CollectionInstanceId Parse(string s, IFormatProvider? provider) => EntityIdOperations.Parse<CollectionInstanceId>(s, provider);
 
-    public static CollectionInstanceId Parse(ReadOnlySpan<char> s) => Parse(s, null);
+    public static CollectionInstanceId Parse(ReadOnlySpan<char> s) => EntityIdOperations.Parse<CollectionInstanceId>(s);
 
-    public static CollectionInstanceId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
-        new(Guid.Parse(s, provider));
+    public static CollectionInstanceId Parse(ReadOnlySpan<char> s, IFormatProvider? provider) => EntityIdOperations.Parse<CollectionInstanceId>(s, provider);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, out CollectionInstanceId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse([NotNullWhen(true)] string? s, out CollectionInstanceId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse(ReadOnlySpan<char> s, out CollectionInstanceId result) =>
-        TryParse(s, null, out result);
+    public static bool TryParse(ReadOnlySpan<char> s, out CollectionInstanceId result) => EntityIdOperations.TryParse(s, null, out result);
 
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out CollectionInstanceId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new CollectionInstanceId(guid);
-            return true;
-        }
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, out CollectionInstanceId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 
-        result = Empty;
-        return false;
-    }
-
-    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out CollectionInstanceId result)
-    {
-        if (Guid.TryParse(s, provider, out var guid))
-        {
-            result = new CollectionInstanceId(guid);
-            return true;
-        }
-
-        result = Empty;
-        return false;
-    }
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, out CollectionInstanceId result) =>
+        EntityIdOperations.TryParse(s, provider, out result);
 }
-
-public sealed class CollectionInstanceIdTypeConverter : EntityIdTypeConverter<CollectionInstanceId>;
-
-public sealed class CollectionInstanceIdJsonConverter : EntityIdJsonConverter<CollectionInstanceId>;
