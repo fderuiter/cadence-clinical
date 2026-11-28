@@ -313,7 +313,7 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
   every service connects to the shared `cadence` database with its search path set to its own module
   schema (`ctms`, `execution`, …). The kernel owns the `kernel` schema.
 - **Migrations** live in each service's `Infrastructure/Persistence/Migrations/` and are managed with
-  `scripts/manage_migrations.ps1` (see [AGENTS.md §10](AGENTS.md)). `Database__MigrateOnStartup=true`
+  `pnpm cadence migrations` (see [AGENTS.md §10](AGENTS.md)). `Database__MigrateOnStartup=true`
   applies them at startup; `Database__MigrateOnly=true` runs them as a deployment job and exits. See the
   [database runbook](docs/OPERATIONAL_DATABASE.md).
 - **The kernel schema** is implemented in `packages/kernel` ([README](packages/kernel/README.md)):

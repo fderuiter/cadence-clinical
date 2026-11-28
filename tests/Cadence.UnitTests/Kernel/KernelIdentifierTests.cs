@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text.Json;
 
@@ -9,7 +10,6 @@ using Cadence.Kernel.Domain.Bitemporal;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
-using Cadence.Kernel.Serialization;
 using Cadence.Kernel.Trust;
 using Cadence.Testing;
 using Cadence.Testing.Time;
@@ -142,7 +142,7 @@ public class KernelIdentifierTests
     }
 
     /// <summary>
-    /// Validates JSON serialization and deserialization across standard and source-generated serializer contexts.
+    /// Validates JSON serialization and deserialization across single, nullable, and collection identifier types.
     /// </summary>
     [Fact(DisplayName = "Identifiers_JsonSerialization_Roundtrips")]
     [Trait("Category", "GxP_OQ")]
@@ -150,33 +150,34 @@ public class KernelIdentifierTests
     {
         // Arrange
         var participantId = ParticipantId.New();
+        var webOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 
         // Act - Standard System.Text.Json
         string json = JsonSerializer.Serialize(participantId);
         var deserialized = JsonSerializer.Deserialize<ParticipantId>(json);
 
-        // Act - Source generated context
-        string aotJson = JsonSerializer.Serialize(participantId, KernelJsonSerializerContext.Default.ParticipantId);
-        var aotDeserialized = JsonSerializer.Deserialize(aotJson, KernelJsonSerializerContext.Default.ParticipantId);
+        // Act - Web options System.Text.Json
+        string webJson = JsonSerializer.Serialize(participantId, webOptions);
+        var webDeserialized = JsonSerializer.Deserialize<ParticipantId>(webJson, webOptions);
 
-        // Act - Nullable and collection source generated context
+        // Act - Nullable and collection identifiers
         StudyId? nullableStudy = StudyId.New();
-        string nullableJson = JsonSerializer.Serialize(nullableStudy, KernelJsonSerializerContext.Default.NullableStudyId);
-        var deserializedNullable = JsonSerializer.Deserialize(nullableJson, KernelJsonSerializerContext.Default.NullableStudyId);
+        string nullableJson = JsonSerializer.Serialize(nullableStudy);
+        var deserializedNullable = JsonSerializer.Deserialize<StudyId?>(nullableJson);
 
         StudyId? nullStudy = null;
-        string nullJson = JsonSerializer.Serialize(nullStudy, KernelJsonSerializerContext.Default.NullableStudyId);
-        var deserializedNull = JsonSerializer.Deserialize(nullJson, KernelJsonSerializerContext.Default.NullableStudyId);
+        string nullJson = JsonSerializer.Serialize(nullStudy);
+        var deserializedNull = JsonSerializer.Deserialize<StudyId?>(nullJson);
 
-        var idList = new System.Collections.Generic.List<StudyId> { StudyId.New(), StudyId.New() };
-        string listJson = JsonSerializer.Serialize(idList, KernelJsonSerializerContext.Default.ListStudyId);
-        var deserializedList = JsonSerializer.Deserialize(listJson, KernelJsonSerializerContext.Default.ListStudyId);
+        var idList = new List<StudyId> { StudyId.New(), StudyId.New() };
+        string listJson = JsonSerializer.Serialize(idList);
+        var deserializedList = JsonSerializer.Deserialize<List<StudyId>>(listJson);
 
         // Assert
         json.Should().Be($"\"{participantId.Value}\"");
         deserialized.Should().Be(participantId);
-        aotJson.Should().Be($"\"{participantId.Value}\"");
-        aotDeserialized.Should().Be(participantId);
+        webJson.Should().Be($"\"{participantId.Value}\"");
+        webDeserialized.Should().Be(participantId);
 
         deserializedNullable.Should().Be(nullableStudy);
         deserializedNull.Should().BeNull();

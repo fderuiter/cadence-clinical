@@ -38,12 +38,6 @@ public interface IDicomIngestionService
         CancellationToken cancellationToken = default);
 }
 
-public record IngestInstanceRequest(
-    string SubjectId,
-    string SiteId,
-    string StudyId,
-    string? OperatorIdentity = "cadence.imaging.pipeline");
-
 public record IngestionResult(
     string StudyEnvelopeId,
     string CertificateId,

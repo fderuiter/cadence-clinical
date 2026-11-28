@@ -52,6 +52,3 @@ K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Endpoints.SubmitAdjudicationSes
 K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Services.BatchIngestionRequest.SiteId
 K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Services.BatchIngestionRequest.StudyId
 K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Services.BatchIngestionRequest.SubjectId
-K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Services.IngestInstanceRequest.SiteId
-K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Services.IngestInstanceRequest.StudyId
-K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Services.IngestInstanceRequest.SubjectId

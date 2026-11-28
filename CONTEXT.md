@@ -1343,7 +1343,7 @@ _Avoid_: Manual, error-prone multi-step terminal procedures without interactive 
 
 ### Idempotent Database Migration Bundle
 
-A self-contained, executable database migration binary or idempotent SQL script generated via `scripts/manage_migrations.ps1` that can be safely executed against any target PostgreSQL database multiple times without re-applying migrations or producing duplicate schema state.
+A self-contained, executable database migration binary or idempotent SQL script generated via `pnpm cadence migrations` that can be safely executed against any target PostgreSQL database multiple times without re-applying migrations or producing duplicate schema state.
 _Avoid_: Manual manual SQL execution or un-versioned database changes bypassing 21 CFR Part 11 qualification.
 
 ### 4-Step Service Decommissioning Protocol ("Clearing Out the Old")

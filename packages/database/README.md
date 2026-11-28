@@ -76,7 +76,7 @@ in the shared `cadence` database. The layout and the operations runbook are in
 For DBA review and GxP qualification, generate an idempotent script into `TestResults/migrations/<module>.sql`:
 
 ```bash
-pnpm cadence migrations script [module|all]   # or bundle / optimize / apply / seed; scripts/manage_migrations.{sh,ps1} pass through
+pnpm cadence migrations script [module|all]   # or bundle / optimize / apply / seed
 ```
 
 After changing an entity or its configuration, run `pnpm cadence migrations add <module> <MigrationName>` (which scaffolds the migration and formats generated `.cs` files with `dotnet format whitespace` and `dotnet format style`) and `pnpm cadence generate-schema-doc`, then commit `docs/schema`; the `schema-doc` gate in `pnpm cadence check` and CI fails while documentation is out of date, a module has pending model changes, or migration metadata/DDL uniqueness is broken.

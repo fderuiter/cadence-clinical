@@ -296,20 +296,3 @@ public static class RuleBasedIntentRouter
         return requiredRoles.Any(req => normalizedUserRoles.Contains(RoleNormalization.NormalizeRole(req)));
     }
 }
-
-/// <summary>
-/// Service facade providing intent routing classification.
-/// </summary>
-public static class IntentRoutingService
-{
-    /// <summary>
-    /// Classifies query using the rule-based intent router.
-    /// </summary>
-    public static IntentRouteResponse ClassifyIntent(
-        string query,
-        IReadOnlyList<string> userRoles,
-        IReadOnlyDictionary<string, string>? context = null)
-    {
-        return RuleBasedIntentRouter.ClassifyIntent(query, userRoles, context);
-    }
-}
