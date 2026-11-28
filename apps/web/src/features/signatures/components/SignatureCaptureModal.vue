@@ -6,6 +6,7 @@
     :dismissible="!busy"
     :fallback-focus="fallbackFocus"
     size="sm"
+    backdrop-class="signature-capture-backdrop"
     dialog-class="modal signature-capture-dialog"
     title="Electronic Signature & Identity Verification"
     aria-label="Electronic Signature Capture Modal"
@@ -544,5 +545,9 @@ button:focus-visible {
     padding: 10px 14px;
     font-size: 16px;
   }
+}
+
+:deep(.signature-capture-backdrop) {
+  z-index: 10010; /* deid-ignore: z-index stacking layer, not PHI */
 }
 </style>

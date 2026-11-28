@@ -100,10 +100,16 @@ const onBackdropClick = () => {
   closeDrawer();
 };
 
+const panelTag = computed(() =>
+  props.role === "dialog" || props.role === "alertdialog" ? "div" : "aside"
+);
+
 const modalStateAttrs = computed(() =>
   props.keepMounted && !drawerOpen.value
     ? { "aria-modal": undefined, "aria-hidden": "true", inert: "" }
-    : {}
+    : props.docked
+      ? { "aria-modal": undefined }
+      : {}
 );
 
 const trapActive = computed(() => drawerOpen.value && !props.docked);
@@ -141,7 +147,8 @@ defineExpose({
       :inert="!drawerOpen || undefined"
       @click.self="onBackdropClick"
     >
-      <aside
+      <component
+        :is="panelTag"
         :id="id"
         ref="drawerRef"
         :class="[
@@ -205,7 +212,7 @@ defineExpose({
         <footer v-if="$slots.footer" class="clinical-drawer-footer">
           <slot name="footer" :close="closeDrawer" />
         </footer>
-      </aside>
+      </component>
 
       <slot name="after-panel" />
     </div>
@@ -287,6 +294,11 @@ defineExpose({
   background: var(--color-border-control);
   margin: 10px auto 2px;
   flex-shrink: 0;
+}
+
+.drawer-mobile-bottom-sheet:not(.position-bottom)
+  .clinical-drawer-sheet-handle {
+  display: none;
 }
 
 .size-sm {
@@ -485,6 +497,11 @@ defineExpose({
     box-shadow: var(--shadow-drawer-bottom);
     animation-name: clinical-drawer-slide-in-bottom;
     padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .drawer-mobile-bottom-sheet:not(.position-bottom)
+    .clinical-drawer-sheet-handle {
+    display: block;
   }
 
   .clinical-drawer-close-btn {

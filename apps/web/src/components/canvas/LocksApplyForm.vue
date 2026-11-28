@@ -204,122 +204,33 @@
       />
     </div>
 
-    <div
+    <ClinicalGovernanceBanner
       v-if="readinessLoading || readiness"
-      class="readiness-panel"
-      :class="{
-        'readiness-panel--ready': readiness?.ready_for_lock,
-        'readiness-panel--blocked': readiness && !readiness.ready_for_lock,
-      }"
       data-testid="study-locks-readiness"
+      class="study-locks-governance-banner"
+      :status="readinessBannerStatus"
+      :status-label="readinessBannerStatusLabel"
+      status-test-id="study-locks-readiness-status"
+      :gates="mappedReadinessGates"
+      gates-test-id="study-locks-readiness-counts"
+      :blocker-count="readiness?.blockers.length ?? 0"
+      blocker-action-id="btn-review-study-lock-blockers"
+      blocker-action-test-id="study-locks-review-blockers"
+      blocker-drawer-title="Study lock readiness blockers"
+      :blocker-drawer-subtitle="studyCode"
+      :teleport="false"
+      aria-label="Study lock readiness"
     >
-      <p v-if="readinessLoading" class="status-line" role="status">
-        Checking lock readiness…
-      </p>
-      <template v-else-if="readiness">
-        <div class="readiness-summary">
-          <span
-            class="clinical-badge readiness-badge"
-            :class="
-              readiness.ready_for_lock
-                ? 'clinical-badge--verified readiness-badge--ready'
-                : 'clinical-badge--error readiness-badge--blocked'
-            "
-            data-testid="study-locks-readiness-status"
-          >
-            <ClinicalIcon
-              :name="
-                readiness.ready_for_lock ? 'check-circle' : 'alert-triangle'
-              "
-              :size="16"
-            />
-            {{
-              readiness.ready_for_lock
-                ? "Ready for Locked"
-                : "Blocked for Locked · Frozen available"
-            }}
-          </span>
-          <span
-            class="readiness-counts"
-            data-testid="study-locks-readiness-counts"
-          >
-            <span
-              v-for="(gate, gIdx) in readinessGates"
-              :key="gate.key"
-              :data-testid="`readiness-gate-${gate.key}`"
-              :class="[
-                'readiness-gate-chip',
-                gate.count > 0
-                  ? 'readiness-gate-chip--active'
-                  : 'readiness-gate-chip--clear',
-              ]"
-            >
-              <template v-if="gIdx > 0"> · </template>{{ gate.label }}
-            </span>
-          </span>
-        </div>
-
-        <ul
-          v-if="readiness.blockers.length > 0"
-          class="readiness-blockers"
-          data-testid="study-locks-readiness-blockers"
-        >
-          <li
-            v-for="(blocker, bIdx) in readiness.blockers"
-            :key="`${blocker.kind}-${blocker.target_ref ?? blocker.finding_ref ?? blocker.query_ref ?? bIdx}`"
-            class="readiness-blocker-item"
-            :data-blocker-kind="normalizeLockBlockerKind(blocker.kind)"
-          >
-            <span
-              class="clinical-badge blocker-kind-badge"
-              :data-testid="`blocker-kind-${normalizeLockBlockerKind(blocker.kind)}`"
-            >
-              {{
-                formatLockBlockerKindLabel(
-                  blocker.kind,
-                  Boolean(blocker.signature_superseded)
-                )
-              }}
-            </span>
-            <template v-if="blocker.masked">
-              <span class="masked-pill">
-                Masked ({{ blocker.mask ?? "Restricted" }})
-              </span>
-              <strong
-                v-if="formatMaskedBlockerOwner(blocker)"
-                class="blocker-owner"
-              >
-                {{ formatMaskedBlockerOwner(blocker) }}:
-              </strong>
-              <span v-if="blocker.next_action" class="blocker-action">
-                {{ blocker.next_action }}
-              </span>
-            </template>
-            <template v-else>
-              <strong v-if="blocker.owner" class="blocker-owner">
-                {{ blocker.owner }}:
-              </strong>
-              <NodeRefChip
-                v-for="chip in getBlockerChips(blocker)"
-                :key="chip.key"
-                :node-ref="chip.ref"
-                :fallback-title="chip.fallback"
-                include-kind
-              />
-              <span
-                v-if="formatLockBlockerDetail(blocker)"
-                class="blocker-detail"
-              >
-                {{ formatLockBlockerDetail(blocker) }}
-              </span>
-              <span v-if="blocker.next_action" class="blocker-action">
-                — {{ blocker.next_action }}
-              </span>
-            </template>
-          </li>
-        </ul>
+      <template #blockers>
+        <LockBlockerList
+          v-if="readiness && readiness.blockers.length > 0"
+          :blockers="readiness.blockers"
+          list-class="readiness-blockers"
+          list-test-id="study-locks-readiness-blockers"
+          badge-test-id-prefix="blocker-kind-"
+        />
       </template>
-    </div>
+    </ClinicalGovernanceBanner>
 
     <div class="apply-actions">
       <button
@@ -351,20 +262,15 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalIcon, ClinicalInput } from "ui";
+import { computed } from "vue";
+import { ClinicalGovernanceBanner, ClinicalInput } from "ui";
 import type { KernelLockKind, KernelLockReadiness } from "../../api/kernelApi";
-import {
-  formatLockBlockerDetail,
-  formatLockBlockerFallbackTitle,
-  formatLockBlockerKindLabel,
-  formatMaskedBlockerOwner,
-  normalizeLockBlockerKind,
-  type useSignedKernelLock,
-} from "../../composables/useSignedKernelLock";
+import type { useSignedKernelLock } from "../../composables/useSignedKernelLock";
+import LockBlockerList from "./LockBlockerList.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 import type { PickerOption } from "./useLockHierarchyPickers";
 
-defineProps<{
+const props = defineProps<{
   studyCode: string;
   studyRef: string;
   applyScopeKind: string;
@@ -413,29 +319,27 @@ const emit = defineEmits<{
   (e: "quickApply", kind: KernelLockKind): void;
 }>();
 
-function getBlockerChips(
-  blocker: NonNullable<KernelLockReadiness["blockers"]>[number]
-) {
-  const chips: Array<{ key: string; ref: string; fallback?: string }> = [];
-  if (blocker.target_ref) {
-    chips.push({
-      key: `t-${blocker.target_ref}`,
-      ref: blocker.target_ref,
-      fallback: formatLockBlockerFallbackTitle(blocker),
-    });
-  }
-  if (blocker.query_ref && blocker.query_ref !== blocker.target_ref) {
-    chips.push({ key: `q-${blocker.query_ref}`, ref: blocker.query_ref });
-  }
-  if (blocker.finding_ref && blocker.finding_ref !== blocker.target_ref) {
-    chips.push({
-      key: `f-${blocker.finding_ref}`,
-      ref: blocker.finding_ref,
-      fallback: blocker.rule_id ?? undefined,
-    });
-  }
-  return chips;
-}
+const readinessBannerStatus = computed(() => {
+  if (props.readinessLoading) return "loading";
+  return props.readiness?.ready_for_lock ? "ready" : "blocked";
+});
+
+const readinessBannerStatusLabel = computed(() => {
+  if (props.readinessLoading) return "Checking lock readiness…";
+  return props.readiness?.ready_for_lock
+    ? "Ready for Locked"
+    : "Blocked for Locked · Frozen available";
+});
+
+const mappedReadinessGates = computed(() => {
+  if (props.readinessLoading || !props.readiness) return [];
+  return props.readinessGates.map((gate) => ({
+    key: gate.key,
+    label: gate.label,
+    count: gate.count,
+    testId: `readiness-gate-${gate.key}`,
+  }));
+});
 </script>
 
 <style scoped src="./locksSection.css"></style>

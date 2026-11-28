@@ -8,4 +8,5 @@ Active Architectural Decision Records for **6. Frontend & Design System**.
 
 ## Decisions
 
+- [ADR-FRONTEND-20261128-shared-governance-banners-and-single-surface-new-form-entry: shared-governance-banners-and-single-surface-new-form-entry](2026-11-28-shared-governance-banners-and-single-surface-new-form-entry.md) (2026-11-28)
 - [ADR-FRONTEND-20261128-standardize-focus-out-dismissal-ancestor-fallback-and-portal-modal-primitives: Standardize Focus Out Dismissal Ancestor Fallback and Portal Modal Primitives](2026-11-28-standardize-focus-out-dismissal-ancestor-fallback-and-portal-modal-primitives.md) (2026-11-28)

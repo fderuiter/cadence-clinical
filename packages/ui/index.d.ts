@@ -29,6 +29,85 @@ export const ClinicalContextBar: DefineComponent<
   any
 >;
 
+export interface ClinicalGovernanceGateItem {
+  key?: string;
+  label: string;
+  count?: number;
+  testId?: string;
+}
+
+export interface ClinicalGovernanceBannerProps {
+  id?: string;
+  status?: "unlocked" | "frozen" | "locked" | "ready" | "blocked" | "loading";
+  statusLabel?: string;
+  statusTestId?: string;
+  summary?: string;
+  summaryTestId?: string;
+  gates?: ClinicalGovernanceGateItem[];
+  gatesTestId?: string;
+  blockerCount?: number;
+  showBlockerAction?: boolean;
+  blockerActionLabel?: string;
+  blockerActionId?: string;
+  blockerActionTestId?: string;
+  blockerDrawerTitle?: string;
+  blockerDrawerSubtitle?: string;
+  showManageAction?: boolean;
+  manageActionLabel?: string;
+  manageActionId?: string;
+  manageActionTestId?: string;
+  manageDrawerTitle?: string;
+  manageDrawerSubtitle?: string;
+  showExportAction?: boolean;
+  exportActionLabel?: string;
+  exportActionId?: string;
+  exportActionTestId?: string;
+  exportDrawerTitle?: string;
+  exportDrawerSubtitle?: string;
+  modelValue?: string | null;
+  activeSheet?: string | null;
+  drawerId?: string;
+  drawerOverlayId?: string;
+  drawerTitle?: string;
+  drawerSubtitle?: string;
+  drawerSize?: "sm" | "md" | "lg" | "xl" | string;
+  drawerDismissible?: boolean;
+  closeLabel?: string;
+  teleport?: boolean | string;
+  mobileBottomSheet?: boolean;
+  ariaLabel?: string;
+}
+
+export const ClinicalGovernanceBanner: DefineSlotsComponent<
+  ClinicalGovernanceBannerProps,
+  {
+    status?: (props: { status: string; statusLabel: string }) => any;
+    summary?: () => any;
+    gates?: (props: { gates: ClinicalGovernanceGateItem[] }) => any;
+    actions?: (props: {
+      activeSheet: string | null;
+      openSheet: (sheet: string | null, trigger?: any) => void;
+      openBlockers: (event?: Event) => void;
+      openLocks: (event?: Event) => void;
+      openExport: (event?: Event) => void;
+      closeDrawer: () => void;
+    }) => any;
+    outcome?: () => any;
+    blockers?: (props: { close: () => void }) => any;
+    locks?: (props: { close: () => void }) => any;
+    export?: (props: { close: () => void }) => any;
+    drawer?: (props: { activeSheet: string | null; close: () => void }) => any;
+  },
+  {
+    openSheet: (sheet: string | null, trigger?: any) => void;
+    openBlockers: (event?: Event) => void;
+    openLocks: (event?: Event) => void;
+    openExport: (event?: Event) => void;
+    closeDrawer: () => void;
+    currentSheet: import("vue").ComputedRef<string | null>;
+  }
+>;
+
 export const ClinicalFormField: DefineComponent<
   {
     field: any;
@@ -791,6 +870,8 @@ export interface HandoffFocusOptions {
   awaitNextTick?: boolean;
   includeDefaultFallbacks?: boolean;
   keepTrigger?: boolean;
+  stickyOffset?: number;
+  scrollTarget?: InlineFocusCandidate;
 }
 
 export function handoffFocus(
@@ -809,6 +890,8 @@ export interface InlineFocusHandoffOptions {
     | (() => HTMLElement | null | undefined)
     | null;
   scrollIfOffscreen?: boolean;
+  stickyOffset?: number;
+  scrollTarget?: InlineFocusCandidate;
 }
 
 export interface InlineFocusHandoffControls {

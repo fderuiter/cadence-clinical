@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.ToolingCore.Primitives;
 using Cadence.ToolingCore.Services;
 
 using Npgsql;
@@ -285,7 +286,7 @@ public static class DatabaseResetService
     public static int RunDatabaseMigrator(string connectionString, string? repoRoot = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
 
         ExporterBinaryResolver.ExporterInvocation invocation = ExporterBinaryResolver.ResolveInvocation(
             repoRoot,
@@ -382,26 +383,4 @@ public static class DatabaseResetService
         (host.Length > ".local".Length &&
          host.EndsWith(".local", StringComparison.OrdinalIgnoreCase) &&
          !host.Contains('/', StringComparison.Ordinal));
-
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln")))
-            {
-                return current;
-            }
-
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current)
-            {
-                break;
-            }
-
-            current = parent ?? string.Empty;
-        }
-
-        return Directory.GetCurrentDirectory();
-    }
 }
