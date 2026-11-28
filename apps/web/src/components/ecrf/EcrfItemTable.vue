@@ -247,6 +247,15 @@
                       Needs re-verification
                     </span>
                     <span
+                      v-else-if="
+                        hasRecordedValue(item) && !sdv.isSdvRequired(item)
+                      "
+                      class="clinical-badge clinical-badge--draft ecrf-sdv-badge"
+                      :data-testid="`ecrf-sdv-status-${item.item_id}`"
+                    >
+                      SDV not required
+                    </span>
+                    <span
                       v-else-if="hasRecordedValue(item)"
                       class="clinical-badge clinical-badge--draft ecrf-sdv-badge ecrf-sdv-badge--unverified"
                       :data-testid="`ecrf-sdv-status-${item.item_id}`"
@@ -259,6 +268,42 @@
                       :data-testid="`ecrf-sdv-status-${item.item_id}`"
                     >
                       No value
+                    </span>
+                    <span
+                      v-if="
+                        hasRecordedValue(item) &&
+                        sdv.isSdvRequired(item) &&
+                        !sdv.activeVerification(item) &&
+                        sdv.hasOpenQuery(item)
+                      "
+                      class="clinical-badge clinical-badge--queried ecrf-sdv-badge ecrf-sdv-badge--wrap"
+                      :data-testid="`ecrf-sdv-query-blocked-${item.item_id}`"
+                    >
+                      Open query — close before SDV
+                    </span>
+                    <span
+                      v-if="sdv.activeReview(item)"
+                      class="clinical-badge clinical-badge--verified ecrf-sdv-badge"
+                      :data-testid="`ecrf-review-status-${item.item_id}`"
+                    >
+                      Reviewed (rev {{ item.revision }})
+                    </span>
+                    <span
+                      v-else-if="sdv.needsRereview(item)"
+                      class="clinical-badge clinical-badge--warning ecrf-sdv-badge"
+                      :data-testid="`ecrf-review-status-${item.item_id}`"
+                    >
+                      Needs re-review
+                    </span>
+                    <span
+                      v-else-if="
+                        hasRecordedValue(item) &&
+                        sdv.isMedicalReviewRequired(item)
+                      "
+                      class="clinical-badge clinical-badge--draft ecrf-sdv-badge"
+                      :data-testid="`ecrf-review-status-${item.item_id}`"
+                    >
+                      Medical review required
                     </span>
                   </div>
                   <span
@@ -273,48 +318,101 @@
                     {{ item.revision }}; unsaved draft is not verified.
                   </span>
                   <div
-                    v-if="canVerifySource && hasRecordedValue(item)"
+                    v-if="
+                      hasRecordedValue(item) &&
+                      ((canVerifySource &&
+                        (sdv.isSdvRequired(item) ||
+                          Boolean(sdv.activeVerification(item)))) ||
+                        canReviewSource)
+                    "
                     class="ecrf-sdv-actions"
                   >
-                    <template v-if="!sdv.activeVerification(item)">
-                      <input
-                        :id="`ecrf-sdv-select-${item.item_id}`"
-                        type="checkbox"
-                        :checked="sdv.isSdvSelected(item.item_id)"
-                        :value="item.item_id"
-                        :disabled="sdv.sdvBusy || formState.assertionsLocked"
-                        :aria-label="`Select ${item.item_id} for source verification`"
-                        @change="
-                          sdv.toggleSdvItem(
-                            item.item_id,
-                            ($event.target as HTMLInputElement).checked
-                          )
-                        "
-                      />
+                    <template
+                      v-if="
+                        canVerifySource &&
+                        (sdv.isSdvRequired(item) ||
+                          Boolean(sdv.activeVerification(item)))
+                      "
+                    >
+                      <template v-if="!sdv.activeVerification(item)">
+                        <input
+                          :id="`ecrf-sdv-select-${item.item_id}`"
+                          type="checkbox"
+                          :checked="sdv.isSdvSelected(item.item_id)"
+                          :value="item.item_id"
+                          :disabled="
+                            sdv.sdvBusy ||
+                            formState.assertionsLocked ||
+                            sdv.hasOpenQuery(item)
+                          "
+                          :aria-label="`Select ${item.item_id} for source verification`"
+                          @change="
+                            sdv.toggleSdvItem(
+                              item.item_id,
+                              ($event.target as HTMLInputElement).checked
+                            )
+                          "
+                        />
+                        <button
+                          :id="`ecrf-verify-${item.item_id}`"
+                          class="btn btn-secondary"
+                          type="button"
+                          :disabled="
+                            sdv.sdvBusy ||
+                            formState.assertionsLocked ||
+                            sdv.hasOpenQuery(item)
+                          "
+                          @click="sdv.beginVerify(item)"
+                        >
+                          Verify<span class="sr-only"> {{ item.item_id }}</span>
+                        </button>
+                      </template>
                       <button
-                        :id="`ecrf-verify-${item.item_id}`"
+                        v-else
+                        :id="`ecrf-unverify-${item.item_id}`"
                         class="btn btn-secondary"
                         type="button"
                         :disabled="sdv.sdvBusy || formState.assertionsLocked"
-                        @click="sdv.beginVerify(item)"
+                        @click="
+                          sdv.beginRetract(item, sdv.activeVerification(item)!)
+                        "
                       >
-                        Verify<span class="sr-only"> {{ item.item_id }}</span>
+                        Withdraw verification<span class="sr-only">
+                          for {{ item.item_id }}</span
+                        >
                       </button>
                     </template>
-                    <button
-                      v-else
-                      :id="`ecrf-unverify-${item.item_id}`"
-                      class="btn btn-secondary"
-                      type="button"
-                      :disabled="sdv.sdvBusy || formState.assertionsLocked"
-                      @click="
-                        sdv.beginRetract(item, sdv.activeVerification(item)!)
-                      "
-                    >
-                      Withdraw verification<span class="sr-only">
-                        for {{ item.item_id }}</span
+
+                    <template v-if="canReviewSource">
+                      <button
+                        v-if="!sdv.activeReview(item)"
+                        :id="`ecrf-review-${item.item_id}`"
+                        class="btn btn-secondary"
+                        type="button"
+                        :disabled="
+                          sdv.sdvBusy ||
+                          formState.assertionsLocked ||
+                          sdv.hasOpenQuery(item)
+                        "
+                        @click="sdv.beginReview(item)"
                       >
-                    </button>
+                        Review<span class="sr-only"> {{ item.item_id }}</span>
+                      </button>
+                      <button
+                        v-else
+                        :id="`ecrf-unreview-${item.item_id}`"
+                        class="btn btn-secondary"
+                        type="button"
+                        :disabled="sdv.sdvBusy || formState.assertionsLocked"
+                        @click="
+                          sdv.beginRetractReview(item, sdv.activeReview(item)!)
+                        "
+                      >
+                        Withdraw review<span class="sr-only">
+                          for {{ item.item_id }}</span
+                        >
+                      </button>
+                    </template>
                   </div>
                 </div>
               </td>
@@ -362,6 +460,17 @@
                       {{ sdv.pendingSdv.item_id }} (revision
                       {{ sdv.pendingSdv.revision }})
                     </template>
+                    <template v-else-if="sdv.pendingSdv.mode === 'review'">
+                      Reason for reviewing
+                      {{ sdv.pendingSdv.item_id }} (revision
+                      {{ sdv.pendingSdv.revision }})
+                    </template>
+                    <template
+                      v-else-if="sdv.pendingSdv.mode === 'retract-review'"
+                    >
+                      Reason for withdrawing review on
+                      {{ sdv.pendingSdv.item_id }}
+                    </template>
                     <template v-else>
                       Reason for withdrawing verification on
                       {{ sdv.pendingSdv.item_id }}
@@ -393,7 +502,11 @@
                     {{
                       sdv.pendingSdv.mode === "verify"
                         ? "Confirm verification"
-                        : "Withdraw verification"
+                        : sdv.pendingSdv.mode === "review"
+                          ? "Confirm review"
+                          : sdv.pendingSdv.mode === "retract-review"
+                            ? "Withdraw review"
+                            : "Withdraw verification"
                     }}
                   </button>
                   <button
@@ -630,6 +743,7 @@ const props = defineProps<{
   queries: UnwrapNestedRefs<ReturnType<typeof useFormQueries>>;
   highlightItemId?: string | null;
   canVerifySource?: boolean;
+  canReviewSource?: boolean;
   canManageQueries?: boolean;
   itemObservationLink: (
     observationId: string | null | undefined,
@@ -951,6 +1065,11 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   align-items: center;
   gap: 6px;
 }
+.ecrf-sdv-badge--wrap {
+  white-space: normal;
+  text-align: left;
+  line-height: 1.3;
+}
 .ecrf-sdv-draft-note {
   color: var(--semantic-color-text-secondary);
   font-size: 0.75rem;
@@ -958,6 +1077,7 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 }
 .ecrf-sdv-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }

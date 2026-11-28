@@ -3,9 +3,11 @@
     id="study-locks-apply-form"
     class="apply-card"
     data-testid="study-locks-apply-form"
-    @submit.prevent="emit('submit')"
+    @submit.prevent="canApply ? emit('submit') : undefined"
   >
-    <h3>Apply signed freeze or lock</h3>
+    <h3>
+      {{ canApply ? "Apply signed freeze or lock" : "Inspect closeout scope" }}
+    </h3>
     <div class="apply-grid">
       <ClinicalInput
         id="lock-apply-scope-kind"
@@ -175,6 +177,7 @@
       </ClinicalInput>
 
       <ClinicalInput
+        v-if="canApply"
         id="lock-apply-kind"
         :model-value="applyKind"
         label="Assertion"
@@ -191,6 +194,7 @@
       </ClinicalInput>
 
       <ClinicalInput
+        v-if="canApply"
         id="lock-apply-reason"
         :model-value="applyReason"
         label="Reason for change"
@@ -221,18 +225,18 @@
       :teleport="false"
       aria-label="Study lock readiness"
     >
-      <template #blockers>
-        <LockBlockerList
+      <template #blockers="{ close }">
+        <LocksCloseoutReadinessCard
           v-if="readiness && readiness.blockers.length > 0"
-          :blockers="readiness.blockers"
-          list-class="readiness-blockers"
-          list-test-id="study-locks-readiness-blockers"
-          badge-test-id-prefix="blocker-kind-"
+          :study-code="studyCode"
+          :apply-scope-ref="applyScopeRef"
+          :readiness="readiness"
+          @navigate="close"
         />
       </template>
     </ClinicalGovernanceBanner>
 
-    <div class="apply-actions">
+    <div v-if="canApply" class="apply-actions">
       <button
         id="btn-apply-study-lock"
         type="submit"
@@ -266,42 +270,46 @@ import { computed } from "vue";
 import { ClinicalGovernanceBanner, ClinicalInput } from "ui";
 import type { KernelLockKind, KernelLockReadiness } from "../../api/kernelApi";
 import type { useSignedKernelLock } from "../../composables/useSignedKernelLock";
-import LockBlockerList from "./LockBlockerList.vue";
+import LocksCloseoutReadinessCard from "./LocksCloseoutReadinessCard.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 import type { PickerOption } from "./useLockHierarchyPickers";
 
-const props = defineProps<{
-  studyCode: string;
-  studyRef: string;
-  applyScopeKind: string;
-  selectedSiteRef: string;
-  selectedEnrollmentRef: string;
-  selectedFormRef: string;
-  selectedObservationRef: string;
-  needsSitePicker: boolean;
-  needsEnrollmentPicker: boolean;
-  needsFormPicker: boolean;
-  needsObservationPicker: boolean;
-  sitePickerOptions: PickerOption[];
-  enrollmentPickerOptions: PickerOption[];
-  formPickerOptions: PickerOption[];
-  observationPickerOptions: PickerOption[];
-  enrollmentsLoading: boolean;
-  formsLoading: boolean;
-  observationsLoading: boolean;
-  applyKind: KernelLockKind;
-  applyReason: string;
-  applyScopeRef: string;
-  readiness: KernelLockReadiness | null;
-  readinessLoading: boolean;
-  readinessGates: ReturnType<
-    typeof useSignedKernelLock
-  >["readinessGates"]["value"];
-  isApplyDisabled: boolean;
-  busy: boolean;
-  canFreezeByReadiness: boolean;
-  isLockBlockedByReadiness: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    canApply?: boolean;
+    studyCode: string;
+    studyRef: string;
+    applyScopeKind: string;
+    selectedSiteRef: string;
+    selectedEnrollmentRef: string;
+    selectedFormRef: string;
+    selectedObservationRef: string;
+    needsSitePicker: boolean;
+    needsEnrollmentPicker: boolean;
+    needsFormPicker: boolean;
+    needsObservationPicker: boolean;
+    sitePickerOptions: PickerOption[];
+    enrollmentPickerOptions: PickerOption[];
+    formPickerOptions: PickerOption[];
+    observationPickerOptions: PickerOption[];
+    enrollmentsLoading: boolean;
+    formsLoading: boolean;
+    observationsLoading: boolean;
+    applyKind: KernelLockKind;
+    applyReason: string;
+    applyScopeRef: string;
+    readiness: KernelLockReadiness | null;
+    readinessLoading: boolean;
+    readinessGates: ReturnType<
+      typeof useSignedKernelLock
+    >["readinessGates"]["value"];
+    isApplyDisabled: boolean;
+    busy: boolean;
+    canFreezeByReadiness: boolean;
+    isLockBlockedByReadiness: boolean;
+  }>(),
+  { canApply: true }
+);
 
 const emit = defineEmits<{
   (e: "update:applyScopeKind", value: string): void;
@@ -318,7 +326,6 @@ const emit = defineEmits<{
   (e: "submit"): void;
   (e: "quickApply", kind: KernelLockKind): void;
 }>();
-
 const readinessBannerStatus = computed(() => {
   if (props.readinessLoading) return "loading";
   return props.readiness?.ready_for_lock ? "ready" : "blocked";
@@ -326,9 +333,10 @@ const readinessBannerStatus = computed(() => {
 
 const readinessBannerStatusLabel = computed(() => {
   if (props.readinessLoading) return "Checking lock readiness…";
-  return props.readiness?.ready_for_lock
-    ? "Ready for Locked"
-    : "Blocked for Locked · Frozen available";
+  if (props.readiness?.ready_for_lock) return "Ready for Locked";
+  return props.canApply
+    ? "Blocked for Locked · Frozen available"
+    : "Blocked for Locked";
 });
 
 const mappedReadinessGates = computed(() => {

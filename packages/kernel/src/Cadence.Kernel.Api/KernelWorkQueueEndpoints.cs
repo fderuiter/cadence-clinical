@@ -318,6 +318,11 @@ public sealed record KernelWorkItemResponse(
 /// <param name="FindingRef">Validation finding NodeRef when applicable.</param>
 /// <param name="ProtocolVersionRef">Protocol version NodeRef when applicable.</param>
 /// <param name="ProposalRef">Proposal NodeRef when applicable.</param>
+/// <param name="SiteCode">Site short code when resolved.</param>
+/// <param name="SubjectCode">Participant subject code when resolved.</param>
+/// <param name="FormTitle">Form title when resolved.</param>
+/// <param name="CollectionSpecId">Collection spec identifier when resolved.</param>
+/// <param name="ItemId">Form item identifier when resolved.</param>
 public sealed record KernelWorkItemTargetResponse(
     string? StudyRef,
     Guid? StudyId,
@@ -326,7 +331,12 @@ public sealed record KernelWorkItemTargetResponse(
     string? ObservationRef,
     string? FindingRef,
     string? ProtocolVersionRef,
-    string? ProposalRef = null)
+    string? ProposalRef = null,
+    string? SiteCode = null,
+    string? SubjectCode = null,
+    string? FormTitle = null,
+    string? CollectionSpecId = null,
+    string? ItemId = null)
 {
     internal static KernelWorkItemTargetResponse From(WorkItemTargetContext context) =>
         new(
@@ -337,5 +347,10 @@ public sealed record KernelWorkItemTargetResponse(
             context.ObservationRef,
             context.FindingRef,
             context.ProtocolVersionRef,
-            context.ProposalRef);
+            context.ProposalRef,
+            context.SiteCode,
+            context.SubjectCode,
+            context.FormTitle,
+            context.CollectionSpecId,
+            context.ItemId);
 }

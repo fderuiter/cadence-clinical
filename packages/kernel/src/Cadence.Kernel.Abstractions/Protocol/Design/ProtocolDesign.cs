@@ -223,6 +223,8 @@ public sealed record CollectionSpec(
 /// <paramref name="Unit"/>, a code when it has a <paramref name="Terminology"/>, otherwise any kind.
 /// </param>
 /// <param name="Prompt">Optional form-specific item prompt or question label preserved from an imported definition.</param>
+/// <param name="SdvRequired">Whether recorded values for this item require source data verification before database lock (defaults to true).</param>
+/// <param name="MedicalReviewRequired">Whether recorded values for this item require medical monitor source data review before database lock (defaults to false).</param>
 public sealed record CollectionItem(
     string Id,
     ConceptRef Concept,
@@ -231,7 +233,9 @@ public sealed record CollectionItem(
     bool Required = false,
     DataPurpose? Purpose = null,
     ObservationValueKind? ValueKind = null,
-    string? Prompt = null) : IProtocolElement
+    string? Prompt = null,
+    bool SdvRequired = true,
+    bool MedicalReviewRequired = false) : IProtocolElement
 {
     /// <summary>The kind of value the item takes, or null when it takes any kind. Derived, so never serialised.</summary>
     [JsonIgnore]

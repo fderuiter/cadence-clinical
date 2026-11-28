@@ -35,7 +35,7 @@
       <template #summary>
         <slot name="banner-summary" />
         <span
-          v-if="canApply && !hasDirectLocked && readiness"
+          v-if="showReadinessSummary && readiness"
           :data-testid="`${prefix}-readiness`"
           class="scope-lock-readiness-inline"
         >
@@ -48,10 +48,14 @@
                 readinessGates.map((gate) => gate.label).join(" · ")
               }}).
             </template>
-            <template v-else>
+            <template v-else-if="canApply">
               Locked blocked:
               {{ readinessGates.map((gate) => gate.label).join(", ") }}
               (Freeze {{ scopeLabel }} remains available).
+            </template>
+            <template v-else>
+              Closeout blockers on this {{ scopeLabel }}:
+              {{ readinessGates.map((gate) => gate.label).join(", ") }}.
             </template>
           </span>
         </span>
@@ -67,7 +71,7 @@
         <slot name="export" :close="close" />
       </template>
 
-      <template #drawer>
+      <template #drawer="{ close }">
         <div class="scope-lock-drawer-body">
           <slot name="held-locks">
             <div
@@ -146,7 +150,7 @@
           </div>
 
           <div
-            v-if="canApply && !hasDirectLocked && readiness"
+            v-if="showReadinessSummary && readiness"
             :class="[
               'scope-lock-readiness',
               readiness.ready_for_lock
@@ -160,17 +164,24 @@
                   readinessGates.map((gate) => gate.label).join(" · ")
                 }}).
               </template>
-              <template v-else>
+              <template v-else-if="canApply">
                 Locked blocked:
                 {{ readinessGates.map((gate) => gate.label).join(", ") }}
                 (Freeze {{ scopeLabel }} remains available).
+              </template>
+              <template v-else>
+                Closeout blockers on this {{ scopeLabel }}:
+                {{ readinessGates.map((gate) => gate.label).join(", ") }}.
               </template>
             </p>
             <LockBlockerList
               v-if="!readiness.ready_for_lock && readiness.blockers.length > 0"
               :blockers="readiness.blockers"
+              :study-code="resolvedStudyCode"
               list-class="scope-lock-blocker-list"
               :list-test-id="`${prefix}-readiness-blockers`"
+              :open-link-test-id-prefix="`${prefix}-blocker-open-`"
+              @navigate="close"
             />
           </div>
         </div>
@@ -203,7 +214,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useSlots, watch } from "vue";
+import { computed, getCurrentInstance, ref, useSlots, watch } from "vue";
 import { ClinicalGovernanceBanner } from "ui";
 import { type KernelLock, type KernelLockKind } from "../../api/kernelApi";
 import type {
@@ -223,6 +234,7 @@ export type {
 
 const props = withDefaults(
   defineProps<{
+    studyCode?: string | null;
     studyRef: string | null;
     scopeRef: string;
     scopeLabel: string;
@@ -238,6 +250,7 @@ const props = withDefaults(
     exportDrawerSubtitle?: string;
   }>(),
   {
+    studyCode: null,
     directLocks: () => [],
     coveringLocks: () => [],
     idPrefix: "scope-lock",
@@ -254,6 +267,16 @@ const props = withDefaults(
 const emit = defineEmits<{
   changed: [lock: KernelLock];
 }>();
+
+const instance = getCurrentInstance();
+const routeStudyCode = computed(() => {
+  const raw = (
+    instance?.appContext.config.globalProperties as {
+      $route?: { params?: Record<string, unknown> };
+    }
+  )?.$route?.params?.studyCode;
+  return typeof raw === "string" ? raw.trim() : "";
+});
 
 const slots = useSlots();
 const prefix = computed(() => props.idPrefix);
@@ -327,8 +350,16 @@ const hasLockMutationActions = computed(
   () => canFreeze.value || canLock.value || releasableLocks.value.length > 0
 );
 
+const showReadinessSummary = computed(
+  () =>
+    !hasDirectLocked.value &&
+    readiness.value !== null &&
+    (canApply.value ||
+      (!readiness.value.ready_for_lock && readiness.value.blockers.length > 0))
+);
+
 const activeBlockerCount = computed(() => {
-  if (!canApply.value || hasDirectLocked.value || !readiness.value) return 0;
+  if (hasDirectLocked.value || !readiness.value) return 0;
   if (readiness.value.ready_for_lock) return 0;
   return readiness.value.blockers.length;
 });
@@ -336,7 +367,7 @@ const activeBlockerCount = computed(() => {
 const bannerStatus = computed(() => {
   if (hasAnyLocked.value) return "locked";
   if (hasAnyLock.value) return "frozen";
-  if (canApply.value && readiness.value) {
+  if (showReadinessSummary.value && readiness.value) {
     return readiness.value.ready_for_lock ? "ready" : "blocked";
   }
   return "unlocked";
@@ -345,7 +376,7 @@ const bannerStatus = computed(() => {
 const bannerStatusLabel = computed(() => {
   if (hasAnyLocked.value) return "Locked";
   if (hasAnyLock.value) return "Frozen";
-  if (canApply.value && readiness.value) {
+  if (showReadinessSummary.value && readiness.value) {
     return readiness.value.ready_for_lock ? "Ready" : "Blocked";
   }
   return "Unlocked";
@@ -379,7 +410,15 @@ const showControls = computed(
     props.showExportAction ||
     hasAnyLock.value ||
     hasLockMutationActions.value ||
+    showReadinessSummary.value ||
     outcome.value !== null
+);
+
+const resolvedStudyCode = computed(
+  () =>
+    props.studyCode?.trim() ||
+    readiness.value?.study_code?.trim() ||
+    routeStudyCode.value
 );
 
 watch(

@@ -77,7 +77,6 @@
 
     <template v-else>
       <LocksApplyForm
-        v-if="canApply"
         v-model:apply-scope-kind="applyScopeKind"
         v-model:selected-site-ref="selectedSiteRef"
         v-model:selected-enrollment-ref="selectedEnrollmentRef"
@@ -85,6 +84,7 @@
         v-model:selected-observation-ref="selectedObservationRef"
         v-model:apply-kind="applyKind"
         v-model:apply-reason="applyReason"
+        :can-apply="canApply"
         :study-code="studyCode"
         :study-ref="studyRef"
         :needs-site-picker="needsSitePicker"

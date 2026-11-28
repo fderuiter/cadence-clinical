@@ -15,8 +15,16 @@ type Schemas = components["schemas"];
 
 export type EcrfFormState = Schemas["ExecutionForms_FormStateResponse"];
 export type EcrfFormSummary = Schemas["ExecutionForms_FormSummaryResponse"];
-export type EcrfForm = Schemas["ExecutionForms_FormResponse"];
-export type EcrfFormItem = Schemas["ExecutionForms_FormItemResponse"];
+export type EcrfFormItem = Omit<
+  Schemas["ExecutionForms_FormItemResponse"],
+  "sdv_required" | "medical_review_required"
+> & {
+  sdv_required?: boolean;
+  medical_review_required?: boolean;
+};
+export type EcrfForm = Omit<Schemas["ExecutionForms_FormResponse"], "items"> & {
+  items: EcrfFormItem[];
+};
 export type EcrfFormLock = Schemas["ExecutionForms_FormLockResponse"];
 export type EcrfFormAssertion = Schemas["ExecutionForms_FormAssertionResponse"];
 /** A signature on the form; `superseded` once a later correction changed what it signed (then `signed_values` says what that was). */

@@ -250,6 +250,7 @@ export const ROLE_PERMISSIONS: Readonly<
     knowledge: ["read"],
     lab_toxicity_review: ["read"],
     notification: ["send"],
+    observation: ["review"],
     regulatory_form: ["read"],
     safety_report: ["approve", "create", "read"],
     site_compliance: ["read"],
@@ -1639,6 +1640,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_mm",
       "sysadmin",
     ],
+    "observation:review": ["sponsor_mm"],
     "payments_audit_log:read": ["auditor", "finance_officer", "sysadmin"],
     "payments_expense:read": [
       "auditor",

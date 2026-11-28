@@ -186,6 +186,21 @@
             :generic-display="genericDisplay"
             :generic-node-loading="genericNodeLoading"
           />
+          <component
+            :is="routerLinkComponent"
+            v-if="
+              hasRouter &&
+              routerLinkComponent &&
+              genericWorkspaceLink &&
+              !recordLocation
+            "
+            id="inspector-open-workspace"
+            data-testid="inspector-open-workspace"
+            class="inspector-link"
+            :to="genericWorkspaceLink.to"
+          >
+            {{ genericWorkspaceLink.label }}
+          </component>
           <router-link
             v-if="recordLocation"
             id="inspector-open-record"
@@ -293,6 +308,7 @@
 </template>
 
 <script setup lang="ts">
+import { getCurrentInstance } from "vue";
 import { formatCommandTitle } from "../../canvas/nodeResolver";
 import { isDemoBuild } from "../../utils/demoMode";
 import AssistPanel from "../ai/AssistPanel.vue";
@@ -314,6 +330,10 @@ const emit = defineEmits<{
   (e: "update:collapsed", collapsed: boolean): void;
 }>();
 
+const instance = getCurrentInstance();
+const hasRouter = Boolean(instance?.appContext.config.globalProperties.$router);
+const routerLinkComponent = instance?.appContext.components.RouterLink ?? null;
+
 const {
   activeNodeRef,
   aiEnabled,
@@ -327,6 +347,7 @@ const {
   explained,
   forceExplainOpen,
   genericDisplay,
+  genericWorkspaceLink,
   getTabIndex,
   hasSelection,
   headerKind,

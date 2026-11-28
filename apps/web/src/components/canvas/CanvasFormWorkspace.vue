@@ -125,6 +125,7 @@
         :can-manage-queries="canManageQueries"
         :can-answer-queries="canAnswerQueries"
         :can-verify-source="canVerifySource"
+        :can-review-source="canReviewSource"
         :highlight-item-id="highlightItemId"
         :form-location="formLocation"
         :observation-location="observationLocation"
@@ -171,6 +172,7 @@ const props = defineProps<{
   canManageQueries: boolean;
   canAnswerQueries?: boolean;
   canVerifySource?: boolean;
+  canReviewSource?: boolean;
   highlightItemId?: string | null;
   backLocation: RouteLocationRaw;
   backLabel: string;

@@ -44,10 +44,11 @@
           {{ blocker.owner }}:
         </strong>
         <NodeRefChip
-          v-for="chip in getBlockerChips(blocker)"
+          v-for="chip in getLockBlockerChips(blocker)"
           :key="chip.key"
           :node-ref="chip.ref"
           :fallback-title="chip.fallback"
+          :to="blockerLocation(blocker)"
           include-kind
         />
         <span
@@ -59,56 +60,87 @@
         <span v-if="blocker.next_action" class="lock-blocker-action">
           — {{ blocker.next_action }}
         </span>
+        <component
+          :is="routerLinkComponent"
+          v-if="
+            openLinkTestIdPrefix &&
+            hasRouter &&
+            routerLinkComponent &&
+            blockerLocation(blocker)
+          "
+          class="lock-blocker-workspace-link"
+          :data-testid="`${openLinkTestIdPrefix}${idx}`"
+          :to="blockerLocation(blocker)!"
+          @click="onWorkspaceNavigate"
+        >
+          {{ resolveLockBlockerActionLabel(blocker) }}
+        </component>
       </template>
     </li>
   </ul>
 </template>
 
 <script setup lang="ts">
+import { computed, getCurrentInstance } from "vue";
 import type { KernelLockBlocker } from "../../api/kernelApi";
 import {
+  getLockBlockerChips,
+  resolveLockBlockerActionLabel,
+  resolveLockBlockerLocation,
+} from "../../canvas/lockBlockerRoutes";
+import {
   formatLockBlockerDetail,
-  formatLockBlockerFallbackTitle,
   formatLockBlockerKindLabel,
   formatMaskedBlockerOwner,
   normalizeLockBlockerKind,
 } from "../../composables/useSignedKernelLock";
 import NodeRefChip from "./NodeRefChip.vue";
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     blockers: KernelLockBlocker[];
+    studyCode?: string | null;
     listTestId?: string;
     listClass?: string;
     badgeTestIdPrefix?: string;
+    openLinkTestIdPrefix?: string;
   }>(),
   {
+    studyCode: null,
     listTestId: undefined,
     listClass: "",
     badgeTestIdPrefix: undefined,
+    openLinkTestIdPrefix: undefined,
   }
 );
 
-function getBlockerChips(blocker: KernelLockBlocker) {
-  const chips: Array<{ key: string; ref: string; fallback?: string }> = [];
-  if (blocker.target_ref) {
-    chips.push({
-      key: `t-${blocker.target_ref}`,
-      ref: blocker.target_ref,
-      fallback: formatLockBlockerFallbackTitle(blocker),
-    });
-  }
-  if (blocker.query_ref && blocker.query_ref !== blocker.target_ref) {
-    chips.push({ key: `q-${blocker.query_ref}`, ref: blocker.query_ref });
-  }
-  if (blocker.finding_ref && blocker.finding_ref !== blocker.target_ref) {
-    chips.push({
-      key: `f-${blocker.finding_ref}`,
-      ref: blocker.finding_ref,
-      fallback: blocker.rule_id ?? undefined,
-    });
-  }
-  return chips;
+const emit = defineEmits<{
+  (e: "navigate"): void;
+}>();
+
+const instance = getCurrentInstance();
+const hasRouter = Boolean(instance?.appContext.config.globalProperties.$router);
+const routerLinkComponent = instance?.appContext.components.RouterLink ?? null;
+const routeStudyCode = computed(() => {
+  const raw = (
+    instance?.appContext.config.globalProperties as {
+      $route?: { params?: Record<string, unknown> };
+    }
+  )?.$route?.params?.studyCode;
+  return typeof raw === "string" ? raw.trim() : "";
+});
+
+function blockerLocation(blocker: KernelLockBlocker) {
+  return resolveLockBlockerLocation(
+    props.studyCode?.trim() || routeStudyCode.value,
+    blocker
+  );
+}
+
+function onWorkspaceNavigate() {
+  void Promise.resolve().then(() => {
+    emit("navigate");
+  });
 }
 </script>
 
@@ -160,5 +192,13 @@ function getBlockerChips(blocker: KernelLockBlocker) {
 
 .lock-blocker-action {
   color: var(--semantic-color-text-body);
+}
+
+.lock-blocker-workspace-link {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
 }
 </style>

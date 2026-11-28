@@ -106,6 +106,18 @@ export function useObservationViewModel(options: {
     observation.value ? !isUnrecordedValue(observation.value.value) : false
   );
 
+  const sdvRequired = computed(() => observation.value?.sdv_required !== false);
+
+  const medicalReviewRequired = computed(() =>
+    Boolean(observation.value?.medical_review_required)
+  );
+
+  const assertionsLocked = computed(() =>
+    observationLocks.value.some(
+      (held) => String(held.kind).toLowerCase() === "locked"
+    )
+  );
+
   const currentRevisionNumber = computed(() => {
     const obs = observation.value;
     if (!obs) return 1;
@@ -155,6 +167,41 @@ export function useObservationViewModel(options: {
     }
   );
 
+  const activeReview = computed<ObservationAssertionItem | null>(() => {
+    if (!observation.value || !hasRecordedValue.value) return null;
+    const assertions = observationAssertions.value;
+    for (let i = assertions.length - 1; i >= 0; i--) {
+      const item = assertions[i];
+      if (
+        String(item.kind).toLowerCase() === "reviewed" &&
+        !item.retracted_at &&
+        Number(item.revision) === currentRevisionNumber.value
+      ) {
+        return item;
+      }
+    }
+    return null;
+  });
+
+  const supersededReview = computed<ObservationAssertionItem | null>(() => {
+    if (!observation.value || !hasRecordedValue.value || activeReview.value) {
+      return null;
+    }
+    const assertions = observationAssertions.value;
+    for (let i = assertions.length - 1; i >= 0; i--) {
+      const item = assertions[i];
+      if (
+        String(item.kind).toLowerCase() === "reviewed" &&
+        !item.retracted_at &&
+        item.revision !== null &&
+        Number(item.revision) < currentRevisionNumber.value
+      ) {
+        return item;
+      }
+    }
+    return null;
+  });
+
   const openQueryThreads = computed<ObservationQueryThread[]>(() => {
     if (!observation.value) return [];
     const assertions = observationAssertions.value;
@@ -183,6 +230,8 @@ export function useObservationViewModel(options: {
         };
       });
   });
+
+  const hasOpenQuery = computed(() => openQueryThreads.value.length > 0);
 
   const correctionDescribedBy = computed(() =>
     activeVerification.value
@@ -308,10 +357,16 @@ export function useObservationViewModel(options: {
     observationRevisions,
     observationAudit,
     hasRecordedValue,
+    sdvRequired,
+    medicalReviewRequired,
+    assertionsLocked,
     currentRevisionNumber,
     activeVerification,
     supersededVerification,
+    activeReview,
+    supersededReview,
     openQueryThreads,
+    hasOpenQuery,
     correctionDescribedBy,
     reasonModalDescription,
     unit,

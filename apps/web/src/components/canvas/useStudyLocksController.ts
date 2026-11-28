@@ -163,9 +163,13 @@ export function useStudyLocksController(studyCodeGetter: () => string) {
     { immediate: true }
   );
 
-  watch([studyRef, pickers.applyScopeRef, canApply], () => {
-    void reloadReadiness();
-  });
+  watch(
+    [studyRef, pickers.applyScopeRef],
+    () => {
+      void reloadReadiness();
+    },
+    { immediate: true }
+  );
 
   function handleRetryStudyLocks() {
     void handoffRetryFocus(() => reloadStudy(), {

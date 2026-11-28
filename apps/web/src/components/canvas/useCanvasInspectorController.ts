@@ -15,6 +15,7 @@ import type {
   KernelProtocolVersion,
 } from "../../api/kernelApi";
 import { useAiAssistance } from "../../ai/aiAssistance";
+import { resolveInspectorNodeWorkspaceLocation } from "../../canvas/lockBlockerRoutes";
 import { formatNodeRef, parseNodeRef } from "../../canvas/nodeRef";
 import { getNodeDisplay } from "../../canvas/nodeResolver";
 import { useKernelCanI } from "../../composables/useKernelCanI";
@@ -114,6 +115,20 @@ export function useCanvasInspectorController(
     if (props.protocolVersion?.ref) return props.protocolVersion.ref;
     if (props.genericNode?.ref) return props.genericNode.ref;
     return genericDisplay.value?.ref ?? "";
+  });
+
+  const genericWorkspaceLink = computed(() => {
+    if (
+      props.participant ||
+      !genericDisplay.value ||
+      genericDisplay.value.masked
+    ) {
+      return null;
+    }
+    return resolveInspectorNodeWorkspaceLocation(
+      props.studyCode,
+      activeNodeRef.value
+    );
   });
 
   const copiedRef = ref(false);
@@ -429,6 +444,7 @@ export function useCanvasInspectorController(
     versionErrorCanI,
     forceExplainOpen,
     genericDisplay,
+    genericWorkspaceLink,
     hasSelection,
     headerKind,
     headerTitle,

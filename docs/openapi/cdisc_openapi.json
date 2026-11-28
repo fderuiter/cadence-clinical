@@ -16145,12 +16145,185 @@
         ]
       }
     },
+    "/api/v1/kernel/observations/{observationRef}/reviews": {
+      "post": {
+        "tags": [
+          "Kernel observations"
+        ],
+        "summary": "Records medical review of the current revision of an observation with the signed reason for change (observation.review).",
+        "operationId": "KernelReviewObservation",
+        "parameters": [
+          {
+            "name": "observationRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_KernelReviewObservationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelAssertionStateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Assertion.AlreadyReviewed\u0060, \u0060K.Assertion.QueryOpen\u0060, \u0060K.Assertion.RevisionStale\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Assertion.AlreadyReviewed",
+            "status": 409
+          },
+          {
+            "code": "K.Assertion.QueryOpen",
+            "status": 409
+          },
+          {
+            "code": "K.Assertion.RevisionStale",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Assertion.Locked",
+            "status": 423
+          }
+        ]
+      }
+    },
     "/api/v1/kernel/assertions/{assertionRef}/retraction": {
       "post": {
         "tags": [
           "Kernel observations"
         ],
-        "summary": "Retracts a verification, answer or query assertion with the signed reason for change (assertion.retract).",
+        "summary": "Retracts a verification, review, answer or query assertion with the signed reason for change (assertion.retract).",
         "operationId": "KernelRetractAssertion",
         "parameters": [
           {
@@ -25743,6 +25916,14 @@
             "items": {
               "$ref": "#/components/schemas/ExecutionForms_CodelistOptionView"
             }
+          },
+          "sdv_required": {
+            "type": "boolean",
+            "default": true
+          },
+          "medical_review_required": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -37925,6 +38106,18 @@
               "string"
             ],
             "format": "date"
+          },
+          "form_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "enrollment_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -38023,6 +38216,15 @@
             "default": 0
           },
           "unopened_visit_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "unreviewed_value_count": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -38404,6 +38606,14 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_CodelistOptionView"
             }
+          },
+          "sdv_required": {
+            "type": "boolean",
+            "default": true
+          },
+          "medical_review_required": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -39315,6 +39525,14 @@
               "null",
               "string"
             ]
+          },
+          "sdv_required": {
+            "type": "boolean",
+            "default": true
+          },
+          "medical_review_required": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -39675,6 +39893,33 @@
             ]
           },
           "attestation_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "Kernel_KernelReviewObservationRequest": {
+        "required": [
+          "enrollment_ref",
+          "revision"
+        ],
+        "type": "object",
+        "properties": {
+          "enrollment_ref": {
+            "type": "string"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "assertion_id": {
             "type": [
               "null",
               "string"
@@ -41658,6 +41903,36 @@
             ]
           },
           "proposal_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "collection_spec_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "item_id": {
             "type": [
               "null",
               "string"

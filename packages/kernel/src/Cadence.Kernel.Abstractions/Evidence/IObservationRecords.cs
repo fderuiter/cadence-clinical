@@ -235,7 +235,9 @@ public sealed record ObservationRecord(
     CodeSystemVersionId? ExpectedCodeSystemVersionId = null,
     string? ExpectedCodelist = null,
     IReadOnlyList<CodelistOptionView>? ExpectedCodelistOptions = null,
-    bool IsBlindedTreatment = false)
+    bool IsBlindedTreatment = false,
+    bool SdvRequired = true,
+    bool MedicalReviewRequired = false)
 {
     private const string MaskedLiteral = "masked";
 

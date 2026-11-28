@@ -514,7 +514,8 @@ public static class KernelLockEndpoints
             explanationResponse,
             snapshot.UnverifiedValueCount,
             snapshot.UnsignedFormCount,
-            snapshot.UnopenedVisitCount));
+            snapshot.UnopenedVisitCount,
+            snapshot.UnreviewedValueCount));
     }
 
     private static async Task<(IReadOnlyList<KernelLockBlockerResponse> Items, HashSet<string> MaskedEvidenceRefs)> MaskReadinessBlockersAsync(
@@ -538,6 +539,11 @@ public static class KernelLockEndpoints
             if (blocker.EnrollmentId is { } enrollmentId)
             {
                 nodesToCheck.Add(NodeRef.For(enrollmentId));
+            }
+
+            if (blocker.CollectionInstanceId is { } collectionInstanceId)
+            {
+                nodesToCheck.Add(NodeRef.For(collectionInstanceId));
             }
 
             if (blocker.ObservationId is { } obsId)
@@ -908,6 +914,7 @@ public static class KernelLockEndpoints
             .Where(c => c.Code is LockReadinessEvaluator.QueriesClosedCondition
                 or LockReadinessEvaluator.RequiredItemsCompleteCondition
                 or LockReadinessEvaluator.ObservationsVerifiedCondition
+                or LockReadinessEvaluator.ObservationsReviewedCondition
                 or LockReadinessEvaluator.FormsSignedCondition
                 or LockReadinessEvaluator.ScheduledVisitsOpenedCondition
                 or LockReadinessEvaluator.ErrorFindingsResolvedCondition)
@@ -940,6 +947,7 @@ public static class KernelLockEndpoints
                 {
                     nameof(LockBlockerKind.OpenQuery) => LockReadinessEvaluator.OpenQueryBlockerCondition,
                     nameof(LockBlockerKind.UnverifiedValue) => LockReadinessEvaluator.UnverifiedValueBlockerCondition,
+                    nameof(LockBlockerKind.UnreviewedValue) => LockReadinessEvaluator.UnreviewedValueBlockerCondition,
                     nameof(LockBlockerKind.UnsignedForm) => LockReadinessEvaluator.UnsignedFormBlockerCondition,
                     nameof(LockBlockerKind.UnopenedVisit) => LockReadinessEvaluator.UnopenedVisitBlockerCondition,
                     nameof(LockBlockerKind.ErrorFinding) => LockReadinessEvaluator.ErrorFindingBlockerCondition,
@@ -1228,7 +1236,8 @@ public sealed record KernelLockReadinessResponse(
     KernelExplanationResponse Explanation,
     int UnverifiedValueCount = 0,
     int UnsignedFormCount = 0,
-    int UnopenedVisitCount = 0);
+    int UnopenedVisitCount = 0,
+    int UnreviewedValueCount = 0);
 
 /// <summary>One unresolved blocker preventing a <c>Locked</c> assertion at a scope, masked in place under <c>K-AUTH-4</c>.</summary>
 public sealed record KernelLockBlockerResponse(
@@ -1256,7 +1265,9 @@ public sealed record KernelLockBlockerResponse(
     string? PlannedActivityId = null,
     string? PlannedActivityName = null,
     DateOnly? PlannedDate = null,
-    DateOnly? WindowEnd = null)
+    DateOnly? WindowEnd = null,
+    string? FormRef = null,
+    string? EnrollmentRef = null)
 {
     internal static KernelLockBlockerResponse FromVisible(LockReadinessBlocker blocker) =>
         new(
@@ -1278,17 +1289,35 @@ public sealed record KernelLockBlockerResponse(
             Mask: null,
             FindingRef: blocker.FindingId is { } fid ? NodeRef.For(fid).ToString() : null,
             RuleId: blocker.RuleId,
-            Detail: blocker.FindingMessage
-                ?? blocker.QueryText
-                ?? (blocker.Kind == LockBlockerKind.UnverifiedValue && blocker.CurrentRevision is { } rev
-                    ? $"Revision {rev} awaiting source verification"
-                    : blocker.ItemLabel),
+            Detail: ResolveVisibleDetail(blocker),
             CurrentRevision: blocker.CurrentRevision,
             SignatureSuperseded: blocker.SignatureSuperseded,
             PlannedActivityId: blocker.PlannedActivityId,
             PlannedActivityName: blocker.PlannedActivityName,
             PlannedDate: blocker.PlannedDate,
-            WindowEnd: blocker.WindowEnd);
+            WindowEnd: blocker.WindowEnd,
+            FormRef: blocker.CollectionInstanceId is { } cid ? NodeRef.For(cid).ToString() : null,
+            EnrollmentRef: blocker.EnrollmentId is { } eid ? NodeRef.For(eid).ToString() : null);
+
+    private static string? ResolveVisibleDetail(LockReadinessBlocker blocker)
+    {
+        if (blocker.FindingMessage is not null)
+        {
+            return blocker.FindingMessage;
+        }
+
+        if (blocker.QueryText is not null)
+        {
+            return blocker.QueryText;
+        }
+
+        return blocker switch
+        {
+            { Kind: LockBlockerKind.UnverifiedValue, CurrentRevision: { } rev } => $"Revision {rev} awaiting source verification",
+            { Kind: LockBlockerKind.UnreviewedValue, CurrentRevision: { } rrev } => $"Revision {rrev} awaiting medical review",
+            _ => blocker.ItemLabel,
+        };
+    }
 
     internal static KernelLockBlockerResponse FromMasked(LockReadinessBlocker blocker, MaskReason reason)
     {
@@ -1296,6 +1325,7 @@ public sealed record KernelLockBlockerResponse(
         {
             LockBlockerKind.OpenQuery => "open query",
             LockBlockerKind.UnverifiedValue => "unverified observation revision",
+            LockBlockerKind.UnreviewedValue => "unreviewed observation revision",
             LockBlockerKind.UnsignedForm => blocker.SignatureSuperseded ? "superseded form signature" : "unsigned form",
             LockBlockerKind.UnopenedVisit => "unopened scheduled visit",
             LockBlockerKind.ErrorFinding => "Error validation finding",

@@ -1115,6 +1115,7 @@ sponsor_mm|imaging_study|read
 sponsor_mm|knowledge|read
 sponsor_mm|lab_toxicity_review|read
 sponsor_mm|notification|send
+sponsor_mm|observation|review
 sponsor_mm|regulatory_form|read
 sponsor_mm|safety_report|approve
 sponsor_mm|safety_report|create

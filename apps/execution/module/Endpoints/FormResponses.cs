@@ -507,6 +507,8 @@ internal static class ExecutionQueryMerger
 /// <param name="CodeSystemVersionId">Pinned code-system version from the item's terminology binding, when governed by controlled terminology.</param>
 /// <param name="Codelist">Codelist group code within the pinned code-system version, when restricted to a codelist.</param>
 /// <param name="CodelistOptions">Hydrated codelist options when <paramref name="Codelist"/> is set.</param>
+/// <param name="SdvRequired">Whether source data verification is required on this item before hard lock.</param>
+/// <param name="MedicalReviewRequired">Whether medical review is required on this item before hard lock.</param>
 public sealed record FormItemResponse(
     string ItemId,
     string? Concept,
@@ -520,7 +522,9 @@ public sealed record FormItemResponse(
     DateTimeOffset? RecordedAt,
     Guid? CodeSystemVersionId = null,
     string? Codelist = null,
-    IReadOnlyList<CodelistOptionView>? CodelistOptions = null)
+    IReadOnlyList<CodelistOptionView>? CodelistOptions = null,
+    bool SdvRequired = true,
+    bool MedicalReviewRequired = false)
 {
     internal static FormItemResponse From(
         string id,
@@ -548,7 +552,9 @@ public sealed record FormItemResponse(
             value?.RecordedAt,
             blinded ? null : item?.Terminology?.CodeSystemVersionId.Value,
             blinded || string.IsNullOrWhiteSpace(item?.Terminology?.Codelist) ? null : item.Terminology.Codelist,
-            blinded ? null : codelistOptions);
+            blinded ? null : codelistOptions,
+            item?.SdvRequired ?? true,
+            item?.MedicalReviewRequired ?? false);
     }
 }
 

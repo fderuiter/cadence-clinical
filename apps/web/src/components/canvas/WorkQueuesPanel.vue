@@ -31,6 +31,62 @@
     </div>
 
     <div
+      v-if="showFilterBar"
+      class="work-queues-filters"
+      data-testid="work-queues-filters"
+      role="group"
+      aria-label="Filter work queue items"
+    >
+      <div v-if="siteOptions.length > 0" class="work-queue-filter-field">
+        <label for="work-queues-filter-site">Site</label>
+        <select id="work-queues-filter-site" v-model="selectedSite">
+          <option value="">All sites</option>
+          <option v-for="site in siteOptions" :key="site" :value="site">
+            {{ site }}
+          </option>
+        </select>
+      </div>
+      <div v-if="participantOptions.length > 0" class="work-queue-filter-field">
+        <label for="work-queues-filter-participant">Participant</label>
+        <select
+          id="work-queues-filter-participant"
+          v-model="selectedParticipant"
+        >
+          <option value="">All participants</option>
+          <option
+            v-for="subject in participantOptions"
+            :key="subject"
+            :value="subject"
+          >
+            {{ subject }}
+          </option>
+        </select>
+      </div>
+      <div v-if="formOptions.length > 0" class="work-queue-filter-field">
+        <label for="work-queues-filter-form">Form</label>
+        <select id="work-queues-filter-form" v-model="selectedForm">
+          <option value="">All forms</option>
+          <option
+            v-for="opt in formOptions"
+            :key="opt.value"
+            :value="opt.value"
+          >
+            {{ opt.label }}
+          </option>
+        </select>
+      </div>
+      <button
+        v-if="hasActiveFilter"
+        id="work-queues-filter-clear"
+        type="button"
+        class="btn btn-secondary"
+        @click="clearFilters"
+      >
+        Clear filters
+      </button>
+    </div>
+
+    <div
       v-if="error"
       id="work-queues-error"
       class="work-queues-status"
@@ -160,17 +216,129 @@ const loading = ref(false);
 const error = ref("");
 const noStudy = ref(false);
 const showEmpty = ref(false);
+const selectedSite = ref("");
+const selectedParticipant = ref("");
+const selectedForm = ref("");
+
+function itemSiteCode(item: KernelWorkItem): string {
+  return item.target?.site_code?.trim() ?? "";
+}
+
+function itemParticipantCode(item: KernelWorkItem): string {
+  return item.target?.subject_code?.trim() ?? "";
+}
+
+function itemFormOption(
+  item: KernelWorkItem
+): { value: string; label: string } | null {
+  const title = item.target?.form_title?.trim() ?? "";
+  const spec = item.target?.collection_spec_id?.trim() ?? "";
+  const value = spec || title;
+  if (!value) return null;
+  return { value, label: title || spec };
+}
+
+const siteOptions = computed(() => {
+  const seen = new Set<string>();
+  for (const queue of queues.value) {
+    for (const item of queue.items) {
+      if (item.masked) continue;
+      const site = itemSiteCode(item);
+      if (site) seen.add(site);
+    }
+  }
+  return Array.from(seen).sort((a, b) => a.localeCompare(b));
+});
+
+const participantOptions = computed(() => {
+  const seen = new Set<string>();
+  for (const queue of queues.value) {
+    for (const item of queue.items) {
+      if (item.masked) continue;
+      if (selectedSite.value && itemSiteCode(item) !== selectedSite.value) {
+        continue;
+      }
+      const subject = itemParticipantCode(item);
+      if (subject) seen.add(subject);
+    }
+  }
+  return Array.from(seen).sort((a, b) => a.localeCompare(b));
+});
+
+const formOptions = computed(() => {
+  const seen = new Map<string, string>();
+  for (const queue of queues.value) {
+    for (const item of queue.items) {
+      if (item.masked) continue;
+      const opt = itemFormOption(item);
+      if (opt && !seen.has(opt.value)) {
+        seen.set(opt.value, opt.label);
+      }
+    }
+  }
+  return Array.from(seen.entries())
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+});
+
+const hasActiveFilter = computed(() =>
+  Boolean(selectedSite.value || selectedParticipant.value || selectedForm.value)
+);
+
+const showFilterBar = computed(
+  () =>
+    queues.value.length > 0 &&
+    (hasActiveFilter.value ||
+      siteOptions.value.length > 0 ||
+      participantOptions.value.length > 0 ||
+      formOptions.value.length > 0)
+);
+
+function clearFilters() {
+  selectedSite.value = "";
+  selectedParticipant.value = "";
+  selectedForm.value = "";
+}
+
+function matchesItemFilters(item: KernelWorkItem): boolean {
+  if (!hasActiveFilter.value) return true;
+  if (item.masked) return false;
+  if (selectedSite.value && itemSiteCode(item) !== selectedSite.value) {
+    return false;
+  }
+  if (
+    selectedParticipant.value &&
+    itemParticipantCode(item) !== selectedParticipant.value
+  ) {
+    return false;
+  }
+  if (selectedForm.value) {
+    const formOpt = itemFormOption(item);
+    if (!formOpt || formOpt.value !== selectedForm.value) {
+      return false;
+    }
+  }
+  return true;
+}
+
+const filteredQueues = computed<KernelWorkQueue[]>(() => {
+  if (!hasActiveFilter.value) return queues.value;
+  return queues.value.map((queue) => ({
+    ...queue,
+    items: queue.items.filter(matchesItemFilters),
+  }));
+});
 
 const totalItems = computed(() =>
-  queues.value.reduce((sum, q) => sum + q.items.length, 0)
+  filteredQueues.value.reduce((sum, q) => sum + q.items.length, 0)
 );
 const hasEmptyQueues = computed(() =>
-  queues.value.some((q) => q.items.length === 0)
+  filteredQueues.value.some((q) => q.items.length === 0)
 );
 const visibleQueues = computed(() =>
   showEmpty.value
-    ? queues.value
-    : queues.value.filter((q) => q.items.length > 0)
+    ? filteredQueues.value
+    : filteredQueues.value.filter((q) => q.items.length > 0)
 );
 
 const statusLine = computed(() => {
@@ -178,7 +346,13 @@ const statusLine = computed(() => {
   if (noStudy.value) {
     return `Study ${props.studyCode} wasn't found or isn't visible to your account.`;
   }
-  if (queues.value.length === 0 || totalItems.value === 0) {
+  if (queues.value.length === 0) {
+    return "All capability work queues are clear for your permissions on this study.";
+  }
+  if (totalItems.value === 0 && hasActiveFilter.value) {
+    return "No work queue items match the selected filters.";
+  }
+  if (totalItems.value === 0) {
     return "All capability work queues are clear for your permissions on this study.";
   }
   return "";
@@ -228,7 +402,9 @@ function workItemLocation(item: KernelWorkItem): RouteLocationRaw {
     if (formRef) {
       return scopedStudyLocation({
         stage: "conduct",
+        ...(target.site_code ? { site: target.site_code } : {}),
         form: formRef,
+        ...(target.item_id ? { item: target.item_id } : {}),
         ...(targetEnrollmentParticipant
           ? { participant: targetEnrollmentParticipant }
           : {}),
@@ -240,6 +416,7 @@ function workItemLocation(item: KernelWorkItem): RouteLocationRaw {
     if (obsRef) {
       return scopedStudyLocation({
         stage: "conduct",
+        ...(target.site_code ? { site: target.site_code } : {}),
         observation: obsRef,
         ...(targetEnrollmentParticipant
           ? { participant: targetEnrollmentParticipant }
@@ -326,7 +503,14 @@ async function load() {
   }
 }
 
-watch(() => props.studyCode, load, { immediate: true });
+watch(
+  () => props.studyCode,
+  () => {
+    clearFilters();
+    void load();
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
@@ -369,6 +553,41 @@ watch(() => props.studyCode, load, { immediate: true });
   font-weight: 600;
   color: var(--semantic-color-text-dark);
   font-variant-numeric: tabular-nums;
+}
+
+.work-queues-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.work-queue-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+}
+
+.work-queue-filter-field label {
+  font-weight: 600;
+  color: var(--semantic-color-text-dark);
+}
+
+.work-queue-filter-field select {
+  min-height: var(--semantic-control-target-min, 24px);
+  padding: 4px 8px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 4px;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  font-family: inherit;
+}
+
+@media (pointer: coarse), (max-width: 1024px) {
+  .work-queue-filter-field select {
+    font-size: 1rem;
+  }
 }
 
 .work-queues-grid {

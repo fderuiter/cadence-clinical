@@ -110,6 +110,7 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, ValidationFindingsOpenSource>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, FormsAwaitingSignatureSource>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, ObservationsAwaitingVerificationSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, ObservationsAwaitingReviewSource>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, ProposalsPendingSource>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IIndicatorPopulationSource, EnrollmentPopulationSource>());
 

@@ -35,6 +35,7 @@ public static class LockReadinessEvaluator
     public const string QueriesClosedCondition = "lock.queries_closed";
     public const string RequiredItemsCompleteCondition = "lock.required_items_complete";
     public const string ObservationsVerifiedCondition = "lock.observations_verified";
+    public const string ObservationsReviewedCondition = "lock.observations_reviewed";
     public const string FormsSignedCondition = "lock.forms_signed";
     public const string ScheduledVisitsOpenedCondition = "lock.scheduled_visits_opened";
     public const string ErrorFindingsResolvedCondition = "lock.error_findings_resolved";
@@ -42,12 +43,14 @@ public static class LockReadinessEvaluator
     public const string OpenQueryBlockerCondition = "lock.open_query";
     public const string MissingRequiredItemBlockerCondition = "lock.missing_required_item";
     public const string UnverifiedValueBlockerCondition = "lock.unverified_value";
+    public const string UnreviewedValueBlockerCondition = "lock.unreviewed_value";
     public const string UnsignedFormBlockerCondition = "lock.unsigned_form";
     public const string UnopenedVisitBlockerCondition = "lock.unopened_visit";
     public const string ErrorFindingBlockerCondition = "lock.error_finding";
 
     public const string SiteOwner = "Site coordinator / investigator";
     public const string MonitorOwner = "Clinical research associate / data manager";
+    public const string MedicalMonitorOwner = "Medical monitor";
     public const string InvestigatorOwner = "Principal investigator";
 
     /// <summary>
@@ -220,7 +223,8 @@ public static class LockReadinessEvaluator
         }
 
         var openQueries = await ReadOpenQueriesAsync(work, study, coveredObservations, cancellationToken).ConfigureAwait(false);
-        var verifiedRevisions = await ReadVerifiedRevisionsAsync(work, study, coveredObservations, cancellationToken).ConfigureAwait(false);
+        var verifiedRevisions = await ReadAssertionRevisionsAsync(work, study, coveredObservations, AssertionKind.Verified, cancellationToken).ConfigureAwait(false);
+        var reviewedRevisions = await ReadAssertionRevisionsAsync(work, study, coveredObservations, AssertionKind.Reviewed, cancellationToken).ConfigureAwait(false);
         var formSignatures = await ReadFormSignaturesAsync(work, instances, cancellationToken).ConfigureAwait(false);
         var activeErrorFindings = await ReadActiveErrorFindingsAsync(tenant, study, findings, cancellationToken).ConfigureAwait(false);
 
@@ -303,7 +307,8 @@ public static class LockReadinessEvaluator
             evaluatedAt,
             studySitesById,
             sitesById,
-            studyEffectivities);
+            studyEffectivities,
+            reviewedRevisions);
     }
 
     public static bool NeedsScheduleEvaluation(Enrollment enrollment) =>
@@ -333,7 +338,8 @@ public static class LockReadinessEvaluator
         DateTimeOffset? evaluatedAt = null,
         IReadOnlyDictionary<StudySiteId, StudySite>? studySitesById = null,
         IReadOnlyDictionary<SiteId, Site>? sitesById = null,
-        IReadOnlyList<Effectivity>? studyEffectivities = null)
+        IReadOnlyList<Effectivity>? studyEffectivities = null,
+        IReadOnlySet<(ObservationId ObservationId, int Revision)>? reviewedRevisions = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         ArgumentNullException.ThrowIfNull(instances);
@@ -460,8 +466,9 @@ public static class LockReadinessEvaluator
             }
         }
 
-        // 3. Unverified current revisions of recorded observations in scope
+        // 3. Unverified and unreviewed current revisions of recorded observations in scope
         var verifiedSet = verifiedRevisions ?? new HashSet<(ObservationId, int)>();
+        var reviewedSet = reviewedRevisions ?? new HashSet<(ObservationId, int)>();
         var inScopeObservationIds = scope.Kind switch
         {
             NodeKinds.CollectionInstance => instances.SelectMany(i => i.Members.Select(m => m.ObservationId)).ToHashSet(),
@@ -474,41 +481,68 @@ public static class LockReadinessEvaluator
             .OrderBy(o => o.ObservedAt)
             .ThenBy(o => o.Id))
         {
-            if (verifiedSet.Contains((obs.Id, obs.Revision)))
-            {
-                continue;
-            }
-
             enrollmentsById.TryGetValue(obs.EnrollmentId, out var enrollment);
             membershipByObservation.TryGetValue(obs.Id, out var memberInfo);
+            var sdvRequired = memberInfo.Item?.SdvRequired ?? true;
+            var medicalReviewRequired = memberInfo.Item?.MedicalReviewRequired ?? false;
             var targetRef = NodeRef.For(obs.Id);
             var collectionTitle = string.IsNullOrWhiteSpace(memberInfo.Spec?.Name) ? memberInfo.Instance?.CollectionSpecId : memberInfo.Spec!.Name;
             var itemLabel = !string.IsNullOrWhiteSpace(memberInfo.Item?.Prompt)
                 ? memberInfo.Item!.Prompt
                 : memberInfo.Item?.Id ?? obs.Concept.ToString();
-            var nextAction = $"{MonitorOwner}: complete source data verification for revision {obs.Revision} of '{itemLabel}' ({targetRef}).";
+            var isBlinded = blindedObservationIds.Contains(obs.Id);
 
-            blockers.Add(new LockReadinessBlocker(
-                LockBlockerKind.UnverifiedValue,
-                MonitorOwner,
-                targetRef,
-                enrollment?.StudySiteId ?? memberInfo.Instance?.StudySiteId,
-                obs.EnrollmentId,
-                memberInfo.Instance?.Id,
-                obs.Id,
-                QueryAssertionId: null,
-                enrollment?.SubjectCode.Value,
-                memberInfo.Instance?.CollectionSpecId,
-                collectionTitle,
-                memberInfo.Item?.Id,
-                itemLabel,
-                QueryText: null,
-                Answered: false,
-                Blinded: blindedObservationIds.Contains(obs.Id),
-                nextAction,
-                NextCapability: "observation.verify",
-                NextTarget: targetRef,
-                CurrentRevision: obs.Revision));
+            if (sdvRequired && !verifiedSet.Contains((obs.Id, obs.Revision)))
+            {
+                var nextAction = $"{MonitorOwner}: complete source data verification for revision {obs.Revision} of '{itemLabel}' ({targetRef}).";
+                blockers.Add(new LockReadinessBlocker(
+                    LockBlockerKind.UnverifiedValue,
+                    MonitorOwner,
+                    targetRef,
+                    enrollment?.StudySiteId ?? memberInfo.Instance?.StudySiteId,
+                    obs.EnrollmentId,
+                    memberInfo.Instance?.Id,
+                    obs.Id,
+                    QueryAssertionId: null,
+                    enrollment?.SubjectCode.Value,
+                    memberInfo.Instance?.CollectionSpecId,
+                    collectionTitle,
+                    memberInfo.Item?.Id,
+                    itemLabel,
+                    QueryText: null,
+                    Answered: false,
+                    Blinded: isBlinded,
+                    nextAction,
+                    NextCapability: "observation.verify",
+                    NextTarget: targetRef,
+                    CurrentRevision: obs.Revision));
+            }
+
+            if (medicalReviewRequired && !reviewedSet.Contains((obs.Id, obs.Revision)))
+            {
+                var reviewAction = $"{MedicalMonitorOwner}: complete medical review for revision {obs.Revision} of '{itemLabel}' ({targetRef}).";
+                blockers.Add(new LockReadinessBlocker(
+                    LockBlockerKind.UnreviewedValue,
+                    MedicalMonitorOwner,
+                    targetRef,
+                    enrollment?.StudySiteId ?? memberInfo.Instance?.StudySiteId,
+                    obs.EnrollmentId,
+                    memberInfo.Instance?.Id,
+                    obs.Id,
+                    QueryAssertionId: null,
+                    enrollment?.SubjectCode.Value,
+                    memberInfo.Instance?.CollectionSpecId,
+                    collectionTitle,
+                    memberInfo.Item?.Id,
+                    itemLabel,
+                    QueryText: null,
+                    Answered: false,
+                    Blinded: isBlinded,
+                    reviewAction,
+                    NextCapability: "observation.review",
+                    NextTarget: targetRef,
+                    CurrentRevision: obs.Revision));
+            }
         }
 
         // 4. Populated forms lacking a current investigator signature (or holding only superseded signatures)
@@ -777,9 +811,15 @@ public static class LockReadinessEvaluator
         var openQueryCount = blockers.Count(b => b.Kind == LockBlockerKind.OpenQuery);
         var missingRequiredCount = blockers.Count(b => b.Kind == LockBlockerKind.MissingRequiredItem);
         var unverifiedValueCount = blockers.Count(b => b.Kind == LockBlockerKind.UnverifiedValue);
+        var unreviewedValueCount = blockers.Count(b => b.Kind == LockBlockerKind.UnreviewedValue);
         var unsignedFormCount = blockers.Count(b => b.Kind == LockBlockerKind.UnsignedForm);
         var unopenedVisitCount = blockers.Count(b => b.Kind == LockBlockerKind.UnopenedVisit);
         var openErrorFindingCount = blockers.Count(b => b.Kind == LockBlockerKind.ErrorFinding);
+        var hasMedicalReviewItems = designs
+            .SelectMany(d => d.CollectionSpecs)
+            .SelectMany(s => s.Items)
+            .Any(i => i.MedicalReviewRequired)
+            || unreviewedValueCount > 0;
         var ready = blockers.Count == 0;
         var explanation = BuildExplanation(
             scope,
@@ -789,7 +829,9 @@ public static class LockReadinessEvaluator
             blockers,
             unverifiedValueCount,
             unsignedFormCount,
-            unopenedVisitCount);
+            unopenedVisitCount,
+            unreviewedValueCount,
+            includeMedicalReviewGate: hasMedicalReviewItems);
 
         return new LockReadinessSnapshot(
             study,
@@ -804,7 +846,8 @@ public static class LockReadinessEvaluator
             openErrorFindingCount,
             unverifiedValueCount,
             unsignedFormCount,
-            unopenedVisitCount);
+            unopenedVisitCount,
+            unreviewedValueCount);
     }
 
     public static Explanation BuildExplanation(
@@ -820,7 +863,8 @@ public static class LockReadinessEvaluator
             blockers!,
             blockers?.Count(b => b.Kind == LockBlockerKind.UnverifiedValue) ?? 0,
             blockers?.Count(b => b.Kind == LockBlockerKind.UnsignedForm) ?? 0,
-            blockers?.Count(b => b.Kind == LockBlockerKind.UnopenedVisit) ?? 0);
+            blockers?.Count(b => b.Kind == LockBlockerKind.UnopenedVisit) ?? 0,
+            blockers?.Count(b => b.Kind == LockBlockerKind.UnreviewedValue) ?? 0);
 
     public static Explanation BuildExplanation(
         NodeRef scope,
@@ -830,7 +874,9 @@ public static class LockReadinessEvaluator
         IReadOnlyList<LockReadinessBlocker> blockers,
         int unverifiedValueCount = 0,
         int unsignedFormCount = 0,
-        int unopenedVisitCount = 0)
+        int unopenedVisitCount = 0,
+        int unreviewedValueCount = 0,
+        bool includeMedicalReviewGate = false)
     {
         ArgumentNullException.ThrowIfNull(scope);
         ArgumentNullException.ThrowIfNull(blockers);
@@ -847,6 +893,11 @@ public static class LockReadinessEvaluator
             .ToArray();
         var unverifiedEvidence = blockers
             .Where(b => b.Kind == LockBlockerKind.UnverifiedValue)
+            .Select(b => b.Target)
+            .Distinct()
+            .ToArray();
+        var unreviewedEvidence = blockers
+            .Where(b => b.Kind == LockBlockerKind.UnreviewedValue)
             .Select(b => b.Target)
             .Distinct()
             .ToArray();
@@ -869,6 +920,7 @@ public static class LockReadinessEvaluator
         var queryNoun = openQueryCount == 1 ? "query" : "queries";
         var itemNoun = missingRequiredCount == 1 ? "item" : "items";
         var unverifiedNoun = unverifiedValueCount == 1 ? "revision" : "revisions";
+        var unreviewedNoun = unreviewedValueCount == 1 ? "revision" : "revisions";
         var formNoun = unsignedFormCount == 1 ? "form" : "forms";
         var visitNoun = unopenedVisitCount == 1 ? "visit form" : "visit forms";
         var findingNoun = openErrorFindingCount == 1 ? "finding" : "findings";
@@ -888,11 +940,18 @@ public static class LockReadinessEvaluator
                 missingEvidence);
 
         var verifiedCondition = unverifiedValueCount == 0
-            ? EvaluatedCondition.Satisfied(ObservationsVerifiedCondition, "All recorded observation revisions in the lock scope are source-verified.")
+            ? EvaluatedCondition.Satisfied(ObservationsVerifiedCondition, "All SDV-required observation revisions in the lock scope are source-verified.")
             : EvaluatedCondition.Unsatisfied(
                 ObservationsVerifiedCondition,
                 $"Verify {unverifiedValueCount} unverified observation {unverifiedNoun} in {scope} before applying a Locked assertion.",
                 unverifiedEvidence);
+
+        var reviewedCondition = unreviewedValueCount == 0
+            ? EvaluatedCondition.Satisfied(ObservationsReviewedCondition, "All medical-review-required observation revisions in the lock scope are medically reviewed.")
+            : EvaluatedCondition.Unsatisfied(
+                ObservationsReviewedCondition,
+                $"Review {unreviewedValueCount} unreviewed observation {unreviewedNoun} in {scope} before applying a Locked assertion.",
+                unreviewedEvidence);
 
         var formsSignedCondition = unsignedFormCount == 0
             ? EvaluatedCondition.Satisfied(FormsSignedCondition, "All populated forms in the lock scope hold a current investigator signature.")
@@ -920,10 +979,15 @@ public static class LockReadinessEvaluator
             queriesCondition,
             itemsCondition,
             verifiedCondition,
-            formsSignedCondition,
-            visitsOpenedCondition,
-            findingsCondition,
         };
+        if (includeMedicalReviewGate || unreviewedValueCount > 0)
+        {
+            conditions.Add(reviewedCondition);
+        }
+
+        conditions.Add(formsSignedCondition);
+        conditions.Add(visitsOpenedCondition);
+        conditions.Add(findingsCondition);
 
         var steps = new List<ExplanationStep>();
         var nextActions = new List<NextAction>();
@@ -948,6 +1012,7 @@ public static class LockReadinessEvaluator
             {
                 LockBlockerKind.OpenQuery => OpenQueryBlockerCondition,
                 LockBlockerKind.UnverifiedValue => UnverifiedValueBlockerCondition,
+                LockBlockerKind.UnreviewedValue => UnreviewedValueBlockerCondition,
                 LockBlockerKind.UnsignedForm => UnsignedFormBlockerCondition,
                 LockBlockerKind.UnopenedVisit => UnopenedVisitBlockerCondition,
                 LockBlockerKind.ErrorFinding => ErrorFindingBlockerCondition,
@@ -961,6 +1026,8 @@ public static class LockReadinessEvaluator
                     $"{blocker.Owner} owns open query {queryLabel} on {blocker.Target} ({blocker.ItemLabel ?? "observation"}).",
                 LockBlockerKind.UnverifiedValue =>
                     $"{blocker.Owner} owns unverified revision {blocker.CurrentRevision ?? 1} on {blocker.Target} ({blocker.ItemLabel ?? "observation"}).",
+                LockBlockerKind.UnreviewedValue =>
+                    $"{blocker.Owner} owns unreviewed revision {blocker.CurrentRevision ?? 1} on {blocker.Target} ({blocker.ItemLabel ?? "observation"}).",
                 LockBlockerKind.UnsignedForm =>
                     $"{blocker.Owner} owns {(blocker.SignatureSuperseded ? "superseded signature" : "unsigned form")} on {blocker.Target} ({blocker.CollectionTitle ?? blocker.CollectionSpecId}).",
                 LockBlockerKind.UnopenedVisit =>
@@ -1004,6 +1071,11 @@ public static class LockReadinessEvaluator
             if (unverifiedValueCount > 0)
             {
                 summaryParts.Add($"{unverifiedValueCount} unverified {unverifiedNoun}");
+            }
+
+            if (unreviewedValueCount > 0)
+            {
+                summaryParts.Add($"{unreviewedValueCount} unreviewed {unreviewedNoun}");
             }
 
             if (unsignedFormCount > 0)
@@ -1335,10 +1407,11 @@ public static class LockReadinessEvaluator
         return (openQueries, answeredIds);
     }
 
-    private static async Task<IReadOnlySet<(ObservationId ObservationId, int Revision)>> ReadVerifiedRevisionsAsync(
+    private static async Task<IReadOnlySet<(ObservationId ObservationId, int Revision)>> ReadAssertionRevisionsAsync(
         IKernelUnitOfWork work,
         StudyId study,
         IReadOnlyList<Observation> coveredObservations,
+        AssertionKind assertionKind,
         CancellationToken cancellationToken)
     {
         var recordedObservations = coveredObservations
@@ -1350,21 +1423,21 @@ public static class LockReadinessEvaluator
         }
 
         var targetGuids = recordedObservations.Select(o => o.Id.Value).ToList();
-        var candidateVerifications = await work.ReadAllAsync<Assertion>(
+        var candidates = await work.ReadAllAsync<Assertion>(
             a => a.StudyId == study
-                && a.Kind == AssertionKind.Verified
+                && a.Kind == assertionKind
                 && a.RetractsId == null
                 && a.TargetKind == NodeKinds.Observation
                 && targetGuids.Contains(a.TargetId),
             cancellationToken).ConfigureAwait(false);
-        if (candidateVerifications.Count == 0)
+        if (candidates.Count == 0)
         {
             return new HashSet<(ObservationId, int)>();
         }
 
-        var verificationIds = candidateVerifications.Select(v => v.Id).ToList();
-        var retractedIds = await LocksInForce.RetractedAsync(work, verificationIds, cancellationToken).ConfigureAwait(false);
-        return candidateVerifications
+        var assertionIds = candidates.Select(v => v.Id).ToList();
+        var retractedIds = await LocksInForce.RetractedAsync(work, assertionIds, cancellationToken).ConfigureAwait(false);
+        return candidates
             .Where(v => !retractedIds.Contains(v.Id) && v.TargetRevision is not null)
             .Select(v => (ObservationId.FromGuid(v.TargetId), v.TargetRevision!.Value))
             .ToHashSet();

@@ -86,6 +86,9 @@ public static class KernelWorkItemSources
     /// <summary>Recorded observations on unlocked scopes that do not hold an active source-data verification at their current revision.</summary>
     public const string ObservationsAwaitingVerification = "observation.awaiting_verification";
 
+    /// <summary>Recorded observations on unlocked scopes whose item requires medical review and that do not hold an active medical review at their current revision.</summary>
+    public const string ObservationsAwaitingReview = "observation.awaiting_review";
+
     /// <summary>Open, unexpired proposals awaiting human approval.</summary>
     public const string ProposalsPending = "intelligence.proposals_pending";
 
@@ -98,6 +101,7 @@ public static class KernelWorkItemSources
         ValidationFindingsOpen,
         FormsAwaitingSignature,
         ObservationsAwaitingVerification,
+        ObservationsAwaitingReview,
         ProposalsPending,
     ];
 }

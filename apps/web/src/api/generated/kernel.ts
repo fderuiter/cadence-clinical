@@ -839,6 +839,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/observations/{observationRef}/reviews": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Records medical review of the current revision of an observation with the signed reason for change (observation.review). */
+    post: operations["KernelReviewObservation"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/assertions/{assertionRef}/retraction": {
     parameters: {
       query?: never;
@@ -848,7 +865,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Retracts a verification, answer or query assertion with the signed reason for change (assertion.retract). */
+    /** Retracts a verification, review, answer or query assertion with the signed reason for change (assertion.retract). */
     post: operations["KernelRetractAssertion"];
     delete?: never;
     options?: never;
@@ -1965,6 +1982,8 @@ export interface components {
       planned_date?: null | string;
       /** Format: date */
       window_end?: null | string;
+      form_ref?: null | string;
+      enrollment_ref?: null | string;
     };
     Kernel_KernelLockReadinessResponse: {
       study_ref: string;
@@ -1998,6 +2017,11 @@ export interface components {
        * @default 0
        */
       unopened_visit_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unreviewed_value_count: number | string;
     };
     Kernel_KernelLockResponse: {
       ref: null | string;
@@ -2070,6 +2094,10 @@ export interface components {
       expected_codelist?: null | string;
       expected_codelist_options?:
         null | components["schemas"]["Kernel_CodelistOptionView"][];
+      /** @default true */
+      sdv_required: boolean;
+      /** @default false */
+      medical_review_required: boolean;
     };
     Kernel_KernelObservationStateResponse: {
       ref: string;
@@ -2269,6 +2297,10 @@ export interface components {
       required: boolean;
       value_kind: null | string;
       unit: null | string;
+      /** @default true */
+      sdv_required: boolean;
+      /** @default false */
+      medical_review_required: boolean;
     };
     Kernel_KernelProtocolFormSummaryResponse: {
       id: string;
@@ -2351,6 +2383,13 @@ export interface components {
       expected_content_hash?: null | string;
       /** Format: uuid */
       attestation_id?: null | string;
+    };
+    Kernel_KernelReviewObservationRequest: {
+      enrollment_ref: string;
+      /** Format: int32 */
+      revision: number | string;
+      /** Format: uuid */
+      assertion_id?: null | string;
     };
     Kernel_KernelRulePackPreviewResponse: {
       item_ref: string;
@@ -2793,6 +2832,11 @@ export interface components {
       finding_ref: null | string;
       protocol_version_ref: null | string;
       proposal_ref?: null | string;
+      site_code?: null | string;
+      subject_code?: null | string;
+      form_title?: null | string;
+      collection_spec_id?: null | string;
+      item_id?: null | string;
     };
     Kernel_KernelWorkQueueDefinitionResponse: {
       definition: string;
@@ -6094,6 +6138,95 @@ export interface operations {
         };
       };
       /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Assertion.AlreadyVerified`, `K.Assertion.QueryOpen`, `K.Assertion.RevisionStale`, `K.Command.IdempotencyConflict`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Locked. Kernel errors: `K.Assertion.Locked`. */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelReviewObservation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        observationRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_KernelReviewObservationRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelAssertionStateResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Assertion.AlreadyReviewed`, `K.Assertion.QueryOpen`, `K.Assertion.RevisionStale`, `K.Command.IdempotencyConflict`. */
       409: {
         headers: {
           [name: string]: unknown;

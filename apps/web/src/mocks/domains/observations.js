@@ -19,13 +19,21 @@ function createInitialObservations() {
     DEMO_PARTICIPANTS[0]?.enrollmentUuid || ENROLLMENT_1001_UUID;
   const enrollmentRef = `enrollment:${canonicalEnrollmentUuid}`;
 
-  const makeObs = (ref, concept, value, recordedAt) => ({
+  const makeObs = (
+    ref,
+    concept,
+    value,
+    recordedAt,
+    { sdvRequired = true, medicalReviewRequired = false } = {}
+  ) => ({
     ref,
     enrollment_ref: enrollmentRef,
     concept,
     value,
     observed_at: recordedAt,
     version: 1,
+    sdv_required: sdvRequired,
+    medical_review_required: medicalReviewRequired,
     locks: [],
     revisions: [
       {
@@ -76,7 +84,8 @@ function createInitialObservations() {
         obs3Ref,
         "PULSE",
         { type: "quantity", value: "72", unit: "/min", comparator: null },
-        "2026-08-01T09:17:00Z"
+        "2026-08-01T09:17:00Z",
+        { sdvRequired: true, medicalReviewRequired: true }
       ),
     ],
   ]);
@@ -96,6 +105,8 @@ export function createObservationsDomain(ctx) {
       value: { type: "text", value: "Seated rest 5 minutes prior to cuff." },
       observed_at: "2026-08-01T09:18:00Z",
       version: 1,
+      sdv_required: false,
+      medical_review_required: false,
       locks: [],
       revisions: [
         {
@@ -145,6 +156,8 @@ export function createObservationsDomain(ctx) {
         },
         observed_at: "2026-08-01T09:15:00Z",
         version: 1,
+        sdv_required: true,
+        medical_review_required: false,
         locks: [],
         revisions: [
           {
@@ -207,6 +220,128 @@ export function createObservationsDomain(ctx) {
   }
 
   ctx.getObservation = getObservation;
+
+  function recordRevisionJudgment({
+    observationRef,
+    body,
+    reason,
+    kind,
+    uuidPrefix,
+    actorId,
+    duplicateCode,
+    duplicateTitle,
+    duplicateNoun,
+    auditAction,
+    activityVerb,
+  }) {
+    const rawObsRef = String(observationRef).split("@")[0];
+    const normalized = rawObsRef.startsWith("observation:")
+      ? rawObsRef
+      : `observation:${rawObsRef}`;
+    if (!state.observations.has(normalized)) {
+      getObservation(normalized);
+    }
+    const target = state.observations.get(normalized);
+    const currentRev =
+      target.revisions[target.revisions.length - 1]?.number ?? 1;
+    const requestedRev = Number(body?.revision ?? currentRev);
+    if (requestedRev !== Number(currentRev)) {
+      return {
+        conflict: true,
+        problem: {
+          title: "Stale observation revision",
+          status: 409,
+          code: "K.Assertion.RevisionStale",
+          detail: `Observation is at revision ${currentRev}, requested ${requestedRev}.`,
+        },
+      };
+    }
+    const rawObsUuid = normalized.replace(/^observation:/, "");
+    const hasOpenQuery = (target.assertions || []).some(
+      (a) => String(a.kind).toLowerCase() === "queried" && !a.retracted_at
+    );
+    if (hasOpenQuery) {
+      return {
+        conflict: true,
+        problem: {
+          title: "Observation has an open query",
+          status: 409,
+          code: "K.Assertion.QueryOpen",
+          detail: `Observation ${normalized} has an open query that must be closed before ${duplicateNoun}.`,
+        },
+      };
+    }
+    const lowerKind = kind.toLowerCase();
+    const alreadyExists = (target.assertions || []).some(
+      (a) =>
+        String(a.kind).toLowerCase() === lowerKind &&
+        !a.retracted_at &&
+        Number(a.revision) === Number(requestedRev)
+    );
+    if (alreadyExists) {
+      return {
+        conflict: true,
+        problem: {
+          title: duplicateTitle,
+          status: 409,
+          code: duplicateCode,
+          detail: `Observation ${normalized} revision ${requestedRev} already has an active ${duplicateNoun}.`,
+        },
+      };
+    }
+    const idx = nextCounter();
+    const assertionUuid =
+      body?.assertion_id || makeUuidFromIndex(uuidPrefix, idx);
+    const assertionRef = `assertion:${assertionUuid}`;
+    const now = new Date().toISOString();
+    const assertionEntry = {
+      assertion_id: assertionUuid,
+      ref: assertionRef,
+      kind,
+      target: normalized,
+      revision: requestedRev,
+      text: null,
+      asserted_by: actorId,
+      asserted_at: now,
+      reason,
+      reason_for_change: reason,
+      retracted_at: null,
+    };
+    target.assertions.push(cloneJson(assertionEntry));
+    target.audit.push({
+      sequence: nextCounter(),
+      recorded_at: now,
+      actor_id: actorId,
+      action: auditAction,
+      subject: assertionRef,
+      version: 1,
+      reason_for_change: reason,
+    });
+    for (const form of state.forms.values()) {
+      if (form.items.some((it) => it.observation_id === rawObsUuid)) {
+        form.assertions.push(cloneJson(assertionEntry));
+      }
+    }
+    ctx.recordActivity(
+      activityVerb,
+      "quality",
+      "assertion",
+      assertionRef,
+      actorId
+    );
+    return {
+      conflict: false,
+      data: {
+        ref: assertionRef,
+        kind,
+        target: normalized,
+        revision: requestedRev,
+        retracts: null,
+        asserted_at: now,
+        asserted_by: actorId,
+      },
+    };
+  }
 
   const methods = {
     getObservation,
@@ -315,112 +450,39 @@ export function createObservationsDomain(ctx) {
       body,
       reason = "Source data verified in demo session"
     ) {
-      const rawObsRef = String(observationRef).split("@")[0];
-      const normalized = rawObsRef.startsWith("observation:")
-        ? rawObsRef
-        : `observation:${rawObsRef}`;
-      if (!state.observations.has(normalized)) {
-        getObservation(normalized);
-      }
-      const target = state.observations.get(normalized);
-      const currentRev =
-        target.revisions[target.revisions.length - 1]?.number ?? 1;
-      const requestedRev = Number(body?.revision ?? currentRev);
-      if (requestedRev !== Number(currentRev)) {
-        return {
-          conflict: true,
-          problem: {
-            title: "Stale observation revision",
-            status: 409,
-            code: "K.Assertion.RevisionStale",
-            detail: `Observation is at revision ${currentRev}, requested ${requestedRev}.`,
-          },
-        };
-      }
-      const rawObsUuid = normalized.replace(/^observation:/, "");
-      const hasOpenQuery = (target.assertions || []).some(
-        (a) => String(a.kind).toLowerCase() === "queried" && !a.retracted_at
-      );
-      if (hasOpenQuery) {
-        return {
-          conflict: true,
-          problem: {
-            title: "Observation has an open query",
-            status: 409,
-            code: "K.Assertion.QueryOpen",
-            detail: `Observation ${normalized} has an open query that must be closed before verification.`,
-          },
-        };
-      }
-      const alreadyVerified = (target.assertions || []).some(
-        (a) =>
-          String(a.kind).toLowerCase() === "verified" &&
-          !a.retracted_at &&
-          Number(a.revision) === Number(requestedRev)
-      );
-      if (alreadyVerified) {
-        return {
-          conflict: true,
-          problem: {
-            title: "Observation revision is already verified",
-            status: 409,
-            code: "K.Assertion.AlreadyVerified",
-            detail: `Observation ${normalized} revision ${requestedRev} already has an active verification.`,
-          },
-        };
-      }
-      const idx = nextCounter();
-      const assertionUuid =
-        body?.assertion_id || makeUuidFromIndex("00008000", idx);
-      const assertionRef = `assertion:${assertionUuid}`;
-      const now = new Date().toISOString();
-      const assertionEntry = {
-        assertion_id: assertionUuid,
-        ref: assertionRef,
-        kind: "Verified",
-        target: normalized,
-        revision: requestedRev,
-        text: null,
-        asserted_by: "usr-cra-01",
-        asserted_at: now,
+      return recordRevisionJudgment({
+        observationRef,
+        body,
         reason,
-        reason_for_change: reason,
-        retracted_at: null,
-      };
-      target.assertions.push(cloneJson(assertionEntry));
-      target.audit.push({
-        sequence: nextCounter(),
-        recorded_at: now,
-        actor_id: "usr-cra-01",
-        action: "assertion.verified",
-        subject: assertionRef,
-        version: 1,
-        reason_for_change: reason,
+        kind: "Verified",
+        uuidPrefix: "00008000",
+        actorId: "usr-cra-01",
+        duplicateCode: "K.Assertion.AlreadyVerified",
+        duplicateTitle: "Observation revision is already verified",
+        duplicateNoun: "verification",
+        auditAction: "assertion.verified",
+        activityVerb: "observation.verified",
       });
-      for (const form of state.forms.values()) {
-        if (form.items.some((it) => it.observation_id === rawObsUuid)) {
-          form.assertions.push(cloneJson(assertionEntry));
-        }
-      }
-      ctx.recordActivity(
-        "observation.verified",
-        "quality",
-        "assertion",
-        assertionRef,
-        "usr-cra-01"
-      );
-      return {
-        conflict: false,
-        data: {
-          ref: assertionRef,
-          kind: "Verified",
-          target: normalized,
-          revision: requestedRev,
-          retracts: null,
-          asserted_at: now,
-          asserted_by: "usr-cra-01",
-        },
-      };
+    },
+
+    reviewObservation(
+      observationRef,
+      body,
+      reason = "Medically reviewed in demo session"
+    ) {
+      return recordRevisionJudgment({
+        observationRef,
+        body,
+        reason,
+        kind: "Reviewed",
+        uuidPrefix: "00008200",
+        actorId: "usr-mm-01",
+        duplicateCode: "K.Assertion.AlreadyReviewed",
+        duplicateTitle: "Observation revision is already reviewed",
+        duplicateNoun: "medical review",
+        auditAction: "assertion.reviewed",
+        activityVerb: "observation.reviewed",
+      });
     },
 
     retractAssertion(
@@ -434,6 +496,7 @@ export function createObservationsDomain(ctx) {
       const rawUuid = normalized.replace(/^assertion:/, "");
       const now = new Date().toISOString();
       let targetObsRef = `observation:${OBS_1_UUID}`;
+      let retractedKind = "Verified";
 
       for (const obs of state.observations.values()) {
         for (const a of obs.assertions) {
@@ -451,6 +514,7 @@ export function createObservationsDomain(ctx) {
             }
             a.retracted_at = now;
             targetObsRef = a.target || obs.ref;
+            retractedKind = a.kind || retractedKind;
           }
         }
       }
@@ -460,6 +524,7 @@ export function createObservationsDomain(ctx) {
           if (a.assertion_id === rawUuid) {
             a.retracted_at = now;
             targetObsRef = a.target || targetObsRef;
+            retractedKind = a.kind || retractedKind;
           }
         }
       }
@@ -468,24 +533,28 @@ export function createObservationsDomain(ctx) {
       const retractionId =
         body?.assertion_id || makeUuidFromIndex("00008100", idx);
       const retractionRef = `assertion:${retractionId}`;
+      const actorId =
+        String(retractedKind).toLowerCase() === "reviewed"
+          ? "usr-mm-01"
+          : "usr-cra-01";
       ctx.recordActivity(
         "assertion.retracted",
         "quality",
         "assertion",
         retractionRef,
-        "usr-cra-01",
+        actorId,
         reason
       );
       return {
         conflict: false,
         data: {
           ref: retractionRef,
-          kind: "Verified",
+          kind: retractedKind,
           target: targetObsRef,
           revision: null,
           retracts: normalized,
           asserted_at: now,
-          asserted_by: "usr-cra-01",
+          asserted_by: actorId,
         },
       };
     },

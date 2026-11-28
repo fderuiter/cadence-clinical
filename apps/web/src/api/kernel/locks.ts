@@ -15,14 +15,21 @@ import {
 const loadRouteTransport = () => import("./locks.transport");
 export type KernelLock = KernelSchemas["Kernel_KernelLockResponse"];
 export type KernelStudyLocks = KernelSchemas["Kernel_KernelStudyLocksResponse"];
-export type KernelLockReadiness =
-  KernelSchemas["Kernel_KernelLockReadinessResponse"];
+export type KernelLockReadiness = Omit<
+  KernelSchemas["Kernel_KernelLockReadinessResponse"],
+  "unreviewed_value_count"
+> & {
+  unreviewed_value_count?: number | string;
+};
 export type KernelLockBlocker =
-  KernelSchemas["Kernel_KernelLockBlockerResponse"];
+  KernelSchemas["Kernel_KernelLockBlockerResponse"] & {
+    site_code?: string | null;
+  };
 export type KernelLockBlockerKind =
   | "OpenQuery"
   | "MissingRequiredItem"
   | "UnverifiedValue"
+  | "UnreviewedValue"
   | "UnsignedForm"
   | "UnopenedVisit"
   | "ErrorFinding";

@@ -526,7 +526,9 @@ internal sealed class KernelObservationRecords(
                 specItem?.Terminology?.CodeSystemVersionId,
                 expectedCodelist,
                 expectedCodelistOptions,
-                isBlindedTreatment);
+                isBlindedTreatment,
+                specItem?.SdvRequired ?? true,
+                specItem?.MedicalReviewRequired ?? false);
         }
         finally
         {

@@ -302,6 +302,7 @@
               :can-manage-queries="canManage"
               :can-answer-queries="canAnswer"
               :can-verify-source="canVerify"
+              :can-review-source="canReview"
               :highlight-item-id="highlightItemQuery || null"
               :back-location="formBackLocation"
               :back-label="formBackLabel"
@@ -1140,6 +1141,7 @@ import {
   canManageQueries,
   canManageRulePacks,
   canReadEtmf,
+  canReviewSource,
   canUnblindParticipant,
   canVerifySource,
 } from "../canvas/authority";
@@ -1997,6 +1999,7 @@ const canManage = computed(() => canManageQueries(authStore));
 const canAnswer = computed(() => canAnswerQueries(authStore));
 const canManageRules = computed(() => canManageRulePacks(authStore));
 const canVerify = computed(() => canVerifySource(authStore));
+const canReview = computed(() => canReviewSource(authStore));
 const canChangeParticipants = computed(() => canManageParticipants(authStore));
 const canUnblindParticipants = computed(() => canUnblindParticipant(authStore));
 const callerAuthKey = computed(() =>

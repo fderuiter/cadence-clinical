@@ -225,6 +225,53 @@ internal sealed class VerifyObservationHandler : ICommandHandler<VerifyObservati
     }
 }
 
+/// <summary>
+/// Handles <see cref="ReviewObservation"/>: under an exclusive advisory lock on the observation and shared locks on its
+/// covering scopes, refuses when a <see cref="AssertionKind.Locked"/> lock holds, when the revision is stale, when an
+/// open query holds on the observation, or when the revision already holds an active medical review (spec §8.2, ADR-2621).
+/// </summary>
+internal sealed class ReviewObservationHandler : ICommandHandler<ReviewObservation, AssertionState>
+{
+    public async Task<CommandResult<AssertionState>> HandleAsync(ReviewObservation command, ICommandContext context, CancellationToken cancellationToken)
+    {
+        var (observation, refused) = await ObservationAssertions.OpenAsync(
+            context, command.AssertionId, command.EnrollmentId, command.ObservationId, cancellationToken, lockObservation: true).ConfigureAwait(false);
+        if (observation is null)
+        {
+            return refused!;
+        }
+
+        if (command.Revision != observation.Revision)
+        {
+            return AssertionErrors.RevisionStale.WithMessage(
+                $"The observation's current revision is {observation.Revision}, not {command.Revision}; reload it and review the current value.");
+        }
+
+        var assertions = await context.Work.ReadAllAsync<Assertion>(
+            a => a.TargetKind == NodeKinds.Observation && a.TargetId == observation.Id.Value,
+            cancellationToken).ConfigureAwait(false);
+        var retractedIds = assertions
+            .Where(a => a.RetractsId is not null)
+            .Select(a => a.RetractsId!.Value)
+            .ToHashSet();
+
+        if (assertions.Any(a => a.Kind == AssertionKind.Queried && a.RetractsId is null && !retractedIds.Contains(a.Id)))
+        {
+            return AssertionErrors.QueryOpen.WithMessage(
+                "An open query holds on this observation; resolve and close the query before medical review.");
+        }
+
+        if (assertions.Any(a => a.Kind == AssertionKind.Reviewed && a.RetractsId is null && a.TargetRevision == command.Revision && !retractedIds.Contains(a.Id)))
+        {
+            return AssertionErrors.AlreadyReviewed;
+        }
+
+        var reviewed = Assertion.Review(command.AssertionId, observation, command.Revision, context.Actor.Id, context.RecordedAt);
+        context.Work.LinkInput(NodeRef.For(observation.Id, command.Revision), LineageEdgeKind.DerivedFrom, target: NodeRef.For(reviewed.Id));
+        return ObservationAssertions.Made(context, reviewed);
+    }
+}
+
 /// <summary>Handles <see cref="RaiseQuery"/> the way <see cref="VerifyObservationHandler"/> checks its observation.</summary>
 internal sealed class RaiseQueryHandler : ICommandHandler<RaiseQuery, AssertionState>
 {
@@ -297,7 +344,7 @@ internal sealed class AnswerQueryHandler : ICommandHandler<AnswerQuery, Assertio
 }
 
 /// <summary>
-/// Handles <see cref="RetractAssertion"/>: withdraws a verification or an answer, or closes a query, once. Locks are
+/// Handles <see cref="RetractAssertion"/>: withdraws a verification, review or answer, or closes a query, once. Locks are
 /// released with <see cref="ReleaseLock"/>, which needs a signature.
 /// </summary>
 internal sealed class RetractAssertionHandler : ICommandHandler<RetractAssertion, AssertionState>
@@ -536,6 +583,7 @@ public static class AssertionServiceCollectionExtensions
         services.AddTransient<ICommandHandler<ApplyLock, LockState>, ApplyLockHandler>();
         services.AddTransient<ICommandHandler<ReleaseLock, LockState>, ReleaseLockHandler>();
         services.AddTransient<ICommandHandler<VerifyObservation, AssertionState>, VerifyObservationHandler>();
+        services.AddTransient<ICommandHandler<ReviewObservation, AssertionState>, ReviewObservationHandler>();
         services.AddTransient<ICommandHandler<RaiseQuery, AssertionState>, RaiseQueryHandler>();
         services.AddTransient<ICommandHandler<AnswerQuery, AssertionState>, AnswerQueryHandler>();
         services.AddTransient<ICommandHandler<RetractAssertion, AssertionState>, RetractAssertionHandler>();

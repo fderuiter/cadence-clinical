@@ -7,3 +7,5 @@ Active Architectural Decision Records for **0. Clinical Kernel (K001–K037)**.
 - Entries below use `# ADR-KERNEL-YYYYMMDD-<slug>: <title>` and are sorted alphabetically by filename.
 
 ## Decisions
+
+- [ADR-KERNEL-20261128-targeted-sdv-flags-medical-review-assertions-and-closeout-readiness: Targeted SDV Flags, Medical Review Assertions, and Closeout Readiness](2026-11-28-targeted-sdv-flags-medical-review-assertions-and-closeout-readiness.md) (2026-11-28)

@@ -151,6 +151,21 @@ const DATA_GOVERNANCE_ROLES = [
   "super_admin",
 ];
 
+const STUDY_CLOSEOUT_READ_ROLES = [
+  ...CLINICAL_OPERATIONS_ROLES,
+  "principal_investigator",
+  "trial_coordinator",
+  "safety_reviewer",
+  "safety_officer",
+  "sponsor_mm",
+  "medical_monitor",
+  "unblinded_statistician",
+  "sponsor_statistician",
+  "pharmacist",
+  "auditor",
+  "tmf_auditor",
+];
+
 const routes = [
   {
     path: "/",
@@ -300,6 +315,10 @@ const routes = [
         "data_manager",
         "cra",
         "monitor",
+        "sponsor_mm",
+        "medical_monitor",
+        "safety_reviewer",
+        "safety_officer",
         "auditor",
         "tmf_auditor",
         "sponsor_admin",
@@ -463,7 +482,7 @@ const routes = [
     beforeEnter: redirectToCanvasSection("data", "locks"),
     meta: {
       requiresAuth: true,
-      requiresRole: DATA_GOVERNANCE_ROLES,
+      requiresRole: STUDY_CLOSEOUT_READ_ROLES,
     },
   },
   {

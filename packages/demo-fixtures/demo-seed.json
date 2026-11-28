@@ -159,7 +159,9 @@
       "name": "Safety reviewer",
       "capabilities": [
         "validation_finding.investigate",
-        "validation_finding.classify"
+        "validation_finding.classify",
+        "observation.review",
+        "assertion.retract"
       ]
     },
     {
