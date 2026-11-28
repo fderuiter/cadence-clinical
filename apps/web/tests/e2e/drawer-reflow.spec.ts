@@ -646,4 +646,243 @@ test.describe("Bounded ClinicalDrawer Viewport Reflow & Scrollable Body Verifica
       );
     }
   });
+
+  test("ClinicalGovernanceBanner keeps all 4 lock surfaces <= 52px above the fold on tablets, reflows at 200% zoom, and aligns single-surface form=new across all 6 viewports", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    const enrollmentParam = "enrollment:00000000-0000-0000-0000-000000001001";
+    const formParam =
+      "collection_instance:00000000-0000-0000-0000-000000002001";
+    const obsParam = "observation:00000000-0000-0000-0000-000000000001";
+
+    for (const vp of [
+      { width: 768, height: 1024 },
+      { width: 1024, height: 768 },
+    ]) {
+      await page.setViewportSize(vp);
+
+      // 1. ParticipantRecord
+      await gotoHashRoute(
+        page,
+        `/studies/DEMO-01?stage=conduct&participant=${enrollmentParam}`
+      );
+      await expect(page.locator("#participant-record")).toBeVisible();
+      await expect(page.locator("#casebook-matrix")).toBeVisible();
+      const participantBannerBox = await page
+        .locator("#participant-lock-banner .clinical-governance-banner")
+        .boundingBox();
+      const matrixBox = await page.locator("#casebook-matrix").boundingBox();
+      expect(participantBannerBox).not.toBeNull();
+      expect(participantBannerBox!.height).toBeLessThanOrEqual(52);
+      expect(matrixBox).not.toBeNull();
+      expect(matrixBox!.y).toBeLessThan(vp.height);
+
+      if (captureScreenshots && vp.width === 1024) {
+        await page.screenshot({
+          path: "/tmp/participant-governance-1024x768.png",
+        });
+      }
+
+      // 2. EcrfFormPanel (EcrfSdvToolbar)
+      await gotoHashRoute(
+        page,
+        `/studies/DEMO-01?stage=conduct&participant=${enrollmentParam}&form=${formParam}`
+      );
+      const ecrfBanner = page
+        .locator("#canvas-form-workspace .clinical-governance-banner")
+        .first();
+      await expect(ecrfBanner).toBeVisible();
+      const ecrfBannerBox = await ecrfBanner.boundingBox();
+      expect(ecrfBannerBox).not.toBeNull();
+      expect(ecrfBannerBox!.height).toBeLessThanOrEqual(52);
+      const firstEcrfItem = page
+        .locator("#ecrf-item-observation-item-sysbp")
+        .first();
+      await expect(firstEcrfItem).toBeVisible();
+      const firstEcrfItemBox = await firstEcrfItem.boundingBox();
+      expect(firstEcrfItemBox).not.toBeNull();
+      expect(firstEcrfItemBox!.y).toBeLessThan(vp.height);
+
+      // 3. ObservationView
+      await gotoHashRoute(
+        page,
+        `/studies/DEMO-01?stage=conduct&participant=${enrollmentParam}&form=${formParam}&item=item-sysbp&observation=${obsParam}`
+      );
+      const obsNewValue = page.locator("#observation-new-value");
+      await expect(obsNewValue).toBeVisible();
+      const obsBanner = page.locator(".clinical-governance-banner").first();
+      await expect(obsBanner).toBeVisible();
+      const obsBannerBox = await obsBanner.boundingBox();
+      const obsInputBox = await obsNewValue.boundingBox();
+      expect(obsBannerBox).not.toBeNull();
+      expect(obsBannerBox!.height).toBeLessThanOrEqual(52);
+      expect(obsInputBox).not.toBeNull();
+      expect(obsInputBox!.y).toBeLessThan(vp.height);
+
+      // 4. LocksSection (LocksApplyForm)
+      await gotoHashRoute(page, "/studies/DEMO-01?stage=data&section=locks");
+      await expect(page.locator("#study-locks-section")).toBeVisible();
+      const locksBanner = page
+        .locator("#study-locks-apply-form .clinical-governance-banner")
+        .first();
+      await expect(locksBanner).toBeVisible();
+      const locksBannerBox = await locksBanner.boundingBox();
+      const applyLockBtnBox = await page
+        .locator("#btn-apply-study-lock")
+        .boundingBox();
+      expect(locksBannerBox).not.toBeNull();
+      expect(locksBannerBox!.height).toBeLessThanOrEqual(52);
+      expect(applyLockBtnBox).not.toBeNull();
+      expect(applyLockBtnBox!.y).toBeLessThan(vp.height);
+    }
+
+    // Verify LocksSection blocker drawer across slide-over, 90dvh mobile bottom-sheet, Escape focus return, and 200% text zoom
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await gotoHashRoute(page, "/studies/DEMO-01?stage=data&section=locks");
+    const reviewBlockersBtn = page.locator(
+      '[data-testid="study-locks-review-blockers"]'
+    );
+    await expect(reviewBlockersBtn).toBeVisible();
+    await reviewBlockersBtn.click();
+    const blockersList = page.locator(
+      '[data-testid="study-locks-readiness-blockers"]'
+    );
+    await expect(blockersList).toBeVisible();
+    await expectZeroAxeViolations(
+      page,
+      ".clinical-drawer-panel.open",
+      "StudyLocksBlockerDrawer"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/locks-blocker-drawer-1024x768.png",
+      });
+    }
+
+    // Check 90dvh bottom-sheet behavior at 390x844 and 320x568
+    for (const mobileVp of [
+      { width: 390, height: 844 },
+      { width: 320, height: 568 },
+    ]) {
+      await page.setViewportSize(mobileVp);
+      const sheetBox = await page
+        .locator(".clinical-drawer-panel.open")
+        .boundingBox();
+      expect(sheetBox).not.toBeNull();
+      expect(sheetBox!.height).toBeLessThanOrEqual(mobileVp.height * 0.91);
+      expect(sheetBox!.y).toBeGreaterThanOrEqual(mobileVp.height * 0.08);
+    }
+
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.keyboard.press("Escape");
+    await expect(blockersList).toBeHidden();
+    await expect(reviewBlockersBtn).toBeFocused();
+
+    // Verify 200% root text zoom reflows without horizontal overflow
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    const zoomOverflow = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+    expect(zoomOverflow.scrollWidth).toBeLessThanOrEqual(
+      zoomOverflow.clientWidth + 2
+    );
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "";
+    });
+
+    // Verify single-surface form=new entry, Switch visit or form drawer, and sticky-chrome clearance across all 6 viewports
+    const sixViewports = [
+      { width: 768, height: 1024 },
+      { width: 1024, height: 768 },
+      { width: 1280, height: 800 },
+      { width: 1440, height: 900 },
+      { width: 390, height: 844 },
+      { width: 320, height: 568 },
+    ];
+
+    for (const vp of sixViewports) {
+      await page.setViewportSize(vp);
+      await gotoHashRoute(
+        page,
+        `/studies/DEMO-01?stage=conduct&participant=${enrollmentParam}`
+      );
+      await expect(page.locator("#casebook-matrix")).toBeVisible();
+      await page
+        .locator("#matrix-open-form-vital-signs-visit-screening")
+        .click();
+
+      await expect(page.locator("#ecrf-form-new")).toBeVisible();
+      // Zero inline ParticipantFormsPanel (#casebook-matrix) mounted
+      await expect(page.locator("#casebook-matrix")).toHaveCount(0);
+      await expect(page.locator("#ecrf-collected-at")).toBeFocused();
+
+      const openMetrics = await page.evaluate(() => {
+        const formRect = document
+          .getElementById("ecrf-form-new")!
+          .getBoundingClientRect();
+        const rawOffset = parseFloat(
+          getComputedStyle(document.documentElement).getPropertyValue(
+            "--sticky-chrome-offset"
+          ) || "0"
+        );
+        return { formTop: formRect.top, stickyOffset: rawOffset };
+      });
+      expect(openMetrics.formTop).toBeGreaterThanOrEqual(
+        Math.max(0, openMetrics.stickyOffset - 8)
+      );
+
+      if (captureScreenshots && vp.width === 1024 && vp.height === 768) {
+        await page.screenshot({
+          path: "/tmp/new-form-single-surface-1024x768.png",
+        });
+      }
+
+      // Open Switch visit or form drawer, check Escape focus restoration once, then switch scheduled visit cell
+      const switcherBtn = page.locator("#btn-switch-visit-or-form");
+      await expect(switcherBtn).toBeVisible();
+      await switcherBtn.click();
+      await expect(
+        page.locator("#workspace-visit-switcher-drawer #casebook-matrix")
+      ).toBeVisible();
+
+      if (captureScreenshots && vp.width === 390 && vp.height === 844) {
+        await page.screenshot({
+          path: "/tmp/visit-switcher-bottom-sheet-390x844.png",
+        });
+      }
+
+      if (vp.width === 1024 && vp.height === 768) {
+        await page.keyboard.press("Escape");
+        await expect(page.locator("#casebook-matrix")).toHaveCount(0);
+        await expect(switcherBtn).toBeFocused();
+        await switcherBtn.click();
+        await expect(
+          page.locator("#workspace-visit-switcher-drawer #casebook-matrix")
+        ).toBeVisible();
+      }
+
+      await page.locator("#matrix-open-form-vital-signs-visit-week4").click();
+      await expect(page.locator("#casebook-matrix")).toHaveCount(0);
+      await expect(page.locator("#ecrf-collected-at")).toBeFocused();
+
+      const switchedMetrics = await page.evaluate(() => {
+        const formRect = document
+          .getElementById("ecrf-form-new")!
+          .getBoundingClientRect();
+        const rawOffset = parseFloat(
+          getComputedStyle(document.documentElement).getPropertyValue(
+            "--sticky-chrome-offset"
+          ) || "0"
+        );
+        return { formTop: formRect.top, stickyOffset: rawOffset };
+      });
+      expect(switchedMetrics.formTop).toBeGreaterThanOrEqual(
+        Math.max(0, switchedMetrics.stickyOffset - 8)
+      );
+    }
+  });
 });

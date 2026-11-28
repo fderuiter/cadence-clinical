@@ -1,13 +1,15 @@
 using System;
 using System.IO;
 
+using Cadence.ToolingCore.Primitives;
+
 namespace Cadence.ToolingCore.Services;
 
 public static class ScaffoldReadmesService
 {
     public static int ScaffoldReadmes(string? repoRoot = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         Console.WriteLine("Scaffolding missing README documentation files...");
 
         string[] targetDirs = ["apps", "packages"];
@@ -30,18 +32,5 @@ public static class ScaffoldReadmesService
         }
 
         return 0;
-    }
-
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
     }
 }

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
+using Cadence.ToolingCore.Primitives;
+
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>A single disallowed Unicode emoji glyph discovered in a scanned text buffer.</summary>
@@ -15,8 +17,6 @@ public readonly record struct EmojiHit(int Line, int Column, int CodePoint, stri
 /// </summary>
 public static class EmojiValidatorService
 {
-    private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
-
     private static readonly string[] ScopedRoots =
     [
         "packages/ui",
@@ -226,7 +226,7 @@ public static class EmojiValidatorService
         bool preCommit = false,
         GitIndexReader? indexReader = null)
     {
-        string resolvedRoot = Path.GetFullPath(repoRoot ?? PreCommitOpenApiService.FindRepoRoot());
+        string resolvedRoot = Path.GetFullPath(repoRoot ?? WorkspacePrimitives.FindRepoRoot());
         var violations = FindViolations(resolvedRoot, targetFiles, preCommit, indexReader);
         if (violations.Count == 0)
         {
@@ -286,7 +286,7 @@ public static class EmojiValidatorService
                     }
 
                     string diskPath = Path.Combine(fullRoot, rel.Replace('/', Path.DirectorySeparatorChar));
-                    string? content = TryReadUtf8Text(diskPath, rel, effectiveReader);
+                    string? content = WorkspacePrimitives.TryReadUtf8Text(diskPath, rel, effectiveReader);
                     if (content is not null)
                     {
                         ScanText(content.AsSpan(), rel, violations);
@@ -422,48 +422,11 @@ public static class EmojiValidatorService
             }
 
             string rel = Path.GetRelativePath(fullRoot, file).Replace('\\', '/');
-            string? content = TryReadUtf8Text(file, rel, reader: null);
+            string? content = WorkspacePrimitives.TryReadUtf8Text(file, rel, indexReader: null);
             if (content is not null)
             {
                 ScanText(content.AsSpan(), rel, violations);
             }
-        }
-    }
-
-    private static string? TryReadUtf8Text(string fullPath, string relPath, GitIndexReader? reader)
-    {
-        byte[] bytes;
-        if (reader is not null)
-        {
-            if (!reader.TryReadBytes(relPath, out bytes))
-            {
-                return null;
-            }
-        }
-        else
-        {
-            if (!File.Exists(fullPath))
-            {
-                return null;
-            }
-
-            try
-            {
-                bytes = File.ReadAllBytes(fullPath);
-            }
-            catch (IOException)
-            {
-                return null;
-            }
-        }
-
-        try
-        {
-            return StrictUtf8.GetString(bytes);
-        }
-        catch (DecoderFallbackException)
-        {
-            return null;
         }
     }
 

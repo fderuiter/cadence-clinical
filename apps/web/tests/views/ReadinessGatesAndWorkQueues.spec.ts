@@ -776,7 +776,27 @@ describe("Kernel readiness gates, validation finding lifecycle, and capability w
     expect(readinessBanner.exists()).toBe(true);
     expect(readinessBanner.text()).toContain("1 missing required item");
     expect(readinessBanner.text()).toContain("1 error finding");
-    expect(readinessBanner.text()).toContain("VS_SYSBP_RANGE");
+    expect(
+      locksWrapper
+        .find("[data-testid='study-locks-readiness-blockers']")
+        .exists()
+    ).toBe(false);
+
+    const reviewBtn = locksWrapper.find(
+      "[data-testid='study-locks-review-blockers']"
+    );
+    await reviewBtn.trigger("click");
+    await flushPromises();
+    expect(
+      locksWrapper.find("[data-testid='study-locks-readiness-blockers']").text()
+    ).toContain("VS_SYSBP_RANGE");
+
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+    );
+    await flushPromises();
+    expect(document.activeElement).toBe(reviewBtn.element);
+
     await locksWrapper
       .find("#lock-apply-reason")
       .setValue("Attempt study lock");
@@ -808,6 +828,8 @@ describe("Kernel readiness gates, validation finding lifecycle, and capability w
       .text();
     expect(inlineReadinessText).toContain("1 error finding");
     expect(inlineReadinessText).toContain("Freeze form remains available");
+    await inlineWrapper.find("#ecrf-lock-manage").trigger("click");
+    await flushPromises();
     await inlineWrapper.find("#ecrf-lock-reason").setValue("Freeze form");
     expect(
       (inlineWrapper.find("#ecrf-lock-freeze").element as HTMLButtonElement)
