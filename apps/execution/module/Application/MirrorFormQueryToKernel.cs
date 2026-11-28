@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Events;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Modules;
 using Cadence.Modules.Execution.Domain;
@@ -12,9 +13,9 @@ namespace Cadence.Modules.Execution.Application;
 /// <summary>
 /// States each query step as a kernel assertion (#5461, spec §8.2, <c>PRD-QRY-001</c>): when Execution commits
 /// <see cref="FormQueryChanged"/>, sends the kernel's <see cref="RaiseQuery"/>, <see cref="AnswerQuery"/> or
-/// <see cref="RetractAssertion"/> as the service account <c>svc:execution-queries</c>, keyed by the delivery, forwarding
-/// the target observation <see cref="FormQueryChanged.Revision"/>, the real acting user (<see cref="FormQueryChanged.ActorId"/>),
-/// and the verbatim <c>X-Change-Reason</c> (<see cref="FormQueryChanged.ReasonForChange"/>).
+/// <see cref="RetractAssertion"/> as the service account <c>svc:execution-queries</c>, keyed deterministically by step
+/// assertion ID so synchronous projection and outbox replay share idempotency, while terminal errors raise
+/// <see cref="KernelOutboxPoisonMessageException"/> so only the affected aggregate stream is quarantined.
 /// </summary>
 internal sealed class MirrorFormQueryToKernel(IKernelCommandSender sender) : KernelEventConsumer<FormQueryChanged>
 {
@@ -37,7 +38,7 @@ internal sealed class MirrorFormQueryToKernel(IKernelCommandSender sender) : Ker
         for (var i = 0; i < payload.Steps.Count; i++)
         {
             var step = payload.Steps[i];
-            var key = $"{delivery.IdempotencyKey}:{i}";
+            var key = FormQueryKernelProjector.StepIdempotencyKey(step);
             var result = step.Kind switch
             {
                 KernelAssertionStepKind.Raise => await sender.SendAsync(
@@ -79,11 +80,16 @@ internal sealed class MirrorFormQueryToKernel(IKernelCommandSender sender) : Ker
                     cancellationToken).ConfigureAwait(false),
             };
 
-            // An assertion that already exists was written by an earlier delivery: nothing to do for that step.
+            // An assertion that already exists was written synchronously or by an earlier delivery: nothing to do for that step.
             if (result.Error is { } error && error.Code != KernelErrors.AlreadyExists.Code)
             {
-                throw new InvalidOperationException(
-                    $"Stating step {i} ({step.Kind}) of Execution query {payload.QueryId.Value:D} in the kernel failed: {error.Code}.");
+                var message = $"Stating step {i} ({step.Kind}) of Execution query {payload.QueryId.Value:D} in the kernel failed: {error.Code}.";
+                if (error.Code == AssertionErrors.Locked.Code)
+                {
+                    throw new InvalidOperationException(message);
+                }
+
+                throw new KernelOutboxPoisonMessageException(message);
             }
         }
     }

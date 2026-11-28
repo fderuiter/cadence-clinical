@@ -70,6 +70,12 @@ public class Assertion : AggregateRoot<AssertionId>
     /// <summary>The signature of a lock or its release.</summary>
     public AttestationId? AttestationId { get; private set; }
 
+    /// <summary>The milestone closeout profile recorded when applying a lock; null for non-lock assertions.</summary>
+    public LockMilestone? Milestone { get; private set; }
+
+    /// <summary>Serialized asymmetric <see cref="DatabaseLockCertificateRecord"/> minted for a study hard lock; null otherwise.</summary>
+    public string? CertificateJson { get; private set; }
+
     public string AssertedBy { get; private set; } = string.Empty;
 
     public DateTimeOffset AssertedAt { get; private set; }
@@ -90,10 +96,17 @@ public class Assertion : AggregateRoot<AssertionId>
         NodeRef scope,
         AttestationId attestation,
         string assertedBy,
-        DateTimeOffset assertedAt)
+        DateTimeOffset assertedAt,
+        LockMilestone milestone = LockMilestone.InterimCut,
+        string? certificateJson = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
-        return new Assertion(id, tenant, (AssertionKind)kind, study, enrollment, scope, assertedBy, assertedAt) { AttestationId = attestation };
+        return new Assertion(id, tenant, (AssertionKind)kind, study, enrollment, scope, assertedBy, assertedAt)
+        {
+            AttestationId = attestation,
+            Milestone = milestone,
+            CertificateJson = certificateJson,
+        };
     }
 
     /// <summary>Verifies revision <paramref name="revision"/> of <paramref name="observation"/> against source.</summary>
@@ -102,6 +115,18 @@ public class Assertion : AggregateRoot<AssertionId>
         ArgumentNullException.ThrowIfNull(observation);
         return new Assertion(
             id, observation.TenantId, AssertionKind.Verified, observation.StudyId, observation.EnrollmentId,
+            NodeRef.For(observation.Id), assertedBy, assertedAt)
+        {
+            TargetRevision = revision,
+        };
+    }
+
+    /// <summary>Records source data review completion for revision <paramref name="revision"/> of <paramref name="observation"/>.</summary>
+    public static Assertion Review(AssertionId id, Observation observation, int revision, string assertedBy, DateTimeOffset assertedAt)
+    {
+        ArgumentNullException.ThrowIfNull(observation);
+        return new Assertion(
+            id, observation.TenantId, AssertionKind.Reviewed, observation.StudyId, observation.EnrollmentId,
             NodeRef.For(observation.Id), assertedBy, assertedAt)
         {
             TargetRevision = revision,
@@ -186,6 +211,7 @@ public class Assertion : AggregateRoot<AssertionId>
             TargetRevision = retracted.TargetRevision,
             RetractsId = retracted.Id,
             AttestationId = attestation,
+            Milestone = retracted.Milestone,
         };
     }
 

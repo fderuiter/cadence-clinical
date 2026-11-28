@@ -40,9 +40,37 @@ public class DatabaseLockAuthToken
     public DateTimeOffset? RevokedAt { get; set; }
     public string? RevokedBy { get; set; }
     public string? RevocationReason { get; set; }
+    public string? CertificateId { get; set; }
+    public string? CertificateFingerprint { get; set; }
+    public string? LockCertificateJson { get; set; }
     public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
     public string ReasonForChange { get; set; } = "Unblinded database lock authorization token";
+    public int VersionIndex { get; set; } = 1;
+}
+
+public class ReplicatedStudyLock
+{
+    public Cadence.Kernel.TenantId TenantId { get; set; }
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string LockId { get; set; } = string.Empty;
+    public string StudyRef { get; set; } = string.Empty;
+    public string StudyCode { get; set; } = string.Empty;
+    public string ScopeKind { get; set; } = "study";
+    public string LockKind { get; set; } = "Locked";
+    public string Milestone { get; set; } = "FinalDatabaseLock";
+    public bool IsActive { get; set; } = true;
+    public string? CertificateId { get; set; }
+    public string? CertificateFingerprint { get; set; }
+    public string? CertificateJson { get; set; }
+    public string AppliedBy { get; set; } = string.Empty;
+    public required DateTimeOffset AppliedAt { get; set; }
+    public DateTimeOffset? RevokedAt { get; set; }
+    public string? RevokedBy { get; set; }
+    public string? RevocationReason { get; set; }
+    public required DateTimeOffset CreatedAt { get; set; }
+    public required string CreatedBy { get; set; }
+    public string ReasonForChange { get; set; } = "Kernel study lock replication";
     public int VersionIndex { get; set; } = 1;
 }
 

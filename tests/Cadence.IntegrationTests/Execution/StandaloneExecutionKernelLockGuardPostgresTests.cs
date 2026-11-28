@@ -74,6 +74,7 @@ public sealed class StandaloneExecutionKernelLockGuardPostgresTests(
       IDisposable
 {
     private const string DataManager = "dm@cross-lock.test";
+    private const string SponsorAdmin = "sponsor.admin@cross-lock.test";
     private const string Coordinator = "crc@cross-lock.test";
     private const string Reason = "Cross-service synchronous kernel lock guard verification on PostgreSQL.";
 
@@ -116,7 +117,8 @@ public sealed class StandaloneExecutionKernelLockGuardPostgresTests(
 
         await IssueGrantAsync(tenant, DataManager, "attestation.sign", AuthorityScope.Tenant(), ct);
         await IssueGrantAsync(tenant, DataManager, "lock.apply", AuthorityScope.Study(studyId), ct);
-        await IssueGrantAsync(tenant, DataManager, "lock.release", AuthorityScope.Study(studyId), ct);
+        await IssueGrantAsync(tenant, SponsorAdmin, "attestation.sign", AuthorityScope.Tenant(), ct);
+        await IssueGrantAsync(tenant, SponsorAdmin, "lock.release", AuthorityScope.Study(studyId), ct);
         await IssueGrantAsync(tenant, Coordinator, "observation.record", AuthorityScope.StudySite(studySiteId), ct);
 
         _kernelHost = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
@@ -240,10 +242,11 @@ public sealed class StandaloneExecutionKernelLockGuardPostgresTests(
             unitRes.StatusCode.Should().Be(HttpStatusCode.OK, await unitRes.Content.ReadAsStringAsync(ct));
         }
 
-        // 6. Release the Frozen assertion in the Clinical Kernel -> standalone Execution mutations succeed again!
+        // 6. Release the Frozen assertion in the Clinical Kernel via four-eyes SponsorAdmin -> standalone Execution mutations succeed again!
+        using var kernelSponsorAdmin = _kernelHost.CreateSignedClient(new GatewayIdentity(SponsorAdmin, [], [], TenantId: tenantCode));
         string releaseAction = KernelLockEndpoints.ReleaseLockAction(lockRef.Split('@')[0]);
         string releaseSig = TestSecurityContext.CreateSigToken(
-            DataManager,
+            SponsorAdmin,
             releaseAction,
             KernelLockEndpoints.ReleaseLockSemanticAction);
         using (var releaseReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/kernel/locks/{lockRef}/release")
@@ -254,7 +257,7 @@ public sealed class StandaloneExecutionKernelLockGuardPostgresTests(
             releaseReq.Headers.Add("Idempotency-Key", KernelProtocolScenario.Key());
             releaseReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Release site freeze after review"));
             releaseReq.Headers.Add(GatewayHeaders.SigToken, releaseSig);
-            using var releaseRes = await kernelDm.SendAsync(releaseReq, ct);
+            using var releaseRes = await kernelSponsorAdmin.SendAsync(releaseReq, ct);
             releaseRes.StatusCode.Should().Be(HttpStatusCode.OK, await releaseRes.Content.ReadAsStringAsync(ct));
         }
 

@@ -75,6 +75,7 @@ public static class ExecutionModule
             .AddCommandHandler<RecordFormSdvAlert, FormSdvAlertState, RecordFormSdvAlertHandler>()
             .AddCommandValidator<RecordFormSdvAlert, RecordFormSdvAlertValidator>()
             .AddScoped<IFormQueryEscalationService, FormQueryEscalationService>()
+            .AddScoped<IFormQueryKernelProjector, FormQueryKernelProjector>()
             .AddScoped<FormSdvAlertQueryService>()
             .AddScoped<IFormSdvAlertQueryService>(sp => sp.GetRequiredService<FormSdvAlertQueryService>())
             .AddScoped<IStudySdvAlertReader>(sp => sp.GetRequiredService<FormSdvAlertQueryService>())

@@ -74,6 +74,7 @@ vi.mock("../../src/components/SignatureCaptureModal.vue", () => ({
       "username",
       "signerName",
       "signerRole",
+      "lockSignerRole",
       "reasons",
       "actionUrl",
       "semanticAction",
@@ -88,6 +89,8 @@ vi.mock("../../src/components/SignatureCaptureModal.vue", () => ({
         :data-semantic="semanticAction"
         :data-username="username"
         :data-signer-name="signerName"
+        :data-signer-role="signerRole"
+        :data-lock-signer-role="String(Boolean(lockSignerRole))"
       >
         <button type="button" data-testid="confirm-step-up" @click="confirm">Confirm signature</button>
       </div>
@@ -1946,5 +1949,276 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     expect(inlineText).toContain("Freeze form remains available");
     await expectNoAxeViolations(inlineWrapper.element);
     inlineWrapper.unmount();
+  });
+
+  it("renders FinalDatabaseLock grouped readiness gates, SCE lock certificate sidebar, parent-lock coverage, self-release guard, and Sponsor Admin read-only apply posture", async () => {
+    const auth = useAuthStore();
+    auth.user = {
+      username: "dm.alice",
+      roles: ["TRIAL_DATA_MANAGER"],
+    } as never;
+
+    const certFingerprint = "e3b0c442".repeat(8);
+    mockListStudyLocks.mockResolvedValue({
+      study_ref: STUDY_REF,
+      study_code: "CAD-101",
+      valid_at: "2026-06-01T10:00:00Z",
+      known_at: "2026-06-01T10:00:00Z",
+      locks: [
+        {
+          ref: `assertion:${SITE_A_ID}`,
+          study_ref: STUDY_REF,
+          scope_ref: SITE_A_REF,
+          scope_kind: "study_site",
+          study_site_ref: SITE_A_REF,
+          enrollment_ref: null,
+          subject_code: null,
+          kind: "Frozen",
+          milestone: "InterimCut",
+          certificate: {
+            certificate_id: "dblcert-001",
+            study_ref: STUDY_REF,
+            study_code: "CAD-101",
+            lock_ref: `assertion:${SITE_A_ID}`,
+            milestone: "InterimCut",
+            attestation_ref: "attestation:01960000-0000-7000-8000-000000000099",
+            signed_by: "dm.alice",
+            issued_at: "2026-06-01T09:30:00Z",
+            key_id: "kernel-ecdsa-v1",
+            algorithm: "ECDSA-P256-SHA256",
+            payload_sha256: "8f434346".repeat(8),
+            fingerprint_sha256: certFingerprint,
+            signature_base64: "ZGVtby1zaWc=",
+            revoked: false,
+            revoked_at: null,
+            revoked_by: null,
+            tenant_code: "demo",
+          },
+          attestation_ref: "attestation:01960000-0000-7000-8000-000000000099",
+          attestation_meaning: "Approved",
+          locked_at: "2026-06-01T09:30:00Z",
+          locked_by: "dm.alice",
+          reason_for_change: "Interim cut site freeze",
+          released: false,
+          release_ref: null,
+          released_at: null,
+          released_by: null,
+          release_reason: null,
+          masked: false,
+          mask: null,
+        },
+        {
+          ref: `assertion:${LOCK_ID}`,
+          study_ref: STUDY_REF,
+          scope_ref: ENROLLMENT_REF,
+          scope_kind: "enrollment",
+          study_site_ref: SITE_A_REF,
+          enrollment_ref: ENROLLMENT_REF,
+          subject_code: "SUBJ-1001",
+          kind: "Frozen",
+          milestone: "InterimCut",
+          certificate: null,
+          attestation_ref: "attestation:01960000-0000-7000-8000-000000000098",
+          attestation_meaning: "Approved",
+          locked_at: "2026-06-01T09:31:00Z",
+          locked_by: "other.dm",
+          reason_for_change: "Child enrollment freeze",
+          released: false,
+          release_ref: null,
+          released_at: null,
+          released_by: null,
+          release_reason: null,
+          masked: false,
+          mask: null,
+        },
+      ],
+      hidden: { more_exist: false, reasons: [] },
+    });
+
+    mockGetStudyLockReadiness
+      .mockResolvedValueOnce({
+        study_ref: STUDY_REF,
+        scope_ref: STUDY_REF,
+        scope_kind: "study",
+        milestone: "InterimCut",
+        ready_for_lock: true,
+        open_query_count: 0,
+        missing_required_item_count: 0,
+        blockers: [],
+      })
+      .mockResolvedValueOnce({
+        study_ref: STUDY_REF,
+        scope_ref: STUDY_REF,
+        scope_kind: "study",
+        milestone: "FinalDatabaseLock",
+        ready_for_lock: false,
+        can_freeze: true,
+        open_query_count: 0,
+        missing_required_item_count: 0,
+        unverified_value_count: 0,
+        unreviewed_value_count: 1,
+        unsigned_form_count: 0,
+        unopened_visit_count: 0,
+        screening_enrollment_count: 1,
+        pending_scheduled_visit_count: 0,
+        open_error_finding_count: 0,
+        blocker_count: 2,
+        blockers: [
+          {
+            kind: "ScreeningEnrollment",
+            owner: "Site Coordinator",
+            target_ref: ENROLLMENT_REF,
+            target_kind: "enrollment",
+            subject_code: "SUBJ-1009",
+            detail: "SUBJ-1009 requires disposition",
+            next_action: "Complete screening disposition before final lock.",
+            masked: false,
+            mask: null,
+          },
+          {
+            kind: "UnreviewedValue",
+            owner: "Trial Data Manager",
+            target_ref: OBS_REF,
+            target_kind: "observation",
+            item_label: "Systolic BP",
+            current_revision: 1,
+            next_action: "Record source data review on Systolic BP.",
+            masked: false,
+            mask: null,
+          },
+        ],
+      });
+
+    const wrapper = mount(LocksSection, {
+      props: { studyCode: "CAD-101" },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    // Governance sidebar renders role separation matrix & verified SCE certificate
+    expect(wrapper.find("[data-testid='locks-role-matrix']").text()).toContain(
+      "Trial Data Manager"
+    );
+    expect(wrapper.find("[data-testid='locks-role-matrix']").text()).toContain(
+      "Sponsor Admin"
+    );
+    expect(
+      wrapper.find("[data-testid='locks-certificate-status']").text()
+    ).toContain("Verified · Unrevoked");
+    expect(
+      wrapper.find("[data-testid='locks-certificate-fingerprint']").text()
+    ).toBe(certFingerprint);
+    expect(
+      wrapper.find("[data-testid='locks-verified-oidc-role']").text()
+    ).toContain("Verified OIDC Role: Trial Data Manager");
+
+    // Copy SCE Certificate button updates status feedback
+    await wrapper
+      .find("[data-testid='btn-copy-sce-certificate']")
+      .trigger("click");
+    await flushPromises();
+    expect(
+      wrapper.find("[data-testid='btn-copy-sce-certificate']").text()
+    ).toContain("SCE Certificate");
+
+    // Parent lock self-release guard & child lock covered-by-parent guard
+    const parentReleaseBtn = wrapper.find(
+      `[data-testid='release-lock-assertion:${SITE_A_ID}']`
+    );
+    expect((parentReleaseBtn.element as HTMLButtonElement).disabled).toBe(true);
+    expect(wrapper.text()).toContain(
+      "Dual-signer release required (cannot release own lock)"
+    );
+
+    const childReleaseBtn = wrapper.find(
+      `[data-testid='release-lock-assertion:${LOCK_ID}']`
+    );
+    expect((childReleaseBtn.element as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      wrapper.find("[data-testid='study-lock-covered-badge']").text()
+    ).toContain("Covered by parent lock");
+
+    // Switch milestone target to FinalDatabaseLock -> grouped Cohort & Schedule + Data, Queries & Review gates render
+    await wrapper.find("[data-testid='lock-milestone-final']").trigger("click");
+    await flushPromises();
+
+    expect(mockGetStudyLockReadiness).toHaveBeenLastCalledWith(
+      STUDY_REF,
+      STUDY_REF,
+      "FinalDatabaseLock"
+    );
+    const cohortGroup = wrapper.find(
+      "[data-testid='readiness-group-cohort-schedule']"
+    );
+    expect(cohortGroup.text()).toContain("1 issue blocking");
+    expect(cohortGroup.text()).toContain("Screening disposition");
+    expect(cohortGroup.text()).toContain("SUBJ-1009 requires disposition");
+
+    const dataGroup = wrapper.find(
+      "[data-testid='readiness-group-data-review']"
+    );
+    expect(dataGroup.text()).toContain("Attention needed");
+    expect(dataGroup.text()).toContain(
+      "0 open queries · synchronous kernel projection"
+    );
+    expect(dataGroup.text()).toContain("Unreviewed value (SDR)");
+
+    // Step-up modal receives locked OIDC role
+    await wrapper.find("#lock-apply-kind").setValue("Frozen");
+    await wrapper
+      .find("#lock-apply-reason")
+      .setValue("Freeze while completing SDR");
+    await wrapper.find("#study-locks-apply-form").trigger("submit");
+    const sigModal = wrapper.find("[data-testid='mock-sig-modal']");
+    expect(sigModal.attributes("data-signer-role")).toBe("Trial Data Manager");
+    expect(sigModal.attributes("data-lock-signer-role")).toBe("true");
+
+    await expectNoAxeViolations(wrapper.element);
+    wrapper.unmount();
+
+    // Sponsor Admin posture (canApply=false, canRelease=true) renders read-only apply card and enables Release on dm.alice's lock
+    auth.user = {
+      username: "sponsor.admin",
+      roles: ["SPONSOR_ADMIN"],
+    } as never;
+    mockCanI.mockImplementation(async (capability: string) => ({
+      capability,
+      verb_class: "Kernel",
+      resource: STUDY_REF,
+      permitted: capability === "lock.release",
+      reason: null,
+      explanation: {
+        subject: STUDY_REF,
+        claim: capability === "lock.release" ? "Permitted" : "Denied",
+        producer: "test",
+        steps: [],
+        conditions: [],
+        next_actions: [],
+      },
+    }));
+
+    const sponsorWrapper = mount(LocksSection, {
+      props: { studyCode: "CAD-101" },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    expect(
+      sponsorWrapper
+        .find("[data-testid='study-locks-readonly-posture']")
+        .exists()
+    ).toBe(true);
+    expect(
+      sponsorWrapper.find("[data-testid='locks-verified-oidc-role']").text()
+    ).toContain("Verified OIDC Role: Sponsor Admin (read-only)");
+    expect(
+      (
+        sponsorWrapper.find(
+          `[data-testid='release-lock-assertion:${SITE_A_ID}']`
+        ).element as HTMLButtonElement
+      ).disabled
+    ).toBe(false);
+    await expectNoAxeViolations(sponsorWrapper.element);
+    sponsorWrapper.unmount();
   });
 });

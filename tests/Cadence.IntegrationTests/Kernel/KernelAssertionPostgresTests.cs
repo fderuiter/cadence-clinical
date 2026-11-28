@@ -59,7 +59,9 @@ public sealed class KernelAssertionPostgresTests(KernelPostgresFixture fixture) 
         view!.Locks.Should().ContainSingle().Which.Should().Match<LockView>(l =>
             l.LockId == locked.LockId && l.Kind == LockKind.Locked && l.Scope == NodeRef.For(subject.Study) && l.AttestationId == locked.AttestationId);
 
-        var released = await _observations.Protocol.OkAsync(await _observations.ReleaseAsync(subject.Tenant, subject.Study, locked.LockId, ct), ct);
+        (await fixture.Sender.SendAsync(await _observations.ReleaseAsync(subject.Tenant, subject.Study, locked.LockId, ct), cancellationToken: ct)).Error!.Code
+            .Should().Be(AssertionErrors.SelfReleaseDenied.Code);
+        var released = await _observations.OkReleaseAsync(subject.Tenant, subject.Study, locked.LockId, ct);
 
         released.Released.Should().BeTrue();
         (await _observations.Protocol.OkAsync(KernelObservationScenario.Correct(subject.Tenant, recorded, Mmhg(128)), ct)).Revision.Should().Be(2);
@@ -158,8 +160,8 @@ public sealed class KernelAssertionPostgresTests(KernelPostgresFixture fixture) 
         var locked = await _observations.Protocol.OkAsync(await _observations.LockAsync(subject.Tenant, subject.Study, scope, ct), ct);
         (await fixture.Sender.SendAsync(await _observations.LockAsync(subject.Tenant, subject.Study, scope, ct), cancellationToken: ct)).Error!.Code
             .Should().Be(AssertionErrors.AlreadyLocked.Code);
-        await _observations.Protocol.OkAsync(await _observations.ReleaseAsync(subject.Tenant, subject.Study, locked.LockId, ct), ct);
-        (await fixture.Sender.SendAsync(await _observations.ReleaseAsync(subject.Tenant, subject.Study, locked.LockId, ct), cancellationToken: ct)).Error!.Code
+        await _observations.OkReleaseAsync(subject.Tenant, subject.Study, locked.LockId, ct);
+        (await _observations.SendReleaseAsync(subject.Tenant, subject.Study, locked.LockId, ct)).Error!.Code
             .Should().Be(AssertionErrors.AlreadyRetracted.Code);
 
         await using var db = fixture.CreateContext(subject.Tenant);
@@ -352,8 +354,7 @@ public sealed class KernelAssertionPostgresTests(KernelPostgresFixture fixture) 
         await _observations.Protocol.OkAsync(Retract(subject, verified.AssertionId), ct);
         var coveringLock = await _observations.Protocol.OkAsync(
             await _observations.LockAsync(subject.Tenant, subject.Study, NodeRef.For(subject.Study), ct, LockKind.Frozen), ct);
-        await _observations.Protocol.OkAsync(
-            await _observations.ReleaseAsync(subject.Tenant, subject.Study, coveringLock.LockId, ct), ct);
+        await _observations.OkReleaseAsync(subject.Tenant, subject.Study, coveringLock.LockId, ct);
         await _observations.Protocol.OkAsync(KernelObservationScenario.Correct(subject.Tenant, recorded, Mmhg(154)), ct);
 
         var view = await fixture.ObservationRecords.FindAsync(subject.Tenant, recorded.ObservationId, ct);

@@ -4,6 +4,7 @@ import type {
   KernelApplyLock,
   KernelCasebookExportQuery,
   KernelLock,
+  KernelLockMilestone,
   KernelLockReadiness,
   KernelReleaseLock,
   KernelStudyExportQuery,
@@ -50,6 +51,7 @@ export function executeApplyLock({
   studyRef,
   scopeRef,
   kind,
+  milestone,
   meaning = "Approved",
   lockId,
   attestationId,
@@ -64,6 +66,7 @@ export function executeApplyLock({
         scope_ref: unversioned(scopeRef),
         kind,
         meaning,
+        ...(milestone ? { milestone } : {}),
         ...(lockId ? { lock_id: lockId } : {}),
         ...(attestationId ? { attestation_id: attestationId } : {}),
       },
@@ -149,13 +152,21 @@ export function executeListStudyLocks(
 
 export function executeGetStudyLockReadiness(
   studyRef: string,
-  scopeRef?: string
+  scopeRef?: string,
+  milestone?: KernelLockMilestone
 ): Promise<KernelLockReadiness> {
+  const query: { scope_ref?: string; milestone?: string } = {};
+  if (scopeRef) {
+    query.scope_ref = unversioned(scopeRef);
+  }
+  if (milestone) {
+    query.milestone = milestone;
+  }
   return unwrapResponse(
     kernelClient.GET("/api/v1/kernel/studies/{studyRef}/locks/readiness", {
       params: {
         path: { studyRef: unversioned(studyRef) },
-        query: scopeRef ? { scope_ref: unversioned(scopeRef) } : undefined,
+        query: Object.keys(query).length > 0 ? query : undefined,
       },
     })
   );

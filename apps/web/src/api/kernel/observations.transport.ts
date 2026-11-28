@@ -67,6 +67,27 @@ export function executeVerifyObservation({
   );
 }
 
+export function executeReviewObservation({
+  observationRef,
+  enrollmentRef,
+  revision,
+  assertionId,
+  reason,
+  idempotencyKey,
+}: KernelObservationVerification): Promise<KernelAssertionState> {
+  return unwrapResponse(
+    kernelClient.POST("/api/v1/kernel/observations/{observationRef}/reviews", {
+      params: { path: { observationRef: unversioned(observationRef) } },
+      body: {
+        enrollment_ref: enrollmentRef,
+        revision,
+        ...(assertionId ? { assertion_id: assertionId } : {}),
+      },
+      headers: mutationHeaders(reason, idempotencyKey),
+    })
+  );
+}
+
 export function executeRetractAssertion({
   assertionRef,
   enrollmentRef,

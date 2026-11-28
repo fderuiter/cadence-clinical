@@ -464,7 +464,10 @@ public sealed class CommercialAndOnboardingUnitTests
             "effectivity.change_status",
             "attestation.sign",
             "simulation.run",
+            "lock.release",
+            "observation.review",
         ]);
+        definedRoles["SPONSOR_ADMIN"].Should().NotContain("lock.apply", "lock.apply and lock.release are segregated across TRIAL_DATA_MANAGER and SPONSOR_ADMIN");
 
         definedRoles.Should().ContainKey("SPONSOR_DESIGNER");
         definedRoles["SPONSOR_DESIGNER"].Should().Contain([
@@ -480,7 +483,8 @@ public sealed class CommercialAndOnboardingUnitTests
         ]);
 
         definedRoles.Should().ContainKey("TRIAL_DATA_MANAGER");
-        definedRoles["TRIAL_DATA_MANAGER"].Should().Contain("simulation.run");
+        definedRoles["TRIAL_DATA_MANAGER"].Should().Contain(["simulation.run", "lock.apply", "observation.review"]);
+        definedRoles["TRIAL_DATA_MANAGER"].Should().NotContain("lock.release", "TRIAL_DATA_MANAGER applies locks while SPONSOR_ADMIN releases them");
 
         var issuedGrants = sender.Commands.OfType<IssueGrant>().ToList();
         issuedGrants.Should().ContainSingle(g => g.Grantee == Actor.ServiceAccount("execution-forms"));
@@ -501,7 +505,9 @@ public sealed class CommercialAndOnboardingUnitTests
             "study_site.activate",
             "attestation.sign",
             "simulation.run",
+            "lock.release",
         ]);
+        demoDesigner.Capabilities.Should().NotContain("lock.apply");
 
         var demoDm = Cadence.Kernel.Host.DevelopmentDemoData.Roles.Single(r => r.Code == "DEMO_DATA_MANAGER");
         demoDm.Capabilities.Should().Contain([
@@ -513,7 +519,10 @@ public sealed class CommercialAndOnboardingUnitTests
             "study_site.link",
             "study_site.activate",
             "simulation.run",
+            "lock.apply",
+            "observation.review",
         ]);
+        demoDm.Capabilities.Should().NotContain("lock.release");
     }
 
     [Fact(DisplayName = "TrialOnboarding_AndDemoSeed_BackfillSimulationRunGrants_WithoutDefineRoleHashConflict")]

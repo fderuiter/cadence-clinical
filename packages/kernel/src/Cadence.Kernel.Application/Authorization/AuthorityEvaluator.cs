@@ -173,6 +173,9 @@ public sealed record KernelAuthorityOptions(IReadOnlySet<string> PlatformOperato
     /// <summary>Dedicated service account for commercial billing operations.</summary>
     public static readonly Actor CommercialBillingOperator = CommercialOperators.BillingOperator;
 
+    /// <summary>Dedicated host-local module service account projecting Execution form queries into kernel assertions.</summary>
+    public static readonly Actor ExecutionQueryProjectionOperator = Actor.ServiceAccount("execution-queries");
+
     /// <summary>The capabilities a platform operator holds without a grant.</summary>
     public static readonly FrozenSet<string> PlatformCapabilities = FrozenSet.Create(StringComparer.Ordinal, "tenant.provision", "grant.issue", "role.define");
 
@@ -184,6 +187,13 @@ public sealed record KernelAuthorityOptions(IReadOnlySet<string> PlatformOperato
         "subscription.expire",
         "entitlement.grant",
         "entitlement.revoke");
+
+    /// <summary>The observation assertion capabilities held by <see cref="ExecutionQueryProjectionOperator"/> when registered in the host.</summary>
+    public static readonly FrozenSet<string> ExecutionQueryProjectionCapabilities = FrozenSet.Create(
+        StringComparer.Ordinal,
+        "observation.query",
+        "observation.query.answer",
+        "assertion.retract");
 }
 
 /// <summary>
@@ -225,6 +235,9 @@ public sealed partial class AuthorityEvaluator(IAuthorityStore store, KernelAuth
 
     /// <summary>Condition: the actor is the dedicated commercial billing operator.</summary>
     public const string CommercialBillingOperatorCondition = "actor.commercial_billing_operator";
+
+    /// <summary>Condition: the actor is the host-local Execution query projection service account.</summary>
+    public const string ExecutionQueryProjectionOperatorCondition = "actor.execution_query_projection_operator";
 
     /// <summary>Condition: an automation agent acts only within its verb classes.</summary>
     public const string AgentVerbCondition = "actor.agent_verb";
@@ -281,6 +294,13 @@ public sealed partial class AuthorityEvaluator(IAuthorityStore store, KernelAuth
             {
                 return AuthorizationDecision.Permit(
                     conditions: EvaluatedCondition.Satisfied(CommercialBillingOperatorCondition, $"{request.Actor.Id} operates commercial billing"));
+            }
+
+            if (request.Actor == KernelAuthorityOptions.ExecutionQueryProjectionOperator
+                && KernelAuthorityOptions.ExecutionQueryProjectionCapabilities.Contains(token))
+            {
+                return AuthorizationDecision.Permit(
+                    conditions: EvaluatedCondition.Satisfied(ExecutionQueryProjectionOperatorCondition, $"{request.Actor.Id} projects Execution queries"));
             }
         }
 
@@ -343,6 +363,14 @@ public sealed partial class AuthorityEvaluator(IAuthorityStore store, KernelAuth
             {
                 var permitted = AuthorizationDecision.Permit(
                     conditions: EvaluatedCondition.Satisfied(CommercialBillingOperatorCondition, $"{actor.Id} operates commercial billing"));
+                return distinct.ToDictionary(r => r, _ => permitted);
+            }
+
+            if (actor == KernelAuthorityOptions.ExecutionQueryProjectionOperator
+                && KernelAuthorityOptions.ExecutionQueryProjectionCapabilities.Contains(token))
+            {
+                var permitted = AuthorizationDecision.Permit(
+                    conditions: EvaluatedCondition.Satisfied(ExecutionQueryProjectionOperatorCondition, $"{actor.Id} projects Execution queries"));
                 return distinct.ToDictionary(r => r, _ => permitted);
             }
         }

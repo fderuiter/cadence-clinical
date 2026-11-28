@@ -99,10 +99,12 @@ Entity: `Assertion`
 | `asserted_at` | `timestamp with time zone` | no |  |  |
 | `asserted_by` | `character varying(255)` | no |  |  |
 | `attestation_id` | `uuid` | yes |  |  |
+| `certificate_json` | `jsonb` | yes |  |  |
 | `created_at` | `timestamp with time zone` | no |  |  |
 | `created_by` | `character varying(255)` | no |  |  |
 | `enrollment_id` | `uuid` | yes |  |  |
 | `kind` | `character varying(32)` | no |  |  |
+| `milestone` | `character varying(32)` | yes |  |  |
 | `reason_for_change` | `character varying(1000)` | no |  |  |
 | `retracts_id` | `uuid` | yes |  |  |
 | `study_id` | `uuid` | no |  |  |
@@ -824,6 +826,38 @@ Indexes:
 
 - `IX_lineage_nodes_tenant_id_derived`: (`tenant_id`, `derived`)
 
+## kernel.lock_certificates
+
+Entity: `LockCertificateEntityRecord`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `algorithm` | `character varying(64)` | no |  |  |
+| `attestation_id` | `uuid` | no |  |  |
+| `certificate_id` | `character varying(128)` | no |  |  |
+| `certificate_json` | `jsonb` | no |  |  |
+| `fingerprint_sha256` | `character varying(64)` | no |  |  |
+| `issued_at` | `timestamp with time zone` | no |  |  |
+| `key_id` | `character varying(128)` | no |  |  |
+| `lock_id` | `uuid` | no |  |  |
+| `milestone` | `character varying(64)` | no |  |  |
+| `payload_sha256` | `character varying(64)` | no |  |  |
+| `revoked` | `boolean` | no |  |  |
+| `revoked_at` | `timestamp with time zone` | yes |  |  |
+| `revoked_by` | `character varying(256)` | yes |  |  |
+| `signature_base64` | `character varying(2048)` | no |  |  |
+| `signed_by` | `character varying(256)` | no |  |  |
+| `study_code` | `character varying(128)` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_lock_certificates_tenant_id_certificate_id`: unique (`tenant_id`, `certificate_id`)
+- `IX_lock_certificates_tenant_id_lock_id`: unique (`tenant_id`, `lock_id`)
+- `IX_lock_certificates_tenant_id_study_id_issued_at`: (`tenant_id`, `study_id`, `issued_at`)
+
 ## kernel.observation_revisions
 
 Entity: `ObservationRevision`
@@ -930,6 +964,8 @@ Entity: `OutboxMessageRecord`
 | `event_id` | `uuid` | no |  |  |
 | `last_error` | `character varying(2000)` | yes |  |  |
 | `next_attempt_at` | `timestamp with time zone` | yes |  |  |
+| `quarantined_at` | `timestamp with time zone` | yes |  |  |
+| `stream_key` | `character varying(256)` | no |  |  |
 | `tenant_id` | `uuid` | no |  |  |
 | `type` | `character varying(200)` | no |  |  |
 
@@ -938,6 +974,31 @@ Indexes:
 - `IX_outbox_messages_enqueued_at`: (`enqueued_at`) where `dispatched_at IS NULL`
 - `IX_outbox_messages_event_id`: unique (`event_id`)
 - `IX_outbox_messages_tenant_id_enqueued_at`: (`tenant_id`, `enqueued_at`) where `dispatched_at IS NULL`
+- `IX_outbox_messages_tenant_id_stream_key_enqueued_at`: (`tenant_id`, `stream_key`, `enqueued_at`) where `dispatched_at IS NULL`
+
+## kernel.outbox_quarantine_messages
+
+Entity: `OutboxQuarantineMessageRecord`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `attempts` | `integer` | no |  |  |
+| `enqueued_at` | `timestamp with time zone` | no |  |  |
+| `envelope` | `jsonb` | no |  |  |
+| `event_id` | `uuid` | no |  |  |
+| `last_error` | `character varying(2000)` | yes |  |  |
+| `outbox_message_id` | `uuid` | no |  |  |
+| `quarantined_at` | `timestamp with time zone` | no |  |  |
+| `reason` | `character varying(128)` | no |  |  |
+| `stream_key` | `character varying(256)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `type` | `character varying(200)` | no |  |  |
+
+Indexes:
+
+- `IX_outbox_quarantine_messages_tenant_id_outbox_message_id`: unique (`tenant_id`, `outbox_message_id`)
+- `IX_outbox_quarantine_messages_tenant_id_stream_key_quarantined~`: (`tenant_id`, `stream_key`, `quarantined_at`)
 
 ## kernel.participants
 

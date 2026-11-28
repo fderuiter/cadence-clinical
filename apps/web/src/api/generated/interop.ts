@@ -708,6 +708,25 @@ export interface components {
       expires_at: string;
       signature_hash: string;
       is_revoked: boolean;
+      certificate_id?: null | string;
+      certificate_fingerprint?: null | string;
+    };
+    Interop_DatabaseLockCertificateContract: {
+      certificate_id: string;
+      tenant_code: string;
+      study_ref: string;
+      study_code: string;
+      lock_id: string;
+      milestone: string;
+      attestation_id: string;
+      signed_by: string;
+      /** Format: date-time */
+      issued_at: string;
+      key_id: string;
+      algorithm: string;
+      payload_sha256: string;
+      fingerprint_sha256: string;
+      signature_base64: string;
     };
     Interop_EhrCandidateItemDto: {
       id: string;
@@ -894,6 +913,8 @@ export interface components {
         null | components["schemas"]["Interop_ExecutionSandboxConfigDto"];
       /** @default Statistical analysis execution run */
       reason_for_execution: string;
+      lock_certificate?:
+        null | components["schemas"]["Interop_DatabaseLockCertificateContract"];
     };
     Interop_ExecuteProgramResponseDto: {
       manifest: components["schemas"]["Interop_ExecutionRunManifestDto"];
@@ -1002,6 +1023,8 @@ export interface components {
        * @default 24
        */
       expires_in_hours: number | string;
+      lock_certificate?:
+        null | components["schemas"]["Interop_DatabaseLockCertificateContract"];
     };
     Interop_LockfileValidationResultSchemaDto: {
       lock_type: string;

@@ -507,6 +507,44 @@ Indexes:
 - `IX_reconsent_requirements_TemplateId`: (`TemplateId`)
 - `IX_reconsent_requirements_tenant_id`: (`tenant_id`)
 
+## econsent.replicated_scope_locks
+
+Entity: `ReplicatedScopeLock`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `AppliedAt` | `timestamp with time zone` | no |  |  |
+| `AppliedBy` | `character varying(255)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `IsActive` | `boolean` | no |  |  |
+| `LockId` | `character varying(255)` | no |  |  |
+| `LockKind` | `character varying(32)` | no |  |  |
+| `Milestone` | `character varying(64)` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `ReleaseReason` | `character varying(1000)` | yes |  |  |
+| `ReleasedAt` | `timestamp with time zone` | yes |  |  |
+| `ReleasedBy` | `character varying(255)` | yes |  |  |
+| `ScopeKind` | `character varying(64)` | no |  |  |
+| `ScopeRef` | `character varying(255)` | no |  |  |
+| `SiteCode` | `character varying(255)` | yes |  |  |
+| `StudyCode` | `character varying(255)` | no |  |  |
+| `StudyRef` | `character varying(255)` | no |  |  |
+| `SubjectCode` | `character varying(255)` | yes |  |  |
+| `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_replicated_scope_locks_IsActive`: (`IsActive`)
+- `IX_replicated_scope_locks_LockId`: (`LockId`)
+- `IX_replicated_scope_locks_SiteCode`: (`SiteCode`)
+- `IX_replicated_scope_locks_StudyCode`: (`StudyCode`)
+- `IX_replicated_scope_locks_StudyRef`: (`StudyRef`)
+- `IX_replicated_scope_locks_SubjectCode`: (`SubjectCode`)
+- `IX_replicated_scope_locks_tenant_id`: (`tenant_id`)
+
 ## econsent.subject_consent_option_selections
 
 Entity: `SubjectConsentOptionSelection`

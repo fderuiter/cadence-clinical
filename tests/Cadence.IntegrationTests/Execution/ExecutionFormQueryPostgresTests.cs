@@ -238,7 +238,7 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
         var secondRaised = await RaiseAsync(form, value.ObservationId, value.Revision, ct);
         secondRaised.Value.Should().NotBeNull("a freeze stops data entry, not queries");
         var secondId = secondRaised.Value!.QueryId;
-        await scenario.Protocol.OkAsync(await scenario.Observations.ReleaseAsync(tenant, study, freeze.LockId, ct), ct);
+        await scenario.Observations.OkReleaseAsync(tenant, study, freeze.LockId, ct);
 
         await RelayAsync(ct);
 
@@ -258,17 +258,19 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
 
         // An Execution query raised just before a Locked assertion commits (before outbox relay) remains Open and cannot be answered under Locked (#5586),
         // while RaiseFormQuery and ReopenFormQuery on closed queries are also refused with K.Assertion.Locked.
-        var unrelayedId = (await RaiseAsync(form, value.ObservationId, value.Revision, ct)).Value!.QueryId;
+        // Raising a query projects synchronously into kernel.assertions before RelayAsync runs, immediately blocking LockAsync with ScopeNotReady.
+        var syncId = (await RaiseAsync(form, value.ObservationId, value.Revision, ct)).Value!.QueryId;
+        (await fixture.Sender.SendAsync(await scenario.Observations.LockAsync(tenant, study, NodeRef.For(form.Instance), ct), cancellationToken: ct))
+            .Error!.Code.Should().Be(AssertionErrors.ScopeNotReady.Code);
+        await scenario.Protocol.OkAsync(new CancelFormQuery(tenant, syncId, enrollment, Key(), "Resolved before lock"), ct);
+        await scenario.VerifyAndSignAsync(form, ct);
         var locked = await scenario.Protocol.OkAsync(await scenario.Observations.LockAsync(tenant, study, NodeRef.For(form.Instance), ct), ct);
         (await RaiseAsync(form, value.ObservationId, value.Revision, ct)).Error!.Code.Should().Be(AssertionErrors.Locked.Code);
-        (await SendAsAsync(Actor.Person(SiteAnswerer), new AnswerFormQuery(tenant, unrelayedId, enrollment, "Confirmed", Key(), Reason), ct))
-            .Error!.Code.Should().Be(AssertionErrors.Locked.Code);
-        (await ReadQueryAsync(unrelayedId, ct)).Status.Should().Be(FormQueryStatus.Open);
         (await StepAsync(new ReopenFormQuery(tenant, id, enrollment, "Reopen under lock", Key(), Reason), ct)).Error!.Code.Should().Be(AssertionErrors.Locked.Code);
         (await ReadQueryAsync(id, ct)).Status.Should().Be(FormQueryStatus.Closed);
 
         // Drain the pre-lock outbox entry after releasing Locked so shared-fixture tests observe a clean outbox.
-        await scenario.Protocol.OkAsync(await scenario.Observations.ReleaseAsync(tenant, study, locked.LockId, ct), ct);
+        await scenario.Observations.OkReleaseAsync(tenant, study, locked.LockId, ct);
         await RelayAsync(ct);
     }
 

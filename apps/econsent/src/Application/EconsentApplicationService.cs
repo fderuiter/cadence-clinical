@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -8,6 +9,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Econsent.Domain;
 using Cadence.Apps.Econsent.Endpoints;
+using Cadence.Apps.Econsent.Infrastructure.Consumers;
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
 using Cadence.Contracts;
 using Cadence.Kernel.Time;
@@ -135,6 +137,16 @@ public sealed class EconsentApplicationService(
         if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } denied)
         {
             return denied;
+        }
+
+        var coveringLock = await FindCoveringActiveLockAsync(
+            request.StudyId!,
+            request.SiteId!,
+            request.SubjectPseudonym!,
+            cancellationToken);
+        if (coveringLock is not null)
+        {
+            return LockedScopeProblem(coveringLock, "capture participant consent");
         }
 
         DateTimeOffset retainUntil = DateTimeOffset.FromUnixTimeSeconds(livenessData!.ExpiresAtUnix) + BiometricLivenessTokenService.ClockSkew;
@@ -305,6 +317,15 @@ public sealed class EconsentApplicationService(
             return ClinicalScopeGuard.OutsideStudy();
         }
 
+        var studyLock = await FindActiveStudyLockAsync(targetStudy, cancellationToken)
+            ?? (template is not null && !string.Equals(template.StudyId, targetStudy, StringComparison.OrdinalIgnoreCase)
+                ? await FindActiveStudyLockAsync(template.StudyId, cancellationToken)
+                : null);
+        if (studyLock is not null)
+        {
+            return LockedScopeProblem(studyLock, "publish consent templates");
+        }
+
         if (template is null)
         {
             template = new ConsentTemplate
@@ -383,4 +404,58 @@ public sealed class EconsentApplicationService(
 
         return TypedResults.Ok(response);
     }
+
+    private async Task<ReplicatedScopeLock?> FindCoveringActiveLockAsync(
+        string studyCodeOrRef,
+        string siteCodeOrRef,
+        string subjectPseudonym,
+        CancellationToken cancellationToken)
+    {
+        string normalizedStudy = KernelScopeLockEconsentConsumer.StripPrefix(studyCodeOrRef, "study:");
+        string normalizedSite = KernelScopeLockEconsentConsumer.StripPrefix(siteCodeOrRef, "study_site:");
+        string siteNodeRef = $"study_site:{normalizedSite}";
+        string normalizedEnrollment = KernelScopeLockEconsentConsumer.StripPrefix(subjectPseudonym, "enrollment:");
+        string enrollmentNodeRef = $"enrollment:{normalizedEnrollment}";
+
+        var candidates = await dbContext.ReplicatedScopeLocks
+            .AsNoTracking()
+            .Where(l => l.IsActive
+                && l.ReleasedAt == null
+                && (l.StudyCode == studyCodeOrRef || l.StudyRef == studyCodeOrRef || l.StudyRef == normalizedStudy)
+                && (l.ScopeKind == "study"
+                    || (l.ScopeKind == "study_site"
+                        && (l.SiteCode == siteCodeOrRef || l.SiteCode == normalizedSite || l.ScopeRef == siteCodeOrRef || l.ScopeRef == siteNodeRef))
+                    || (l.ScopeKind == "enrollment"
+                        && (l.SubjectCode == subjectPseudonym || l.ScopeRef == subjectPseudonym || l.ScopeRef == enrollmentNodeRef))))
+            .ToListAsync(cancellationToken);
+        return candidates.OrderBy(l => l.AppliedAt).FirstOrDefault();
+    }
+
+    private async Task<ReplicatedScopeLock?> FindActiveStudyLockAsync(
+        string studyCodeOrRef,
+        CancellationToken cancellationToken)
+    {
+        string normalizedStudy = KernelScopeLockEconsentConsumer.StripPrefix(studyCodeOrRef, "study:");
+        var candidates = await dbContext.ReplicatedScopeLocks
+            .AsNoTracking()
+            .Where(l => l.IsActive
+                && l.ReleasedAt == null
+                && l.ScopeKind == "study"
+                && (l.StudyCode == studyCodeOrRef || l.StudyRef == studyCodeOrRef || l.StudyRef == normalizedStudy))
+            .ToListAsync(cancellationToken);
+        return candidates.OrderBy(l => l.AppliedAt).FirstOrDefault();
+    }
+
+    private static IResult LockedScopeProblem(ReplicatedScopeLock activeLock, string attemptedAction) =>
+        Results.Problem(
+            title: "Scope is locked",
+            detail: $"Cannot {attemptedAction} while {activeLock.ScopeKind} scope is {activeLock.LockKind.ToLowerInvariant()} (lock {activeLock.LockId}).",
+            statusCode: StatusCodes.Status423Locked,
+            extensions: new Dictionary<string, object?>
+            {
+                ["error_code"] = "kernel.assertion.locked",
+                ["lock_id"] = activeLock.LockId,
+                ["scope_kind"] = activeLock.ScopeKind,
+                ["lock_kind"] = activeLock.LockKind,
+            });
 }

@@ -205,8 +205,7 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
         ruleInputs.Should().HaveCount(2);
         ruleInputs.Single(r => r.CollectionInstanceId == vitalsId).Values.Should().ContainSingle(v => v.ObservationId == sbpObs);
 
-        await _scenario.Protocol.OkAsync(
-            await _scenario.Observations.ReleaseAsync(tenant, study, frozen.LockId, ct), ct);
+        await _scenario.Observations.OkReleaseAsync(tenant, study, frozen.LockId, ct);
         (await records.FindScopeStateAsync(tenant, vitalsId, ct))!.Locks.Should().BeEmpty();
     }
 

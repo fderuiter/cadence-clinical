@@ -80,13 +80,54 @@ internal sealed class OutboxMessageConfiguration : IEntityTypeConfiguration<Outb
         builder.ToTable("outbox_messages");
         builder.HasKey(x => x.Id);
         builder.HasIndex(x => x.EventId).IsUnique();
+        builder.Property(x => x.StreamKey).HasMaxLength(256).IsRequired().HasDefaultValue(string.Empty);
         builder.Property(x => x.Type).HasMaxLength(200).IsRequired();
         builder.Property(x => x.Envelope).HasColumnType("jsonb").IsRequired();
         builder.Property(x => x.LastError).HasMaxLength(2000);
         builder.HasIndex(x => x.EnqueuedAt).HasFilter("dispatched_at IS NULL");
 
-        // Serves the relay's per-tenant ordering check over undelivered messages.
+        // Serves the relay's per-tenant and per-stream ordering checks over undelivered messages.
         builder.HasIndex(x => new { x.TenantId, x.EnqueuedAt }).HasFilter("dispatched_at IS NULL");
+        builder.HasIndex(x => new { x.TenantId, x.StreamKey, x.EnqueuedAt }).HasFilter("dispatched_at IS NULL");
+    }
+}
+
+internal sealed class OutboxQuarantineMessageConfiguration : IEntityTypeConfiguration<OutboxQuarantineMessageRecord>
+{
+    public void Configure(EntityTypeBuilder<OutboxQuarantineMessageRecord> builder)
+    {
+        builder.ToTable("outbox_quarantine_messages");
+        builder.HasKey(x => x.Id);
+        builder.HasIndex(x => new { x.TenantId, x.OutboxMessageId }).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.StreamKey, x.QuarantinedAt });
+        builder.Property(x => x.StreamKey).HasMaxLength(256).IsRequired();
+        builder.Property(x => x.Type).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.Envelope).HasColumnType("jsonb").IsRequired();
+        builder.Property(x => x.Reason).HasMaxLength(128).IsRequired();
+        builder.Property(x => x.LastError).HasMaxLength(2000);
+    }
+}
+
+internal sealed class LockCertificateConfiguration : IEntityTypeConfiguration<LockCertificateEntityRecord>
+{
+    public void Configure(EntityTypeBuilder<LockCertificateEntityRecord> builder)
+    {
+        builder.ToTable("lock_certificates");
+        builder.HasKey(x => x.Id);
+        builder.HasIndex(x => new { x.TenantId, x.CertificateId }).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.LockId }).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.StudyId, x.IssuedAt });
+        builder.Property(x => x.CertificateId).HasMaxLength(128).IsRequired();
+        builder.Property(x => x.StudyCode).HasMaxLength(128).IsRequired();
+        builder.Property(x => x.Milestone).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.SignedBy).HasMaxLength(256).IsRequired();
+        builder.Property(x => x.KeyId).HasMaxLength(128).IsRequired();
+        builder.Property(x => x.Algorithm).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.PayloadSha256).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.FingerprintSha256).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.SignatureBase64).HasMaxLength(2048).IsRequired();
+        builder.Property(x => x.CertificateJson).HasColumnType("jsonb").IsRequired();
+        builder.Property(x => x.RevokedBy).HasMaxLength(256);
     }
 }
 

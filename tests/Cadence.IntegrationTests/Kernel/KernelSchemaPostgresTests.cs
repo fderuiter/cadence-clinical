@@ -46,7 +46,7 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
             .ToListAsync(TestContext.Current.CancellationToken);
         tables.Should().BeEquivalentTo(
             "__ef_migrations_history", "tenants", "organizations", "people", "sites", "studies", "study_sites",
-            "provenance_activities", "domain_events", "audit_entries", "audit_chain_heads", "outbox_messages",
+            "provenance_activities", "domain_events", "audit_entries", "audit_chain_heads", "outbox_messages", "outbox_quarantine_messages",
             "idempotency_records", "audit_chain_seals", "tenant_memberships",
             "code_systems", "code_system_versions", "code_system_entries", "concepts", "concept_revisions", "concept_mappings",
             "standard_versions", "standard_datasets", "standard_variables", "standard_value_level_definitions",
@@ -56,7 +56,7 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
             "grant_periods", "work_queue_definitions", "validation_runs", "validation_run_packs", "validation_run_datasets",
             "validation_run_inputs", "validation_detections", "validation_findings", "effectivities", "effectivity_status_periods",
             "qualifications", "qualification_periods", "qualification_requirements", "qualification_requirement_periods", "proposals",
-            "form_version_snapshots", "observations", "observation_revisions", "assertions", "collection_instances",
+            "form_version_snapshots", "observations", "observation_revisions", "assertions", "lock_certificates", "collection_instances",
             "collection_instance_members", "subscriptions", "subscription_periods", "product_entitlements",
             "biostat_export_audit_logs");
     }

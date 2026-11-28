@@ -47,6 +47,10 @@ public static class StandaloneTenantModelExtensions
         value => ParseOrEmpty(value),
         guid => guid.ToString("D"));
 
+    private static readonly ValueConverter<Cadence.Kernel.TenantId, Guid> KernelTenantToGuidConverter = new(
+        value => value.Value,
+        guid => Cadence.Kernel.TenantId.FromGuid(guid));
+
     /// <summary>
     /// Identifies append-only/insert-only audit, outbox, transition, and historical revision entities that are never
     /// updated in place and therefore do not carry mutable row optimistic-concurrency tokens.
@@ -142,6 +146,9 @@ public static class StandaloneTenantModelExtensions
         ArgumentNullException.ThrowIfNull(context);
         var entityBuilder = modelBuilder.Entity<TEntity>();
         IMutableProperty? existingProp = entityType.FindProperty(TenantPropertyName);
+        var clrTenantProp = typeof(TEntity).GetProperty(
+            TenantPropertyName,
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
 
         if (existingProp is not null && existingProp.ClrType == typeof(string))
         {
@@ -156,6 +163,21 @@ public static class StandaloneTenantModelExtensions
             if (!context.Database.IsRelational())
             {
                 ApplyStringTenantQueryFilter(entityBuilder, entityType, context);
+            }
+        }
+        else if ((existingProp is not null && existingProp.ClrType == typeof(Cadence.Kernel.TenantId))
+            || clrTenantProp?.PropertyType == typeof(Cadence.Kernel.TenantId))
+        {
+            entityBuilder.Property<Cadence.Kernel.TenantId>(TenantPropertyName)
+                .HasColumnName(TenantColumnName)
+                .HasColumnType("uuid")
+                .HasConversion(KernelTenantToGuidConverter)
+                .IsRequired();
+            entityBuilder.HasIndex(TenantPropertyName);
+
+            if (!context.Database.IsRelational())
+            {
+                ApplyKernelTenantQueryFilter(entityBuilder, entityType, context);
             }
         }
         else
@@ -227,6 +249,39 @@ public static class StandaloneTenantModelExtensions
         var matchesSeed = Expression.AndAlso(
             notUnbound,
             Expression.Equal(efPropertyCall, Expression.Constant(Guid.Empty)));
+
+        Expression predicate = Expression.OrElse(filterIsNull, Expression.OrElse(matchesActive, matchesSeed));
+        CombineAndSetQueryFilter(entityBuilder, entityType, parameter, predicate);
+    }
+
+    private static void ApplyKernelTenantQueryFilter<TContext>(
+        Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder entityBuilder,
+        IMutableEntityType entityType,
+        TContext context)
+        where TContext : DbContext, ITenantScopedDbContext
+    {
+        var parameter = Expression.Parameter(entityType.ClrType, "e");
+        var contextConst = Expression.Constant(context, typeof(TContext));
+        var activeFilter = Expression.Property(contextConst, nameof(ITenantScopedDbContext.ActiveInMemoryTenantFilter));
+        var filterIsNull = Expression.Equal(activeFilter, Expression.Constant(null, typeof(Guid?)));
+
+        var efPropertyCall = Expression.Call(
+            typeof(EF),
+            nameof(EF.Property),
+            [typeof(Cadence.Kernel.TenantId)],
+            parameter,
+            Expression.Constant(TenantPropertyName));
+
+        var tenantValue = Expression.Property(efPropertyCall, nameof(Cadence.Kernel.TenantId.Value));
+        var matchesActive = Expression.Equal(
+            Expression.Convert(tenantValue, typeof(Guid?)),
+            activeFilter);
+        var notUnbound = Expression.NotEqual(
+            activeFilter,
+            Expression.Constant((Guid?)UnboundTenantSentinel, typeof(Guid?)));
+        var matchesSeed = Expression.AndAlso(
+            notUnbound,
+            Expression.Equal(tenantValue, Expression.Constant(Guid.Empty)));
 
         Expression predicate = Expression.OrElse(filterIsNull, Expression.OrElse(matchesActive, matchesSeed));
         CombineAndSetQueryFilter(entityBuilder, entityType, parameter, predicate);

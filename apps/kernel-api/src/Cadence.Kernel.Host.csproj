@@ -19,6 +19,7 @@
     <ProjectReference Include="..\..\..\packages\ddf\src\Cadence.Ddf.csproj" />
     <ProjectReference Include="..\..\intelligence\src\Cadence.Modules.Intelligence.csproj" />
     <ProjectReference Include="..\..\execution\module\Cadence.Modules.Execution.csproj" />
+    <ProjectReference Include="..\..\..\packages\contracts\src\Cadence.Contracts.csproj" />
     <ProjectReference Include="..\..\..\packages\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\..\..\packages\database\src\Cadence.Database.csproj" />
     <ProjectReference Include="..\..\..\packages\telemetry\src\Cadence.Telemetry.csproj" />

@@ -355,12 +355,15 @@ Entity: `DatabaseLockAuthToken`
 | --- | --- | --- | --- | --- |
 | `Id` | `character varying(36)` | no |  | PK |
 | `AuthorizedRolesJson` | `jsonb` | no |  |  |
+| `CertificateFingerprint` | `character varying(128)` | yes |  |  |
+| `CertificateId` | `character varying(128)` | yes |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `CreatedBy` | `character varying(255)` | no |  |  |
 | `ExpiresAt` | `timestamp with time zone` | no |  |  |
 | `IsRevoked` | `boolean` | no |  |  |
 | `IssuedAt` | `timestamp with time zone` | no |  |  |
 | `IssuedTo` | `character varying(255)` | no |  |  |
+| `LockCertificateJson` | `jsonb` | yes |  |  |
 | `LockId` | `character varying(255)` | no |  |  |
 | `Milestone` | `character varying(255)` | no |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
@@ -375,6 +378,7 @@ Entity: `DatabaseLockAuthToken`
 
 Indexes:
 
+- `IX_sce_database_lock_auth_tokens_CertificateId`: (`CertificateId`)
 - `IX_sce_database_lock_auth_tokens_StudyId`: (`StudyId`)
 - `IX_sce_database_lock_auth_tokens_TokenId`: unique (`TokenId`)
 - `IX_sce_database_lock_auth_tokens_tenant_id`: (`tenant_id`)
@@ -427,6 +431,42 @@ Indexes:
 - `IX_sce_execution_runs_SnapshotId`: (`SnapshotId`)
 - `IX_sce_execution_runs_StudyId`: (`StudyId`)
 - `IX_sce_execution_runs_tenant_id`: (`tenant_id`)
+
+## interop.sce_replicated_study_locks
+
+Entity: `ReplicatedStudyLock`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `AppliedAt` | `timestamp with time zone` | no |  |  |
+| `AppliedBy` | `character varying(255)` | no |  |  |
+| `CertificateFingerprint` | `character varying(128)` | yes |  |  |
+| `CertificateId` | `character varying(128)` | yes |  |  |
+| `CertificateJson` | `jsonb` | yes |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `IsActive` | `boolean` | no |  |  |
+| `LockId` | `character varying(255)` | no |  |  |
+| `LockKind` | `character varying(32)` | no |  |  |
+| `Milestone` | `character varying(64)` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `RevocationReason` | `character varying(1000)` | yes |  |  |
+| `RevokedAt` | `timestamp with time zone` | yes |  |  |
+| `RevokedBy` | `character varying(255)` | yes |  |  |
+| `ScopeKind` | `character varying(64)` | no |  |  |
+| `StudyCode` | `character varying(255)` | no |  |  |
+| `StudyRef` | `character varying(255)` | no |  |  |
+| `VersionIndex` | `integer` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_sce_replicated_study_locks_CertificateId`: (`CertificateId`)
+- `IX_sce_replicated_study_locks_LockId`: (`LockId`)
+- `IX_sce_replicated_study_locks_StudyCode`: (`StudyCode`)
+- `IX_sce_replicated_study_locks_StudyRef`: (`StudyRef`)
+- `IX_sce_replicated_study_locks_tenant_id`: (`tenant_id`)
 
 ## interop.sce_statistical_programs
 

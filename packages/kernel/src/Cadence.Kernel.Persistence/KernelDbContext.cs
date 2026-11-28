@@ -113,6 +113,10 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     public DbSet<OutboxMessageRecord> OutboxMessages => Set<OutboxMessageRecord>();
 
+    public DbSet<OutboxQuarantineMessageRecord> OutboxQuarantineMessages => Set<OutboxQuarantineMessageRecord>();
+
+    public DbSet<LockCertificateEntityRecord> LockCertificates => Set<LockCertificateEntityRecord>();
+
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
 
     public DbSet<BiostatExportAuditLog> BiostatExportAuditLogs => Set<BiostatExportAuditLog>();

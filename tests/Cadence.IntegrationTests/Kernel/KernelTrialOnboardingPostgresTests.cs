@@ -228,19 +228,19 @@ public sealed class KernelTrialOnboardingPostgresTests(ExecutionFormModulePostgr
         var searchOne = await GetJsonAsync(refreshedOne, "/api/v1/kernel/search?q=MERIDIAN-101", ct);
         searchOne.EnumerateArray().Should().ContainSingle(hit => hit.GetProperty("code").GetString() == "MERIDIAN-101");
 
-        // 3b. Verify TRIAL_DATA_MANAGER role template is defined on bootstrap, and Sponsor Admin can delegate it at Study scope to a colleague who signs locks.
-        Guid sponsorAdminGrantGuid;
+        // 3b. Verify TRIAL_DATA_MANAGER role template is defined on bootstrap, and Sponsor Admin can issue it at Study scope to a colleague who signs locks.
         Guid trialDataManagerRoleGuid;
         await using (var conn = new NpgsqlConnection(fixture.AdminConnectionString))
         {
             await conn.OpenAsync(ct);
             (await ScalarLongAsync(conn, "SELECT count(*) FROM kernel.roles WHERE tenant_id = @tid AND code = 'TRIAL_DATA_MANAGER'", ("tid", tenantId)))
                 .Should().Be(1L);
-            sponsorAdminGrantGuid = Guid.Parse((await ScalarStringAsync(
+            (await ScalarLongAsync(
                 conn,
-                "SELECT g.id::text FROM kernel.grants g JOIN kernel.roles r ON r.id = g.role_id WHERE g.tenant_id = @tid AND r.code = 'SPONSOR_ADMIN' AND g.grantee_id = @sub",
+                "SELECT count(*) FROM kernel.grants g JOIN kernel.roles r ON r.id = g.role_id WHERE g.tenant_id = @tid AND r.code = 'SPONSOR_ADMIN' AND g.grantee_id = @sub",
                 ("tid", tenantId),
-                ("sub", subjectOne)))!);
+                ("sub", subjectOne)))
+                .Should().Be(1L);
             trialDataManagerRoleGuid = Guid.Parse((await ScalarStringAsync(
                 conn,
                 "SELECT id::text FROM kernel.roles WHERE tenant_id = @tid AND code = 'TRIAL_DATA_MANAGER'",
@@ -249,13 +249,12 @@ public sealed class KernelTrialOnboardingPostgresTests(ExecutionFormModulePostgr
 
         string dmColleagueSub = Guid.CreateVersion7(clock.UtcNow.AddSeconds(5)).ToString();
         clock.Advance(TimeSpan.FromSeconds(1));
-        var delegateResult = await SendAsPersonAsync(
+        var issueResult = await SendAsPersonAsync(
             host.Services,
             subjectOne,
-            new DelegateGrant(
+            new IssueGrant(
                 TenantId.FromGuid(tenantId),
                 GrantId.New(clock.UtcNow),
-                GrantId.FromGuid(sponsorAdminGrantGuid),
                 Actor.Person(dmColleagueSub),
                 Capability: null,
                 RoleId.FromGuid(trialDataManagerRoleGuid),
@@ -263,10 +262,10 @@ public sealed class KernelTrialOnboardingPostgresTests(ExecutionFormModulePostgr
                 clock.UtcNow,
                 ValidTo: null,
                 WithGrantOption: false,
-                "idem-delegate-trial-dm",
-                "Delegate study data manager authority"),
+                "idem-issue-trial-dm",
+                "Issue study data manager authority under segregated lock governance"),
             ct);
-        delegateResult.IsSuccess.Should().BeTrue(delegateResult.Error?.Message);
+        issueResult.IsSuccess.Should().BeTrue(issueResult.Error?.Message);
 
         var studyOneRef = NodeRef.For(studyOneId).ToString();
         using var dmColleagueClient = host.CreateSignedClient(
@@ -296,14 +295,34 @@ public sealed class KernelTrialOnboardingPostgresTests(ExecutionFormModulePostgr
                 Cadence.Kernel.Api.KernelLockEndpoints.ReleaseLockSemanticAction,
                 issuedAt: clock.UtcNow);
             clock.Advance(TimeSpan.FromSeconds(1));
+            using (var forbiddenDmReleaseReq = new HttpRequestMessage(HttpMethod.Post, new Uri($"/api/v1/kernel/locks/{lockRef}/release", UriKind.Relative))
+            {
+                Content = JsonContent.Create(new { study_ref = studyOneRef, meaning = "Responsibility" }),
+            })
+            {
+                forbiddenDmReleaseReq.Headers.Add("Idempotency-Key", "idem-trial-dm-unlock-denied-1");
+                forbiddenDmReleaseReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Attempted self-release by Trial DM"));
+                forbiddenDmReleaseReq.Headers.Add(GatewayHeaders.SigToken, dmReleaseToken);
+                using var forbiddenResp = await dmColleagueClient.SendAsync(forbiddenDmReleaseReq, ct);
+                forbiddenResp.StatusCode.Should().Be(HttpStatusCode.Forbidden, "TRIAL_DATA_MANAGER holds lock.apply, not lock.release");
+            }
+
+            using var sponsorAdminClient = host.CreateSignedClient(
+                new GatewayIdentity(subjectOne, ["Sponsor Admin"], ["*"], TenantId: tenantCode));
+            var sponsorReleaseToken = TestSecurityContext.CreateSigToken(
+                subjectOne,
+                Cadence.Kernel.Api.KernelLockEndpoints.ReleaseLockAction(lockRef),
+                Cadence.Kernel.Api.KernelLockEndpoints.ReleaseLockSemanticAction,
+                issuedAt: clock.UtcNow);
+            clock.Advance(TimeSpan.FromSeconds(1));
             using var releaseReq = new HttpRequestMessage(HttpMethod.Post, new Uri($"/api/v1/kernel/locks/{lockRef}/release", UriKind.Relative))
             {
                 Content = JsonContent.Create(new { study_ref = studyOneRef, meaning = "Responsibility" }),
             };
-            releaseReq.Headers.Add("Idempotency-Key", "idem-trial-dm-unlock-1");
-            releaseReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Trial DM study unfreeze"));
-            releaseReq.Headers.Add(GatewayHeaders.SigToken, dmReleaseToken);
-            using var releaseResp = await dmColleagueClient.SendAsync(releaseReq, ct);
+            releaseReq.Headers.Add("Idempotency-Key", "idem-trial-sponsor-unlock-1");
+            releaseReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Sponsor Admin four-eyes study unfreeze"));
+            releaseReq.Headers.Add(GatewayHeaders.SigToken, sponsorReleaseToken);
+            using var releaseResp = await sponsorAdminClient.SendAsync(releaseReq, ct);
             string releaseBody = await releaseResp.Content.ReadAsStringAsync(ct);
             releaseResp.StatusCode.Should().Be(HttpStatusCode.OK, releaseBody);
         }

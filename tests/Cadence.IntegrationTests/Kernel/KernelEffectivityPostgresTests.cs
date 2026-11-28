@@ -264,9 +264,7 @@ public sealed class KernelEffectivityPostgresTests(KernelPostgresFixture fixture
             (await ActivateAsync(tenant, boston, ct))
                 .Error.Should().Be(ObservationErrors.Locked);
 
-            await _scenario.OkAsync(
-                await observations.ReleaseAsync(tenant, study, applied.LockId, ct),
-                ct);
+            await observations.OkReleaseAsync(tenant, study, applied.LockId, ct);
         }
 
         // Study-site-level lock also blocks site-scoped DeclareEffectivity and ActivateStudySite on that site.
@@ -278,9 +276,7 @@ public sealed class KernelEffectivityPostgresTests(KernelPostgresFixture fixture
             .Error.Should().Be(ObservationErrors.Locked);
         (await ActivateAsync(tenant, boston, ct)).Error.Should().Be(ObservationErrors.Locked);
 
-        await _scenario.OkAsync(
-            await observations.ReleaseAsync(tenant, study, siteFrozen.LockId, ct),
-            ct);
+        await observations.OkReleaseAsync(tenant, study, siteFrozen.LockId, ct);
         (await ActivateAsync(tenant, boston, ct)).IsSuccess.Should().BeTrue();
     }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -37,10 +38,7 @@ public interface ILockRecords
 
     /// <summary>
     /// Evaluates whether <paramref name="scope"/> in <paramref name="study"/> is ready for a <see cref="LockKind.Locked"/>
-    /// assertion across all six readiness gates: open queries, missing required collection items, unverified observation
-    /// revisions, unsigned or superseded populated forms, unopened due/closed scheduled visits, and unresolved Error
-    /// validation findings. Returns null when <paramref name="study"/> or <paramref name="scope"/> does not exist in
-    /// <paramref name="study"/>.
+    /// assertion under <see cref="LockMilestone.InterimCut"/>.
     /// </summary>
     Task<LockReadinessSnapshot?> ReadReadinessAsync(
         TenantId tenant,
@@ -50,9 +48,22 @@ public interface ILockRecords
         Task.FromResult<LockReadinessSnapshot?>(null);
 
     /// <summary>
+    /// Evaluates whether <paramref name="scope"/> in <paramref name="study"/> is ready for a <see cref="LockKind.Locked"/>
+    /// assertion under <paramref name="milestone"/>. Returns null when <paramref name="study"/> or <paramref name="scope"/>
+    /// does not exist in <paramref name="study"/>.
+    /// </summary>
+    Task<LockReadinessSnapshot?> ReadReadinessAsync(
+        TenantId tenant,
+        StudyId study,
+        NodeRef scope,
+        LockMilestone milestone,
+        CancellationToken cancellationToken) =>
+        ReadReadinessAsync(tenant, study, scope, cancellationToken);
+
+    /// <summary>
     /// Pre-checks whether <paramref name="scope"/> exists in <paramref name="study"/>, whether <paramref name="kind"/>
     /// is already held at <paramref name="scope"/>, and (for <see cref="LockKind.Locked"/>) whether <paramref name="scope"/>
-    /// is ready, before recording a signature attestation.
+    /// is ready under <see cref="LockMilestone.InterimCut"/>, before recording a signature attestation.
     /// </summary>
     Task<LockApplyPrecheck> PrecheckApplyAsync(
         TenantId tenant,
@@ -61,6 +72,20 @@ public interface ILockRecords
         LockKind kind,
         CancellationToken cancellationToken) =>
         Task.FromResult(new LockApplyPrecheck(ScopeExistsInStudy: true, AlreadyLocked: false, Readiness: null));
+
+    /// <summary>
+    /// Pre-checks whether <paramref name="scope"/> exists in <paramref name="study"/>, whether <paramref name="kind"/>
+    /// is already held at <paramref name="scope"/> or covered by an active ancestor lock, and (for <see cref="LockKind.Locked"/>)
+    /// whether <paramref name="scope"/> is ready under <paramref name="milestone"/>, before recording a signature attestation.
+    /// </summary>
+    Task<LockApplyPrecheck> PrecheckApplyAsync(
+        TenantId tenant,
+        StudyId study,
+        NodeRef scope,
+        LockKind kind,
+        LockMilestone milestone,
+        CancellationToken cancellationToken) =>
+        PrecheckApplyAsync(tenant, study, scope, kind, cancellationToken);
 
     /// <summary>
     /// Checks whether any active write-denying lock (<see cref="LockKind.Frozen"/> or <see cref="LockKind.Locked"/>)
@@ -340,6 +365,51 @@ public sealed record ScopeWriteLockCheck(
     }
 }
 
+/// <summary>Closeout milestone profile governing lock readiness evaluation.</summary>
+[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<LockMilestone>))]
+public enum LockMilestone
+{
+    /// <summary>Interim cut profile: evaluates opened due/closed visits, populated forms, SDV, open queries, required items, and Error findings.</summary>
+    InterimCut = 0,
+
+    /// <summary>Final closeout database lock profile: additionally blocks Screening enrollments, NotYetOpen scheduled visits on Enrolled subjects, unsigned NotAsked forms, and unreviewed observations.</summary>
+    FinalDatabaseLock = 1,
+}
+
+/// <summary>Asymmetric database lock certificate minted for a study-wide <see cref="LockKind.Locked"/> assertion.</summary>
+public sealed record DatabaseLockCertificateRecord(
+    string CertificateId,
+    string TenantId,
+    string StudyId,
+    string StudyCode,
+    string LockId,
+    LockMilestone Milestone,
+    string AttestationId,
+    string SignedBy,
+    DateTimeOffset IssuedAt,
+    string KeyId,
+    string Algorithm,
+    string PayloadSha256,
+    string FingerprintSha256,
+    string SignatureBase64,
+    bool Revoked = false,
+    DateTimeOffset? RevokedAt = null,
+    string? RevokedBy = null);
+
+/// <summary>Signs canonical <see cref="DatabaseLockCertificateRecord"/> payloads using the kernel's private asymmetric key.</summary>
+public interface ILockCertificateSigner
+{
+    DatabaseLockCertificateRecord Sign(
+        TenantId tenant,
+        StudyId studyId,
+        string studyCode,
+        AssertionId lockId,
+        LockMilestone milestone,
+        AttestationId attestationId,
+        string signedBy,
+        DateTimeOffset issuedAt);
+}
+
 /// <summary>What blocks a <see cref="LockKind.Locked"/> assertion at a target scope.</summary>
 public enum LockBlockerKind
 {
@@ -352,14 +422,20 @@ public enum LockBlockerKind
     /// <summary>A recorded observation in scope whose current revision lacks an unretracted <see cref="AssertionKind.Verified"/> assertion.</summary>
     UnverifiedValue,
 
-    /// <summary>A populated <c>CollectionInstance</c> in scope lacking a current <c>Approved</c> or <c>Responsibility</c> signature (including forms with only superseded signatures).</summary>
+    /// <summary>A populated <c>CollectionInstance</c> in scope lacking a current <c>Approved</c> or <c>Responsibility</c> signature (including forms with only superseded signatures, or <c>NotAsked</c>-only forms at final lock).</summary>
     UnsignedForm,
 
-    /// <summary>A due or closed scheduled visit on an active enrollment in scope with an unopened form.</summary>
+    /// <summary>A due or closed scheduled visit (or <c>NotYetOpen</c> future scheduled visit at final database lock) on an active enrollment in scope with an unopened form.</summary>
     UnopenedVisit,
 
     /// <summary>An active (<see cref="FindingStatus.Open"/> or <see cref="FindingStatus.Investigating"/>) <see cref="ValidationSeverity.Error"/> validation finding in scope.</summary>
     ErrorFinding,
+
+    /// <summary>An enrollment still in <c>Screening</c> status without final cohort disposition (<c>Enrolled</c> or <c>ScreenFailed</c>) at final database lock.</summary>
+    ScreeningEnrollment,
+
+    /// <summary>A recorded observation in scope whose current revision lacks an unretracted <see cref="AssertionKind.Reviewed"/> source data review assertion at final database lock.</summary>
+    UnreviewedValue,
 }
 
 /// <summary>One unresolved blocker preventing a <see cref="LockKind.Locked"/> assertion at a scope.</summary>
@@ -407,13 +483,19 @@ public sealed record LockReadinessSnapshot(
     int OpenErrorFindingCount = 0,
     int UnverifiedValueCount = 0,
     int UnsignedFormCount = 0,
-    int UnopenedVisitCount = 0);
+    int UnopenedVisitCount = 0,
+    LockMilestone Milestone = LockMilestone.InterimCut,
+    int ScreeningEnrollmentCount = 0,
+    int PendingScheduledVisitCount = 0,
+    int UnreviewedValueCount = 0);
 
 /// <summary>Pre-check result evaluated before recording an electronic signature for <c>ApplyLock</c>.</summary>
 public sealed record LockApplyPrecheck(
     bool ScopeExistsInStudy,
     bool AlreadyLocked,
-    LockReadinessSnapshot? Readiness);
+    LockReadinessSnapshot? Readiness,
+    NodeRef? CoveringLockScope = null,
+    LockKind? CoveringLockKind = null);
 
 /// <summary>The locks recorded for one study at a bitemporal cut.</summary>
 /// <param name="StudyId">The study's canonical identifier.</param>
@@ -429,25 +511,6 @@ public sealed record StudyLockList(
     IReadOnlyList<StudyLockEntry> Locks);
 
 /// <summary>One lock assertion and any retracting release assertion recorded at the evaluated bitemporal cut.</summary>
-/// <param name="LockId">The lock assertion's identifier.</param>
-/// <param name="StudyId">The study the lock belongs to.</param>
-/// <param name="EnrollmentId">The enrollment when the scope is at or below an enrollment; null for study or study site.</param>
-/// <param name="StudySiteId">The study site when the scope is at or below a study site; null for a study lock.</param>
-/// <param name="SubjectCode">The enrollment's pseudonymous subject code when applicable; null otherwise.</param>
-/// <param name="Kind">Whether the scope is <see cref="LockKind.Frozen"/> or <see cref="LockKind.Locked"/>.</param>
-/// <param name="Scope">The locked object (<c>study</c>, <c>study_site</c>, <c>enrollment</c>, <c>collection_instance</c> or <c>observation</c>).</param>
-/// <param name="BlindedScope">True when the locked observation records a blinded treatment or intervention concept.</param>
-/// <param name="AttestationId">The electronic signature that attested applying the lock.</param>
-/// <param name="AttestationMeaning">The signature meaning recorded when the lock was applied.</param>
-/// <param name="LockedAt">When the lock was asserted.</param>
-/// <param name="LockedBy">Who asserted the lock.</param>
-/// <param name="ReasonForChange">Why the lock was applied.</param>
-/// <param name="Released">True when a release assertion has retracted this lock as of the evaluated cut.</param>
-/// <param name="ReleaseAssertionId">The retracting assertion's identifier when released; null while active.</param>
-/// <param name="ReleaseAttestationId">The electronic signature that attested releasing the lock; null while active.</param>
-/// <param name="ReleasedAt">When the lock was released; null while active.</param>
-/// <param name="ReleasedBy">Who released the lock; null while active.</param>
-/// <param name="ReleaseReason">Why the lock was released; null while active.</param>
 public sealed record StudyLockEntry(
     AssertionId LockId,
     StudyId StudyId,
@@ -467,4 +530,21 @@ public sealed record StudyLockEntry(
     AttestationId? ReleaseAttestationId,
     DateTimeOffset? ReleasedAt,
     string? ReleasedBy,
-    string? ReleaseReason);
+    string? ReleaseReason,
+    LockMilestone Milestone = LockMilestone.InterimCut,
+    DatabaseLockCertificateRecord? Certificate = null);
+
+/// <summary>JSON serializer helper for <see cref="DatabaseLockCertificateRecord"/> persisted on <c>kernel.assertions</c>.</summary>
+public static class DatabaseLockCertificateJson
+{
+    private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
+
+    public static string Serialize(DatabaseLockCertificateRecord certificate)
+    {
+        ArgumentNullException.ThrowIfNull(certificate);
+        return JsonSerializer.Serialize(certificate, Options);
+    }
+
+    public static DatabaseLockCertificateRecord? Deserialize(string? json) =>
+        string.IsNullOrWhiteSpace(json) ? null : JsonSerializer.Deserialize<DatabaseLockCertificateRecord>(json, Options);
+}

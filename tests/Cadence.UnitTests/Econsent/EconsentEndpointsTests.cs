@@ -595,6 +595,108 @@ public sealed class EconsentEndpointsTests : IDisposable
         await publishEndpoint.DidNotReceiveWithAnyArgs().Publish(default(EconsentReconsentRequired)!, TestContext.Current.CancellationToken);
     }
 
+    [Fact]
+    [GxPRequirement("PRD-CDR-006")]
+    public async Task ReplicatedScopeLocks_RejectConsentCaptureAndTemplatePublishWith423_WithoutSpendingBiometricLivenessToken()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var context = CreateContext();
+        var clock = new FakeClock();
+        var sharedUseStore = new ReplayCache(clock);
+        var publishEndpoint = Substitute.For<IPublishEndpoint>();
+        var service = CreateService(context, clock, sharedUseStore, publishEndpoint);
+        var consumer = new Cadence.Apps.Econsent.Infrastructure.Consumers.KernelScopeLockEconsentConsumer(
+            context,
+            new EconsentUnitOfWork(context),
+            clock: clock);
+
+        string studyLockId = Guid.NewGuid().ToString("D");
+        string studyNodeRef = $"study:{Guid.NewGuid():D}";
+        var appliedContext = Substitute.For<ConsumeContext<KernelScopeLockApplied>>();
+        appliedContext.CancellationToken.Returns(ct);
+        appliedContext.Message.Returns(new KernelScopeLockApplied
+        {
+            TenantCode = "demo",
+            LockId = $"assertion:{studyLockId}",
+            StudyRef = studyNodeRef,
+            StudyCode = "STUDY-LOCK-1",
+            ScopeKind = "study",
+            ScopeRef = "study:STUDY-LOCK-1",
+            LockKind = "Frozen",
+            Milestone = "InterimCut",
+            AppliedBy = "dm.lead",
+            AppliedAt = clock.UtcNow,
+        });
+        await consumer.Consume(appliedContext);
+
+        // 1. Publishing a template under an active study lock returns HTTP 423 and emits no re-consent event.
+        var publishRequest = new PublishTemplateRequest("STUDY-LOCK-1", "v2.0", "Protocol amendment", "Amendment", true, null);
+        var lockedPublish = await EconsentEndpoints.ProcessPublishTemplateAsync(
+            "tpl-locked-01", 2, publishRequest, service, Caller("STUDY-LOCK-1"), ct);
+        var lockedPublishProblem = lockedPublish.Should().BeOfType<ProblemHttpResult>().Subject;
+        lockedPublishProblem.StatusCode.Should().Be(StatusCodes.Status423Locked);
+        (await context.ConsentTemplates.CountAsync(ct)).Should().Be(0);
+        await publishEndpoint.DidNotReceiveWithAnyArgs().Publish(default(EconsentReconsentRequired)!, ct);
+
+        // 2. Capturing participant consent under an active scope lock returns HTTP 423 BEFORE spending the liveness token!
+        string singleUseLivenessToken = BiometricLivenessTokenService.IssueToken(
+            "SUBJ-LOCKED-01",
+            0.99m,
+            true,
+            "camera",
+            secret: TestSecurityContext.BiometricLivenessKeyBytes,
+            now: clock.UtcNow);
+        var captureRequest = new CaptureConsentRequest(
+            SubjectPseudonym: "SUBJ-LOCKED-01",
+            StudyId: "STUDY-LOCK-1",
+            SiteId: "SITE-01",
+            SignerName: "Elena Participant",
+            SignerEmail: "elena@example.com",
+            SignerRole: "Subject",
+            Meaning: "I agree to participate",
+            SigningReason: null,
+            ProtocolVersion: "v2.0",
+            DigestSha256: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289", // pragma: allowlist secret
+            SignatureData: "SIG-DATA-LOCKED-01",
+            LivenessToken: singleUseLivenessToken,
+            DeviceTimestamp: clock.UtcNow);
+
+        var lockedCapture = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-locked-01", 2, captureRequest, service, Caller("STUDY-LOCK-1"), ct);
+        lockedCapture.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status423Locked);
+        (await context.SubjectConsents.CountAsync(ct)).Should().Be(0);
+
+        // 3. Releasing the study lock allows both template publish AND retrying consent capture with the SAME liveness token!
+        var releasedContext = Substitute.For<ConsumeContext<KernelScopeLockReleased>>();
+        releasedContext.CancellationToken.Returns(ct);
+        var releasedMsg = new KernelScopeLockReleased
+        {
+            TenantCode = "demo",
+            ReleaseAssertionId = Guid.NewGuid().ToString("D"),
+            LockId = $"assertion:{studyLockId}",
+            StudyRef = studyNodeRef,
+            StudyCode = "STUDY-LOCK-1",
+            ScopeKind = "study",
+            ScopeRef = "study:STUDY-LOCK-1",
+            LockKind = "Frozen",
+            ReleasedBy = "sponsor.admin",
+            ReleasedAt = clock.UtcNow.AddSeconds(10),
+            ReleaseReason = "Reopened for amendment consent capture",
+        };
+        releasedContext.Message.Returns(releasedMsg);
+        await consumer.Consume(releasedContext);
+
+        var unlockedPublish = await EconsentEndpoints.ProcessPublishTemplateAsync(
+            "tpl-locked-01", 2, publishRequest, service, Caller("STUDY-LOCK-1"), ct);
+        unlockedPublish.Should().BeOfType<Ok<PublishTemplateResponse>>();
+
+        var unlockedCapture = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-locked-01", 2, captureRequest, service, Caller("STUDY-LOCK-1"), ct);
+        unlockedCapture.Should().BeOfType<Ok<CaptureConsentResponse>>(
+            "rejecting consent capture under a lock must not spend the participant's single-use biometric liveness token");
+        (await context.SubjectConsents.CountAsync(ct)).Should().Be(1);
+    }
+
     private static DefaultHttpContext Caller(params string[] studies)
     {
         var httpContext = new DefaultHttpContext();

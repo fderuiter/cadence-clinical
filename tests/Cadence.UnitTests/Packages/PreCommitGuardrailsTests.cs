@@ -1706,7 +1706,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         var sharedContracts = PreCommitOpenApiService.AnalyzeBackendContractChanges(["packages/contracts/src/StudyDto.cs"], realRepoRoot);
         sharedContracts.ShouldExport.Should().BeTrue();
-        sharedContracts.TargetServices.Should().Equal("ctms", "econsent", "etmf", "execution", "notifications", "payments");
+        sharedContracts.TargetServices.Should().Equal("ctms", "econsent", "etmf", "execution", "interop", "kernel", "notifications", "payments");
         sharedContracts.HasCsharpFiles.Should().BeTrue();
 
         var nonExporterProjects = PreCommitOpenApiService.AnalyzeBackendContractChanges(

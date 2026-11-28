@@ -222,7 +222,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         afterRetraction.Assertions.Single(a => a.AssertionId == AssertionId.FromGuid(verifiedRev2Ref.Id)).RetractedAt.Should().NotBeNull();
 
         // Release Frozen and apply Locked: Locked refuses both new verifications and verification withdrawals with 423 K.Assertion.Locked.
-        await _scenario.OkAsync(await observations.ReleaseAsync(tenant, study, frozen.LockId, ct), ct);
+        await observations.OkReleaseAsync(tenant, study, frozen.LockId, ct);
         var reVerifiedRev2 = await SendAsync<KernelAssertionStateResponse>(
             monitor, HttpMethod.Post, $"observations/{observation}/verifications", "Re-verified against source addendum",
             new { enrollment_ref = enrollmentRef, revision = 2 }, HttpStatusCode.Created, ct);

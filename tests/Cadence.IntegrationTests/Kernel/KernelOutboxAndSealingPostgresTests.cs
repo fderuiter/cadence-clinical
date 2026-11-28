@@ -302,6 +302,101 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
         third.Should().Be(new OutboxRelayResult(0, 0, MoreDue: false));
     }
 
+    /// <summary>
+    /// Validates per-aggregate outbox stream isolation and dead-letter quarantine: a poison consumer exception
+    /// (<see cref="Cadence.Kernel.Events.KernelOutboxPoisonMessageException"/>) immediately quarantines the offending
+    /// aggregate stream into <c>kernel.outbox_quarantine_messages</c> (holding back only subsequent events on that same
+    /// <c>stream_key</c>), while unrelated aggregate streams in the same tenant dispatch without head-of-line blocking,
+    /// and <c>FORCE ROW LEVEL SECURITY</c> isolates quarantine rows per tenant.
+    /// </summary>
+    [Fact(DisplayName = "OutboxRelay_PoisonConsumer_QuarantinesOnlyAffectedStream_AndIsolatesQuarantineByTenantRls")]
+    [GxPRequirement("PRD-CDR-006")]
+    public async Task OutboxRelayPoisonConsumerQuarantinesOnlyAffectedStreamAndIsolatesQuarantineByTenantRls()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var tenantA = NewTenant();
+        var tenantB = NewTenant();
+        (await fixture.Sender.SendAsync(tenantA, cancellationToken: ct)).IsSuccess.Should().BeTrue();
+        (await fixture.Sender.SendAsync(tenantB, cancellationToken: ct)).IsSuccess.Should().BeTrue();
+
+        // Dispatch TenantProvisioned bootstrap barriers first so aggregate stream ordering is exercised within tenantA.
+        (await fixture.OutboxRelay.RelayBatchAsync(100, ct)).Should().Be(new OutboxRelayResult(2, 0, MoreDue: false));
+        fixture.Publisher.Reset();
+
+        var poisonOrg = NewOrganization(tenantA.TenantId);
+        var healthyOrg = NewOrganization(tenantA.TenantId);
+        var otherTenantOrg = NewOrganization(tenantB.TenantId);
+        (await fixture.Sender.SendAsync(poisonOrg, cancellationToken: ct)).IsSuccess.Should().BeTrue();
+        (await fixture.Sender.SendAsync(healthyOrg, cancellationToken: ct)).IsSuccess.Should().BeTrue();
+        (await fixture.Sender.SendAsync(otherTenantOrg, cancellationToken: ct)).IsSuccess.Should().BeTrue();
+
+        // Also enqueue a dependent Study on the SAME stream_key as poisonOrg? RegisterStudy uses its own Study stream,
+        // so enqueue a second outbox message sharing poisonOrg's stream_key via UpdateOrganization-equivalent or check stream_key directly:
+        string poisonStreamKey;
+        Guid dependentEventId = Guid.CreateVersion7();
+        await using (var adminDb = fixture.CreateAdminContext())
+        {
+            var tenantAOutbox = await adminDb.OutboxMessages
+                .AsNoTracking()
+                .Where(o => o.TenantId == tenantA.TenantId)
+                .ToListAsync(ct);
+            var poisonOutbox = tenantAOutbox.Single(o => o.Envelope.Contains(poisonOrg.Code, StringComparison.Ordinal));
+            poisonStreamKey = poisonOutbox.StreamKey;
+            poisonStreamKey.Should().NotBeNullOrWhiteSpace();
+
+            using var writes = adminDb.PermitPipelineWrites();
+            adminDb.OutboxMessages.Add(new OutboxMessageRecord
+            {
+                Id = Guid.CreateVersion7(),
+                EventId = dependentEventId,
+                TenantId = tenantA.TenantId,
+                StreamKey = poisonStreamKey,
+                Type = "OrganizationFollowUp",
+                Envelope = poisonOutbox.Envelope.Replace(poisonOutbox.EventId.ToString(), dependentEventId.ToString(), StringComparison.Ordinal),
+                EnqueuedAt = poisonOutbox.EnqueuedAt.AddMilliseconds(5),
+                Attempts = 0,
+            });
+            await adminDb.SaveChangesAsync(ct);
+        }
+
+        fixture.Publisher.FailWith = envelope =>
+            envelope.Tenant == tenantA.TenantId
+            && envelope.Payload.TryGetProperty("code", out var codeProp)
+            && codeProp.GetString() == poisonOrg.Code
+                ? new Cadence.Kernel.Events.KernelOutboxPoisonMessageException($"Poison payload on {poisonOrg.Code}")
+                : null;
+
+        var firstPass = await fixture.OutboxRelay.RelayBatchAsync(100, ct);
+        var secondPass = await fixture.OutboxRelay.RelayBatchAsync(100, ct);
+
+        // healthyOrg (in tenantA!) and otherTenantOrg (in tenantB) both dispatch immediately, while poisonOrg is quarantined
+        // and dependentEventId on the SAME stream_key stays held behind the quarantined message!
+        firstPass.Should().Be(new OutboxRelayResult(Dispatched: 2, Failed: 1, MoreDue: false));
+        secondPass.Should().Be(new OutboxRelayResult(Dispatched: 0, Failed: 0, MoreDue: false));
+
+        var deliveredCodes = fixture.Publisher.Delivered
+            .Select(e => e.Payload.GetProperty("code").GetString())
+            .ToList();
+        deliveredCodes.Should().BeEquivalentTo(healthyOrg.Code, otherTenantOrg.Code);
+        fixture.Publisher.Delivered.Select(e => e.EventId).Should().NotContain(dependentEventId);
+
+        // Verify tenant-scoped RLS on kernel.outbox_quarantine_messages: tenantA sees its 1 quarantined row, tenantB sees 0.
+        await using (var dbTenantA = fixture.CreateContext(tenantA.TenantId))
+        {
+            var tenantAQuarantined = await dbTenantA.OutboxQuarantineMessages.AsNoTracking().ToListAsync(ct);
+            tenantAQuarantined.Should().ContainSingle();
+            tenantAQuarantined[0].StreamKey.Should().Be(poisonStreamKey);
+            tenantAQuarantined[0].Reason.Should().Be("PoisonConsumerError");
+            tenantAQuarantined[0].Attempts.Should().Be(1);
+            tenantAQuarantined[0].LastError.Should().Contain(poisonOrg.Code);
+        }
+
+        await using var dbTenantB = fixture.CreateContext(tenantB.TenantId);
+        (await dbTenantB.OutboxQuarantineMessages.AsNoTracking().CountAsync(ct))
+            .Should().Be(0, "FORCE ROW LEVEL SECURITY on kernel.outbox_quarantine_messages must isolate tenants");
+    }
+
     private static ProvisionTenant NewTenant()
     {
         var suffix = Guid.NewGuid().ToString("N")[..10];

@@ -38,6 +38,8 @@ public static class LockReadinessEvaluator
     public const string FormsSignedCondition = "lock.forms_signed";
     public const string ScheduledVisitsOpenedCondition = "lock.scheduled_visits_opened";
     public const string ErrorFindingsResolvedCondition = "lock.error_findings_resolved";
+    public const string ScreeningEnrollmentsResolvedCondition = "lock.screening_enrollments_resolved";
+    public const string ObservationsReviewedCondition = "lock.observations_reviewed";
 
     public const string OpenQueryBlockerCondition = "lock.open_query";
     public const string MissingRequiredItemBlockerCondition = "lock.missing_required_item";
@@ -45,6 +47,8 @@ public static class LockReadinessEvaluator
     public const string UnsignedFormBlockerCondition = "lock.unsigned_form";
     public const string UnopenedVisitBlockerCondition = "lock.unopened_visit";
     public const string ErrorFindingBlockerCondition = "lock.error_finding";
+    public const string ScreeningEnrollmentBlockerCondition = "lock.screening_enrollment";
+    public const string UnreviewedValueBlockerCondition = "lock.unreviewed_value";
 
     public const string SiteOwner = "Site coordinator / investigator";
     public const string MonitorOwner = "Clinical research associate / data manager";
@@ -60,8 +64,9 @@ public static class LockReadinessEvaluator
         StudyId study,
         NodeRef scope,
         CancellationToken cancellationToken,
-        DateTimeOffset? evaluatedAt = null) =>
-        CheckAsync(TenantId.Empty, work, study, scope, findings: null, cancellationToken, evaluatedAt);
+        DateTimeOffset? evaluatedAt = null,
+        LockMilestone milestone = LockMilestone.InterimCut) =>
+        CheckAsync(TenantId.Empty, work, study, scope, findings: null, cancellationToken, evaluatedAt, milestone);
 
     internal static async Task<KernelError?> CheckAsync(
         TenantId tenant,
@@ -70,7 +75,8 @@ public static class LockReadinessEvaluator
         NodeRef scope,
         IValidationFindings? findings,
         CancellationToken cancellationToken,
-        DateTimeOffset? evaluatedAt = null)
+        DateTimeOffset? evaluatedAt = null,
+        LockMilestone milestone = LockMilestone.InterimCut)
     {
         var snapshot = await EvaluateAsync(
             tenant,
@@ -80,7 +86,8 @@ public static class LockReadinessEvaluator
             scope,
             findings,
             cancellationToken,
-            evaluatedAt).ConfigureAwait(false);
+            evaluatedAt,
+            milestone).ConfigureAwait(false);
         return snapshot.ReadyForLock
             ? null
             : AssertionErrors.ScopeNotReady.WithMessage(snapshot.Explanation.Claim) with { Explanation = snapshot.Explanation };
@@ -92,8 +99,9 @@ public static class LockReadinessEvaluator
         string studyCode,
         NodeRef scope,
         CancellationToken cancellationToken,
-        DateTimeOffset? evaluatedAt = null) =>
-        EvaluateAsync(TenantId.Empty, work, study, studyCode, scope, findings: null, cancellationToken, evaluatedAt);
+        DateTimeOffset? evaluatedAt = null,
+        LockMilestone milestone = LockMilestone.InterimCut) =>
+        EvaluateAsync(TenantId.Empty, work, study, studyCode, scope, findings: null, cancellationToken, evaluatedAt, milestone);
 
     internal static async Task<LockReadinessSnapshot> EvaluateAsync(
         TenantId tenant,
@@ -103,7 +111,8 @@ public static class LockReadinessEvaluator
         NodeRef scope,
         IValidationFindings? findings,
         CancellationToken cancellationToken,
-        DateTimeOffset? evaluatedAt = null)
+        DateTimeOffset? evaluatedAt = null,
+        LockMilestone milestone = LockMilestone.InterimCut)
     {
         IReadOnlyList<CollectionInstance> instances;
         IReadOnlyList<Observation> coveredObservations;
@@ -220,7 +229,10 @@ public static class LockReadinessEvaluator
         }
 
         var openQueries = await ReadOpenQueriesAsync(work, study, coveredObservations, cancellationToken).ConfigureAwait(false);
-        var verifiedRevisions = await ReadVerifiedRevisionsAsync(work, study, coveredObservations, cancellationToken).ConfigureAwait(false);
+        var verifiedRevisions = await ReadVerifiedRevisionsAsync(work, study, coveredObservations, AssertionKind.Verified, cancellationToken).ConfigureAwait(false);
+        var reviewedRevisions = milestone == LockMilestone.FinalDatabaseLock
+            ? await ReadVerifiedRevisionsAsync(work, study, coveredObservations, AssertionKind.Reviewed, cancellationToken).ConfigureAwait(false)
+            : null;
         var formSignatures = await ReadFormSignaturesAsync(work, instances, cancellationToken).ConfigureAwait(false);
         var activeErrorFindings = await ReadActiveErrorFindingsAsync(tenant, study, findings, cancellationToken).ConfigureAwait(false);
 
@@ -303,7 +315,9 @@ public static class LockReadinessEvaluator
             evaluatedAt,
             studySitesById,
             sitesById,
-            studyEffectivities);
+            studyEffectivities,
+            milestone,
+            reviewedRevisions);
     }
 
     public static bool NeedsScheduleEvaluation(Enrollment enrollment) =>
@@ -333,7 +347,9 @@ public static class LockReadinessEvaluator
         DateTimeOffset? evaluatedAt = null,
         IReadOnlyDictionary<StudySiteId, StudySite>? studySitesById = null,
         IReadOnlyDictionary<SiteId, Site>? sitesById = null,
-        IReadOnlyList<Effectivity>? studyEffectivities = null)
+        IReadOnlyList<Effectivity>? studyEffectivities = null,
+        LockMilestone milestone = LockMilestone.InterimCut,
+        IReadOnlySet<(ObservationId ObservationId, int Revision)>? reviewedRevisions = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         ArgumentNullException.ThrowIfNull(instances);
@@ -511,7 +527,55 @@ public static class LockReadinessEvaluator
                 CurrentRevision: obs.Revision));
         }
 
-        // 4. Populated forms lacking a current investigator signature (or holding only superseded signatures)
+        // 3b. Final database lock: recorded observations lacking an active source data review (AssertionKind.Reviewed) at their current revision
+        if (milestone == LockMilestone.FinalDatabaseLock)
+        {
+            var reviewedSet = reviewedRevisions ?? new HashSet<(ObservationId, int)>();
+            foreach (var obs in observationsById.Values
+                .Where(o => inScopeObservationIds.Contains(o.Id) && o.Value is not MissingValue { Reason: NullFlavor.NotAsked })
+                .OrderBy(o => o.ObservedAt)
+                .ThenBy(o => o.Id))
+            {
+                if (reviewedSet.Contains((obs.Id, obs.Revision)))
+                {
+                    continue;
+                }
+
+                enrollmentsById.TryGetValue(obs.EnrollmentId, out var enrollment);
+                membershipByObservation.TryGetValue(obs.Id, out var memberInfo);
+                var targetRef = NodeRef.For(obs.Id);
+                var collectionTitle = string.IsNullOrWhiteSpace(memberInfo.Spec?.Name) ? memberInfo.Instance?.CollectionSpecId : memberInfo.Spec!.Name;
+                var itemLabel = !string.IsNullOrWhiteSpace(memberInfo.Item?.Prompt)
+                    ? memberInfo.Item!.Prompt
+                    : memberInfo.Item?.Id ?? obs.Concept.ToString();
+                var nextAction = $"{MonitorOwner}: complete source data review for revision {obs.Revision} of '{itemLabel}' ({targetRef}) before final database lock.";
+
+                blockers.Add(new LockReadinessBlocker(
+                    LockBlockerKind.UnreviewedValue,
+                    MonitorOwner,
+                    targetRef,
+                    enrollment?.StudySiteId ?? memberInfo.Instance?.StudySiteId,
+                    obs.EnrollmentId,
+                    memberInfo.Instance?.Id,
+                    obs.Id,
+                    QueryAssertionId: null,
+                    enrollment?.SubjectCode.Value,
+                    memberInfo.Instance?.CollectionSpecId,
+                    collectionTitle,
+                    memberInfo.Item?.Id,
+                    itemLabel,
+                    QueryText: null,
+                    Answered: false,
+                    Blinded: blindedObservationIds.Contains(obs.Id),
+                    nextAction,
+                    NextCapability: "observation.review",
+                    NextTarget: targetRef,
+                    CurrentRevision: obs.Revision));
+            }
+        }
+
+        // 4. Forms lacking a current investigator signature (or holding only superseded signatures).
+        //    InterimCut ignores opened forms that hold only NotAsked placeholders; FinalDatabaseLock requires all opened forms to be signed.
         var signaturesMap = formSignaturesByInstance ?? new Dictionary<CollectionInstanceId, IReadOnlyList<Attestation>>();
         foreach (var instance in instances.OrderBy(i => i.OpenedAt).ThenBy(i => i.Id))
         {
@@ -520,15 +584,17 @@ public static class LockReadinessEvaluator
                 .Where(o => o is not null)
                 .Select(o => o!)
                 .ToList();
-            if (!memberObservations.Any(o => o.Value is not MissingValue { Reason: NullFlavor.NotAsked }))
+            var hasPopulatedObservation = memberObservations.Any(o => o.Value is not MissingValue { Reason: NullFlavor.NotAsked });
+            if (!hasPopulatedObservation && milestone != LockMilestone.FinalDatabaseLock)
             {
                 continue;
             }
 
-            var currentHash = CollectionInstance.ContentHashOf(
-                memberObservations.Select(o => new CollectionContentEntry(o.Id, o.Revision, o.Value)));
+            var currentHash = memberObservations.Count > 0
+                ? CollectionInstance.ContentHashOf(memberObservations.Select(o => new CollectionContentEntry(o.Id, o.Revision, o.Value)))
+                : null;
             var signatures = signaturesMap.GetValueOrDefault(instance.Id) ?? [];
-            var hasCurrentSignature = signatures.Any(a =>
+            var hasCurrentSignature = currentHash is not null && signatures.Any(a =>
                 a.Meaning is AttestationMeaning.Approved or AttestationMeaning.Responsibility
                 && string.Equals(a.TargetContentHash, currentHash, StringComparison.Ordinal));
             if (hasCurrentSignature)
@@ -542,9 +608,23 @@ public static class LockReadinessEvaluator
             var collectionTitle = string.IsNullOrWhiteSpace(spec?.Name) ? instance.CollectionSpecId : spec!.Name;
             enrollmentsById.TryGetValue(instance.EnrollmentId, out var enrollment);
             var targetRef = NodeRef.For(instance.Id);
-            var nextAction = superseded
-                ? $"{InvestigatorOwner}: re-sign form '{collectionTitle}' ({targetRef}) because a subsequent data change superseded its prior signature."
-                : $"{InvestigatorOwner}: sign populated form '{collectionTitle}' ({targetRef}) before locking.";
+            string nextAction;
+            string itemLabel;
+            if (superseded)
+            {
+                nextAction = $"{InvestigatorOwner}: re-sign form '{collectionTitle}' ({targetRef}) because a subsequent data change superseded its prior signature.";
+                itemLabel = "Signature superseded";
+            }
+            else if (hasPopulatedObservation)
+            {
+                nextAction = $"{InvestigatorOwner}: sign populated form '{collectionTitle}' ({targetRef}) before locking.";
+                itemLabel = "Awaiting investigator signature";
+            }
+            else
+            {
+                nextAction = $"{InvestigatorOwner}: complete or sign opened form '{collectionTitle}' ({targetRef}) before final database lock.";
+                itemLabel = "Opened unpopulated form awaiting disposition or signature";
+            }
 
             blockers.Add(new LockReadinessBlocker(
                 LockBlockerKind.UnsignedForm,
@@ -559,7 +639,7 @@ public static class LockReadinessEvaluator
                 instance.CollectionSpecId,
                 collectionTitle,
                 ItemId: null,
-                ItemLabel: superseded ? "Signature superseded" : "Awaiting investigator signature",
+                ItemLabel: itemLabel,
                 QueryText: null,
                 Answered: false,
                 Blinded: false,
@@ -569,8 +649,44 @@ public static class LockReadinessEvaluator
                 SignatureSuperseded: superseded));
         }
 
-        // 5. Unopened scheduled visits (due/Open or Closed) on active enrollments in scope,
-        //    excluding screen-failed enrollments and visits scheduled after participation ended on withdrawn enrollments.
+        // 4b. Final database lock: enrollments still in Screening disposition must resolve (Enrolled or ScreenFailed)
+        if (milestone == LockMilestone.FinalDatabaseLock
+            && scope.Kind is NodeKinds.Study or NodeKinds.StudySite or NodeKinds.Enrollment)
+        {
+            foreach (var enrollment in enrollmentsById.Values
+                .Where(e => e.Status == EnrollmentStatus.Screening)
+                .OrderBy(e => e.SubjectCode.Value, StringComparer.Ordinal)
+                .ThenBy(e => e.Id))
+            {
+                var targetRef = NodeRef.For(enrollment.Id);
+                var nextAction = $"{SiteOwner}: complete enrollment or record screen failure for screening subject '{enrollment.SubjectCode.Value}' ({targetRef}) before final database lock.";
+
+                blockers.Add(new LockReadinessBlocker(
+                    LockBlockerKind.ScreeningEnrollment,
+                    SiteOwner,
+                    targetRef,
+                    enrollment.StudySiteId,
+                    enrollment.Id,
+                    CollectionInstanceId: null,
+                    ObservationId: null,
+                    QueryAssertionId: null,
+                    enrollment.SubjectCode.Value,
+                    CollectionSpecId: null,
+                    CollectionTitle: null,
+                    ItemId: null,
+                    ItemLabel: "Screening disposition pending",
+                    QueryText: null,
+                    Answered: false,
+                    Blinded: false,
+                    nextAction,
+                    NextCapability: "enrollment.change_status",
+                    NextTarget: targetRef));
+            }
+        }
+
+        // 5. Unopened scheduled visits (due/Open or Closed, plus NotYetOpen on Enrolled subjects for FinalDatabaseLock)
+        //    on active enrollments in scope, excluding screen-failed enrollments and visits scheduled after participation ended on withdrawn enrollments.
+        int pendingScheduledVisitCount = 0;
         if (evaluatedAt is { } evalInstant
             && scope.Kind is NodeKinds.Study or NodeKinds.StudySite or NodeKinds.Enrollment
             && studySitesById is not null
@@ -646,7 +762,10 @@ public static class LockReadinessEvaluator
 
                 foreach (var expected in expectedVisits)
                 {
-                    if (expected.Status is not (VisitWindowStatus.Open or VisitWindowStatus.Closed))
+                    var isPendingFutureVisit = milestone == LockMilestone.FinalDatabaseLock
+                        && enrollment.Status == EnrollmentStatus.Enrolled
+                        && expected.Status == VisitWindowStatus.NotYetOpen;
+                    if (expected.Status is not (VisitWindowStatus.Open or VisitWindowStatus.Closed) && !isPendingFutureVisit)
                     {
                         continue;
                     }
@@ -669,10 +788,20 @@ public static class LockReadinessEvaluator
                             continue;
                         }
 
+                        if (isPendingFutureVisit)
+                        {
+                            pendingScheduledVisitCount++;
+                        }
+
                         var specTitle = specsById.TryGetValue(specId, out var spec) && !string.IsNullOrWhiteSpace(spec.Name)
                             ? spec.Name
                             : specId;
-                        var windowStateLabel = expected.Status == VisitWindowStatus.Closed ? "overdue" : "due";
+                        var windowStateLabel = expected.Status switch
+                        {
+                            VisitWindowStatus.Closed => "overdue",
+                            VisitWindowStatus.NotYetOpen => "pending scheduled",
+                            _ => "due",
+                        };
                         var nextAction = $"{SiteOwner}: open scheduled form '{specTitle}' ({specId}) for {windowStateLabel} visit '{activity.Name}' (target {expected.Target:yyyy-MM-dd}) on {targetRef}.";
 
                         blockers.Add(new LockReadinessBlocker(
@@ -780,6 +909,8 @@ public static class LockReadinessEvaluator
         var unsignedFormCount = blockers.Count(b => b.Kind == LockBlockerKind.UnsignedForm);
         var unopenedVisitCount = blockers.Count(b => b.Kind == LockBlockerKind.UnopenedVisit);
         var openErrorFindingCount = blockers.Count(b => b.Kind == LockBlockerKind.ErrorFinding);
+        var screeningEnrollmentCount = blockers.Count(b => b.Kind == LockBlockerKind.ScreeningEnrollment);
+        var unreviewedValueCount = blockers.Count(b => b.Kind == LockBlockerKind.UnreviewedValue);
         var ready = blockers.Count == 0;
         var explanation = BuildExplanation(
             scope,
@@ -789,7 +920,10 @@ public static class LockReadinessEvaluator
             blockers,
             unverifiedValueCount,
             unsignedFormCount,
-            unopenedVisitCount);
+            unopenedVisitCount,
+            milestone,
+            screeningEnrollmentCount,
+            unreviewedValueCount);
 
         return new LockReadinessSnapshot(
             study,
@@ -804,7 +938,11 @@ public static class LockReadinessEvaluator
             openErrorFindingCount,
             unverifiedValueCount,
             unsignedFormCount,
-            unopenedVisitCount);
+            unopenedVisitCount,
+            milestone,
+            screeningEnrollmentCount,
+            pendingScheduledVisitCount,
+            unreviewedValueCount);
     }
 
     public static Explanation BuildExplanation(
@@ -820,7 +958,10 @@ public static class LockReadinessEvaluator
             blockers!,
             blockers?.Count(b => b.Kind == LockBlockerKind.UnverifiedValue) ?? 0,
             blockers?.Count(b => b.Kind == LockBlockerKind.UnsignedForm) ?? 0,
-            blockers?.Count(b => b.Kind == LockBlockerKind.UnopenedVisit) ?? 0);
+            blockers?.Count(b => b.Kind == LockBlockerKind.UnopenedVisit) ?? 0,
+            LockMilestone.InterimCut,
+            blockers?.Count(b => b.Kind == LockBlockerKind.ScreeningEnrollment) ?? 0,
+            blockers?.Count(b => b.Kind == LockBlockerKind.UnreviewedValue) ?? 0);
 
     public static Explanation BuildExplanation(
         NodeRef scope,
@@ -830,7 +971,10 @@ public static class LockReadinessEvaluator
         IReadOnlyList<LockReadinessBlocker> blockers,
         int unverifiedValueCount = 0,
         int unsignedFormCount = 0,
-        int unopenedVisitCount = 0)
+        int unopenedVisitCount = 0,
+        LockMilestone milestone = LockMilestone.InterimCut,
+        int screeningEnrollmentCount = 0,
+        int unreviewedValueCount = 0)
     {
         ArgumentNullException.ThrowIfNull(scope);
         ArgumentNullException.ThrowIfNull(blockers);
@@ -865,6 +1009,16 @@ public static class LockReadinessEvaluator
             .Select(b => b.FindingId is { } fid ? NodeRef.For(fid) : b.Target)
             .Distinct()
             .ToArray();
+        var screeningEvidence = blockers
+            .Where(b => b.Kind == LockBlockerKind.ScreeningEnrollment)
+            .Select(b => b.Target)
+            .Distinct()
+            .ToArray();
+        var unreviewedEvidence = blockers
+            .Where(b => b.Kind == LockBlockerKind.UnreviewedValue)
+            .Select(b => b.Target)
+            .Distinct()
+            .ToArray();
 
         var queryNoun = openQueryCount == 1 ? "query" : "queries";
         var itemNoun = missingRequiredCount == 1 ? "item" : "items";
@@ -872,6 +1026,8 @@ public static class LockReadinessEvaluator
         var formNoun = unsignedFormCount == 1 ? "form" : "forms";
         var visitNoun = unopenedVisitCount == 1 ? "visit form" : "visit forms";
         var findingNoun = openErrorFindingCount == 1 ? "finding" : "findings";
+        var screeningNoun = screeningEnrollmentCount == 1 ? "screening enrollment" : "screening enrollments";
+        var unreviewedNoun = unreviewedValueCount == 1 ? "revision" : "revisions";
 
         var queriesCondition = openQueryCount == 0
             ? EvaluatedCondition.Satisfied(QueriesClosedCondition, "All queries in the lock scope are closed.")
@@ -894,15 +1050,21 @@ public static class LockReadinessEvaluator
                 $"Verify {unverifiedValueCount} unverified observation {unverifiedNoun} in {scope} before applying a Locked assertion.",
                 unverifiedEvidence);
 
+        var formsSignedSatisfiedText = milestone == LockMilestone.FinalDatabaseLock
+            ? "All opened forms in the lock scope hold a current investigator signature."
+            : "All populated forms in the lock scope hold a current investigator signature.";
         var formsSignedCondition = unsignedFormCount == 0
-            ? EvaluatedCondition.Satisfied(FormsSignedCondition, "All populated forms in the lock scope hold a current investigator signature.")
+            ? EvaluatedCondition.Satisfied(FormsSignedCondition, formsSignedSatisfiedText)
             : EvaluatedCondition.Unsatisfied(
                 FormsSignedCondition,
                 $"Sign {unsignedFormCount} unsigned or superseded {formNoun} in {scope} before applying a Locked assertion.",
                 unsignedFormEvidence);
 
+        var visitsOpenedSatisfiedText = milestone == LockMilestone.FinalDatabaseLock
+            ? "All scheduled visit forms (including pending future visits) on active enrollments in the lock scope are opened."
+            : "All due or closed scheduled visit forms on active enrollments in the lock scope are opened.";
         var visitsOpenedCondition = unopenedVisitCount == 0
-            ? EvaluatedCondition.Satisfied(ScheduledVisitsOpenedCondition, "All due or closed scheduled visit forms on active enrollments in the lock scope are opened.")
+            ? EvaluatedCondition.Satisfied(ScheduledVisitsOpenedCondition, visitsOpenedSatisfiedText)
             : EvaluatedCondition.Unsatisfied(
                 ScheduledVisitsOpenedCondition,
                 $"Open {unopenedVisitCount} scheduled {visitNoun} in {scope} before applying a Locked assertion.",
@@ -924,6 +1086,24 @@ public static class LockReadinessEvaluator
             visitsOpenedCondition,
             findingsCondition,
         };
+
+        if (milestone == LockMilestone.FinalDatabaseLock)
+        {
+            var screeningCondition = screeningEnrollmentCount == 0
+                ? EvaluatedCondition.Satisfied(ScreeningEnrollmentsResolvedCondition, "All enrollments in the lock scope have resolved screening disposition.")
+                : EvaluatedCondition.Unsatisfied(
+                    ScreeningEnrollmentsResolvedCondition,
+                    $"Resolve {screeningEnrollmentCount} {screeningNoun} in {scope} before applying a final database lock.",
+                    screeningEvidence);
+            var reviewedCondition = unreviewedValueCount == 0
+                ? EvaluatedCondition.Satisfied(ObservationsReviewedCondition, "All recorded observation revisions in the lock scope are source-reviewed.")
+                : EvaluatedCondition.Unsatisfied(
+                    ObservationsReviewedCondition,
+                    $"Review {unreviewedValueCount} unreviewed observation {unreviewedNoun} in {scope} before applying a final database lock.",
+                    unreviewedEvidence);
+            conditions.Add(screeningCondition);
+            conditions.Add(reviewedCondition);
+        }
 
         var steps = new List<ExplanationStep>();
         var nextActions = new List<NextAction>();
@@ -948,8 +1128,10 @@ public static class LockReadinessEvaluator
             {
                 LockBlockerKind.OpenQuery => OpenQueryBlockerCondition,
                 LockBlockerKind.UnverifiedValue => UnverifiedValueBlockerCondition,
+                LockBlockerKind.UnreviewedValue => UnreviewedValueBlockerCondition,
                 LockBlockerKind.UnsignedForm => UnsignedFormBlockerCondition,
                 LockBlockerKind.UnopenedVisit => UnopenedVisitBlockerCondition,
+                LockBlockerKind.ScreeningEnrollment => ScreeningEnrollmentBlockerCondition,
                 LockBlockerKind.ErrorFinding => ErrorFindingBlockerCondition,
                 _ => MissingRequiredItemBlockerCondition,
             };
@@ -961,10 +1143,14 @@ public static class LockReadinessEvaluator
                     $"{blocker.Owner} owns open query {queryLabel} on {blocker.Target} ({blocker.ItemLabel ?? "observation"}).",
                 LockBlockerKind.UnverifiedValue =>
                     $"{blocker.Owner} owns unverified revision {blocker.CurrentRevision ?? 1} on {blocker.Target} ({blocker.ItemLabel ?? "observation"}).",
+                LockBlockerKind.UnreviewedValue =>
+                    $"{blocker.Owner} owns unreviewed revision {blocker.CurrentRevision ?? 1} on {blocker.Target} ({blocker.ItemLabel ?? "observation"}).",
                 LockBlockerKind.UnsignedForm =>
                     $"{blocker.Owner} owns {(blocker.SignatureSuperseded ? "superseded signature" : "unsigned form")} on {blocker.Target} ({blocker.CollectionTitle ?? blocker.CollectionSpecId}).",
                 LockBlockerKind.UnopenedVisit =>
                     $"{blocker.Owner} owns unopened scheduled visit '{blocker.PlannedActivityName ?? blocker.PlannedActivityId}' ({blocker.CollectionTitle ?? blocker.CollectionSpecId}) on {blocker.Target}.",
+                LockBlockerKind.ScreeningEnrollment =>
+                    $"{blocker.Owner} owns unresolved screening enrollment {blocker.Target} ({blocker.SubjectCode ?? "subject"}).",
                 LockBlockerKind.ErrorFinding =>
                     $"{blocker.Owner} owns Error validation finding {findingLabel} ({blocker.RuleId ?? "rule"}) on {blocker.Target}.",
                 _ =>
@@ -986,11 +1172,18 @@ public static class LockReadinessEvaluator
         string headline;
         if (blockers.Count == 0)
         {
-            headline = $"Scope {scope} is ready for a Locked assertion: 0 open queries, 0 missing required items, 0 unverified revisions, 0 unsigned forms, 0 unopened visits, and 0 open Error validation findings.";
+            headline = milestone == LockMilestone.FinalDatabaseLock
+                ? $"Scope {scope} is ready for a FinalDatabaseLock assertion: 0 screening enrollments, 0 open queries, 0 missing required items, 0 unverified revisions, 0 unreviewed revisions, 0 unsigned forms, 0 unopened visits, and 0 open Error validation findings."
+                : $"Scope {scope} is ready for a Locked assertion: 0 open queries, 0 missing required items, 0 unverified revisions, 0 unsigned forms, 0 unopened visits, and 0 open Error validation findings.";
         }
         else
         {
             var summaryParts = new List<string>();
+            if (screeningEnrollmentCount > 0)
+            {
+                summaryParts.Add($"{screeningEnrollmentCount} {screeningNoun}");
+            }
+
             if (openQueryCount > 0)
             {
                 summaryParts.Add($"{openQueryCount} open {queryNoun}");
@@ -1004,6 +1197,11 @@ public static class LockReadinessEvaluator
             if (unverifiedValueCount > 0)
             {
                 summaryParts.Add($"{unverifiedValueCount} unverified {unverifiedNoun}");
+            }
+
+            if (unreviewedValueCount > 0)
+            {
+                summaryParts.Add($"{unreviewedValueCount} unreviewed {unreviewedNoun}");
             }
 
             if (unsignedFormCount > 0)
@@ -1339,6 +1537,7 @@ public static class LockReadinessEvaluator
         IKernelUnitOfWork work,
         StudyId study,
         IReadOnlyList<Observation> coveredObservations,
+        AssertionKind assertionKind,
         CancellationToken cancellationToken)
     {
         var recordedObservations = coveredObservations
@@ -1352,7 +1551,7 @@ public static class LockReadinessEvaluator
         var targetGuids = recordedObservations.Select(o => o.Id.Value).ToList();
         var candidateVerifications = await work.ReadAllAsync<Assertion>(
             a => a.StudyId == study
-                && a.Kind == AssertionKind.Verified
+                && a.Kind == assertionKind
                 && a.RetractsId == null
                 && a.TargetKind == NodeKinds.Observation
                 && targetGuids.Contains(a.TargetId),

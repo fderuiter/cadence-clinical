@@ -2,6 +2,7 @@ import {
   ASSERTION_ALREADY_LOCKED,
   ASSERTION_LOCKED,
   ASSERTION_SCOPE_NOT_READY,
+  ASSERTION_SELF_RELEASE_DENIED,
   assertionErrorCode,
   describeKernelError,
   extractKernelExplanation,
@@ -14,19 +15,40 @@ import {
 
 const loadRouteTransport = () => import("./locks.transport");
 export type KernelLock = KernelSchemas["Kernel_KernelLockResponse"];
+export type KernelDatabaseLockCertificate =
+  KernelSchemas["Kernel_KernelDatabaseLockCertificateResponse"];
 export type KernelStudyLocks = KernelSchemas["Kernel_KernelStudyLocksResponse"];
-export type KernelLockReadiness =
+type RawKernelLockReadiness =
   KernelSchemas["Kernel_KernelLockReadinessResponse"];
+export type KernelLockReadiness = Omit<
+  RawKernelLockReadiness,
+  | "milestone"
+  | "screening_enrollment_count"
+  | "pending_scheduled_visit_count"
+  | "unreviewed_value_count"
+> &
+  Partial<
+    Pick<
+      RawKernelLockReadiness,
+      | "milestone"
+      | "screening_enrollment_count"
+      | "pending_scheduled_visit_count"
+      | "unreviewed_value_count"
+    >
+  >;
 export type KernelLockBlocker =
   KernelSchemas["Kernel_KernelLockBlockerResponse"];
 export type KernelLockBlockerKind =
   | "OpenQuery"
   | "MissingRequiredItem"
   | "UnverifiedValue"
+  | "UnreviewedValue"
   | "UnsignedForm"
   | "UnopenedVisit"
+  | "ScreeningEnrollment"
   | "ErrorFinding";
 export type KernelLockKind = KernelSchemas["Kernel_LockKind"];
+export type KernelLockMilestone = "InterimCut" | "FinalDatabaseLock";
 export type KernelLockMeaning = "Approved" | "Responsibility";
 export type StudyExportFormat =
   | "csv"
@@ -53,6 +75,7 @@ export interface KernelApplyLock {
   studyRef: string;
   scopeRef: string;
   kind: KernelLockKind;
+  milestone?: KernelLockMilestone;
   meaning?: KernelLockMeaning;
   lockId?: string | null;
   attestationId?: string | null;
@@ -157,10 +180,25 @@ export function describeLockError(error: unknown): string {
     }
     return "This scope has open queries, missing required items, unverified values, unsigned forms, unopened scheduled visits, or unresolved error validation findings that must be resolved before locking. Freeze remains available.";
   }
+  if (code === ASSERTION_SELF_RELEASE_DENIED) {
+    const explanation = extractKernelExplanation(error);
+    if (explanation?.claim) {
+      return explanation.claim;
+    }
+    return "Dual-signer policy: a lock cannot be released by the same signatory who applied it; an independent Sponsor Admin must release it.";
+  }
   if (code === ASSERTION_ALREADY_LOCKED || status === 409) {
+    const explanation = extractKernelExplanation(error);
+    if (explanation?.claim) {
+      return explanation.claim;
+    }
     return "That lock state already changed; reload and inspect the current locks.";
   }
   if (code === ASSERTION_LOCKED || status === 423) {
+    const explanation = extractKernelExplanation(error);
+    if (explanation?.claim) {
+      return explanation.claim;
+    }
     return "A higher or peer lock blocks this change until that lock is released.";
   }
   if (code === KERNEL_AUTHORIZATION_DENIED || status === 403) {

@@ -11,6 +11,7 @@ using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Endpoints;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
 using Cadence.Apps.Interop.Infrastructure.Security;
+using Cadence.Contracts;
 using Cadence.Kernel.Time;
 using Cadence.Security.Rbac;
 
@@ -35,6 +36,7 @@ public sealed class SceProgramLockService(
     IInteropUnitOfWork unitOfWork,
     ILockfileValidatorService validator,
     SceTokenSigner signer,
+    IKernelLockCertificateVerifier certificateVerifier,
     IClock clock) : ISceProgramLockService
 {
     public async Task<IResult> ListProgramsAsync(string studyId, HttpContext httpContext, CancellationToken ct)
@@ -164,13 +166,62 @@ public sealed class SceProgramLockService(
             return OutsideStudy();
         }
 
+        string normalizedLockId = KernelLockCertificateVerifier.NormalizePrefix(req.LockId, "assertion:");
+        string? requestedCertId = req.LockCertificate?.CertificateId;
+        var replicatedLocks = await db.ReplicatedStudyLocks
+            .AsNoTracking()
+            .Where(l => l.LockId == normalizedLockId
+                || l.LockId == req.LockId
+                || (requestedCertId != null && l.CertificateId == requestedCertId))
+            .ToListAsync(ct);
+
+        if (replicatedLocks.Any(l => !l.IsActive || l.RevokedAt != null))
+        {
+            return Results.Json(
+                new { error = "UNBLINDED_ACCESS_DENIED", details = "The study database lock has been released and its certificate revoked." },
+                statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        DatabaseLockCertificateContract? certificate = req.LockCertificate;
+        if (certificate is null)
+        {
+            string? storedJson = replicatedLocks
+                .FirstOrDefault(l => l.IsActive && l.RevokedAt == null && !string.IsNullOrWhiteSpace(l.CertificateJson))
+                ?.CertificateJson;
+            if (!string.IsNullOrWhiteSpace(storedJson))
+            {
+                certificate = JsonSerializer.Deserialize<DatabaseLockCertificateContract>(storedJson);
+            }
+        }
+
+        if (!certificateVerifier.TryVerifyForStudyLock(
+                certificate,
+                req.StudyId,
+                req.LockId,
+                CallerScope.TenantId(httpContext),
+                out string? certFailure))
+        {
+            return Results.Json(
+                new { error = "UNBLINDED_ACCESS_DENIED", details = certFailure ?? "Invalid database lock certificate." },
+                statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        var verifiedCert = certificate!;
+        string serializedCert = JsonSerializer.Serialize(verifiedCert);
+
         var now = clock.UtcNow;
         var expiresAt = DateTimeOffset.FromUnixTimeSeconds(
             now.AddHours(req.ExpiresInHours <= 0 ? 24 : req.ExpiresInHours).ToUnixTimeSeconds());
         string tokenId = "DBLOCK-AUTH-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
         var roles = SceEndpoints.UnblindedExecutorRoles.ToList();
 
-        string sigHash = signer.Sign(LockTokenPayload(tokenId, req.StudyId, req.LockId, req.IssuedTo, expiresAt));
+        string sigHash = signer.Sign(LockTokenPayload(
+            tokenId,
+            req.StudyId,
+            req.LockId,
+            req.IssuedTo,
+            expiresAt,
+            verifiedCert.FingerprintSha256));
 
         var tokenEntity = new DatabaseLockAuthToken
         {
@@ -184,6 +235,9 @@ public sealed class SceProgramLockService(
             ExpiresAt = expiresAt,
             SignatureHash = sigHash,
             IsRevoked = false,
+            CertificateId = verifiedCert.CertificateId,
+            CertificateFingerprint = verifiedCert.FingerprintSha256,
+            LockCertificateJson = serializedCert,
             CreatedAt = now,
             CreatedBy = userId,
             ReasonForChange = req.Reason
@@ -200,7 +254,14 @@ public sealed class SceProgramLockService(
             StudyId = req.StudyId,
             IsUnblinded = true,
             LockTokenId = tokenId,
-            DetailsJson = JsonSerializer.Serialize(new { lock_id = req.LockId, milestone = req.Milestone, reason = req.Reason }),
+            DetailsJson = JsonSerializer.Serialize(new
+            {
+                lock_id = req.LockId,
+                milestone = req.Milestone,
+                certificate_id = verifiedCert.CertificateId,
+                certificate_fingerprint = verifiedCert.FingerprintSha256,
+                reason = req.Reason
+            }),
             Sha256Hash = ComputeSha256($"{tokenId}|ISSUE_LOCK_TOKEN|{now:O}"),
             CreatedAt = now
         });
@@ -264,8 +325,16 @@ public sealed class SceProgramLockService(
     internal static IResult OutsideStudy() =>
         Results.Json(new { error = "OUTSIDE_STUDY_SCOPE", details = "You are not assigned to this study." }, statusCode: StatusCodes.Status403Forbidden);
 
-    internal static string LockTokenPayload(string tokenId, string studyId, string lockId, string issuedTo, DateTimeOffset expiresAt) =>
-        $"{tokenId}|{studyId}|{lockId}|{issuedTo}|{expiresAt.ToUnixTimeSeconds()}";
+    internal static string LockTokenPayload(
+        string tokenId,
+        string studyId,
+        string lockId,
+        string issuedTo,
+        DateTimeOffset expiresAt,
+        string? certificateFingerprint = null) =>
+        string.IsNullOrWhiteSpace(certificateFingerprint)
+            ? $"{tokenId}|{studyId}|{lockId}|{issuedTo}|{expiresAt.ToUnixTimeSeconds()}"
+            : $"{tokenId}|{studyId}|{lockId}|{issuedTo}|{expiresAt.ToUnixTimeSeconds()}|{certificateFingerprint}";
 
     internal static string ComputeSha256(string raw)
     {
@@ -306,6 +375,8 @@ public sealed class SceProgramLockService(
             IssuedAt: t.IssuedAt.ToString("O"),
             ExpiresAt: t.ExpiresAt.ToString("O"),
             SignatureHash: t.SignatureHash,
-            IsRevoked: t.IsRevoked);
+            IsRevoked: t.IsRevoked,
+            CertificateId: t.CertificateId,
+            CertificateFingerprint: t.CertificateFingerprint);
     }
 }

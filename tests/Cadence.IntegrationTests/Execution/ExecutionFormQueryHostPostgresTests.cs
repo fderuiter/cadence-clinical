@@ -315,7 +315,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
 
         // Switch from Frozen to Locked: while Diastolic is still missing and blankQuery is still open, Locked is refused with ScopeNotReady (#5466).
         await RelayHostOutboxAsync();
-        await _scenario.Protocol.OkAsync(await _scenario.Observations.ReleaseAsync(tenant, study, frozen.LockId, ct), ct);
+        await _scenario.Observations.OkReleaseAsync(tenant, study, frozen.LockId, ct);
         var prematureLock = await fixture.Sender.SendAsync(
             await _scenario.Observations.LockAsync(tenant, study, NodeRef.For(enrollment), ct, LockKind.Locked),
             cancellationToken: ct);

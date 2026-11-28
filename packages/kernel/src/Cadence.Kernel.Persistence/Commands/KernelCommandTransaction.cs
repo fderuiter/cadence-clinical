@@ -16,6 +16,8 @@ using Cadence.Kernel.Application.Identity;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
+using Cadence.Kernel.Events;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Persistence.IdentityVault;
@@ -371,6 +373,7 @@ internal sealed class KernelCommandTransaction(
                 auditEntryHash: primaryAudit?.Hash ?? string.Empty,
                 failureReason: null,
                 cancellationToken).ConfigureAwait(false);
+            await StageLockCertificateAsync(cancellationToken).ConfigureAwait(false);
 
             Fault(CommitStage.AuditAppended);
 
@@ -1149,11 +1152,26 @@ internal sealed class KernelCommandTransaction(
             CausationId = envelope.CausationId,
             Payload = payload.GetRawText(),
         });
+        string streamKey;
+        if (subject is not null)
+        {
+            streamKey = subject.Unversioned().ToString();
+        }
+        else if (string.Equals(type, DecisionDeniedEvent, StringComparison.Ordinal))
+        {
+            streamKey = $"activity:{execution.ActivityId:D}";
+        }
+        else
+        {
+            streamKey = $"tenant:{envelope.Tenant}";
+        }
+
         db.OutboxMessages.Add(new OutboxMessageRecord
         {
             Id = Guid.CreateVersion7(),
             EventId = envelope.EventId,
             TenantId = envelope.Tenant,
+            StreamKey = streamKey,
             Type = envelope.Type,
             Envelope = JsonSerializer.Serialize(envelope, KernelCommandPipelineJson.Options),
             EnqueuedAt = envelope.Recorded,
@@ -1309,6 +1327,69 @@ internal sealed class KernelCommandTransaction(
                     });
                     break;
                 }
+        }
+    }
+
+    private async Task StageLockCertificateAsync(CancellationToken cancellationToken)
+    {
+        foreach (var (domainEvent, _) in _events)
+        {
+            switch (domainEvent)
+            {
+                case LockApplied { Certificate: { } cert } applied:
+                    {
+                        var serialized = DatabaseLockCertificateJson.Serialize(cert) ?? "{}";
+                        db.LockCertificates.Add(new LockCertificateEntityRecord
+                        {
+                            Id = Guid.CreateVersion7(execution.RecordedAt),
+                            CertificateId = cert.CertificateId,
+                            TenantId = Command.TenantId,
+                            StudyId = applied.StudyId,
+                            StudyCode = cert.StudyCode,
+                            LockId = applied.LockId,
+                            Milestone = cert.Milestone.ToString(),
+                            AttestationId = applied.AttestationId,
+                            SignedBy = cert.SignedBy,
+                            IssuedAt = cert.IssuedAt,
+                            KeyId = cert.KeyId,
+                            Algorithm = cert.Algorithm,
+                            PayloadSha256 = cert.PayloadSha256,
+                            FingerprintSha256 = cert.FingerprintSha256,
+                            SignatureBase64 = cert.SignatureBase64,
+                            CertificateJson = serialized,
+                            Revoked = false,
+                            RevokedAt = null,
+                            RevokedBy = null,
+                        });
+                        break;
+                    }
+
+                case LockReleased { RevokedCertificateId: { Length: > 0 } certId }:
+                    {
+                        var existing = await db.LockCertificates
+                            .SingleOrDefaultAsync(
+                                c => c.TenantId == Command.TenantId && c.CertificateId == certId,
+                                cancellationToken)
+                            .ConfigureAwait(false);
+                        if (existing is not null && !existing.Revoked)
+                        {
+                            existing.Revoked = true;
+                            existing.RevokedAt = execution.RecordedAt;
+                            existing.RevokedBy = execution.Actor.Id;
+                            if (DatabaseLockCertificateJson.Deserialize(existing.CertificateJson) is { } parsed)
+                            {
+                                existing.CertificateJson = DatabaseLockCertificateJson.Serialize(parsed with
+                                {
+                                    Revoked = true,
+                                    RevokedAt = execution.RecordedAt,
+                                    RevokedBy = execution.Actor.Id,
+                                }) ?? existing.CertificateJson;
+                            }
+                        }
+
+                        break;
+                    }
+            }
         }
     }
 

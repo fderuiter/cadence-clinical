@@ -36,7 +36,9 @@ public sealed record LockApplied(
     LockKind Kind,
     StudyId StudyId,
     NodeRef Scope,
-    AttestationId AttestationId);
+    AttestationId AttestationId,
+    LockMilestone Milestone = LockMilestone.InterimCut,
+    DatabaseLockCertificateRecord? Certificate = null);
 
 /// <summary>A lock was released by the retracting assertion <c>AssertionId</c> (spec §10.5, Quality family).</summary>
 [KernelEvent("LockReleased", 1)]
@@ -47,4 +49,5 @@ public sealed record LockReleased(
     LockKind Kind,
     StudyId StudyId,
     NodeRef Scope,
-    AttestationId AttestationId);
+    AttestationId AttestationId,
+    string? RevokedCertificateId = null);

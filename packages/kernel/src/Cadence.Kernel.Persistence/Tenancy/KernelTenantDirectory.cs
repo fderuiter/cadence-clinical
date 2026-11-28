@@ -64,4 +64,16 @@ internal sealed class KernelTenantDirectory(IDbContextFactory<KernelDbContext> c
 
         return active;
     }
+
+    public async Task<string?> FindCodeAsync(TenantId tenant, CancellationToken cancellationToken = default)
+    {
+        await using var tenantDb = await contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        tenantDb.BindTenant(tenant);
+        return await tenantDb.Tenants
+            .AsNoTracking()
+            .Where(t => t.Id == tenant)
+            .Select(t => t.Code)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
 }

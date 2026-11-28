@@ -24,6 +24,7 @@ internal sealed class KernelObservationScenario(KernelPostgresFixture fixture)
 {
     public const string EntryReason = "Initial entry";
     public const string CorrectionReason = "Transcription error: source document reads 128";
+    public const string ReleaseApproverId = "sponsor-admin-it@cadence.test";
 
     public static readonly ConceptRef SystolicBloodPressure = new(ConceptId.New(), 1);
 
@@ -64,6 +65,37 @@ internal sealed class KernelObservationScenario(KernelPostgresFixture fixture)
         var attestation = await Protocol.OkAsync(
             Protocol.AttestCommand(tenant, AttestationMeaning.Responsibility, LockStatement.Target(id, LockStatement.Release(id, lockId))), ct);
         return new ReleaseLock(tenant, id, study, lockId, attestation, KernelProtocolScenario.Key(), "Query found after lock; unlocking to correct");
+    }
+
+    /// <summary>Signs and sends <see cref="ReleaseLock"/> as a distinct Sponsor Admin approver (satisfying four-eyes release).</summary>
+    public async Task<CommandResult<LockState>> SendReleaseAsync(TenantId tenant, StudyId study, AssertionId lockId, CancellationToken ct)
+    {
+        var previous = fixture.CurrentActor.Actor;
+        fixture.CurrentActor.Actor = Actor.Person(ReleaseApproverId);
+        try
+        {
+            var command = await ReleaseAsync(tenant, study, lockId, ct);
+            return await fixture.Sender.SendAsync(command, cancellationToken: ct);
+        }
+        finally
+        {
+            fixture.CurrentActor.Actor = previous;
+        }
+    }
+
+    /// <summary>Signs and releases <paramref name="lockId"/> as <see cref="ReleaseApproverId"/>, asserting success.</summary>
+    public async Task<LockState> OkReleaseAsync(TenantId tenant, StudyId study, AssertionId lockId, CancellationToken ct)
+    {
+        var previous = fixture.CurrentActor.Actor;
+        fixture.CurrentActor.Actor = Actor.Person(ReleaseApproverId);
+        try
+        {
+            return await Protocol.OkAsync(await ReleaseAsync(tenant, study, lockId, ct), ct);
+        }
+        finally
+        {
+            fixture.CurrentActor.Actor = previous;
+        }
     }
 
     /// <summary>The command withdrawing <paramref name="enrollment"/>'s participant; the investigator's signature is recorded first.</summary>

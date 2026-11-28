@@ -172,6 +172,11 @@ public static class KernelLockEndpoints
             return KernelProblems.BadRequest("Invalid signature meaning", "Signature meaning must be Approved or Responsibility.");
         }
 
+        if (!TryParseMilestone(request.Milestone, out var milestone))
+        {
+            return KernelProblems.BadRequest("Invalid lock milestone", "Lock milestone must be InterimCut or FinalDatabaseLock.");
+        }
+
         var tenant = KernelRequestTenant.Get(context);
         var studyId = StudyId.FromGuid(studyNode.Id);
         var lockId = request.LockId is { } givenLock && givenLock != Guid.Empty
@@ -193,7 +198,8 @@ public static class KernelLockEndpoints
                 reason,
                 meaning,
                 new DateTimeOffset(token.IssuedAt, TimeSpan.Zero),
-                StepUpMethod),
+                StepUpMethod,
+                milestone),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         if (applyResult.Error is { } applyError)
         {
@@ -205,6 +211,7 @@ public static class KernelLockEndpoints
                     studyId,
                     studyNode,
                     scope,
+                    milestone,
                     locks,
                     applyError,
                     cancellationToken).ConfigureAwait(false);
@@ -432,6 +439,7 @@ public static class KernelLockEndpoints
     internal static async Task<Results<Ok<KernelLockReadinessResponse>, ProblemHttpResult>> GetReadinessAsync(
         string studyRef,
         [FromQuery(Name = "scope_ref")] string? scopeRef,
+        [FromQuery(Name = "milestone")] string? milestoneRaw,
         HttpContext context,
         IKernelNavigator navigator,
         ILockRecords locks,
@@ -451,6 +459,13 @@ public static class KernelLockEndpoints
             }
 
             explicitScope = parsedScope;
+        }
+
+        if (!TryParseMilestone(milestoneRaw, out var milestone))
+        {
+            return KernelProblems.BadRequest(
+                "Invalid lock milestone",
+                "Name milestone as InterimCut or FinalDatabaseLock.");
         }
 
         var tenant = KernelRequestTenant.Get(context);
@@ -483,6 +498,7 @@ public static class KernelLockEndpoints
             tenant,
             resolvedStudy.Study.StudyId,
             targetScope,
+            milestone,
             cancellationToken).ConfigureAwait(false);
         if (snapshot is null)
         {
@@ -514,7 +530,11 @@ public static class KernelLockEndpoints
             explanationResponse,
             snapshot.UnverifiedValueCount,
             snapshot.UnsignedFormCount,
-            snapshot.UnopenedVisitCount));
+            snapshot.UnopenedVisitCount,
+            snapshot.Milestone.ToString(),
+            snapshot.ScreeningEnrollmentCount,
+            snapshot.PendingScheduledVisitCount,
+            snapshot.UnreviewedValueCount));
     }
 
     private static async Task<(IReadOnlyList<KernelLockBlockerResponse> Items, HashSet<string> MaskedEvidenceRefs)> MaskReadinessBlockersAsync(
@@ -838,6 +858,7 @@ public static class KernelLockEndpoints
         StudyId studyId,
         NodeRef studyNode,
         NodeRef targetScope,
+        LockMilestone milestone,
         ILockRecords locks,
         KernelError applyError,
         CancellationToken cancellationToken)
@@ -850,7 +871,7 @@ public static class KernelLockEndpoints
             return applyError;
         }
 
-        var snapshot = await locks.ReadReadinessAsync(tenant, studyId, targetScope, cancellationToken).ConfigureAwait(false);
+        var snapshot = await locks.ReadReadinessAsync(tenant, studyId, targetScope, milestone, cancellationToken).ConfigureAwait(false);
         if (snapshot is null)
         {
             return applyError;
@@ -908,7 +929,9 @@ public static class KernelLockEndpoints
             .Where(c => c.Code is LockReadinessEvaluator.QueriesClosedCondition
                 or LockReadinessEvaluator.RequiredItemsCompleteCondition
                 or LockReadinessEvaluator.ObservationsVerifiedCondition
+                or LockReadinessEvaluator.ObservationsReviewedCondition
                 or LockReadinessEvaluator.FormsSignedCondition
+                or LockReadinessEvaluator.ScreeningEnrollmentsResolvedCondition
                 or LockReadinessEvaluator.ScheduledVisitsOpenedCondition
                 or LockReadinessEvaluator.ErrorFindingsResolvedCondition)
             .Select(c => new KernelConditionResponse(c.Code, c.Description, c.Met, Scrub(c.Evidence)))
@@ -940,7 +963,9 @@ public static class KernelLockEndpoints
                 {
                     nameof(LockBlockerKind.OpenQuery) => LockReadinessEvaluator.OpenQueryBlockerCondition,
                     nameof(LockBlockerKind.UnverifiedValue) => LockReadinessEvaluator.UnverifiedValueBlockerCondition,
+                    nameof(LockBlockerKind.UnreviewedValue) => LockReadinessEvaluator.UnreviewedValueBlockerCondition,
                     nameof(LockBlockerKind.UnsignedForm) => LockReadinessEvaluator.UnsignedFormBlockerCondition,
+                    nameof(LockBlockerKind.ScreeningEnrollment) => LockReadinessEvaluator.ScreeningEnrollmentBlockerCondition,
                     nameof(LockBlockerKind.UnopenedVisit) => LockReadinessEvaluator.UnopenedVisitBlockerCondition,
                     nameof(LockBlockerKind.ErrorFinding) => LockReadinessEvaluator.ErrorFindingBlockerCondition,
                     _ => LockReadinessEvaluator.MissingRequiredItemBlockerCondition,
@@ -1005,6 +1030,33 @@ public static class KernelLockEndpoints
         return false;
     }
 
+    private static bool TryParseMilestone(string? raw, out LockMilestone milestone)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            milestone = LockMilestone.InterimCut;
+            return true;
+        }
+
+        var trimmed = raw.Trim();
+        if (string.Equals(trimmed, "interim_cut", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(trimmed, "InterimCut", StringComparison.OrdinalIgnoreCase))
+        {
+            milestone = LockMilestone.InterimCut;
+            return true;
+        }
+
+        if (string.Equals(trimmed, "final_database_lock", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(trimmed, "FinalDatabaseLock", StringComparison.OrdinalIgnoreCase))
+        {
+            milestone = LockMilestone.FinalDatabaseLock;
+            return true;
+        }
+
+        milestone = default;
+        return false;
+    }
+
     private static Guid DeriveDeterministicGuid(TenantId tenant, string idempotencyKey, string slot)
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"cadence:lock:{tenant}:{slot}:{idempotencyKey}"));
@@ -1029,13 +1081,15 @@ public static class KernelLockEndpoints
 /// <param name="Meaning">Signature meaning (<c>Approved</c> by default, or <c>Responsibility</c>).</param>
 /// <param name="LockId">Optional lock assertion identifier; derived deterministically from the idempotency key when omitted.</param>
 /// <param name="AttestationId">Optional attestation identifier; derived deterministically from the idempotency key when omitted.</param>
+/// <param name="Milestone">Optional lock milestone (<c>InterimCut</c> by default, or <c>FinalDatabaseLock</c>).</param>
 public sealed record KernelApplyLockRequest(
     string StudyRef,
     string ScopeRef,
     string Kind,
     string? Meaning = null,
     Guid? LockId = null,
-    Guid? AttestationId = null);
+    Guid? AttestationId = null,
+    string? Milestone = null);
 
 /// <summary>Body of <c>POST /api/v1/kernel/locks/{lockRef}/release</c>.</summary>
 /// <param name="StudyRef">Optional study NodeRef; resolved from the lock assertion when omitted.</param>
@@ -1092,6 +1146,49 @@ public sealed record KernelStudyLocksResponse(
     IReadOnlyList<KernelLockResponse> Locks,
     KernelHiddenContentResponse Hidden);
 
+/// <summary>Asymmetrically signed database lock certificate emitted when a study-level <c>Locked</c> assertion is applied.</summary>
+public sealed record KernelDatabaseLockCertificateResponse(
+    string CertificateId,
+    string StudyRef,
+    string StudyCode,
+    string LockRef,
+    string Milestone,
+    string AttestationRef,
+    string SignedBy,
+    DateTimeOffset IssuedAt,
+    string KeyId,
+    string Algorithm,
+    string PayloadSha256,
+    string FingerprintSha256,
+    string SignatureBase64,
+    bool Revoked,
+    DateTimeOffset? RevokedAt,
+    string? RevokedBy,
+    string TenantCode = "")
+{
+    internal static KernelDatabaseLockCertificateResponse? From(StudyId studyId, AssertionId lockId, DatabaseLockCertificateRecord? record) =>
+        record is null
+            ? null
+            : new(
+                record.CertificateId,
+                NodeRef.For(studyId).ToString(),
+                record.StudyCode,
+                NodeRef.For(lockId).ToString(),
+                record.Milestone.ToString(),
+                $"attestation:{record.AttestationId}",
+                record.SignedBy,
+                record.IssuedAt,
+                record.KeyId,
+                record.Algorithm,
+                record.PayloadSha256,
+                record.FingerprintSha256,
+                record.SignatureBase64,
+                record.Revoked,
+                record.RevokedAt,
+                record.RevokedBy,
+                record.TenantId);
+}
+
 /// <summary>A lock assertion or masked placeholder in a study lock list or mutation response.</summary>
 /// <param name="Ref">The lock assertion NodeRef (<c>assertion:&lt;uuid&gt;</c>), or null when masked.</param>
 /// <param name="StudyRef">The study NodeRef.</param>
@@ -1113,6 +1210,8 @@ public sealed record KernelStudyLocksResponse(
 /// <param name="ReleaseReason">Why the lock was released; null while active or when masked.</param>
 /// <param name="Masked">True when caller visibility or blinding hides this lock's details.</param>
 /// <param name="Mask">Why the lock is masked (<c>Blinded</c>), or null when visible.</param>
+/// <param name="Milestone">The lock milestone (<c>InterimCut</c> or <c>FinalDatabaseLock</c>), or null when masked.</param>
+/// <param name="Certificate">The asymmetrically signed database lock certificate for study-level <c>Locked</c> assertions, or null otherwise.</param>
 public sealed record KernelLockResponse(
     string? Ref,
     string StudyRef,
@@ -1133,7 +1232,9 @@ public sealed record KernelLockResponse(
     string? ReleasedBy,
     string? ReleaseReason,
     bool Masked,
-    string? Mask)
+    string? Mask,
+    string? Milestone = null,
+    KernelDatabaseLockCertificateResponse? Certificate = null)
 {
     internal static KernelLockResponse FromVisible(StudyLockEntry entry) =>
         new(
@@ -1156,7 +1257,9 @@ public sealed record KernelLockResponse(
             entry.ReleasedBy,
             entry.ReleaseReason,
             Masked: false,
-            Mask: null);
+            Mask: null,
+            entry.Milestone.ToString(),
+            KernelDatabaseLockCertificateResponse.From(entry.StudyId, entry.LockId, entry.Certificate));
 
     internal static KernelLockResponse FromMasked(StudyLockEntry entry, MaskReason reason) =>
         new(
@@ -1179,7 +1282,9 @@ public sealed record KernelLockResponse(
             ReleasedBy: null,
             ReleaseReason: null,
             Masked: true,
-            Mask: reason.ToString());
+            Mask: reason.ToString(),
+            Milestone: null,
+            Certificate: null);
 
     internal static KernelLockResponse FromState(StudyId studyId, LockState state, AttestationMeaning meaning, string reason) =>
         new(
@@ -1202,7 +1307,9 @@ public sealed record KernelLockResponse(
             state.Released ? state.By : null,
             state.Released ? reason : null,
             Masked: false,
-            Mask: null);
+            Mask: null,
+            state.Milestone.ToString(),
+            KernelDatabaseLockCertificateResponse.From(studyId, state.LockId, state.Certificate));
 }
 
 /// <summary>Live write-lock check response (<c>GET /api/v1/kernel/locks/in-force</c>).</summary>
@@ -1228,7 +1335,11 @@ public sealed record KernelLockReadinessResponse(
     KernelExplanationResponse Explanation,
     int UnverifiedValueCount = 0,
     int UnsignedFormCount = 0,
-    int UnopenedVisitCount = 0);
+    int UnopenedVisitCount = 0,
+    string Milestone = nameof(LockMilestone.InterimCut),
+    int ScreeningEnrollmentCount = 0,
+    int PendingScheduledVisitCount = 0,
+    int UnreviewedValueCount = 0);
 
 /// <summary>One unresolved blocker preventing a <c>Locked</c> assertion at a scope, masked in place under <c>K-AUTH-4</c>.</summary>
 public sealed record KernelLockBlockerResponse(
@@ -1278,11 +1389,7 @@ public sealed record KernelLockBlockerResponse(
             Mask: null,
             FindingRef: blocker.FindingId is { } fid ? NodeRef.For(fid).ToString() : null,
             RuleId: blocker.RuleId,
-            Detail: blocker.FindingMessage
-                ?? blocker.QueryText
-                ?? (blocker.Kind == LockBlockerKind.UnverifiedValue && blocker.CurrentRevision is { } rev
-                    ? $"Revision {rev} awaiting source verification"
-                    : blocker.ItemLabel),
+            Detail: ResolveBlockerDetail(blocker),
             CurrentRevision: blocker.CurrentRevision,
             SignatureSuperseded: blocker.SignatureSuperseded,
             PlannedActivityId: blocker.PlannedActivityId,
@@ -1290,13 +1397,36 @@ public sealed record KernelLockBlockerResponse(
             PlannedDate: blocker.PlannedDate,
             WindowEnd: blocker.WindowEnd);
 
+    private static string? ResolveBlockerDetail(LockReadinessBlocker blocker)
+    {
+        if (blocker.FindingMessage is not null)
+        {
+            return blocker.FindingMessage;
+        }
+        if (blocker.QueryText is not null)
+        {
+            return blocker.QueryText;
+        }
+        if (blocker.Kind == LockBlockerKind.UnverifiedValue && blocker.CurrentRevision is { } rev)
+        {
+            return $"Revision {rev} awaiting source verification";
+        }
+        if (blocker.Kind == LockBlockerKind.UnreviewedValue && blocker.CurrentRevision is { } rRev)
+        {
+            return $"Revision {rRev} awaiting source data review";
+        }
+        return blocker.ItemLabel;
+    }
+
     internal static KernelLockBlockerResponse FromMasked(LockReadinessBlocker blocker, MaskReason reason)
     {
         var blockerLabel = blocker.Kind switch
         {
             LockBlockerKind.OpenQuery => "open query",
             LockBlockerKind.UnverifiedValue => "unverified observation revision",
+            LockBlockerKind.UnreviewedValue => "unreviewed observation revision",
             LockBlockerKind.UnsignedForm => blocker.SignatureSuperseded ? "superseded form signature" : "unsigned form",
+            LockBlockerKind.ScreeningEnrollment => "screening enrollment disposition",
             LockBlockerKind.UnopenedVisit => "unopened scheduled visit",
             LockBlockerKind.ErrorFinding => "Error validation finding",
             _ => "missing required item",

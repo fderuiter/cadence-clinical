@@ -257,9 +257,10 @@ public sealed class KernelDevelopmentTenantPostgresTests(ExecutionFormModulePost
         using var deniedEnrollment = await crc.SendAsync(screenOtherSite, ct);
         deniedEnrollment.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
-        // dm.lead holds DEMO_DATA_MANAGER at AuthorityScope.Study (without tenant-wide attestation.sign) and applies + releases a signed lock.
+        // dm.lead holds DEMO_DATA_MANAGER (lock.apply) at AuthorityScope.Study while designer.lead holds DEMO_DESIGNER (lock.release).
         string unversionedStudyRef = studyRef.Split('@')[0];
         using var dm = host.CreateSignedClient(new GatewayIdentity(DataManagerSubject, [], [], TenantId: code));
+        using var designer = host.CreateSignedClient(new GatewayIdentity(DesignerLeadSubject, [], [], TenantId: code));
         var applyLockReq = SendJsonRequest(HttpMethod.Post, "/api/v1/kernel/locks", "Demo interim review freeze", new
         {
             study_ref = unversionedStudyRef,
@@ -281,6 +282,22 @@ public sealed class KernelDevelopmentTenantPostgresTests(ExecutionFormModulePost
             lockRef = JsonDocument.Parse(body).RootElement.GetProperty("ref").GetString()!;
         }
 
+        var forbiddenSelfReleaseReq = SendJsonRequest(HttpMethod.Post, $"/api/v1/kernel/locks/{lockRef}/release", "Attempted DM self-release", new
+        {
+            study_ref = unversionedStudyRef,
+            meaning = "Responsibility",
+        });
+        forbiddenSelfReleaseReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                DataManagerSubject,
+                Cadence.Kernel.Api.KernelLockEndpoints.ReleaseLockAction(lockRef),
+                Cadence.Kernel.Api.KernelLockEndpoints.ReleaseLockSemanticAction));
+        using (var forbiddenRelease = await dm.SendAsync(forbiddenSelfReleaseReq, ct))
+        {
+            forbiddenRelease.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
         var releaseLockReq = SendJsonRequest(HttpMethod.Post, $"/api/v1/kernel/locks/{lockRef}/release", "Demo interim review complete", new
         {
             study_ref = unversionedStudyRef,
@@ -289,10 +306,10 @@ public sealed class KernelDevelopmentTenantPostgresTests(ExecutionFormModulePost
         releaseLockReq.Headers.Add(
             GatewayHeaders.SigToken,
             TestSecurityContext.CreateSigToken(
-                DataManagerSubject,
+                DesignerLeadSubject,
                 Cadence.Kernel.Api.KernelLockEndpoints.ReleaseLockAction(lockRef),
                 Cadence.Kernel.Api.KernelLockEndpoints.ReleaseLockSemanticAction));
-        using (var releasedLock = await dm.SendAsync(releaseLockReq, ct))
+        using (var releasedLock = await designer.SendAsync(releaseLockReq, ct))
         {
             string body = await releasedLock.Content.ReadAsStringAsync(ct);
             releasedLock.StatusCode.Should().Be(HttpStatusCode.OK, body);
@@ -345,6 +362,7 @@ public sealed class KernelDevelopmentTenantPostgresTests(ExecutionFormModulePost
 
     private const string CrcSubject = "1a4345cc-364c-4b8b-881e-93bbea528b0a";
     private const string DataManagerSubject = "47a9d88f-73d7-4aca-9fd6-14b8e6e9284f";
+    private const string DesignerLeadSubject = "8808e058-a472-4f72-9970-a027eddf35bc";
     private const string SubjectParticipantId = "7a8b9c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d";
 
     private const string AuditCount =

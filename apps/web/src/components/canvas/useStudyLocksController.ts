@@ -4,11 +4,13 @@ import {
   kernelApi,
   type KernelLock,
   type KernelLockKind,
+  type KernelLockMilestone,
 } from "../../api/kernelApi";
 import { fetchStudyLocksResult } from "../../canvas/kernelLocks";
 import { getNodeDisplay, seedNodeSummary } from "../../canvas/nodeResolver";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import { useSignedKernelLock } from "../../composables/useSignedKernelLock";
+import { useAuthStore } from "../../stores/auth.js";
 import {
   unversionedNodeRef,
   useLockHierarchyPickers,
@@ -26,6 +28,7 @@ const LOCKS_RECOVERED_TARGETS = [
 ];
 
 export function useStudyLocksController(studyCodeGetter: () => string) {
+  const authStore = useAuthStore();
   const locks = ref<KernelLock[]>([]);
   const hiddenLocks = ref<{ more_exist: boolean; reasons: string[] }>({
     more_exist: false,
@@ -37,6 +40,7 @@ export function useStudyLocksController(studyCodeGetter: () => string) {
   const asOfInput = ref("");
 
   const applyKind = ref<KernelLockKind>("Frozen");
+  const selectedMilestone = ref<KernelLockMilestone>("InterimCut");
   const applyReason = ref("");
   const releaseReason = ref("");
 
@@ -90,6 +94,8 @@ export function useStudyLocksController(studyCodeGetter: () => string) {
     busy,
     outcome,
     modalOp,
+    signerUsername,
+    verifiedSignerRole,
     signatureModalProps,
     probePermissions,
     reloadReadiness,
@@ -99,6 +105,7 @@ export function useStudyLocksController(studyCodeGetter: () => string) {
   } = useSignedKernelLock({
     studyRef: () => studyRefBridge.value,
     scopeRef: () => pickers.applyScopeRef.value,
+    milestone: () => selectedMilestone.value,
     watchPermissions: false,
     onApplied: async () => {
       applyReason.value = "";
@@ -163,7 +170,7 @@ export function useStudyLocksController(studyCodeGetter: () => string) {
     { immediate: true }
   );
 
-  watch([studyRef, pickers.applyScopeRef, canApply], () => {
+  watch([studyRef, pickers.applyScopeRef, canApply, selectedMilestone], () => {
     void reloadReadiness();
   });
 
@@ -228,10 +235,96 @@ export function useStudyLocksController(studyCodeGetter: () => string) {
     openApply({
       scopeRef,
       kind: applyKind.value,
+      milestone: selectedMilestone.value,
       reason: applyReason.value,
       targetLabel: () => getNodeDisplay(scopeRef).label,
     });
   }
+
+  function isSelfLocked(entry: KernelLock): boolean {
+    if (entry.masked || entry.released || !entry.locked_by) return false;
+    const lockedByNorm = entry.locked_by.trim().toLowerCase();
+    if (!lockedByNorm) return false;
+    const storeUser = authStore?.user as
+      { username?: string; email?: string; id?: string } | null | undefined;
+    const storeIdentity = authStore?.identity as
+      { username?: string; email?: string; id?: string } | null | undefined;
+    const candidates = [
+      storeIdentity?.username,
+      storeIdentity?.email,
+      storeIdentity?.id,
+      storeUser?.username,
+      storeUser?.email,
+      storeUser?.id,
+      signerUsername.value,
+    ]
+      .filter(
+        (val): val is string => typeof val === "string" && val.trim().length > 0
+      )
+      .map((val) => val.trim().toLowerCase());
+    return candidates.some(
+      (candidate) =>
+        candidate === lockedByNorm || `person:${candidate}` === lockedByNorm
+    );
+  }
+
+  function coveringAncestorLock(entry: KernelLock): KernelLock | null {
+    if (entry.masked || entry.released || !entry.scope_kind) return null;
+    const entryKind = entry.scope_kind;
+    if (entryKind === "study") return null;
+
+    for (const candidate of locks.value) {
+      if (
+        candidate.masked ||
+        candidate.released ||
+        !candidate.scope_kind ||
+        candidate.ref === entry.ref
+      ) {
+        continue;
+      }
+      if (candidate.scope_kind === "study") {
+        return candidate;
+      }
+      if (
+        candidate.scope_kind === "study_site" &&
+        entryKind !== "study_site" &&
+        candidate.scope_ref &&
+        entry.study_site_ref &&
+        unversionedNodeRef(candidate.scope_ref) ===
+          unversionedNodeRef(entry.study_site_ref)
+      ) {
+        return candidate;
+      }
+      if (
+        candidate.scope_kind === "enrollment" &&
+        (entryKind === "collection_instance" || entryKind === "observation") &&
+        candidate.scope_ref &&
+        entry.enrollment_ref &&
+        unversionedNodeRef(candidate.scope_ref) ===
+          unversionedNodeRef(entry.enrollment_ref)
+      ) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  const latestCertificateLock = computed<KernelLock | null>(() => {
+    const withCert = locks.value.filter(
+      (entry) => !entry.masked && Boolean(entry.certificate)
+    );
+    if (withCert.length === 0) return null;
+    const activeUnrevoked = [...withCert]
+      .reverse()
+      .find((entry) => !entry.released && !entry.certificate?.revoked);
+    return activeUnrevoked ?? withCert[withCert.length - 1] ?? null;
+  });
+
+  const activeLockCount = computed(
+    () =>
+      locks.value.filter((entry) => !entry.masked && entry.released === false)
+        .length
+  );
 
   function openReleaseModal(lockRef: string, lockKind: string) {
     if (!releaseReason.value.trim()) {
@@ -269,6 +362,7 @@ export function useStudyLocksController(studyCodeGetter: () => string) {
     activeOnly,
     asOfInput,
     applyKind,
+    selectedMilestone,
     applyReason,
     releaseReason,
     quickDialog,
@@ -279,6 +373,9 @@ export function useStudyLocksController(studyCodeGetter: () => string) {
     studyError,
     canApply,
     canRelease,
+    verifiedSignerRole,
+    latestCertificateLock,
+    activeLockCount,
     readiness,
     readinessLoading,
     readinessGates,
@@ -290,6 +387,8 @@ export function useStudyLocksController(studyCodeGetter: () => string) {
     signatureModalProps,
     lockColumns,
     isApplyDisabled,
+    isSelfLocked,
+    coveringAncestorLock,
     ...pickers,
     reloadLocks,
     handleRetryStudyLocks,

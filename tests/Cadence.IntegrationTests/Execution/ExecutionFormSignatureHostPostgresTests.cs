@@ -377,9 +377,7 @@ public sealed class ExecutionFormSignatureHostPostgresTests(ExecutionFormModuleP
             ct);
         signedUnderFreeze.Superseded.Should().BeFalse();
 
-        await _scenario.Protocol.OkAsync(
-            await _scenario.Observations.ReleaseAsync(tenant, study, frozen.LockId, ct),
-            ct);
+        await _scenario.Observations.OkReleaseAsync(tenant, study, frozen.LockId, ct);
 
         await _scenario.Protocol.OkAsync(
             await _scenario.Observations.LockAsync(tenant, study, enrollmentScope, ct, LockKind.Locked),

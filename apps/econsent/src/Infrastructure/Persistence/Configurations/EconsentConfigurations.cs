@@ -351,3 +351,33 @@ public class BiometricLivenessVerificationConfiguration : IEntityTypeConfigurati
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
     }
 }
+
+public class ReplicatedScopeLockConfiguration : IEntityTypeConfiguration<ReplicatedScopeLock>
+{
+    public void Configure(EntityTypeBuilder<ReplicatedScopeLock> builder)
+    {
+        builder.ToTable("replicated_scope_locks");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.LockId).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.LockId);
+        builder.Property(x => x.StudyRef).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.StudyRef);
+        builder.Property(x => x.StudyCode).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.StudyCode);
+        builder.Property(x => x.SiteCode).HasMaxLength(255);
+        builder.HasIndex(x => x.SiteCode);
+        builder.Property(x => x.SubjectCode).HasMaxLength(255);
+        builder.HasIndex(x => x.SubjectCode);
+        builder.Property(x => x.ScopeKind).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.ScopeRef).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.LockKind).HasMaxLength(32).IsRequired();
+        builder.Property(x => x.Milestone).HasMaxLength(64).IsRequired();
+        builder.HasIndex(x => x.IsActive);
+        builder.Property(x => x.AppliedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReleasedBy).HasMaxLength(255);
+        builder.Property(x => x.ReleaseReason).HasMaxLength(1000);
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+    }
+}
