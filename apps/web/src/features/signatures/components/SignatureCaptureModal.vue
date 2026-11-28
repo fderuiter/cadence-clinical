@@ -546,6 +546,6 @@ button:focus-visible {
 }
 
 :deep(.signature-capture-backdrop) {
-  z-index: 10010;
+  z-index: 10010; /* deid-ignore: CSS stacking z-index, not a postal code */
 }
 </style>
