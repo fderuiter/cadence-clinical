@@ -502,11 +502,11 @@ Exits `1` when validation, schema reset, or migration fails.
 
 #### `cadence db migrate`
 
-Resolves the PostgreSQL connection string from `ConnectionStrings__cadence`, then `POSTGRES_CONNECTION_STRING`, and runs `Cadence.DatabaseMigrator` once across all 18 design-time `DbContext` assemblies (`kernel`, `identity_vault`, `execution`, `intelligence`, and the 15 `SearchPath` service schemas), pre-creating any missing `SearchPath` service schemas before applying pending EF Core migrations. Use `pnpm cadence migrations add <module> <Name>` (or `scripts/manage_migrations.sh` / `scripts/manage_migrations.ps1`) to add or script migrations across any of the 18 persistence modules.
+Resolves the PostgreSQL connection string from `ConnectionStrings__cadence`, then `POSTGRES_CONNECTION_STRING`, and runs `Cadence.DatabaseMigrator` once across all 18 design-time `DbContext` assemblies (`kernel`, `identity_vault`, `execution`, `intelligence`, and the 15 `SearchPath` service schemas), pre-creating any missing `SearchPath` service schemas before applying pending EF Core migrations. Use `pnpm cadence migrations` (for example `pnpm cadence migrations add <module> <Name>` or `pnpm cadence migrations script [module|all]`) to add or script migrations across any of the 18 persistence modules.
 
 ### `cadence migrations`
 
-Unified EF Core migration tooling across all 18 persistence modules in `PersistenceModuleCatalog` (`ctms`, `econsent`, `eisf`, `etmf`, `execution`, `executionmodule`, `fileshare`, `imaging`, `intelligence`, `interop`, `kernel`, `knowledge`, `notifications`, `org`, `payments`, `quality`, `safety`, `tickets`; [ADR-2536](adr/2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md)). `scripts/manage_migrations.sh` and `scripts/manage_migrations.ps1` are thin pass-through wrappers that delegate all eight subcommands (`add`, `script`, `list`, `verify`, `apply`, `bundle`, `optimize`, `seed`) to `cadence migrations`.
+Unified EF Core migration tooling across all 18 persistence modules in `PersistenceModuleCatalog` (`ctms`, `econsent`, `eisf`, `etmf`, `execution`, `executionmodule`, `fileshare`, `imaging`, `intelligence`, `interop`, `kernel`, `knowledge`, `notifications`, `org`, `payments`, `quality`, `safety`, `tickets`; [ADR-2536](adr/2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md)), providing eight subcommands (`add`, `script`, `list`, `verify`, `apply`, `bundle`, `optimize`, `seed`).
 
 #### `cadence migrations add <module> <name>`
 

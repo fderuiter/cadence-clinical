@@ -77,9 +77,6 @@ pnpm cadence migrations bundle [module|all]     # writes TestResults/migrations/
 pnpm cadence migrations optimize [module|all]   # writes CompiledModels/ per module (skips execution)
 pnpm cadence migrations apply [module|all]      # creates missing SearchPath schemas and migrates via Cadence.DatabaseMigrator
 pnpm cadence migrations seed [module|all]       # runs CLI seeders (execution; cites DevelopmentTenantBootstrap.cs for kernel)
-# Thin pass-through wrappers delegate all 8 actions directly to cadence migrations:
-scripts/manage_migrations.sh <add|script|list|verify|apply|bundle|optimize|seed> ...
-pwsh scripts/manage_migrations.ps1 <add|script|list|verify|apply|bundle|optimize|seed> ...
 ```
 
 Generated SQL review artifacts and migration bundles are written to `TestResults/migrations/` (gitignored) rather than checked

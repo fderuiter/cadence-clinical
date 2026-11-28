@@ -223,7 +223,7 @@ Inside each project, `Domain/` has no dependency on `Infrastructure/`, `Endpoint
 
 ### 10. Database migrations
 
-- Add a migration across any of the 18 persistence modules: `pnpm cadence migrations add <module> <MigrationName>` (automatically formats generated `.cs` files with `dotnet format whitespace` and `dotnet format style`; `scripts/manage_migrations.sh` and `pwsh scripts/manage_migrations.ps1` pass all actions through to `cadence migrations`).
+- Add a migration across any of the 18 persistence modules: `pnpm cadence migrations add <module> <MigrationName>` (automatically formats generated `.cs` files with `dotnet format whitespace` and `dotnet format style`).
 - Generate an idempotent SQL script for review (`TestResults/migrations/<module>.sql`), a self-contained migration bundle (`TestResults/migrations/<module>_migration_bundle`), or compiled EF Core models (`CompiledModels/`): `pnpm cadence migrations script [module|all]`, `pnpm cadence migrations bundle [module|all]`, `pnpm cadence migrations optimize [module|all]`.
 - Apply pending migrations (creating missing `SearchPath` schemas via `Cadence.DatabaseMigrator`) or run CLI seeders: `pnpm cadence migrations apply [module|all]`, `pnpm cadence migrations seed [module|all]`.
 - Verify snapshots, `.Designer.cs` companions, attributes, and DDL uniqueness offline: `pnpm cadence migrations verify [module|all]` — and verify migrations against real PostgreSQL (see pattern 7).

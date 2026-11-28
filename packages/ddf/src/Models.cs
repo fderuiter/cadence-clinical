@@ -2,12 +2,6 @@ using System.Collections.Generic;
 
 namespace Cadence.Ddf;
 
-public record CompilerWarning(
-    string Field,
-    object? GeneratedValue,
-    string WarningReason
-);
-
 /// <summary>An item's text in one language (a BCP 47 tag); the templates write one label and hint per language.</summary>
 public record ItemLocalization(
     string Language,
