@@ -14,6 +14,8 @@ namespace Cadence.Database.Tenancy;
 public static partial class StandaloneTenantIsolationSql
 {
     public const string IsolationPolicy = "tenant_isolation";
+    public const string PendingWorkDirectoryPolicy = "pending_work_directory";
+    public const string PendingWorkDirectorySetting = "cadence.pending_work_directory";
     public const string TenantSetting = "cadence.tenant_id";
     public const string CurrentTenantFunction = "kernel.current_tenant_id()";
     public const string MigrationsHistoryTable = "__EFMigrationsHistory";
@@ -59,8 +61,87 @@ public static partial class StandaloneTenantIsolationSql
     }
 
     /// <summary>
+    /// Creates a narrow <c>SECURITY DEFINER</c> directory function returning only distinct <c>tenant_id</c> UUIDs
+    /// with pending work matching <paramref name="predicateSql"/> (modeled on <c>kernel.tenant_ids()</c>, ADR-2548).
+    /// Under <c>FORCE ROW LEVEL SECURITY</c>, the accompanying <c>FOR SELECT</c> policy requires both the
+    /// function-local <c>cadence.pending_work_directory = 'on'</c> GUC and membership in the table owner role, so
+    /// <c>cadence_app</c> (<c>NOSUPERUSER NOBYPASSRLS</c>) cannot bypass RLS by setting the GUC directly.
+    /// </summary>
+    public static string EnablePendingWorkDirectoryFunctionSql(
+        string schema,
+        string table,
+        string functionName,
+        string predicateSql,
+        string role = "cadence_app")
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(predicateSql);
+        string s = Quote(schema);
+        string t = Quote(table);
+        string fn = Quote(functionName);
+        string r = Quote(role);
+        string qualifiedTable = $"{s}.{t}";
+        string regclassLiteral = $"{schema}.\"{table}\"";
+
+        return $"""
+            DROP POLICY IF EXISTS {PendingWorkDirectoryPolicy} ON {qualifiedTable};
+            CREATE POLICY {PendingWorkDirectoryPolicy} ON {qualifiedTable} FOR SELECT
+                USING (pg_catalog.current_setting('{PendingWorkDirectorySetting}', true) = 'on'
+                   AND pg_catalog.pg_has_role(current_user, (SELECT c.relowner FROM pg_catalog.pg_class c WHERE c.oid = '{regclassLiteral}'::regclass), 'MEMBER'));
+
+            CREATE OR REPLACE FUNCTION {s}.{fn}() RETURNS SETOF uuid
+            LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+            SET search_path = pg_catalog, pg_temp
+            AS $fn$
+            DECLARE
+                prev_setting text := pg_catalog.current_setting('{PendingWorkDirectorySetting}', true);
+            BEGIN
+                PERFORM pg_catalog.set_config('{PendingWorkDirectorySetting}', 'on', true);
+                RETURN QUERY
+                    SELECT DISTINCT t.tenant_id
+                    FROM {qualifiedTable} t
+                    WHERE {predicateSql}
+                    ORDER BY t.tenant_id;
+                PERFORM pg_catalog.set_config('{PendingWorkDirectorySetting}', COALESCE(prev_setting, ''), true);
+            EXCEPTION
+                WHEN OTHERS THEN
+                    PERFORM pg_catalog.set_config('{PendingWorkDirectorySetting}', COALESCE(prev_setting, ''), true);
+                    RAISE;
+            END;
+            $fn$;
+            REVOKE ALL ON FUNCTION {s}.{fn}() FROM PUBLIC;
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{role}') THEN
+                    GRANT EXECUTE ON FUNCTION {s}.{fn}() TO {r};
+                END IF;
+            END $$;
+            """;
+    }
+
+    public static string DisablePendingWorkDirectoryFunctionSql(
+        string schema,
+        string table,
+        string functionName,
+        bool dropPolicy = true)
+    {
+        string s = Quote(schema);
+        string t = Quote(table);
+        string fn = Quote(functionName);
+        string qualifiedTable = $"{s}.{t}";
+        string dropPolicySql = dropPolicy
+            ? $"DROP POLICY IF EXISTS {PendingWorkDirectoryPolicy} ON {qualifiedTable};"
+            : string.Empty;
+
+        return $"""
+            DROP FUNCTION IF EXISTS {s}.{fn}();
+            {dropPolicySql}
+            """;
+    }
+
+    /// <summary>
     /// Grants the non-superuser, <c>NOBYPASSRLS</c> application role (<c>cadence_app</c>) DML privileges on a
-    /// standalone module schema while revoking privileges on <c>__EFMigrationsHistory</c>.
+    /// standalone module schema (plus <c>EXECUTE</c> on narrow zero-arg <c>*_tenant_ids()</c> directory functions)
+    /// while revoking privileges on <c>__EFMigrationsHistory</c>.
     /// </summary>
     public static string GrantAppRoleSql(string schema, string role = "cadence_app")
     {
@@ -68,6 +149,8 @@ public static partial class StandaloneTenantIsolationSql
         string r = Quote(role);
         return $"""
             DO $$
+            DECLARE
+                fn_sig text;
             BEGIN
                 IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{role}') THEN
                     GRANT USAGE ON SCHEMA {s} TO {r};
@@ -76,6 +159,16 @@ public static partial class StandaloneTenantIsolationSql
                     IF to_regclass('{schema}."{MigrationsHistoryTable}"') IS NOT NULL THEN
                         REVOKE ALL ON {s}."{MigrationsHistoryTable}" FROM {r};
                     END IF;
+                    FOR fn_sig IN
+                        SELECT p.oid::regprocedure::text
+                        FROM pg_catalog.pg_proc p
+                        JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+                        WHERE n.nspname = '{schema}'
+                          AND p.proname LIKE '%\_tenant\_ids' ESCAPE '\'
+                          AND p.pronargs = 0
+                    LOOP
+                        EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO %I', fn_sig, '{role}');
+                    END LOOP;
                 END IF;
             END $$;
             """;

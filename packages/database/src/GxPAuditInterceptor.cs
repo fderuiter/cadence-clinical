@@ -41,6 +41,10 @@ public class GxPAuditInterceptor(
             return await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
         }
 
+        Guid targetTenantId = await Tenancy.StandaloneTenantSaveChangesInterceptor
+            .StampTenantIdsAsync(context, cancellationToken, forceResolveForAuditEntries: true)
+            .ConfigureAwait(false);
+
         // Resolved only once something is audited; a provider with no actor throws here and the save fails.
         string currentUser = currentUserProvider();
         if (string.IsNullOrWhiteSpace(currentUser))
@@ -60,9 +64,10 @@ public class GxPAuditInterceptor(
             }
             else if (entry.State == EntityState.Modified)
             {
-                // From the loaded value, not the current one, so a retried save does not count twice.
+                // Non-concurrency-token VersionIndex properties still advance from OriginalValue + 1 here;
+                // concurrency tokens were already incremented once above.
                 var versionProp = entry.Metadata.FindProperty(nameof(IGxPAuditable.VersionIndex));
-                if (versionProp is not null)
+                if (versionProp is { IsConcurrencyToken: false })
                 {
                     var propEntry = entry.Property(versionProp.Name);
                     if (versionProp.ClrType == typeof(long))
@@ -140,7 +145,7 @@ public class GxPAuditInterceptor(
             chain.Append(draft);
         }
 
-        await Tenancy.StandaloneTenantSaveChangesInterceptor.StampTenantIdsAsync(context, cancellationToken).ConfigureAwait(false);
+        Tenancy.StandaloneTenantSaveChangesInterceptor.StampAuditEntries(context, chain.Added, targetTenantId);
         return await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
     }
 

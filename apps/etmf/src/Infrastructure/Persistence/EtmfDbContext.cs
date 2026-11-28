@@ -50,5 +50,10 @@ public sealed class EtmfDbContext(DbContextOptions<EtmfDbContext> options) : DbC
 
         modelBuilder.AddTransactionalOutboxEntities();
         modelBuilder.ConfigureStandaloneTenancy(this);
+
+        modelBuilder.Entity<TmfExportJob>()
+            .HasIndex(StandaloneTenantModelExtensions.TenantPropertyName, nameof(TmfExportJob.CreatedAt))
+            .HasDatabaseName("IX_tmf_export_jobs_queued_tenant_created")
+            .HasFilter("\"Status\" = 'QUEUED'");
     }
 }

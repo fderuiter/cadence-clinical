@@ -251,6 +251,12 @@ namespace Cadence.Apps.Fileshare.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UploadedBy");
 
+                    b.HasIndex(new[] { "TenantId" }, "IX_file_records_pending_conversion_tenant")
+                        .HasFilter("\"ConversionStatus\" = 'PENDING' AND NOT \"IsDeleted\"");
+
+                    b.HasIndex(new[] { "TenantId" }, "IX_file_records_pending_transcode_tenant")
+                        .HasFilter("\"TranscodeStatus\" = 'PENDING' AND NOT \"IsDeleted\"");
+
                     b.ToTable("file_records", (string)null);
                 });
 

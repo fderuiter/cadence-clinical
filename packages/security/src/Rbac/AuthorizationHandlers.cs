@@ -224,11 +224,14 @@ public sealed class TenantScopeAuthorizationHandler : AuthorizationHandler<Tenan
             return;
         }
 
-        ITenantAccessVerifier? verifier = httpContext?.RequestServices?.GetService<ITenantAccessVerifier>();
-        if (verifier is not null && !await verifier.IsActiveTenantAsync(tenantCode, httpContext!.RequestAborted).ConfigureAwait(false))
+        if (!RequestTenantResolutionCache.TryGet(httpContext, tenantCode, out _))
         {
-            context.Fail(new AuthorizationFailureReason(this, ClinicalScopeGuard.TenantAccessDeniedDetail));
-            return;
+            ITenantAccessVerifier? verifier = httpContext?.RequestServices?.GetService<ITenantAccessVerifier>();
+            if (verifier is not null && !await verifier.IsActiveTenantAsync(tenantCode, httpContext!.RequestAborted).ConfigureAwait(false))
+            {
+                context.Fail(new AuthorizationFailureReason(this, ClinicalScopeGuard.TenantAccessDeniedDetail));
+                return;
+            }
         }
 
         context.Succeed(requirement);

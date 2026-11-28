@@ -11,18 +11,18 @@ migration application.
 ## Public APIs / Exports
 
 - `AddCadencePostgresDbContext<TContext>()`: registers the service's DbContext against PostgreSQL in its own
-  module schema, with transient-failure retries, a readiness health check (tag `ready`, served at `/healthz/ready`)
-  and migrations. For standalone tenant-isolated schemas (`enableStandaloneTenancy: true`, default), it also wires
-  `ICurrentTenantAccessor` (`HttpContextCurrentTenantAccessor` + `ITenantScope`), `ITenantCodeResolver`
-  (`PostgresKernelTenantCodeResolver` via `kernel.tenant_id_by_code(text)`), `StandaloneTenantConnectionInterceptor`
-  (sets `cadence.tenant_id` on open and resets to `''` on close), and `StandaloneTenantSaveChangesInterceptor`
-  (stamps verified `tenant_id` shadow columns on insert, blocks cross-tenant mutation, and refuses writes when `ICurrentTenantAccessor.IsTenantReadOnly` is true), backing PostgreSQL
+  module schema over a single shared `NpgsqlDataSource`, with transient-failure retries, a readiness health check (tag `ready`, served at `/healthz/ready`)
+  and migrations. For standalone tenant-isolated schemas, it wires
+  `ICurrentTenantAccessor` (`CurrentTenantAccessor` + `ITenantScope`, memoizing active `(tenantCode, tenantId)` resolutions per HTTP request via `RequestTenantResolutionCache` while honoring `ITenantScope.Bind` / `Suppress` overrides), `ITenantCodeResolver`
+  (`PostgresTenantCodeResolver` over the shared `NpgsqlDataSource` via `kernel.tenant_id_by_code(text)`, caching active mappings for 5 seconds via `IClock` while never caching `null` or inactive tenants), `StandaloneTenantConnectionInterceptor` + scoped `StandaloneDbContextLeaseManager`
+  (acquires one connection lease per scoped `DbContext` across reads, audit tip prefetches, `PostgresSigTokenUseStore`, and saves; rebinds `cadence.tenant_id` on mid-scope `ITenantScope` changes; and resets `cadence.tenant_id` to `''` before returning the connection to the pool), and `StandaloneTenantSaveChangesInterceptor`
+  (executes a single `StampTenantIdsAsync` and concurrency-token pass per save, blocks cross-tenant mutation, and refuses writes when `ICurrentTenantAccessor.IsCurrentTenantReadOnly` is true), backing PostgreSQL
   `ENABLE` + `FORCE ROW LEVEL SECURITY` (`tenant_isolation` using `kernel.current_tenant_id()`,
   [ADR-2548](../../docs/adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md)). By default (`enableDefaultGxPAudit: true`), it also registers scoped `IAuditActorScope` and attaches a single `GxPAuditInterceptor` per `DbContext` composition that resolves the actor from `IAuditActorScope` (`svc:` service accounts for background workers, MassTransit consumers, and seeders) or the verified HTTP caller, failing closed when neither is present. The optional
   `configureOptions(serviceProvider, options)` runs per scope after the provider is set for host-specific options.
 - `ApplyStandaloneTenancy()` (`StandaloneTenantModelExtensions`) and `StandaloneTenantIsolationSql`: configure the
   `tenant_id uuid NOT NULL` shadow property across entity types (plus matching non-relational EF Core query filters
-  for in-memory test hosts) and emit idempotent schema migration DDL for `ENABLE` / `FORCE ROW LEVEL SECURITY`.
+  for in-memory test hosts) and emit idempotent schema migration DDL for `ENABLE` / `FORCE ROW LEVEL SECURITY` plus narrow zero-argument `SECURITY DEFINER` pending-work directory functions (`EnablePendingWorkDirectoryFunctionSql`).
 - `WithModuleSchema(connectionString, schema)`: scopes a connection to one module schema (search path
   `<schema>,public`, ADR-2447). `ModuleSchemaFor<TContext>()` derives the default name (`CtmsDbContext` is `ctms`).
 - `ResolvePostgresConnectionString(...)`: reads `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`.

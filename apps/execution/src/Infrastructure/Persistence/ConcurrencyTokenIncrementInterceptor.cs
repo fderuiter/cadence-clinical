@@ -1,10 +1,14 @@
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Database;
 using Cadence.Database.Concurrency;
+using Cadence.Database.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 
@@ -79,9 +83,19 @@ public sealed class ConcurrencyTokenIncrementInterceptor : SaveChangesIntercepto
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        IncrementConcurrencyTokens(eventData.Context);
+        if (eventData.Context is { } context && !HasDelegatingSaveInterceptor(context))
+        {
+            IncrementConcurrencyTokens(context);
+        }
+
         return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
+
+    private static bool HasDelegatingSaveInterceptor(DbContext context) =>
+        context.GetService<IDbContextOptions>()?
+            .FindExtension<CoreOptionsExtension>()?
+            .Interceptors?
+            .Any(static i => i is StandaloneTenantSaveChangesInterceptor or GxPAuditInterceptor) is true;
 
     private static void IncrementConcurrencyTokens(DbContext? context) =>
         StandaloneConcurrencyTokenInterceptor.IncrementConcurrencyTokens(context);
