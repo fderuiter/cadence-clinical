@@ -755,30 +755,79 @@ function createDefaultContextualSops(): Record<
       reasonForChange: "Updated for Clinical Canvas v2",
       updatedAt: "2026-06-10T10:00:00Z",
     }),
-    ...buildCanvasSectionSopEntries("stage=design&section=protocol-versions", {
-      mappingPrefix: "map-can-proto",
-      stageFallback: "design",
-      persona: "sponsor_designer",
-      priority: 45,
-      articleId: "art-can-proto",
-      versionId: "ver-can-110",
-      title:
-        "SOP-CAN-110: Protocol Versions, USDM Draft Import & Amendment Lineage",
-      slug: "sop-can-110-protocol-versions",
-      tags: ["canvas", "protocol-versions", "usdm", "odm", "design"],
-      categoryId: "cat-study-authoring",
-      categoryName: "Study Authoring & MDR",
-      authorUserId: "sponsor_study_lead",
-      sectionAnchor: "#canvas-protocol-versions",
-      heading: "Protocol Version Authoring & Publication",
-      summary:
-        "Governs ODM XML and USDM JSON protocol draft imports, Schedule of Activities inspection, and immutable version promotion.",
-      stepsHeading: "Key Controls",
-      steps: [
-        "Validate USDM schedule structure, visit windows, and form bindings before publishing a new protocol version.",
-        "Record a 21 CFR Part 11 justification whenever importing or superseding protocol versions.",
-      ],
-    }),
+    ...(() => {
+      const protoBaseSpec = {
+        persona: "sponsor_designer",
+        priority: 45,
+        articleId: "art-can-proto",
+        versionId: "ver-can-110",
+        title:
+          "SOP-CAN-110: Protocol Versions, USDM Draft Import & Amendment Lineage",
+        slug: "sop-can-110-protocol-versions",
+        categoryId: "cat-study-authoring",
+        categoryName: "Study Authoring & MDR",
+        authorUserId: "sponsor_study_lead",
+        stepsHeading: "Key Controls",
+        steps: [
+          "Validate USDM schedule structure, visit windows, and form bindings before publishing a new protocol version.",
+          "Record a 21 CFR Part 11 justification whenever importing or superseding protocol versions.",
+        ],
+      };
+      return {
+        ...buildCanvasSectionSopEntries(
+          "stage=design&section=protocol-versions",
+          {
+            ...protoBaseSpec,
+            mappingPrefix: "map-can-proto",
+            stageFallback: "design",
+            tags: [
+              "canvas",
+              "protocol-versions",
+              "schedule-of-activities",
+              "usdm",
+              "odm",
+              "design",
+            ],
+            sectionAnchor: "#canvas-protocol-versions",
+            heading: "Protocol Version Authoring & Publication",
+            summary:
+              "Governs ODM XML and USDM JSON protocol draft imports, Schedule of Activities inspection, and immutable version promotion.",
+            extraSections: [
+              {
+                id: "canvas-schedule-of-activities",
+                heading: "Schedule of Activities Matrix & Visit Windows",
+                body: "Inspect epochs, visit windows, collection rows, CDISC concepts, and protocol footnotes across approved and draft protocol versions.",
+              },
+            ],
+          }
+        ),
+        ...buildCanvasSectionSopEntries(
+          "stage=design&section=schedule-of-activities",
+          {
+            ...protoBaseSpec,
+            mappingPrefix: "map-can-soa",
+            tags: [
+              "canvas",
+              "schedule-of-activities",
+              "protocol-versions",
+              "usdm",
+              "design",
+            ],
+            sectionAnchor: "#canvas-schedule-of-activities",
+            heading: "Schedule of Activities Matrix & Visit Windows",
+            summary:
+              "Governs Schedule of Activities epoch matrices, visit windows, collection specifications, CDISC concepts, and protocol footnotes.",
+            extraSections: [
+              {
+                id: "canvas-protocol-versions",
+                heading: "Protocol Version Authoring & Publication",
+                body: "Governs ODM XML and USDM JSON protocol draft imports, amendment lineage review, and immutable version promotion.",
+              },
+            ],
+          }
+        ),
+      };
+    })(),
     ...(() => {
       const sitesSpec = {
         persona: "super_admin",
