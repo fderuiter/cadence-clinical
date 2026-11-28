@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Linq;
 
+using Cadence.ToolingCore.Primitives;
+
 namespace Cadence.ToolingCore.Services;
 
 public static class PathPatternValidatorService
@@ -12,7 +14,7 @@ public static class PathPatternValidatorService
         bool preCommit = false,
         GitIndexReader? indexReader = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         Console.WriteLine("Validating file path patterns and directory conventions...");
 
         if (files is { Length: 0 })
@@ -120,6 +122,4 @@ public static class PathPatternValidatorService
             return 0;
         }
     }
-
-    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 }

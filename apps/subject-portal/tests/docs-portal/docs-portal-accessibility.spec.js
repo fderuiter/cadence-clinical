@@ -197,7 +197,36 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
       (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
       0
     );
-    expect(dataRowCount).toBeGreaterThanOrEqual(715);
+    expect(dataRowCount).toBeGreaterThanOrEqual(28);
+
+    const shardHrefs = new Set(
+      Array.from(
+        tbodyBlocks.join("\n").matchAll(/href="([^"#?]+)"/gi),
+        (m) => m[1]
+      )
+    );
+    let shardedEntryCount = 0;
+    for (const rawHref of shardHrefs) {
+      let relShard = rawHref
+        .replace(/^\/cadence-clinical\//, "")
+        .replace(/^\.\//, "");
+      if (relShard.endsWith("/")) relShard += "index.html";
+      if (!relShard.endsWith(".html")) relShard += ".html";
+      const shardFullPath = path.join(docsDistDir, relShard);
+      expect(fs.existsSync(shardFullPath)).toBe(true);
+      const shardHtml = fs.readFileSync(shardFullPath, "utf8");
+      const shardTbodies = Array.from(
+        shardHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
+        (m) => m[1]
+      );
+      const shardRows = shardTbodies.reduce(
+        (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
+        0
+      );
+      const shardAdrItems = (shardHtml.match(/<li><a\s/gi) || []).length;
+      shardedEntryCount += shardRows + shardAdrItems;
+    }
+    expect(shardedEntryCount).toBeGreaterThanOrEqual(715);
   });
 
   test("navbar items and portal layout render without clipping, overlap, or horizontal scroll across 375px–1920px viewports", async ({

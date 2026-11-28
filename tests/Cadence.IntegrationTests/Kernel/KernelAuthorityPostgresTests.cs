@@ -159,7 +159,7 @@ public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresF
         Tick();
 
         DelegateGrant Delegation(GrantId parent, Actor grantee, string capability, AuthorityScope scope, DateTimeOffset? to) =>
-            new(tenant, GrantId.New(), parent, grantee, capability, null, scope, from, to, false, Key(), "DOA");
+            new(tenant, GrantId.New(), parent, grantee, capability, null, scope, from, to, false, Key(), "Delegation of authority entry");
 
         (await SendAs(Pi, Delegation(piGrant.GrantId, Crc, "artifact.register", AuthorityScope.Study(study), from.AddDays(30)), ct)).Error!.Code
             .Should().Be(AuthorityErrors.DelegationExceedsParent.Code);
@@ -337,7 +337,7 @@ public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresF
         var from = _fixture.Clock.UtcNow;
 
         RecordQualification Qualification(ArtifactVersionId evidence, QualificationKind kind = QualificationKind.Training, ProtocolVersionId? version = null) =>
-            new(tenant, QualificationId.New(), Crc, kind, "gcp", version, evidence, from, null, Key(), "Filed");
+            new(tenant, QualificationId.New(), Crc, kind, "gcp", version, evidence, from, null, Key(), "Qualification evidence filed");
 
         (await _fixture.Sender.SendAsync(Qualification(ethicsApproval), cancellationToken: ct)).Error.Should().Be(QualificationErrors.EvidenceInvalid);
         (await _fixture.Sender.SendAsync(Qualification(ArtifactVersionId.New()), cancellationToken: ct)).Error.Should().Be(QualificationErrors.EvidenceInvalid);

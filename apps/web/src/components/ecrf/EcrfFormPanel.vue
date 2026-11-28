@@ -245,6 +245,10 @@ import { useEcrfForm } from "../../composables/useEcrfForm";
 import { useEcrfSdv } from "../../composables/useEcrfSdv";
 import { useFormQueries } from "../../composables/useFormQueries";
 import { useAuthStore } from "../../stores/auth.js";
+import {
+  alignElementBelowStickyChrome,
+  ensureFocusedElementClearsStickyChrome,
+} from "../../utils/stickyChromeOffset";
 import EcrfAssertionsList from "./EcrfAssertionsList.vue";
 import EcrfFormOpener, {
   type CanvasFormEnrollmentContext,
@@ -560,7 +564,91 @@ watch(
   }
 );
 
-defineExpose({ dirty, form });
+let lastAlignedOpenerKey = "";
+let openerHandoffSeq = 0;
+
+async function focusNewFormOpener(forceKey?: string) {
+  const seq = ++openerHandoffSeq;
+  await nextTick();
+  await nextTick();
+  if (seq !== openerHandoffSeq || form.value || props.formId) return;
+  if (typeof document === "undefined") return;
+  const collectedAtEl = document.getElementById("ecrf-collected-at");
+  if (!collectedAtEl) return;
+  if (forceKey) {
+    lastAlignedOpenerKey = forceKey;
+  }
+  alignElementBelowStickyChrome("#ecrf-form-new");
+  const focused = await handoffFocus(
+    [
+      "#ecrf-collected-at",
+      "#ecrf-collection-spec",
+      "#canvas-form-workspace-title",
+      "#ecrf-form-title",
+    ],
+    {
+      awaitNextTick: false,
+      scrollIfOffscreen: true,
+      scrollTarget: "#ecrf-form-new",
+    }
+  );
+  if (focused) {
+    alignElementBelowStickyChrome("#ecrf-form-new");
+    ensureFocusedElementClearsStickyChrome(focused, { programmatic: true });
+  }
+}
+
+watch(
+  [
+    () => Boolean(form.value),
+    () => props.formId ?? "",
+    () => props.collectionSpecId ?? "",
+    () => props.plannedActivityId ?? "",
+    () => Boolean(props.scheduleLoading),
+    () => Boolean(props.enrollmentContext?.scheduleLoading),
+    () => props.scheduleError ?? "",
+    () => props.enrollmentContext?.scheduleError ?? "",
+    () =>
+      props.enrollmentContext?.governanceStatus ??
+      props.scheduleOptions?.governanceStatus ??
+      "",
+    () => props.enrollmentContext?.enrollmentId ?? props.enrollmentId ?? "",
+  ],
+  ([
+    hasLoadedForm,
+    formId,
+    specId,
+    visitId,
+    schedLoading,
+    ctxSchedLoading,
+    schedErr,
+    ctxSchedErr,
+    govStatus,
+    enrId,
+  ]) => {
+    if (
+      hasLoadedForm ||
+      formId ||
+      !specId ||
+      schedLoading ||
+      ctxSchedLoading ||
+      schedErr ||
+      ctxSchedErr ||
+      govStatus === "NoEffectiveVersion"
+    ) {
+      if (hasLoadedForm || formId || !specId) {
+        lastAlignedOpenerKey = "";
+      }
+      return;
+    }
+    const openerKey = `${enrId || "standalone"}::${specId}::${visitId}`;
+    if (openerKey === lastAlignedOpenerKey) return;
+    void focusNewFormOpener(openerKey);
+  },
+  { immediate: true, flush: "post" }
+);
+
+defineExpose({ dirty, form, focusNewFormOpener });
 watch(dirty, (value) => emit("dirty-change", value));
 onUnmounted(() => {
   if (typeof window !== "undefined") {

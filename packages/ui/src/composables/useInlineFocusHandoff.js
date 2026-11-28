@@ -95,20 +95,78 @@ const ensureProgrammaticTabIndex = (el) => {
   }
 };
 
-const applyInlineFocus = (el, options = {}) => {
+const PROGRAMMATIC_FOCUS_KEY = Symbol.for("cadence.programmaticFocusState");
+
+export const resolveStickyTopOffsetPx = (options = {}) => {
+  if (
+    typeof options.stickyOffset === "number" &&
+    Number.isFinite(options.stickyOffset)
+  ) {
+    return Math.max(0, options.stickyOffset);
+  }
+  if (typeof document === "undefined" || !document.documentElement) {
+    return 0;
+  }
+  let raw = "";
+  if (
+    document.documentElement.style &&
+    typeof document.documentElement.style.getPropertyValue === "function"
+  ) {
+    raw = document.documentElement.style
+      .getPropertyValue("--sticky-chrome-offset")
+      .trim();
+  }
+  if (
+    !raw &&
+    typeof window !== "undefined" &&
+    typeof window.getComputedStyle === "function"
+  ) {
+    try {
+      raw = window
+        .getComputedStyle(document.documentElement)
+        .getPropertyValue("--sticky-chrome-offset")
+        .trim();
+    } catch {
+      raw = "";
+    }
+  }
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+const resolveScrollAnchor = (candidate, container) => {
+  if (!candidate) return null;
+  const raw = resolveOption(candidate);
+  if (!raw) return null;
+  if (typeof raw === "string") {
+    return queryDocumentSelector(raw, container);
+  }
+  return raw.$el || raw;
+};
+
+const getWindowScrollY = () => {
+  if (typeof window === "undefined") return 0;
+  return (
+    window.scrollY ??
+    window.pageYOffset ??
+    (typeof document !== "undefined"
+      ? document.documentElement?.scrollTop
+      : 0) ??
+    0
+  );
+};
+
+const hasMeasuredRect = (rect) =>
+  Boolean(rect && (rect.width > 0 || rect.height > 0 || !isJSDOMEnv()));
+
+const applyInlineFocus = (el, options = {}, container = null) => {
   ensureProgrammaticTabIndex(el);
   const scrollIfOffscreen = Boolean(options.scrollIfOffscreen);
   const preventScroll =
     options.preventScroll !== undefined ? Boolean(options.preventScroll) : true;
 
-  if (
-    scrollIfOffscreen &&
-    typeof window !== "undefined" &&
-    !isJSDOMEnv() &&
-    typeof el.getBoundingClientRect === "function" &&
-    typeof el.scrollIntoView === "function"
-  ) {
-    const rect = el.getBoundingClientRect();
+  if (scrollIfOffscreen && typeof window !== "undefined") {
+    const minClearTop = resolveStickyTopOffsetPx(options);
     const vh =
       window.innerHeight ||
       (typeof document !== "undefined" &&
@@ -119,16 +177,59 @@ const applyInlineFocus = (el, options = {}) => {
       (typeof document !== "undefined" &&
         document.documentElement?.clientWidth) ||
       0;
-    const isOffscreen =
-      vh > 0 &&
-      (rect.bottom < 0 ||
-        rect.top > vh ||
-        (vw > 0 && (rect.right < 0 || rect.left > vw)));
-    if (isOffscreen) {
-      el.scrollIntoView({ block: "nearest", inline: "nearest" });
+
+    const scrollAnchor = resolveScrollAnchor(options.scrollTarget, container);
+    if (
+      scrollAnchor &&
+      typeof scrollAnchor.getBoundingClientRect === "function"
+    ) {
+      const anchorRect = scrollAnchor.getBoundingClientRect();
+      if (hasMeasuredRect(anchorRect) && vh > 0) {
+        if (
+          (anchorRect.bottom < minClearTop || anchorRect.top > vh) &&
+          typeof scrollAnchor.scrollIntoView === "function"
+        ) {
+          scrollAnchor.scrollIntoView({ block: "start", inline: "nearest" });
+        }
+        const updatedAnchorRect = scrollAnchor.getBoundingClientRect();
+        const scrollY = getWindowScrollY();
+        if (typeof window.scrollBy === "function") {
+          if (updatedAnchorRect.top < minClearTop && scrollY > 0) {
+            window.scrollBy(0, Math.floor(updatedAnchorRect.top - minClearTop));
+          } else if (updatedAnchorRect.top > vh - 80) {
+            window.scrollBy(0, Math.ceil(updatedAnchorRect.top - minClearTop));
+          }
+        }
+      }
+    }
+
+    if (typeof el.getBoundingClientRect === "function") {
+      let rect = el.getBoundingClientRect();
+      if (hasMeasuredRect(rect) && vh > 0) {
+        const isOffscreen =
+          rect.bottom < minClearTop ||
+          rect.top > vh ||
+          (vw > 0 && (rect.right < 0 || rect.left > vw));
+        if (isOffscreen && typeof el.scrollIntoView === "function") {
+          el.scrollIntoView({ block: "nearest", inline: "nearest" });
+          rect = el.getBoundingClientRect();
+        }
+        const scrollY = getWindowScrollY();
+        if (typeof window.scrollBy === "function") {
+          if (rect.top < minClearTop && scrollY > 0) {
+            window.scrollBy(0, Math.floor(rect.top - minClearTop));
+          } else if (
+            rect.bottom > vh &&
+            rect.height <= Math.max(48, vh - minClearTop)
+          ) {
+            window.scrollBy(0, Math.ceil(rect.bottom - vh + 12));
+          }
+        }
+      }
     }
   }
 
+  globalThis[PROGRAMMATIC_FOCUS_KEY] = { target: el, at: Date.now() };
   try {
     el.focus({ preventScroll });
   } catch {
@@ -191,7 +292,7 @@ export async function handoffFocus(targets, options = {}) {
     container
   );
   if (el) {
-    applyInlineFocus(el, options);
+    applyInlineFocus(el, options, container);
     return el;
   }
 
