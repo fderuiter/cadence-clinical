@@ -98,4 +98,4 @@ Validation commands such as `validate-readmes`, `validate-markdown`, `validate-i
 - `tests/Cadence.UnitTests/Packages/DatabaseResetServiceTests.cs`: `ConnectionStrings__cadence` -> `POSTGRES_CONNECTION_STRING`
   precedence, `Production` environment rejection, and fail-closed `NpgsqlConnectionStringBuilder` host validation across
   PostgreSQL URIs and key-value strings.
-- Architecture rules cover the assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
+- Architecture rules cover the assembly (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`), including `PackageFileSizeSentinelTests` enforcing the 500-non-empty-line vertical-slice ceiling across non-registry C# files (`QualityGates.cs` and `CiPlan.cs` exempt) and zero private `FindRepoRoot` duplicates.

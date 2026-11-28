@@ -2682,6 +2682,9 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await openRecordLink.click();
 
     await expect(page.locator("#participant-record")).toBeVisible();
+    const openCasebookDrawerBtn = page.locator("#btn-open-casebook-drawer");
+    await expect(openCasebookDrawerBtn).toBeVisible();
+    await openCasebookDrawerBtn.click();
     const exportCasebookBtn = page.locator("#btn-export-casebook");
     await expect(exportCasebookBtn).toBeVisible();
     await exportCasebookBtn.click();
@@ -2696,6 +2699,8 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     expect(shaBox!.x + shaBox!.width).toBeLessThanOrEqual(320.5);
     await expectPageWithin320("ParticipantRecord (with SHA-256 digest)");
     await expectNoWcagViolations(page, "ParticipantRecord at 320x640");
+    await page.keyboard.press("Escape");
+    await expect(openCasebookDrawerBtn).toBeFocused();
 
     // 4. ProtocolVersionsSection.vue (.scrollable-table-wrapper)
     await gotoHashRoute(

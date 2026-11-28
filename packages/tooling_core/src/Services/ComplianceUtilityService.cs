@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
+using Cadence.ToolingCore.Primitives;
+
 namespace Cadence.ToolingCore.Services;
 
 public static class ComplianceUtilityService
@@ -13,7 +15,7 @@ public static class ComplianceUtilityService
 
     public static int ExecuteComplianceUtility(bool sanitize = false, string[]? targetFiles = null, string? docsDir = null, string? repoRoot = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         Console.WriteLine($"Executing GxP compliance utility for root '{repoRoot}'...");
 
         if (sanitize)
@@ -36,7 +38,7 @@ public static class ComplianceUtilityService
         bool preCommit = false,
         GitIndexReader? indexReader = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         if (targetFiles is { Length: 0 })
         {
             Console.WriteLine("✔ No staged Markdown files to check for requirement tag casing.");
@@ -184,6 +186,4 @@ public static class ComplianceUtilityService
 
         return updatedCount;
     }
-
-    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 }

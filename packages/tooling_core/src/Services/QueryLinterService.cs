@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Linq;
 
+using Cadence.ToolingCore.Primitives;
+
 namespace Cadence.ToolingCore.Services;
 
 public static class QueryLinterService
@@ -12,7 +14,7 @@ public static class QueryLinterService
         bool preCommit = false,
         GitIndexReader? indexReader = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         Console.WriteLine("Linting database and ORM query statements...");
 
         if (files is { Length: 0 })
@@ -129,6 +131,4 @@ public static class QueryLinterService
                normalized.StartsWith(".cadence/", StringComparison.OrdinalIgnoreCase) ||
                normalized.StartsWith(".venv/", StringComparison.OrdinalIgnoreCase);
     }
-
-    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 }

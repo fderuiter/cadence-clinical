@@ -1,6 +1,9 @@
+import { handoffFocus } from "ui";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { appScrollBehavior } from "../src/router/index.js";
 import {
   FOCUS_RING_CLEARANCE_PX,
+  alignElementBelowStickyChrome,
   clearCanvasStickyTopbarHeight,
   clearShellStickyHeaderHeight,
   ensureFocusedElementClearsStickyChrome,
@@ -122,7 +125,7 @@ describe("stickyChromeOffset synchronization (ADR-2663)", () => {
     expect(syncRootStickyChromeOffset().released).toBe(false);
   });
 
-  it("scrolls focused main controls out from behind sticky chrome while ignoring pointer interactions and sticky header buttons", () => {
+  it("scrolls focused main controls out from behind sticky chrome while ignoring pointer interactions and sticky header buttons", async () => {
     updateShellStickyHeaderHeight(48);
     updateCanvasStickyTopbarHeight(44, { inAppShell: true });
     window.scrollY = 220;
@@ -165,8 +168,147 @@ describe("stickyChromeOffset synchronization (ADR-2663)", () => {
     ensureFocusedElementClearsStickyChrome(btn);
     expect(scrollBySpy).not.toHaveBeenCalled();
 
+    // Explicit programmatic focus clears sticky chrome even immediately after pointerdown
+    recordStickyChromePointerDown();
+    ensureFocusedElementClearsStickyChrome(btn, { programmatic: true });
+    expect(scrollBySpy).toHaveBeenCalledWith(
+      0,
+      30 - (92 + FOCUS_RING_CLEARANCE_PX)
+    );
+
+    // handoffFocus marks target as programmatic so focus listeners bypass pointer guard too
+    scrollBySpy.mockClear();
+    recordStickyChromePointerDown();
+    await handoffFocus(btn, { awaitNextTick: false });
+    ensureFocusedElementClearsStickyChrome(btn);
+    expect(scrollBySpy).toHaveBeenCalled();
+
+    // alignElementBelowStickyChrome aligns off-screen or sticky-obscured containers
+    scrollBySpy.mockClear();
+    const formNew = document.createElement("form");
+    formNew.id = "ecrf-form-new";
+    formNew.getBoundingClientRect = () => ({
+      x: 20,
+      y: 720,
+      top: 720,
+      bottom: 980,
+      left: 20,
+      right: 620,
+      width: 600,
+      height: 260,
+      toJSON: () => ({}),
+    });
+    document.body.appendChild(formNew);
+    expect(alignElementBelowStickyChrome("#ecrf-form-new")).toBe(true);
+    expect(scrollBySpy).toHaveBeenCalledWith(
+      0,
+      720 - (92 + FOCUS_RING_CLEARANCE_PX)
+    );
+
+    formNew.remove();
     btn.remove();
     header.remove();
     scrollBySpy.mockRestore();
+  });
+
+  it("coordinates appScrollBehavior across study, participant, form, visit, and observation routes while preserving savedPosition and inspector node peeks", () => {
+    updateShellStickyHeaderHeight(48);
+    updateCanvasStickyTopbarHeight(44, { inAppShell: true });
+
+    const saved = { left: 0, top: 380 };
+    expect(
+      appScrollBehavior(
+        {
+          path: "/studies/CAD-101",
+          name: "study",
+          query: { stage: "conduct" },
+        },
+        {
+          path: "/studies/CAD-101",
+          name: "study",
+          query: { stage: "conduct", form: "new" },
+        },
+        saved
+      )
+    ).toEqual(saved);
+
+    expect(
+      appScrollBehavior(
+        {
+          path: "/studies/CAD-101",
+          name: "study",
+          hash: "#casebook-matrix",
+          query: {},
+        },
+        { path: "/studies/CAD-101", name: "study", query: {} },
+        null
+      )
+    ).toEqual({
+      el: "#casebook-matrix",
+      top: 92 + FOCUS_RING_CLEARANCE_PX,
+    });
+
+    // Inspector-only ?node=... peek preserves current workspace scroll
+    expect(
+      appScrollBehavior(
+        {
+          path: "/studies/CAD-101",
+          name: "study",
+          query: {
+            stage: "conduct",
+            participant: "participant:1",
+            node: "observation:9",
+          },
+        },
+        {
+          path: "/studies/CAD-101",
+          name: "study",
+          query: { stage: "conduct", participant: "participant:1" },
+        },
+        null
+      )
+    ).toBe(false);
+
+    // Scheduled visit switch on form=new resets scroll to top
+    expect(
+      appScrollBehavior(
+        {
+          path: "/studies/CAD-101",
+          name: "study",
+          query: {
+            stage: "conduct",
+            participant: "participant:1",
+            form: "new",
+            spec: "cs.vitals",
+            visit: "pa.week4",
+          },
+        },
+        {
+          path: "/studies/CAD-101",
+          name: "study",
+          query: {
+            stage: "conduct",
+            participant: "participant:1",
+            form: "new",
+            spec: "cs.vitals",
+            visit: "pa.week2",
+          },
+        },
+        null
+      )
+    ).toEqual({ top: 0, left: 0 });
+
+    // Navigating to standalone /observations/:observationRef resets scroll to top
+    expect(
+      appScrollBehavior(
+        { path: "/observations/observation:1", name: "observation", query: {} },
+        {
+          path: "/studies/CAD-101",
+          name: "study",
+          query: { stage: "conduct" },
+        },
+        null
+      )
+    ).toEqual({ top: 0, left: 0 });
   });
 });

@@ -53,11 +53,11 @@ the tested revision recorded in `docs/SDLC/Requirements_Traceability_Matrix.md`.
 
 ## Referenced by
 
-`packages/tooling_core`, `packages/cli`, `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`, `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`. No application references it.
+`packages/tooling_core`, `packages/cli`, `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`, `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`, `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`. No application references it.
 
 ## Tests
 
-`tests/Cadence.UnitTests/Packages/ComplianceUnitTests.cs` and parts of `tests/Cadence.UnitTests/Packages/PortedPackagesUnitTests.cs`:
+`tests/Cadence.UnitTests/Packages/ComplianceUnitTests.cs`, parts of `tests/Cadence.UnitTests/Packages/PortedPackagesUnitTests.cs`, and `tests/Cadence.ArchitectureTests/Architecture/PackageFileSizeSentinelTests.cs` (500-non-empty-line cap across `RequirementTagScanner` and `RtmGeneratorService` slices):
 
 ```bash
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.ComplianceUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests"
