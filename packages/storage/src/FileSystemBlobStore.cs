@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -14,6 +15,7 @@ namespace Cadence.Storage;
 public sealed record FileSystemStorageOptions
 {
     /// <summary>The absolute directory the store keeps its objects under. Required; there is no default.</summary>
+    [Required(AllowEmptyStrings = false)]
     public string RootPath { get; init; } = "";
 }
 

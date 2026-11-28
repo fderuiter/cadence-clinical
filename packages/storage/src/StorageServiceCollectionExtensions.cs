@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 
 using Amazon;
@@ -9,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Storage;
 
@@ -16,9 +19,11 @@ namespace Cadence.Storage;
 public sealed record S3StorageOptions
 {
     /// <summary>The bucket every object goes in. Required.</summary>
+    [Required(AllowEmptyStrings = false)]
     public string BucketName { get; init; } = "";
 
     /// <summary>The AWS region (default <c>us-east-1</c>, which MinIO also accepts).</summary>
+    [Required(AllowEmptyStrings = false)]
     public string Region { get; init; } = "us-east-1";
 
     /// <summary>The endpoint of an S3-compatible server such as MinIO; empty for Amazon S3.</summary>
@@ -82,17 +87,36 @@ public static class StorageServiceCollectionExtensions
                     throw new InvalidOperationException("Storage:Provider 'filesystem' needs Storage:RootPath, an absolute directory.");
                 }
 
-                services.TryAddSingleton(fileSystem);
-                services.TryAddSingleton<IStoragePort<byte[]>>(_ => new FileSystemBlobStore(fileSystem));
+                services.AddOptions<FileSystemStorageOptions>()
+                    .Bind(section)
+                    .Validate(TryValidateDataAnnotations, "Storage FileSystemStorageOptions failed DataAnnotations validation.")
+                    .Validate(
+                        o => !string.IsNullOrWhiteSpace(o.RootPath) && Path.IsPathFullyQualified(o.RootPath),
+                        "Storage:Provider 'filesystem' needs Storage:RootPath, an absolute directory.")
+                    .ValidateOnStart();
+                services.TryAddSingleton(sp => sp.GetRequiredService<IOptions<FileSystemStorageOptions>>().Value);
+                services.TryAddSingleton<IStoragePort<byte[]>>(sp =>
+                    new FileSystemBlobStore(sp.GetRequiredService<IOptions<FileSystemStorageOptions>>().Value));
                 return services;
             case "s3":
             case "minio":
                 var options = section.Get<S3StorageOptions>() ?? new S3StorageOptions();
                 Validate(options, provider);
-                services.TryAddSingleton(options);
-                services.TryAddSingleton<IAmazonS3>(_ => CreateClient(options));
+                services.AddOptions<S3StorageOptions>()
+                    .Bind(section)
+                    .Validate(TryValidateDataAnnotations, "Storage S3StorageOptions failed DataAnnotations validation.")
+                    .Validate(o => !string.IsNullOrWhiteSpace(o.BucketName), "Storage:BucketName is required.")
+                    .Validate(
+                        o => string.IsNullOrEmpty(o.AccessKeyId) == string.IsNullOrEmpty(o.SecretAccessKey),
+                        "Storage:AccessKeyId and Storage:SecretAccessKey are set together or not at all.")
+                    .Validate(
+                        o => provider != "minio" || !string.IsNullOrWhiteSpace(o.ServiceUrl),
+                        "Storage:Provider 'minio' needs Storage:ServiceUrl.")
+                    .ValidateOnStart();
+                services.TryAddSingleton(sp => sp.GetRequiredService<IOptions<S3StorageOptions>>().Value);
+                services.TryAddSingleton<IAmazonS3>(sp => CreateClient(sp.GetRequiredService<IOptions<S3StorageOptions>>().Value));
                 services.TryAddSingleton<IStoragePort<byte[]>>(sp =>
-                    new S3BlobStore(sp.GetRequiredService<IAmazonS3>(), options));
+                    new S3BlobStore(sp.GetRequiredService<IAmazonS3>(), sp.GetRequiredService<IOptions<S3StorageOptions>>().Value));
                 return services;
             default:
                 throw new InvalidOperationException(
@@ -153,5 +177,12 @@ public static class StorageServiceCollectionExtensions
         {
             throw new InvalidOperationException("Storage:Provider 'minio' needs Storage:ServiceUrl.");
         }
+    }
+
+    private static bool TryValidateDataAnnotations<TOptions>(TOptions options)
+        where TOptions : class
+    {
+        var results = new List<ValidationResult>();
+        return Validator.TryValidateObject(options, new ValidationContext(options), results, validateAllProperties: true);
     }
 }

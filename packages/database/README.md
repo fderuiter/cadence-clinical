@@ -25,8 +25,8 @@ migration application.
   for in-memory test hosts) and emit idempotent schema migration DDL for `ENABLE` / `FORCE ROW LEVEL SECURITY` plus narrow zero-argument `SECURITY DEFINER` pending-work directory functions (`EnablePendingWorkDirectoryFunctionSql`).
 - `WithModuleSchema(connectionString, schema)`: scopes a connection to one module schema (search path
   `<schema>,public`, ADR-2447). `ModuleSchemaFor<TContext>()` derives the default name (`CtmsDbContext` is `ctms`).
-- `ResolvePostgresConnectionString(...)`: reads `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`.
-  There is no fallback in any environment: a missing value fails startup with a message naming both keys (ADR-2260).
+- `ResolvePostgresConnectionString(...)` and `AddCadencePostgresOptions(...)`: reads `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`, and binds `CadencePostgresOptions` with `ValidateDataAnnotations().ValidateOnStart()`.
+  There is no fallback in any environment: a missing or whitespace value fails startup with a message naming both keys (ADR-2260).
 - `CadenceDesignTimeDbContextFactory<TDbContext>`: abstract `IDesignTimeDbContextFactory<TDbContext>` base class for
   service design-time factories (`dotnet ef` and `Cadence.SchemaDocExporter`). Resolves the connection string
   fail-closed via `ResolveDesignTimeConnectionString(args)` (ADR-2260), scopes Npgsql to the module's schema

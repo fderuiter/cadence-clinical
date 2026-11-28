@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -52,19 +53,29 @@ public sealed class KeycloakAdminOptions
     public string? BaseUrl { get; set; }
 
     /// <summary>Target Cadence realm containing clinical users and realm roles.</summary>
+    [Required(AllowEmptyStrings = false)]
     public string Realm { get; set; } = "cadence";
 
     /// <summary>Realm used to authenticate the admin operator.</summary>
+    [Required(AllowEmptyStrings = false)]
     public string AdminRealm { get; set; } = "master";
 
     /// <summary>OIDC client used for administrative token acquisition.</summary>
+    [Required(AllowEmptyStrings = false)]
     public string ClientId { get; set; } = "admin-cli";
 
     /// <summary>Keycloak admin username.</summary>
+    [Required(AllowEmptyStrings = false)]
     public string AdminUsername { get; set; } = "admin";
 
     /// <summary>Keycloak admin password.</summary>
     public string? AdminPassword { get; set; }
+
+    /// <summary>Returns <see langword="true"/> when <paramref name="baseUrl"/> is an absolute HTTP or HTTPS URI.</summary>
+    public static bool IsValidBaseUrl(string? baseUrl) =>
+        !string.IsNullOrWhiteSpace(baseUrl)
+        && Uri.TryCreate(baseUrl.Trim(), UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 }
 
 /// <summary>Raised when Keycloak Admin REST synchronization fails.</summary>
@@ -584,7 +595,26 @@ public static class KeycloakOnboardingServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
 
-        services.Configure<KeycloakAdminOptions>(configuration.GetSection(KeycloakAdminOptions.SectionName));
+        var section = configuration.GetSection(KeycloakAdminOptions.SectionName);
+        bool IsSectionConfigured(KeycloakAdminOptions options) =>
+            section.Exists() || options.BaseUrl is not null || options.AdminPassword is not null;
+
+        services.AddOptions<KeycloakAdminOptions>()
+            .Bind(section)
+            .ValidateDataAnnotations()
+            .Validate(
+                options => !string.IsNullOrWhiteSpace(options.Realm)
+                    && !string.IsNullOrWhiteSpace(options.AdminRealm)
+                    && !string.IsNullOrWhiteSpace(options.ClientId)
+                    && !string.IsNullOrWhiteSpace(options.AdminUsername),
+                "KeycloakAdmin Realm, AdminRealm, ClientId, and AdminUsername must not be empty.")
+            .Validate(
+                options => !IsSectionConfigured(options) || KeycloakAdminOptions.IsValidBaseUrl(options.BaseUrl),
+                "KeycloakAdmin:BaseUrl must be an absolute http or https URL when KeycloakAdmin is configured.")
+            .Validate(
+                options => !IsSectionConfigured(options) || !string.IsNullOrWhiteSpace(options.AdminPassword),
+                "KeycloakAdmin:AdminPassword must not be empty when KeycloakAdmin is configured.")
+            .ValidateOnStart();
         services.AddHttpClient<HttpKeycloakOnboardingClient>(HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(15));
         services.TryAddTransient<IKeycloakOnboardingClient>(sp => sp.GetRequiredService<HttpKeycloakOnboardingClient>());
         services.TryAddTransient<IKernelIdentityScopeSynchronizer>(sp => sp.GetRequiredService<IKeycloakOnboardingClient>());

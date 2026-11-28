@@ -1,17 +1,23 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
+using System.Linq;
 using System.Text.Json;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
@@ -21,6 +27,34 @@ using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
 
 namespace Cadence.Telemetry;
+
+/// <summary>
+/// Startup-validated CORS options bound from the <c>Cors</c> section (<c>Cors:AllowedOrigins</c>).
+/// Wildcards and non-HTTPS origins fail host startup; an empty list emits no CORS headers.
+/// </summary>
+public sealed class CadenceCorsOptions
+{
+    public const string SectionName = "Cors";
+    public const string PolicyName = "CadenceAllowedOrigins";
+
+    [Required]
+    public IList<string> AllowedOrigins { get; set; } = [];
+
+    public static bool IsValidOrigin(string? origin)
+    {
+        if (string.IsNullOrWhiteSpace(origin) || origin.Contains('*', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return Uri.TryCreate(origin.Trim(), UriKind.Absolute, out var uri)
+            && string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+            && string.IsNullOrEmpty(uri.UserInfo)
+            && string.IsNullOrEmpty(uri.Query)
+            && string.IsNullOrEmpty(uri.Fragment)
+            && (string.IsNullOrEmpty(uri.AbsolutePath) || string.Equals(uri.AbsolutePath, "/", StringComparison.Ordinal));
+    }
+}
 
 public static partial class CadenceTelemetryExtensions
 {
@@ -172,6 +206,36 @@ public static partial class CadenceTelemetryExtensions
         builder.Services.Configure<ForwardedHeadersOptions>(options =>
             CadenceHttpHardening.ConfigureForwardedHeaders(options, trustedProxies));
         builder.Services.AddHsts(options => options.MaxAge = CadenceHttpHardening.HstsMaxAge);
+
+        var corsSection = builder.Configuration.GetSection(CadenceCorsOptions.SectionName);
+        var allowedOriginsSection = corsSection.GetSection(nameof(CadenceCorsOptions.AllowedOrigins));
+        builder.Services.AddOptions<CadenceCorsOptions>()
+            .Bind(corsSection)
+            .ValidateDataAnnotations()
+            .Validate(
+                options => options.AllowedOrigins is not null
+                    && allowedOriginsSection.GetChildren().All(child => CadenceCorsOptions.IsValidOrigin(child.Value))
+                    && options.AllowedOrigins.All(CadenceCorsOptions.IsValidOrigin),
+                "Cors:AllowedOrigins must contain only explicit https origins without wildcards.")
+            .ValidateOnStart();
+
+        builder.Services.AddCors();
+        builder.Services.AddOptions<CorsOptions>()
+            .Configure<IOptions<CadenceCorsOptions>>((corsOptions, cadenceCors) =>
+            {
+                string[] origins = cadenceCors.Value.AllowedOrigins
+                    .Select(origin => origin.Trim().TrimEnd('/'))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+                if (origins.Length > 0)
+                {
+                    corsOptions.AddPolicy(CadenceCorsOptions.PolicyName, policy =>
+                        policy.WithOrigins(origins)
+                            .AllowAnyHeader()
+                            .AllowAnyMethod());
+                }
+            });
+
         builder.Services.AddHealthChecks();
         if (configureProblemDetails != null)
         {
@@ -239,6 +303,9 @@ public static partial class CadenceTelemetryExtensions
 
         app.UseExceptionHandler();
         app.UseCadenceTraceparent();
+        app.UseWhen(
+            context => context.RequestServices.GetService<IOptions<CadenceCorsOptions>>()?.Value.AllowedOrigins is { Count: > 0 },
+            branch => branch.UseCors(CadenceCorsOptions.PolicyName));
         app.MapCadenceApiDocumentation(app.Environment);
         app.MapCadenceProbeEndpoints();
 

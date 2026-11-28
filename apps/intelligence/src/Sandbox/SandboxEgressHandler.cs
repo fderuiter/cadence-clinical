@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
@@ -13,7 +14,7 @@ using Microsoft.Extensions.Options;
 namespace Cadence.Modules.Intelligence.Sandbox;
 
 /// <summary>Which named HTTP clients a sandboxed run may use besides the model providers' own.</summary>
-public sealed class SandboxEgressOptions
+public sealed class SandboxEgressOptions : IValidatableObject
 {
     /// <summary>The configuration section.</summary>
     public const string Section = "Intelligence:Sandbox";
@@ -22,7 +23,19 @@ public sealed class SandboxEgressOptions
     /// Named clients a run may use, such as the worker role's client for the host's internal read API. Empty by
     /// default: in the composition host the read ports are in-process and need no network.
     /// </summary>
+    [Required]
     public IList<string> AllowedClients { get; set; } = [];
+
+    /// <inheritdoc />
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (AllowedClients is null || AllowedClients.Any(string.IsNullOrWhiteSpace))
+        {
+            yield return new ValidationResult(
+                $"{Section}:{nameof(AllowedClients)} must not contain empty or whitespace client names.",
+                [nameof(AllowedClients)]);
+        }
+    }
 }
 
 /// <summary>
@@ -53,8 +66,13 @@ internal sealed class SandboxEgressConfiguration(IOptions<SandboxEgressOptions> 
     public void Configure(string? name, HttpClientFactoryOptions options)
     {
         var clientName = name ?? Options.DefaultName;
-        var allowed = clientName.StartsWith(InferenceHttpClients.Prefix, StringComparison.Ordinal)
-            || egress.Value.AllowedClients.Contains(clientName, StringComparer.Ordinal);
+        var allowed = !string.IsNullOrWhiteSpace(clientName)
+            && !string.Equals(clientName, Options.DefaultName, StringComparison.Ordinal)
+            && (clientName.StartsWith(InferenceHttpClients.Prefix, StringComparison.Ordinal)
+                || egress.Value.AllowedClients.Any(allowedClient =>
+                    !string.IsNullOrWhiteSpace(allowedClient)
+                    && !string.Equals(allowedClient, Options.DefaultName, StringComparison.Ordinal)
+                    && string.Equals(allowedClient, clientName, StringComparison.Ordinal)));
         options.HttpMessageHandlerBuilderActions.Add(builder =>
             builder.AdditionalHandlers.Insert(0, new SandboxEgressHandler(clientName, allowed)));
     }

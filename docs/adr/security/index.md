@@ -7,3 +7,5 @@ Active Architectural Decision Records for **2. API Gateway, Security & Identity*
 - Entries below use `# ADR-SECURITY-YYYYMMDD-<slug>: <title>` and are sorted alphabetically by filename.
 
 ## Decisions
+
+- [ADR-SECURITY-20261128-validate-service-gateway-storage-database-and-cors-options-on-startup: Validate Service, Gateway, Storage, Database, and CORS Options on Startup](2026-11-28-validate-service-gateway-storage-database-and-cors-options-on-startup.md) (2026-11-28)
