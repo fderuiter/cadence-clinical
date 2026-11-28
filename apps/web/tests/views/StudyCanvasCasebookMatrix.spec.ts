@@ -568,8 +568,54 @@ describe("Casebook matrix, inline form workspace, context handoff, and monitor r
     expect(wrapper.find("#canvas-navigator").exists()).toBe(true);
     expect(wrapper.find("#canvas-inspector").exists()).toBe(true);
     expect(wrapper.find("#zoom-form").text()).toBe("Forms · cs.adverse_event");
-    // #casebook-matrix stays visible above EcrfFormPanel when ?form=new is open
-    expect(wrapper.find("#casebook-matrix").exists()).toBe(true);
+    // Preselected ?form=new&spec=... omits duplicate inline #casebook-matrix and offers Switch visit or form drawer
+    expect(wrapper.find("#casebook-matrix").exists()).toBe(false);
+    expect(wrapper.findAll("#record-forms").length).toBe(0);
+    const switcherBtn = wrapper.find("#btn-switch-visit-or-form");
+    expect(switcherBtn.exists()).toBe(true);
+    expect(switcherBtn.attributes("aria-expanded")).toBe("false");
+
+    await switcherBtn.trigger("click");
+    await flushPromises();
+    expect(switcherBtn.attributes("aria-expanded")).toBe("true");
+    expect(
+      wrapper.find("#workspace-visit-switcher-drawer #casebook-matrix").exists()
+    ).toBe(true);
+
+    // Dismissing Switch visit or form drawer via Escape restores focus to trigger button
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+    );
+    await flushPromises();
+    expect(wrapper.find("#casebook-matrix").exists()).toBe(false);
+    expect(document.activeElement).toBe(switcherBtn.element);
+
+    // Re-open switcher drawer and switch to a scheduled visit cell -> closes drawer, aligns #ecrf-form-new, and focuses #ecrf-collected-at
+    await switcherBtn.trigger("click");
+    await flushPromises();
+    await wrapper
+      .find('[id="matrix-open-cs.vitals-pa.week4"]')
+      .trigger("click");
+    await flushPromises();
+    expect(router.currentRoute.value.query).toMatchObject({
+      stage: "conduct",
+      participant: `participant:${PARTICIPANT_ID}`,
+      form: "new",
+      spec: "cs.vitals",
+      visit: "pa.week4",
+    });
+    expect(wrapper.find("#casebook-matrix").exists()).toBe(false);
+    expect(document.activeElement?.id).toBe("ecrf-collected-at");
+
+    // Switch back to cs.adverse_event via switcher drawer
+    await wrapper.find("#btn-switch-visit-or-form").trigger("click");
+    await flushPromises();
+    await wrapper
+      .find('[id="unscheduled-open-cs.adverse_event"]')
+      .trigger("click");
+    await flushPromises();
+    expect(document.activeElement?.id).toBe("ecrf-collected-at");
+
     const specSelect = wrapper.find("#ecrf-collection-spec");
     expect(specSelect.exists()).toBe(true);
     expect(specSelect.element.tagName).toBe("SELECT");
