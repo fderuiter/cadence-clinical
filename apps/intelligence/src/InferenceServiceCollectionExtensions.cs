@@ -40,9 +40,26 @@ public static class InferenceServiceCollectionExtensions
         var section = configuration.GetSection(InferenceOptions.Section);
         var intelligence = configuration.GetSection(IntelligenceOptions.SectionName).Get<IntelligenceOptions>() ?? new IntelligenceOptions();
         services.TryAddSingleton(new InferenceModelSettings(intelligence.Anthropic.Tiers, intelligence.Prices));
-        services.AddOptions<InferenceOptions>().Bind(section);
-        services.AddOptions<SandboxEgressOptions>().Bind(configuration.GetSection(SandboxEgressOptions.Section));
-        var providers = section.GetSection("Providers").Get<InferenceProvidersOptions>() ?? new InferenceProvidersOptions();
+
+        services.AddSingleton<IValidateOptions<InferenceOptions>>(new InferenceOptionsValidator(section));
+        services.AddOptions<InferenceOptions>()
+            .Configure(options => InferenceOptionsValidator.Bind(section, options))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        var sandboxSection = configuration.GetSection(SandboxEgressOptions.Section);
+        var allowedClientsSection = sandboxSection.GetSection(nameof(SandboxEgressOptions.AllowedClients));
+        services.AddOptions<SandboxEgressOptions>()
+            .Bind(sandboxSection)
+            .ValidateDataAnnotations()
+            .Validate(
+                options => options.AllowedClients is not null
+                    && allowedClientsSection.GetChildren().All(child => !string.IsNullOrWhiteSpace(child.Value))
+                    && options.AllowedClients.All(client => !string.IsNullOrWhiteSpace(client)),
+                $"{SandboxEgressOptions.Section}:{nameof(SandboxEgressOptions.AllowedClients)} must not contain empty or whitespace client names.")
+            .ValidateOnStart();
+
+        var providers = InferenceOptionsValidator.BindProviders(section.GetSection("Providers"));
 
         AddProvider(services, ClaudePlatformAwsProvider.ProviderId, providers.AnthropicAws, (sp, o) => new ClaudePlatformAwsProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
         AddProvider(services, BedrockProvider.ProviderId, providers.Bedrock, (sp, o) => new BedrockProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
@@ -94,17 +111,17 @@ public static class InferenceServiceCollectionExtensions
     }
 
     /// <summary>Builds every provider and the supplier catalogue at start, so a bad endpoint or approval stops the host.</summary>
-    private sealed class InferenceStartupCheck(IEnumerable<IInferenceProvider> providers, ISupplierCatalog suppliers) : IHostedService
+    private sealed class InferenceStartupCheck(IServiceProvider services) : IHostedService
     {
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            var ids = providers.Select(p => p.Id).ToList();
+            var ids = services.GetServices<IInferenceProvider>().Select(p => p.Id).ToList();
             if (ids.Distinct(StringComparer.Ordinal).Count() != ids.Count)
             {
                 throw new InvalidOperationException($"Inference provider ids must be unique: {string.Join(", ", ids)}.");
             }
 
-            _ = suppliers.All;
+            _ = services.GetRequiredService<ISupplierCatalog>().All;
             return Task.CompletedTask;
         }
 

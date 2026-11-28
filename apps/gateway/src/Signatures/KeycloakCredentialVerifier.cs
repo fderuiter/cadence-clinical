@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -44,13 +45,58 @@ public sealed class SignatureCredentialOptions
     public const string DefaultClientId = "cadence-esignature";
 
     /// <summary>The realm's OIDC token endpoint. Derived from the OIDC settings unless <c>OIDC_TOKEN_ENDPOINT</c> is set.</summary>
+    [Required]
     public Uri? TokenEndpoint { get; set; }
 
     /// <summary>A Keycloak client with only "Direct access grants" enabled (<c>OIDC_SIGNATURE_CLIENT_ID</c>).</summary>
+    [Required(AllowEmptyStrings = false)]
     public string ClientId { get; set; } = DefaultClientId;
 
     /// <summary>Set when that client is confidential (<c>OIDC_SIGNATURE_CLIENT_SECRET</c>).</summary>
     public string? ClientSecret { get; set; }
+
+    /// <summary>
+    /// Attempts to resolve the Keycloak token endpoint using <see cref="Uri.TryCreate(string?, UriKind, out Uri?)"/>
+    /// so malformed configuration values fail through startup options validation instead of throwing <see cref="UriFormatException"/>.
+    /// </summary>
+    public static bool TryResolveTokenEndpoint(string? tokenEndpoint, string? metadataAddress, string? authority, out Uri? resolved)
+    {
+        if (!string.IsNullOrWhiteSpace(tokenEndpoint))
+        {
+            if (Uri.TryCreate(tokenEndpoint.Trim(), UriKind.Absolute, out var explicitUri)
+                && (explicitUri.Scheme == Uri.UriSchemeHttp || explicitUri.Scheme == Uri.UriSchemeHttps))
+            {
+                resolved = explicitUri;
+                return true;
+            }
+
+            resolved = null;
+            return false;
+        }
+
+        const string discoverySuffix = "/.well-known/openid-configuration";
+        string? realm = string.IsNullOrWhiteSpace(metadataAddress) ? authority : metadataAddress;
+        if (string.IsNullOrWhiteSpace(realm))
+        {
+            resolved = null;
+            return false;
+        }
+
+        if (realm.EndsWith(discoverySuffix, StringComparison.Ordinal))
+        {
+            realm = realm[..^discoverySuffix.Length];
+        }
+
+        if (Uri.TryCreate($"{realm.TrimEnd('/')}/protocol/openid-connect/token", UriKind.Absolute, out var derivedUri)
+            && (derivedUri.Scheme == Uri.UriSchemeHttp || derivedUri.Scheme == Uri.UriSchemeHttps))
+        {
+            resolved = derivedUri;
+            return true;
+        }
+
+        resolved = null;
+        return false;
+    }
 
     /// <summary>
     /// The Keycloak token endpoint for a realm: <c>OIDC_TOKEN_ENDPOINT</c> when set, otherwise next to the

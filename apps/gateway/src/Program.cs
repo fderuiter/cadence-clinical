@@ -79,13 +79,24 @@ builder.Services.AddOptions<GatewaySigningOptions>()
 builder.Services.AddOptions<SignatureCredentialOptions>()
     .Configure(options =>
     {
-        options.TokenEndpoint = SignatureCredentialOptions.ResolveTokenEndpoint(
-            builder.Configuration["OIDC_TOKEN_ENDPOINT"], oidcMetadataAddress, oidcAuthority);
+        options.TokenEndpoint = SignatureCredentialOptions.TryResolveTokenEndpoint(
+            builder.Configuration["OIDC_TOKEN_ENDPOINT"], oidcMetadataAddress, oidcAuthority, out var endpoint)
+            ? endpoint
+            : null;
         options.ClientId = builder.Configuration["OIDC_SIGNATURE_CLIENT_ID"] is { Length: > 0 } clientId
             ? clientId
             : SignatureCredentialOptions.DefaultClientId;
         options.ClientSecret = builder.Configuration["OIDC_SIGNATURE_CLIENT_SECRET"];
-    });
+    })
+    .ValidateDataAnnotations()
+    .Validate(
+        options => options.TokenEndpoint is { IsAbsoluteUri: true } uri
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps),
+        "OIDC_TOKEN_ENDPOINT must resolve to an absolute http or https URI.")
+    .Validate(
+        options => !string.IsNullOrWhiteSpace(options.ClientId),
+        "OIDC_SIGNATURE_CLIENT_ID must not be empty or whitespace.")
+    .ValidateOnStart();
 builder.Services.AddHttpClient<ICredentialVerifier, KeycloakCredentialVerifier>(client => client.Timeout = TimeSpan.FromSeconds(10));
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 // A tighter per-signer limit on password re-checks, on top of the gateway-wide limit (AddGatewayRateLimiting).
@@ -124,8 +135,9 @@ var routes = ServiceTopology.Services
     }))
     .ToArray();
 
-var clusters = ServiceTopology.Services
-    .Select(service => GatewayClusters.Create(service.ClusterId, GetServiceUrl(service), builder.Configuration))
+builder.Services.AddGatewayClusterOptions(builder.Configuration);
+var clusterEndpoints = ServiceTopology.Services
+    .Select(service => (service.ClusterId, Url: GetServiceUrl(service)))
     .ToArray();
 
 string kernelServiceUrl = GetServiceUrl(ServiceTopology.Get("kernel"));
@@ -138,8 +150,9 @@ builder.Services.TryAddSingleton<ITenantEntitlementCache, GatewayTenantEntitleme
 
 builder.Services.AddGatewayRateLimiting(builder.Configuration);
 
+builder.Services.AddSingleton<IProxyConfigProvider>(sp =>
+    new GatewayProxyConfigProvider(routes, clusterEndpoints, sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<GatewayClusterOptions>>()));
 builder.Services.AddReverseProxy()
-    .LoadFromMemory(routes, clusters)
     .AddTransforms(GatewayIdentityForwarding.AddSignedIdentityTransform);
 
 var app = builder.Build();

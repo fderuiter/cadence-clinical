@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
@@ -19,10 +21,22 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 using Npgsql;
 
 namespace Cadence.Database;
+
+/// <summary>
+/// Startup-validated PostgreSQL connection string options bound from <c>ConnectionStrings:{connectionName}</c>
+/// or <c>POSTGRES_CONNECTION_STRING</c>.
+/// </summary>
+public sealed class CadencePostgresOptions
+{
+    /// <summary>Resolved PostgreSQL connection string.</summary>
+    [Required(AllowEmptyStrings = false)]
+    public string? ConnectionString { get; set; }
+}
 
 public static partial class CadenceDatabaseExtensions
 {
@@ -64,6 +78,7 @@ public static partial class CadenceDatabaseExtensions
     {
         ArgumentNullException.ThrowIfNull(builder);
 
+        builder.Services.AddCadencePostgresOptions(builder.Configuration, builder.Environment, connectionName);
         string baseConnectionString = ResolvePostgresConnectionString(builder.Configuration, builder.Environment, connectionName);
         string connectionString = WithModuleSchema(
             baseConnectionString,
@@ -265,6 +280,34 @@ public static partial class CadenceDatabaseExtensions
     }
 
     /// <summary>
+    /// Registers <see cref="CadencePostgresOptions"/> bound from <c>ConnectionStrings:{connectionName}</c>
+    /// or <c>POSTGRES_CONNECTION_STRING</c> with <c>ValidateDataAnnotations()</c> and <c>ValidateOnStart()</c>.
+    /// </summary>
+    public static IServiceCollection AddCadencePostgresOptions(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment,
+        string connectionName = DefaultConnectionName)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(environment);
+
+        string optionsName = string.Equals(connectionName, DefaultConnectionName, StringComparison.Ordinal)
+            ? Options.DefaultName
+            : connectionName;
+        services.AddOptions<CadencePostgresOptions>(optionsName)
+            .Configure(options => BindPostgresOptions(configuration, connectionName, options))
+            .ValidateDataAnnotations()
+            .Validate(
+                options => !string.IsNullOrWhiteSpace(options.ConnectionString),
+                $"No PostgreSQL connection string configured for '{environment.ApplicationName}'. Set ConnectionStrings__{connectionName} or {LegacyConnectionStringKey}.")
+            .ValidateOnStart();
+
+        return services;
+    }
+
+    /// <summary>
     /// Resolves the PostgreSQL connection string in this order: <c>ConnectionStrings:{connectionName}</c>,
     /// then <c>POSTGRES_CONNECTION_STRING</c>. There is no built-in fallback in any environment (including
     /// Development): a missing value fails startup with an <see cref="InvalidOperationException"/> naming both
@@ -278,19 +321,36 @@ public static partial class CadenceDatabaseExtensions
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(environment);
 
-        if (configuration.GetConnectionString(connectionName) is { Length: > 0 } named)
-        {
-            return named;
-        }
+        var options = new CadencePostgresOptions();
+        BindPostgresOptions(configuration, connectionName, options);
 
-        if (configuration[LegacyConnectionStringKey] is { Length: > 0 } legacy)
+        var validationResults = new List<ValidationResult>();
+        if (Validator.TryValidateObject(options, new ValidationContext(options), validationResults, validateAllProperties: true)
+            && !string.IsNullOrWhiteSpace(options.ConnectionString))
         {
-            return legacy;
+            return options.ConnectionString;
         }
 
         throw new InvalidOperationException(
             $"No PostgreSQL connection string configured for '{environment.ApplicationName}'. " +
             $"Set ConnectionStrings__{connectionName} or {LegacyConnectionStringKey}.");
+    }
+
+    private static void BindPostgresOptions(IConfiguration configuration, string connectionName, CadencePostgresOptions options)
+    {
+        if (configuration.GetConnectionString(connectionName) is { Length: > 0 } named)
+        {
+            options.ConnectionString = named;
+            return;
+        }
+
+        if (configuration[LegacyConnectionStringKey] is { Length: > 0 } legacy)
+        {
+            options.ConnectionString = legacy;
+            return;
+        }
+
+        options.ConnectionString = configuration.GetConnectionString(connectionName) ?? configuration[LegacyConnectionStringKey];
     }
 
     /// <summary>Design-time argument that supplies the connection string: <c>dotnet ef ... -- --connection "..."</c>.</summary>

@@ -57,6 +57,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 // The only host that registers kernel persistence (K-XS-2). In production it connects as the application role and
 // its migrations and role grant are applied separately with KernelDatabase; a local stack that connects as the
 // schema owner sets Database__MigrateOnStartup to true instead.
+builder.Services.AddCadencePostgresOptions(builder.Configuration, builder.Environment);
 string connectionString = CadenceDatabaseExtensions.ResolvePostgresConnectionString(builder.Configuration, builder.Environment);
 KernelMigrationHostedService.Register(builder.Services, builder.Configuration, connectionString);
 
