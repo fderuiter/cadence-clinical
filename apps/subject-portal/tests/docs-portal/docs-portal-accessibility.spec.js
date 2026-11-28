@@ -185,19 +185,73 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
     expect(orphanedPipeFindings).toEqual([]);
     expect(codeAnchorFindings).toEqual([]);
 
+    const countTbodyRows = (html) =>
+      Array.from(
+        html.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
+        (m) => m[1]
+      ).reduce(
+        (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
+        0
+      );
+
     const docIndexHtml = fs.readFileSync(
       path.join(docsDistDir, "DOCUMENTATION_INDEX.html"),
       "utf8"
     );
-    const tbodyBlocks = Array.from(
-      docIndexHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
-      (m) => m[1]
-    );
-    const dataRowCount = tbodyBlocks.reduce(
-      (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
-      0
-    );
-    expect(dataRowCount).toBeGreaterThanOrEqual(715);
+    const shardHubRowCount = countTbodyRows(docIndexHtml);
+    expect(shardHubRowCount).toBeGreaterThanOrEqual(25);
+
+    const shardHrefs = [
+      ...new Set(
+        Array.from(
+          docIndexHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
+          (m) => m[1]
+        ).flatMap((tbody) =>
+          Array.from(tbody.matchAll(/href="([^"#?]+)"/gi), (h) => h[1])
+        )
+      ),
+    ];
+
+    const missingShardFiles = [];
+    let categoryTableRowCount = 0;
+    let adrDecisionEntryCount = 0;
+
+    for (const href of shardHrefs) {
+      const relShardPath = href.replace(/^(?:\.\/|\/cadence-clinical\/)/, "");
+      const shardHtmlPath =
+        relShardPath === ""
+          ? path.join(docsDistDir, "index.html")
+          : relShardPath.endsWith("/")
+            ? path.join(docsDistDir, relShardPath, "index.html")
+            : relShardPath.endsWith(".html")
+              ? path.join(docsDistDir, relShardPath)
+              : path.join(docsDistDir, `${relShardPath}.html`);
+
+      if (!fs.existsSync(shardHtmlPath)) {
+        missingShardFiles.push(`${href} -> ${shardHtmlPath}`);
+        continue;
+      }
+
+      const shardHtml = fs.readFileSync(shardHtmlPath, "utf8");
+      if (relShardPath.startsWith("adr/")) {
+        const docContent =
+          shardHtml.match(/<div class="vp-doc[\s\S]*?<\/main>/i)?.[0] ||
+          shardHtml;
+        adrDecisionEntryCount += (
+          docContent.match(
+            /<li(?:\s[^>]*)?>\s*<a\s[^>]*>\s*ADR-[A-Z0-9-]+:/gi
+          ) || []
+        ).length;
+      } else {
+        categoryTableRowCount += countTbodyRows(shardHtml);
+      }
+    }
+
+    expect(missingShardFiles).toEqual([]);
+    expect(categoryTableRowCount).toBeGreaterThanOrEqual(136);
+    expect(
+      categoryTableRowCount + adrDecisionEntryCount
+    ).toBeGreaterThanOrEqual(715);
   });
 
   test("navbar items and portal layout render without clipping, overlap, or horizontal scroll across 375px–1920px viewports", async ({
