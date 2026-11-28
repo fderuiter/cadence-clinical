@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -20,6 +21,8 @@ namespace Cadence.Apps.Etmf.Workers;
 
 public sealed class EtmfExportWorker : BackgroundService
 {
+    private const string QueuedExportTenantsSql = "SELECT \"etmf\".\"queued_export_tenant_ids\"() AS \"Value\"";
+
     private readonly IServiceProvider _serviceProvider;
     private readonly EtmfExportQueue _queue;
     private readonly ILogger<EtmfExportWorker> _logger;
@@ -38,33 +41,25 @@ public sealed class EtmfExportWorker : BackgroundService
     {
         _logger.LogInformation("eTMF Export Background Worker started.");
 
+        bool startupRecoveryCompleted = false;
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                if (_queue.TryDequeue(out var queuedJobId, out var queuedTenantCode))
+                while (_queue.TryDequeue(out var readyJobId, out var readyTenantCode))
                 {
-                    var tenantScope = _serviceProvider.GetService<ITenantScope>();
-                    if (tenantScope is not null && !string.IsNullOrWhiteSpace(queuedTenantCode))
-                    {
-                        using (tenantScope.Bind(queuedTenantCode))
-                        {
-                            await ProcessJobAsync(queuedJobId, stoppingToken);
-                        }
-                    }
-                    else
-                    {
-                        await ProcessJobAsync(queuedJobId, stoppingToken);
-                    }
-
-                    continue;
+                    await DispatchQueuedItemAsync(readyJobId, readyTenantCode, stoppingToken).ConfigureAwait(false);
                 }
 
-                bool foundAny = await PollNextQueuedJobAsync(stoppingToken);
-                if (!foundAny)
+                if (!startupRecoveryCompleted)
                 {
-                    await Task.Delay(1000, stoppingToken);
+                    await DrainPendingQueuedJobsAsync(stoppingToken).ConfigureAwait(false);
+                    startupRecoveryCompleted = true;
                 }
+
+                var (queuedJobId, queuedTenantCode) = await _queue.DequeueWithTenantAsync(stoppingToken).ConfigureAwait(false);
+                await DispatchQueuedItemAsync(queuedJobId, queuedTenantCode, stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -73,56 +68,159 @@ public sealed class EtmfExportWorker : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred in eTMF Export Background Worker loop.");
-                await Task.Delay(2000, stoppingToken);
+                await Task.Delay(2000, stoppingToken).ConfigureAwait(false);
             }
         }
     }
 
-    private async Task<bool> PollNextQueuedJobAsync(CancellationToken stoppingToken)
+    /// <summary>
+    /// Discovers tenants with <c>QUEUED</c> export jobs via <c>etmf.queued_export_tenant_ids()</c> (opening tenant
+    /// scopes only for tenants with pending work) and drains their queued exports.
+    /// </summary>
+    public async Task<int> DrainPendingQueuedJobsAsync(CancellationToken stoppingToken = default)
     {
-        var resolver = _serviceProvider.GetService<ITenantCodeResolver>();
-        var tenantScope = _serviceProvider.GetService<ITenantScope>();
-        if (resolver is not null && tenantScope is not null)
+        int processed = 0;
+
+        await using var discoveryScope = _serviceProvider.CreateAsyncScope();
+        var discoveryDb = discoveryScope.ServiceProvider.GetRequiredService<EtmfDbContext>();
+        var tenantScope = discoveryScope.ServiceProvider.GetService<ITenantScope>();
+        bool isNpgsql = discoveryDb.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) is true;
+
+        if (isNpgsql)
         {
-            var tenantIds = await resolver.ListActiveTenantIdsAsync(stoppingToken);
-            if (tenantIds.Count > 0)
+            List<Guid> pendingTenantIds;
+            using (tenantScope?.Suppress())
             {
-                foreach (Guid tenantId in tenantIds)
+                pendingTenantIds = await discoveryDb.Database
+                    .SqlQueryRaw<Guid>(QueuedExportTenantsSql)
+                    .ToListAsync(stoppingToken)
+                    .ConfigureAwait(false);
+            }
+
+            foreach (Guid tenantId in pendingTenantIds)
+            {
+                using (tenantScope?.Bind(tenantId))
+                {
+                    processed += await DrainCurrentTenantQueuedJobsAsync(stoppingToken).ConfigureAwait(false);
+                }
+            }
+
+            return processed;
+        }
+
+        if (!discoveryDb.Database.IsRelational())
+        {
+            var inMemoryPending = await discoveryDb.TmfExportJobs
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(j => j.Status == "QUEUED")
+                .OrderBy(j => j.CreatedAt)
+                .Select(j => new
+                {
+                    j.Id,
+                    TenantId = EF.Property<Guid>(j, StandaloneTenantModelExtensions.TenantPropertyName),
+                })
+                .ToListAsync(stoppingToken)
+                .ConfigureAwait(false);
+
+            foreach (var item in inMemoryPending)
+            {
+                if (tenantScope is not null && item.TenantId != Guid.Empty)
+                {
+                    using (tenantScope.Bind(item.TenantId))
+                    {
+                        await ProcessJobAsync(item.Id, stoppingToken).ConfigureAwait(false);
+                    }
+                }
+                else
+                {
+                    await ProcessJobAsync(item.Id, stoppingToken).ConfigureAwait(false);
+                }
+
+                processed++;
+            }
+
+            return processed;
+        }
+
+        return await DrainCurrentTenantQueuedJobsAsync(stoppingToken).ConfigureAwait(false);
+    }
+
+    private async Task DispatchQueuedItemAsync(string jobId, string? tenantCode, CancellationToken stoppingToken)
+    {
+        await using var dispatchScope = _serviceProvider.CreateAsyncScope();
+        var tenantScope = dispatchScope.ServiceProvider.GetService<ITenantScope>();
+        if (tenantScope is not null && !string.IsNullOrWhiteSpace(tenantCode))
+        {
+            using (tenantScope.Bind(tenantCode))
+            {
+                await ProcessJobAsync(jobId, stoppingToken).ConfigureAwait(false);
+            }
+
+            return;
+        }
+
+        if (tenantScope is not null)
+        {
+            var discoveryDb = dispatchScope.ServiceProvider.GetRequiredService<EtmfDbContext>();
+            bool isNpgsql = discoveryDb.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) is true;
+            if (isNpgsql)
+            {
+                List<Guid> pendingTenantIds;
+                using (tenantScope.Suppress())
+                {
+                    pendingTenantIds = await discoveryDb.Database
+                        .SqlQueryRaw<Guid>(QueuedExportTenantsSql)
+                        .ToListAsync(stoppingToken)
+                        .ConfigureAwait(false);
+                }
+
+                foreach (Guid tenantId in pendingTenantIds)
                 {
                     using (tenantScope.Bind(tenantId))
                     {
-                        using var tenantPollScope = _serviceProvider.CreateScope();
-                        var tenantDb = tenantPollScope.ServiceProvider.GetRequiredService<EtmfDbContext>();
-                        var tenantJob = await tenantDb.TmfExportJobs
-                            .Where(j => j.Status == "QUEUED")
-                            .OrderBy(j => j.CreatedAt)
-                            .FirstOrDefaultAsync(stoppingToken);
-                        if (tenantJob is not null)
+                        await using var checkScope = _serviceProvider.CreateAsyncScope();
+                        var checkDb = checkScope.ServiceProvider.GetRequiredService<EtmfDbContext>();
+                        bool existsInTenant = await checkDb.TmfExportJobs
+                            .AsNoTracking()
+                            .AnyAsync(j => j.Id == jobId, stoppingToken)
+                            .ConfigureAwait(false);
+                        if (existsInTenant)
                         {
-                            await ProcessJobAsync(tenantJob.Id, stoppingToken);
-                            return true;
+                            await ProcessJobAsync(jobId, stoppingToken).ConfigureAwait(false);
+                            return;
                         }
                     }
                 }
 
-                return false;
+                return;
             }
         }
 
-        using var pollScope = _serviceProvider.CreateScope();
-        var db = pollScope.ServiceProvider.GetRequiredService<EtmfDbContext>();
-        var queuedJob = await db.TmfExportJobs
-            .Where(j => j.Status == "QUEUED")
-            .OrderBy(j => j.CreatedAt)
-            .FirstOrDefaultAsync(stoppingToken);
+        await ProcessJobAsync(jobId, stoppingToken).ConfigureAwait(false);
+    }
 
-        if (queuedJob is null)
+    private async Task<int> DrainCurrentTenantQueuedJobsAsync(CancellationToken stoppingToken)
+    {
+        List<string> jobIds;
+        await using (var pollScope = _serviceProvider.CreateAsyncScope())
         {
-            return false;
+            var db = pollScope.ServiceProvider.GetRequiredService<EtmfDbContext>();
+            jobIds = await db.TmfExportJobs
+                .AsNoTracking()
+                .Where(j => j.Status == "QUEUED")
+                .OrderBy(j => j.CreatedAt)
+                .Select(j => j.Id)
+                .ToListAsync(stoppingToken)
+                .ConfigureAwait(false);
         }
 
-        await ProcessJobAsync(queuedJob.Id, stoppingToken);
-        return true;
+        foreach (string id in jobIds)
+        {
+            await ProcessJobAsync(id, stoppingToken).ConfigureAwait(false);
+        }
+
+        return jobIds.Count;
     }
 
     public async Task ProcessJobAsync(string jobId, CancellationToken ct)

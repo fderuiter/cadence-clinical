@@ -20,6 +20,7 @@ using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Apps.Etmf.Services;
 using Cadence.Apps.Etmf.Workers;
 using Cadence.Database;
+using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
@@ -598,6 +599,120 @@ public class EtmfExportTests
         updatedJob.ProcessedDocuments.Should().Be(1);
         updatedJob.DownloadUrl.Should().Be("/api/v1/etmf/export-jobs/JOB-100/download");
         updatedJob.ExpiresAt.Should().Be(_clock.UtcNow.AddHours(24));
+    }
+
+    [Fact]
+    public async Task EtmfExportWorker_AwaitsChannelWakeupWithTenant_WithoutPollingActiveTenantsWhileIdle()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var dbName = $"etmf-channel-wakeup-{Guid.NewGuid():N}";
+        Guid alphaTenant = Guid.NewGuid();
+        var mappings = new Dictionary<string, Guid>(StringComparer.Ordinal)
+        {
+            ["tenant-alpha"] = alphaTenant,
+        };
+
+        int listActiveCalls = 0;
+        var resolver = new StubTenantCodeResolver(mappings, () => Interlocked.Increment(ref listActiveCalls));
+
+        var services = new ServiceCollection();
+        services.AddSingleton<Cadence.Database.Tenancy.ITenantCodeResolver>(resolver);
+        services.AddScoped<Cadence.Database.Tenancy.CurrentTenantAccessor>(sp =>
+            new Cadence.Database.Tenancy.CurrentTenantAccessor(
+                sp.GetRequiredService<Cadence.Database.Tenancy.ITenantCodeResolver>()));
+        services.AddScoped<Cadence.Database.Tenancy.ICurrentTenantAccessor>(sp =>
+            sp.GetRequiredService<Cadence.Database.Tenancy.CurrentTenantAccessor>());
+        services.AddScoped<Cadence.Database.Tenancy.ITenantScope>(sp =>
+            sp.GetRequiredService<Cadence.Database.Tenancy.CurrentTenantAccessor>());
+        services.AddScoped<Cadence.Database.Audit.IAuditActorScope, Cadence.Database.Audit.AmbientAuditActorScope>();
+        services.AddScoped(sp =>
+        {
+            var accessor = sp.GetRequiredService<Cadence.Database.Tenancy.ICurrentTenantAccessor>();
+            var optionsBuilder = new DbContextOptionsBuilder<EtmfDbContext>();
+            optionsBuilder.UseInMemoryDatabase(dbName);
+            optionsBuilder.UseCadenceStandaloneTenancy(accessor, isRelational: false);
+            optionsBuilder.AddInterceptors(Cadence.Database.Tenancy.StandaloneTenantSaveChangesInterceptor.Instance);
+            return new EtmfDbContext(optionsBuilder.Options);
+        });
+        services.AddSingleton<IClock>(_clock);
+
+        await using var provider = services.BuildServiceProvider();
+        var queue = new EtmfExportQueue();
+        var worker = new EtmfExportWorker(provider, queue, NullLogger<EtmfExportWorker>.Instance);
+
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        await worker.StartAsync(cts.Token);
+
+        // Startup drain runs once on non-relational fallback; reset counter to observe steady-state idle + channel wakeup.
+        await Task.Delay(50, ct);
+        Interlocked.Exchange(ref listActiveCalls, 0);
+
+        // Seed a queued job for tenant-alpha and enqueue it on EtmfExportQueue.
+        using (var seedScope = provider.CreateScope())
+        {
+            using var _ = seedScope.ServiceProvider.GetRequiredService<Cadence.Database.Tenancy.ITenantScope>().Bind(alphaTenant);
+            var seedDb = seedScope.ServiceProvider.GetRequiredService<EtmfDbContext>();
+            seedDb.TmfDocuments.Add(TmfDocument.CreateApproved(
+                id: "DOC-WAKE-1",
+                studyId: "STUDY-WAKE",
+                filename: "Protocol.pdf",
+                createdBy: "cra.user",
+                createdAt: _clock.UtcNow.UtcDateTime,
+                reasonForChange: "Approved protocol",
+                siteId: "SITE-1",
+                zone: 1,
+                section: "01.01",
+                artifactCode: "01.01.01",
+                artifactType: "Protocol",
+                content: "Protocol Content",
+                mimeType: "application/pdf",
+                protocolVersionIndex: 1));
+            seedDb.TmfExportJobs.Add(new TmfExportJob("JOB-WAKE-1")
+            {
+                StudyId = "STUDY-WAKE",
+                RequestedBy = "cra.user",
+                Status = "QUEUED",
+                TotalDocuments = 1,
+                ProcessedDocuments = 0,
+                CreatedAt = _clock.UtcNow.UtcDateTime,
+            });
+            await seedDb.SaveChangesAsync(ct);
+        }
+
+        await queue.EnqueueAsync("JOB-WAKE-1", "tenant-alpha", ct);
+
+        string? observedStatus = null;
+        for (int attempt = 0; attempt < 40 && observedStatus != "COMPLETED"; attempt++)
+        {
+            await Task.Delay(25, ct);
+            using var verifyScope = provider.CreateScope();
+            using var _ = verifyScope.ServiceProvider.GetRequiredService<Cadence.Database.Tenancy.ITenantScope>().Bind(alphaTenant);
+            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<EtmfDbContext>();
+            observedStatus = (await verifyDb.TmfExportJobs.AsNoTracking().FirstAsync(j => j.Id == "JOB-WAKE-1", ct)).Status;
+        }
+
+        await cts.CancelAsync();
+        await worker.StopAsync(ct);
+
+        observedStatus.Should().Be("COMPLETED");
+        Volatile.Read(ref listActiveCalls).Should().Be(0, "channel wakeups with tenant code must not sweep ListActiveTenantIdsAsync");
+    }
+
+    private sealed class StubTenantCodeResolver(
+        IReadOnlyDictionary<string, Guid> mappings,
+        Action onListActive) : Cadence.Database.Tenancy.ITenantCodeResolver
+    {
+        public Guid? ResolveTenantId(string tenantCode) =>
+            mappings.TryGetValue(tenantCode, out Guid id) ? id : null;
+
+        public ValueTask<Guid?> ResolveTenantIdAsync(string tenantCode, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(ResolveTenantId(tenantCode));
+
+        public Task<IReadOnlyList<Guid>> ListActiveTenantIdsAsync(CancellationToken cancellationToken = default)
+        {
+            onListActive();
+            return Task.FromResult<IReadOnlyList<Guid>>(mappings.Values.ToList());
+        }
     }
 
     /// <summary>A request signed by a CRA assigned to <paramref name="studies"/>.</summary>

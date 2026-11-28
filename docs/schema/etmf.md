@@ -374,6 +374,7 @@ Indexes:
 - `IX_tmf_export_jobs_CreatedAt`: (`CreatedAt`)
 - `IX_tmf_export_jobs_Status`: (`Status`)
 - `IX_tmf_export_jobs_StudyId`: (`StudyId`)
+- `IX_tmf_export_jobs_queued_tenant_created`: (`tenant_id`, `CreatedAt`) where `"Status" = 'QUEUED'`
 - `IX_tmf_export_jobs_tenant_id`: (`tenant_id`)
 
 ## etmf.transactional_outbox

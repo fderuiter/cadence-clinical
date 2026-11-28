@@ -653,6 +653,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2691: Split Generated CDASH Variable Union, Enforce Intra-File Frontend Clone Detection, and Delegate Lazy Kernel Action Wrappers](adr/2026-11-26-deduplicate-cdash-frontend-clones-and-kernel-action-wrappers.md) | Current | - Status: Accepted |
 | [ADR-2692: Strip Unreachable Non-Demo Route Modules, Remove hls.js, and Tighten Worker CSP](adr/2026-11-27-strip-unreachable-route-modules-and-remove-hls-js.md) | Current | - Status: Accepted |
 | [ADR-2834: Tokenized Focus Cascade, Scroll Gutters, and Explicit CSS Transitions](adr/2026-11-27-tokenized-focus-cascade-scroll-gutters-and-explicit-css-transitions.md) | Current | - Status: Accepted |
+| [ADR-2668: Cache Tenant Resolution, Scoped DbContext Connection Leasing, and Pending-Work Tenant Indexing](adr/2026-11-27-cache-tenant-resolution-and-index-pending-work.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

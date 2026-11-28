@@ -146,6 +146,15 @@ public sealed class CurrentTenantAccessor(
         _nonHttpFallbackTenantCode = tenantCode.Trim();
     }
 
+    internal enum TenantBindingStatus
+    {
+        Unbound,
+        Bound,
+        Invalid,
+    }
+
+    internal readonly record struct TenantBindingResolution(TenantBindingStatus Status, Guid TenantId);
+
     public Guid? GetCurrentTenantId()
     {
         if (SuppressedLocal.Value)
@@ -172,9 +181,23 @@ public sealed class CurrentTenantAccessor(
         }
 
         string? tenantCode = CallerScope.TenantId(httpContext);
-        return string.IsNullOrWhiteSpace(tenantCode)
-            ? null
-            : tenantCodeResolver.ResolveTenantId(tenantCode);
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return null;
+        }
+
+        if (RequestTenantResolutionCache.TryGet(httpContext, tenantCode, out Guid cachedId))
+        {
+            return cachedId;
+        }
+
+        Guid? resolved = tenantCodeResolver.ResolveTenantId(tenantCode);
+        if (resolved is { } activeId && activeId != Guid.Empty)
+        {
+            RequestTenantResolutionCache.Set(httpContext, tenantCode, activeId);
+        }
+
+        return resolved;
     }
 
     public async ValueTask<Guid?> GetCurrentTenantIdAsync(CancellationToken cancellationToken = default)
@@ -203,9 +226,119 @@ public sealed class CurrentTenantAccessor(
         }
 
         string? tenantCode = CallerScope.TenantId(httpContext);
-        return string.IsNullOrWhiteSpace(tenantCode)
-            ? null
-            : await tenantCodeResolver.ResolveTenantIdAsync(tenantCode, cancellationToken).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return null;
+        }
+
+        if (RequestTenantResolutionCache.TryGet(httpContext, tenantCode, out Guid cachedId))
+        {
+            return cachedId;
+        }
+
+        Guid? resolved = await tenantCodeResolver.ResolveTenantIdAsync(tenantCode, cancellationToken).ConfigureAwait(false);
+        if (resolved is { } activeId && activeId != Guid.Empty)
+        {
+            RequestTenantResolutionCache.Set(httpContext, tenantCode, activeId);
+        }
+
+        return resolved;
+    }
+
+    internal TenantBindingResolution ResolveBindingState()
+    {
+        if (SuppressedLocal.Value)
+        {
+            return new TenantBindingResolution(TenantBindingStatus.Unbound, Guid.Empty);
+        }
+
+        if (BoundTenantLocal.Value is { } explicitGuid)
+        {
+            return explicitGuid == Guid.Empty
+                ? new TenantBindingResolution(TenantBindingStatus.Invalid, Guid.Empty)
+                : new TenantBindingResolution(TenantBindingStatus.Bound, explicitGuid);
+        }
+
+        if (!string.IsNullOrWhiteSpace(BoundTenantCodeLocal.Value))
+        {
+            Guid? boundResolved = tenantCodeResolver.ResolveTenantId(BoundTenantCodeLocal.Value);
+            return boundResolved is { } validBound && validBound != Guid.Empty
+                ? new TenantBindingResolution(TenantBindingStatus.Bound, validBound)
+                : new TenantBindingResolution(TenantBindingStatus.Invalid, Guid.Empty);
+        }
+
+        HttpContext? httpContext = httpContextAccessor?.HttpContext;
+        if (httpContext is null)
+        {
+            if (_nonHttpFallbackTenantCode is null)
+            {
+                return new TenantBindingResolution(TenantBindingStatus.Unbound, Guid.Empty);
+            }
+
+            Guid? fallbackResolved = tenantCodeResolver.ResolveTenantId(_nonHttpFallbackTenantCode);
+            return fallbackResolved is { } validFallback && validFallback != Guid.Empty
+                ? new TenantBindingResolution(TenantBindingStatus.Bound, validFallback)
+                : new TenantBindingResolution(TenantBindingStatus.Unbound, Guid.Empty);
+        }
+
+        string? tenantCode = CallerScope.TenantId(httpContext);
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return new TenantBindingResolution(TenantBindingStatus.Unbound, Guid.Empty);
+        }
+
+        Guid? httpResolved = GetCurrentTenantId();
+        return httpResolved is { } validHttp && validHttp != Guid.Empty
+            ? new TenantBindingResolution(TenantBindingStatus.Bound, validHttp)
+            : new TenantBindingResolution(TenantBindingStatus.Invalid, Guid.Empty);
+    }
+
+    internal async ValueTask<TenantBindingResolution> ResolveBindingStateAsync(CancellationToken cancellationToken)
+    {
+        if (SuppressedLocal.Value)
+        {
+            return new TenantBindingResolution(TenantBindingStatus.Unbound, Guid.Empty);
+        }
+
+        if (BoundTenantLocal.Value is { } explicitGuid)
+        {
+            return explicitGuid == Guid.Empty
+                ? new TenantBindingResolution(TenantBindingStatus.Invalid, Guid.Empty)
+                : new TenantBindingResolution(TenantBindingStatus.Bound, explicitGuid);
+        }
+
+        if (!string.IsNullOrWhiteSpace(BoundTenantCodeLocal.Value))
+        {
+            Guid? boundResolved = await tenantCodeResolver.ResolveTenantIdAsync(BoundTenantCodeLocal.Value, cancellationToken).ConfigureAwait(false);
+            return boundResolved is { } validBound && validBound != Guid.Empty
+                ? new TenantBindingResolution(TenantBindingStatus.Bound, validBound)
+                : new TenantBindingResolution(TenantBindingStatus.Invalid, Guid.Empty);
+        }
+
+        HttpContext? httpContext = httpContextAccessor?.HttpContext;
+        if (httpContext is null)
+        {
+            if (_nonHttpFallbackTenantCode is null)
+            {
+                return new TenantBindingResolution(TenantBindingStatus.Unbound, Guid.Empty);
+            }
+
+            Guid? fallbackResolved = await tenantCodeResolver.ResolveTenantIdAsync(_nonHttpFallbackTenantCode, cancellationToken).ConfigureAwait(false);
+            return fallbackResolved is { } validFallback && validFallback != Guid.Empty
+                ? new TenantBindingResolution(TenantBindingStatus.Bound, validFallback)
+                : new TenantBindingResolution(TenantBindingStatus.Unbound, Guid.Empty);
+        }
+
+        string? tenantCode = CallerScope.TenantId(httpContext);
+        if (string.IsNullOrWhiteSpace(tenantCode))
+        {
+            return new TenantBindingResolution(TenantBindingStatus.Unbound, Guid.Empty);
+        }
+
+        Guid? httpResolved = await GetCurrentTenantIdAsync(cancellationToken).ConfigureAwait(false);
+        return httpResolved is { } validHttp && validHttp != Guid.Empty
+            ? new TenantBindingResolution(TenantBindingStatus.Bound, validHttp)
+            : new TenantBindingResolution(TenantBindingStatus.Invalid, Guid.Empty);
     }
 
     public ValueTask<bool> IsActiveTenantAsync(string tenantCode, CancellationToken cancellationToken = default)
@@ -215,13 +348,29 @@ public sealed class CurrentTenantAccessor(
             return ValueTask.FromResult(false);
         }
 
-        return CheckActiveAsync(tenantCode, cancellationToken);
+        HttpContext? httpContext = httpContextAccessor?.HttpContext;
+        if (RequestTenantResolutionCache.TryGet(httpContext, tenantCode, out _))
+        {
+            return ValueTask.FromResult(true);
+        }
+
+        return CheckActiveAsync(httpContext, tenantCode, cancellationToken);
     }
 
-    private async ValueTask<bool> CheckActiveAsync(string tenantCode, CancellationToken cancellationToken)
+    private async ValueTask<bool> CheckActiveAsync(HttpContext? httpContext, string tenantCode, CancellationToken cancellationToken)
     {
         Guid? resolved = await tenantCodeResolver.ResolveTenantIdAsync(tenantCode, cancellationToken).ConfigureAwait(false);
-        return resolved.HasValue && resolved.Value != Guid.Empty;
+        if (resolved is { } activeId && activeId != Guid.Empty)
+        {
+            if (httpContext is not null && string.Equals(CallerScope.TenantId(httpContext)?.Trim(), tenantCode.Trim(), StringComparison.Ordinal))
+            {
+                RequestTenantResolutionCache.Set(httpContext, tenantCode, activeId);
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     public IDisposable Bind(Guid tenantId)

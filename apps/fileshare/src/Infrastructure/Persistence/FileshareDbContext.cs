@@ -40,5 +40,17 @@ public sealed class FileshareDbContext(DbContextOptions<FileshareDbContext> opti
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
         modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
         modelBuilder.ConfigureStandaloneTenancy(this);
+
+        modelBuilder.Entity<FileRecord>()
+            .HasIndex(
+                [StandaloneTenantModelExtensions.TenantPropertyName],
+                "IX_file_records_pending_transcode_tenant")
+            .HasFilter("\"TranscodeStatus\" = 'PENDING' AND NOT \"IsDeleted\"");
+
+        modelBuilder.Entity<FileRecord>()
+            .HasIndex(
+                [StandaloneTenantModelExtensions.TenantPropertyName],
+                "IX_file_records_pending_conversion_tenant")
+            .HasFilter("\"ConversionStatus\" = 'PENDING' AND NOT \"IsDeleted\"");
     }
 }

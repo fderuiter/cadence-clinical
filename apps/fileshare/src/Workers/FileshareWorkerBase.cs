@@ -1,9 +1,16 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Fileshare.Domain;
+using Cadence.Apps.Fileshare.Infrastructure.Persistence;
 using Cadence.Database.Audit;
+using Cadence.Database.Tenancy;
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -33,6 +40,76 @@ public abstract class FileshareWorkerBase : BackgroundService
     protected abstract TimeSpan PollInterval { get; }
 
     protected abstract Task ProcessPendingAsync(CancellationToken stoppingToken);
+
+    protected async Task ProcessForDiscoveredTenantsAsync(
+        string postgresDirectorySql,
+        Expression<Func<FileRecord, bool>> pendingPredicate,
+        Func<CancellationToken, Task> processBoundContextAsync,
+        CancellationToken ct)
+    {
+        await using var discoveryScope = ScopeFactory.CreateAsyncScope();
+        var discoveryDb = discoveryScope.ServiceProvider.GetRequiredService<FileshareDbContext>();
+        var tenantScope = discoveryScope.ServiceProvider.GetService<ITenantScope>();
+
+        bool isNpgsql = discoveryDb.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) is true;
+        if (isNpgsql && tenantScope is not null)
+        {
+            List<Guid> pendingTenantIds;
+            using (tenantScope.Suppress())
+            {
+                pendingTenantIds = await discoveryDb.Database
+                    .SqlQueryRaw<Guid>(postgresDirectorySql)
+                    .ToListAsync(ct)
+                    .ConfigureAwait(false);
+            }
+
+            foreach (Guid tenantId in pendingTenantIds)
+            {
+                using (tenantScope.Bind(tenantId))
+                {
+                    await processBoundContextAsync(ct).ConfigureAwait(false);
+                }
+            }
+
+            return;
+        }
+
+        if (!discoveryDb.Database.IsRelational() && tenantScope is not null)
+        {
+            var pendingTenantIds = await discoveryDb.FileRecords
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(pendingPredicate)
+                .Select(f => EF.Property<Guid>(f, StandaloneTenantModelExtensions.TenantPropertyName))
+                .Distinct()
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+
+            if (pendingTenantIds.Count == 0)
+            {
+                return;
+            }
+
+            foreach (Guid tenantId in pendingTenantIds)
+            {
+                if (tenantId == Guid.Empty)
+                {
+                    await processBoundContextAsync(ct).ConfigureAwait(false);
+                }
+                else
+                {
+                    using (tenantScope.Bind(tenantId))
+                    {
+                        await processBoundContextAsync(ct).ConfigureAwait(false);
+                    }
+                }
+            }
+
+            return;
+        }
+
+        await processBoundContextAsync(ct).ConfigureAwait(false);
+    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

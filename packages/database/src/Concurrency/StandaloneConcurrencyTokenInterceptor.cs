@@ -1,12 +1,16 @@
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Cadence.Database.Tenancy;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cadence.Database.Concurrency;
 
@@ -110,7 +114,11 @@ public sealed class StandaloneConcurrencyTokenInterceptor : SaveChangesIntercept
         DbContextEventData eventData,
         InterceptionResult<int> result)
     {
-        IncrementConcurrencyTokens(eventData.Context);
+        if (eventData.Context is { } context && !HasDelegatingSaveInterceptor(context, includeAuditInterceptor: false))
+        {
+            IncrementConcurrencyTokens(context);
+        }
+
         return base.SavingChanges(eventData, result);
     }
 
@@ -119,8 +127,27 @@ public sealed class StandaloneConcurrencyTokenInterceptor : SaveChangesIntercept
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        IncrementConcurrencyTokens(eventData.Context);
+        if (eventData.Context is { } context && !HasDelegatingSaveInterceptor(context, includeAuditInterceptor: true))
+        {
+            IncrementConcurrencyTokens(context);
+        }
+
         return base.SavingChangesAsync(eventData, result, cancellationToken);
+    }
+
+    internal static bool HasDelegatingSaveInterceptor(DbContext context, bool includeAuditInterceptor)
+    {
+        var interceptors = context.GetService<IDbContextOptions>()?
+            .FindExtension<CoreOptionsExtension>()?
+            .Interceptors;
+        if (interceptors is null)
+        {
+            return false;
+        }
+
+        return interceptors.Any(i =>
+            i is StandaloneTenantSaveChangesInterceptor
+            || (includeAuditInterceptor && i is GxPAuditInterceptor));
     }
 
     public static void IncrementConcurrencyTokens(DbContext? context)
