@@ -42,6 +42,10 @@ public static class DatabaseTestEvidence
     public const string FormQueryWorklistBenchmarkTest =
         "Cadence.IntegrationTests.Execution.FormQueryWorklistBenchmarkPostgresTests.BenchmarkThreeHundredStudyFormsWorklistSqlLatencyAndAllocations";
 
+    /// <summary>The 3,000-document eTMF projected-read and SQL scope benchmark opt-in test (<c>CADENCE_ETMF_BENCHMARK=1</c>).</summary>
+    public const string EtmfReadProjectionBenchmarkTest =
+        "Cadence.IntegrationTests.Etmf.EtmfReadProjectionBenchmarkPostgresTests.BenchmarkThreeThousandStudyDocumentsProjectedReadsSqlScopeAndReconciledMutations";
+
     /// <summary>The Chromium browser-to-database observation correction test (<c>CADENCE_TEST_BROWSER=1</c>, ADR-2531).</summary>
     public const string BrowserCorrectionTest =
         "Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests.BrowserCorrectionReachesTheDatabaseWithItsReason";
@@ -49,7 +53,8 @@ public static class DatabaseTestEvidence
     /// <summary>
     /// Tests that are skipped by design in non-snapshot runs even with a database, because they need a separate opt-in:
     /// the 10M-edge lineage benchmark (<c>CADENCE_LINEAGE_BENCHMARK=1</c>), the 300-form worklist benchmark
-    /// (<c>CADENCE_FORM_QUERY_BENCHMARK=1</c>), and the Chromium browser-to-database
+    /// (<c>CADENCE_FORM_QUERY_BENCHMARK=1</c>), the 3,000-document eTMF projected-read benchmark
+    /// (<c>CADENCE_ETMF_BENCHMARK=1</c>), and the Chromium browser-to-database
     /// correction check (<c>CADENCE_TEST_BROWSER=1</c>, executed in <c>accessibility-e2e</c>). During GxP snapshots // deid-ignore
     /// (<see cref="SnapshotOptInTests"/>), <see cref="BrowserCorrectionTest"/> is mandatory (ADR-2531).
     /// </summary>
@@ -57,6 +62,7 @@ public static class DatabaseTestEvidence
     {
         LineageBenchmarkTest,
         FormQueryWorklistBenchmarkTest,
+        EtmfReadProjectionBenchmarkTest,
         BrowserCorrectionTest,
     };
 
@@ -68,6 +74,7 @@ public static class DatabaseTestEvidence
     {
         LineageBenchmarkTest,
         FormQueryWorklistBenchmarkTest,
+        EtmfReadProjectionBenchmarkTest,
     };
 
     /// <summary>The skipped or not-executed tests from the database assemblies in the TRX files under <paramref name="resultsPath"/>.</summary>

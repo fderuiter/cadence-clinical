@@ -361,7 +361,7 @@ import { useToastStore } from "../../stores/toasts.js";
 import {
   canStageEtmfQc,
   ETMF_STAGE_ROLE_REASON,
-} from "../../canvas/authority.ts";
+} from "../../canvas/authority/etmfTraining";
 import {
   extractAiProvenanceAttributes,
   formatClinicalEnum,

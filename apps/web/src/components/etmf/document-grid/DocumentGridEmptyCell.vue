@@ -55,7 +55,7 @@
 
 <script setup>
 import { ClinicalIcon, EmptyState } from "ui";
-import { ETMF_STAGE_ROLE_REASON } from "../../../canvas/authority.ts";
+import { ETMF_STAGE_ROLE_REASON } from "../../../canvas/authority/etmfTraining";
 
 defineProps({
   scopeForbiddenGuidance: {

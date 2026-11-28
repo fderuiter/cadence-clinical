@@ -533,7 +533,7 @@ import {
   canReadEtmf,
   canReviewEtmfQc,
   canStageEtmfQc,
-} from "../canvas/authority";
+} from "../canvas/authority/etmfTraining";
 import DocumentGrid from "../components/etmf/DocumentGrid.vue";
 import TmfBinderTree from "../components/etmf/TmfBinderTree.vue";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";

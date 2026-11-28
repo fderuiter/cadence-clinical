@@ -3,7 +3,7 @@ import {
   canExportEtmf,
   canStageEtmfQc,
   canTagEtmf,
-} from "../../../canvas/authority.ts";
+} from "../../../canvas/authority/etmfTraining";
 import { use2DGrid } from "../../../composables/use2DGrid";
 import { useAuthStore } from "../../../stores/auth";
 import { useEtmfStore } from "../../../stores/etmf";

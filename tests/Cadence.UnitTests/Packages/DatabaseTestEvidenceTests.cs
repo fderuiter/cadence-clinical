@@ -64,6 +64,7 @@ public sealed class DatabaseTestEvidenceTests : IDisposable
             ("Cadence.UnitTests.dll", "Cadence.UnitTests.Some", "Skipped", "NotExecuted"),
             ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.LineageBenchmarkPostgresTests", "BenchmarkTenMillionEdgesTraceLatency", "NotExecuted"),
             ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Execution.FormQueryWorklistBenchmarkPostgresTests", "BenchmarkThreeHundredStudyFormsWorklistSqlLatencyAndAllocations", "NotExecuted"),
+            ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Etmf.EtmfReadProjectionBenchmarkPostgresTests", "BenchmarkThreeThousandStudyDocumentsProjectedReadsSqlScopeAndReconciledMutations", "NotExecuted"),
             ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests", "BrowserCorrectionReachesTheDatabaseWithItsReason", "NotExecuted"));
 
         var skipped = DatabaseTestEvidence.FindSkipped(_dir);
@@ -114,6 +115,15 @@ public sealed class DatabaseTestEvidenceTests : IDisposable
             "    [Fact]",
             "    public void BenchmarkThreeHundredStudyFormsWorklistSqlLatencyAndAllocations() { }",
             "}"));
+        string etmfDir = Path.Combine(repoRoot, "tests", "Cadence.IntegrationTests", "Etmf");
+        Directory.CreateDirectory(etmfDir);
+        File.WriteAllText(Path.Combine(etmfDir, "EtmfReadProjectionBenchmarkPostgresTests.cs"), string.Join("\n",
+            "namespace Cadence.IntegrationTests.Etmf;",
+            "public class EtmfReadProjectionBenchmarkPostgresTests",
+            "{",
+            "    [Fact]",
+            "    public void BenchmarkThreeThousandStudyDocumentsProjectedReadsSqlScopeAndReconciledMutations() { }",
+            "}"));
         File.WriteAllText(Path.Combine(e2eDir, "FlowTests.cs"), string.Join("\n",
             "namespace Cadence.E2ETests.E2E;",
             "public class FlowTests",
@@ -159,6 +169,7 @@ public sealed class DatabaseTestEvidenceTests : IDisposable
             ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.RlsTests", "Passes", "Passed"),
             ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.LineageBenchmarkPostgresTests", "BenchmarkTenMillionEdgesTraceLatency", "NotExecuted"),
             ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Execution.FormQueryWorklistBenchmarkPostgresTests", "BenchmarkThreeHundredStudyFormsWorklistSqlLatencyAndAllocations", "NotExecuted"),
+            ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Etmf.EtmfReadProjectionBenchmarkPostgresTests", "BenchmarkThreeThousandStudyDocumentsProjectedReadsSqlScopeAndReconciledMutations", "NotExecuted"),
             ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests", "BrowserCorrectionReachesTheDatabaseWithItsReason", "NotExecuted"));
 
         DatabaseTestEvidence.FindSkipped(_dir, repoRoot: null, requireBrowserEvidence: false).Should().BeEmpty();
