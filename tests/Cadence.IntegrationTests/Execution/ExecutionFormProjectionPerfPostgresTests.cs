@@ -49,6 +49,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
+using Npgsql;
+
 using Xunit;
 
 using static Cadence.IntegrationTests.Kernel.KernelCollectionScenario;
@@ -904,6 +906,7 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
 
         async Task SeedFormsUpToAsync(int targetTotal)
         {
+            var seededAny = false;
             while (seededCount < targetTotal)
             {
                 var chunkEnd = Math.Min(targetTotal, seededCount + 500);
@@ -1073,6 +1076,18 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
 
                 await seedDb.SaveChangesAsync(ct);
                 seededCount = chunkEnd;
+                seededAny = true;
+            }
+
+            if (seededAny)
+            {
+                await using var adminConn = new NpgsqlConnection(fixture.AdminConnectionString);
+                await adminConn.OpenAsync(ct);
+                await using var analyzeCmd = new NpgsqlCommand(
+                    "ANALYZE kernel.observations, kernel.observation_revisions, kernel.collection_instances, kernel.collection_instance_members, kernel.attestations, kernel.assertions, kernel.validation_findings, kernel.validation_detections, kernel.enrollments, kernel.study_sites, kernel.studies, kernel.sites, kernel.concepts, kernel.protocol_versions;",
+                    adminConn)
+                { CommandTimeout = 0 };
+                await analyzeCmd.ExecuteNonQueryAsync(ct);
             }
         }
 
@@ -1104,6 +1119,16 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
                 cancellationToken: ct);
             swValidate.Stop();
             valResult.IsSuccess.Should().BeTrue(valResult.Error?.Message);
+
+            await using (var adminConn = new NpgsqlConnection(fixture.AdminConnectionString))
+            {
+                await adminConn.OpenAsync(ct);
+                await using var analyzeFindingsCmd = new NpgsqlCommand(
+                    "ANALYZE kernel.validation_findings, kernel.validation_detections;",
+                    adminConn)
+                { CommandTimeout = 0 };
+                await analyzeFindingsCmd.ExecuteNonQueryAsync(ct);
+            }
 
             // 2. ListForStudyAsync (Study Home work-queue hydration path).
             var beforeStudyBytes = GC.GetTotalAllocatedBytes(precise: true);

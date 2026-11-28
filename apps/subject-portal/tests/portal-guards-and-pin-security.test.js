@@ -525,8 +525,9 @@ describe("Portal Availability Guards and PIN Security", () => {
     state.pinUnlock.isOpen = true;
     await nextTick();
     document.getElementById("btn-pin-unlock-signout").click();
-    await settle();
-    expect(state.session.userId).toBeNull();
-    expect(state.pinUnlock.isOpen).toBe(false);
+    await vi.waitFor(() => {
+      expect(state.session.userId).toBeNull();
+      expect(state.pinUnlock.isOpen).toBe(false);
+    });
   });
 });

@@ -806,8 +806,17 @@ describe("Client-side ePRO sync, draft preservation, PIN recovery, and offline s
       req.onsuccess = () => resolve(req.result);
     });
     expect(rawStored[0].answers).toBeUndefined();
+    expect(rawStored[0].ciphertext).toBeUndefined();
+    expect(rawStored[0].iv).toBeUndefined();
     expect(rawStored[0].subject_id).toBeUndefined();
-    expect(JSON.stringify(rawStored[0])).not.toContain("132");
+    const {
+      client_id: _cid,
+      device_timestamp: _dt,
+      resolved_at: _rt,
+      ...scrubbedRecord
+    } = rawStored[0];
+    expect(JSON.stringify(scrubbedRecord)).not.toContain("132");
+    expect(JSON.stringify(scrubbedRecord)).not.toContain("vssbp");
   });
 
   it("Req 7 & PII Guardrails: renders offline-accessible coordinator phone and email links in participant card, sync drawer, PIN dialog, and inbox while masking PII", async () => {

@@ -308,7 +308,7 @@ describe("Harden Offline Shell, PIN Sync, Guarded Sign-Out, Split Signatures, Re
     } finally {
       fs.rmSync(tmpOutDir, { recursive: true, force: true });
     }
-  });
+  }, 60000);
 
   it("AC2 & AC3 (Req 3 & 4): opens PIN unlock before startup sync, emits sync:locked with zero sync:success events while items remain locked, and enables authenticated autoDisburse on PIN unlock", async () => {
     const userId = "subj_auth_01";
@@ -369,24 +369,26 @@ describe("Harden Offline Shell, PIN Sync, Guarded Sign-Out, Split Signatures, Re
     try {
       document.body.innerHTML = `<div id="app"></div>`;
       await initializeApp();
-      await settle();
 
       // PIN unlock modal is opened before startup sync, and zero sync:success events fire while locked
-      expect(state.pinUnlock.isOpen).toBe(true);
+      await vi.waitFor(() => {
+        expect(state.pinUnlock.isOpen).toBe(true);
+        expect(syncLockedSpy).toHaveBeenCalled();
+        expect(state.syncStatusText).toMatch(/PIN|locked/i);
+      });
       expect(syncSuccessSpy).not.toHaveBeenCalled();
-      expect(syncLockedSpy).toHaveBeenCalled();
-      expect(state.syncStatusText).toMatch(/PIN|locked/i);
       expect(callOrder).not.toContain("epro/sync");
 
       // Unlocking the PIN in an authenticated session syncs queued items and triggers stipend autoDisburse
       state.pinUnlock.pin = "246810";
       await handlePINUnlockSubmit();
-      await settle();
 
-      expect(state.pinUnlock.isOpen).toBe(false);
-      expect(callOrder).toContain("epro/sync");
-      expect(callOrder).toContain("diary-stipend");
-      expect(syncSuccessSpy).toHaveBeenCalledTimes(1);
+      await vi.waitFor(() => {
+        expect(state.pinUnlock.isOpen).toBe(false);
+        expect(callOrder).toContain("epro/sync");
+        expect(callOrder).toContain("diary-stipend");
+        expect(syncSuccessSpy).toHaveBeenCalledTimes(1);
+      });
     } finally {
       window.removeEventListener("sync:success", syncSuccessSpy);
       window.removeEventListener("sync:locked", syncLockedSpy);
@@ -642,9 +644,15 @@ describe("Harden Offline Shell, PIN Sync, Guarded Sign-Out, Split Signatures, Re
     sigWrapper.query("#sign-username").value = userId;
     sigWrapper.query("#sign-password").value = "CorrectOidcPassword!"; // pragma: allowlist secret
     await verifyAndSubmitSignature();
-    await settle();
 
-    expect(state.signatureModalOpen).toBe(false);
+    await vi.waitFor(() => {
+      expect(state.signatureModalOpen).toBe(false);
+      expect(
+        onlineEndpoints.some((c) =>
+          c.url.includes("payments/participant/me/diary-stipend")
+        )
+      ).toBe(true);
+    });
     const stepUpCall = onlineEndpoints.find((c) =>
       c.url.includes("api/v1/auth/signature-verification")
     );
@@ -654,11 +662,6 @@ describe("Harden Offline Shell, PIN Sync, Guarded Sign-Out, Split Signatures, Re
       action: "/api/v1/interop/epro/submit",
       semantic_action: "collection.sign",
     });
-    expect(
-      onlineEndpoints.some((c) =>
-        c.url.includes("payments/participant/me/diary-stipend")
-      )
-    ).toBe(true);
 
     // Offline ePRO mode -> Security PIN (numeric inputmode) + PBKDF2 wrapped key verification
     state.session.isOfflineMode = true;

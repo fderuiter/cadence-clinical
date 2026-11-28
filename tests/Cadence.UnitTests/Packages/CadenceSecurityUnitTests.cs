@@ -1441,7 +1441,7 @@ public class CadenceSecurityUnitTests
             [CadenceSecurityServiceCollectionExtensions.GatewaySecretConfigurationKey] = TestSecurityContext.GatewaySecret,
             [AuditSecretKey.EnvironmentVariable] = TestSecurityContext.AuditLogSecretKey,
         });
-        secBuilder.Services.AddCadenceSecurity(opts => opts.AuditLogSecretKey = "too-short");
+        secBuilder.Services.AddCadenceSecurity(opts => opts.AuditLogSecretKey = "too-short"); // pragma: allowlist secret
         await using var secApp = secBuilder.Build();
 
         Func<Task> start = () => secApp.StartAsync(TestContext.Current.CancellationToken);

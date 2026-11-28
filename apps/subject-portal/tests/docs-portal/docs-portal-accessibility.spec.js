@@ -185,19 +185,57 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
     expect(orphanedPipeFindings).toEqual([]);
     expect(codeAnchorFindings).toEqual([]);
 
+    const countTbodyRows = (html) =>
+      Array.from(
+        html.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
+        (m) => m[1]
+      ).reduce(
+        (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
+        0
+      );
+
     const docIndexHtml = fs.readFileSync(
       path.join(docsDistDir, "DOCUMENTATION_INDEX.html"),
       "utf8"
     );
-    const tbodyBlocks = Array.from(
-      docIndexHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
-      (m) => m[1]
+    const hubRowCount = countTbodyRows(docIndexHtml);
+    expect(hubRowCount).toBeGreaterThanOrEqual(28);
+
+    const shardHrefs = Array.from(
+      new Set(
+        Array.from(
+          docIndexHtml.matchAll(/<tbody(?:\s[^>]*)?>[\s\S]*?<\/tbody>/gi)
+        ).flatMap((m) =>
+          Array.from(m[0].matchAll(/href="([^"#?]+)"/gi), (x) => x[1])
+        )
+      )
     );
-    const dataRowCount = tbodyBlocks.reduce(
-      (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
-      0
-    );
-    expect(dataRowCount).toBeGreaterThanOrEqual(715);
+    let totalCatalogEntries = 0;
+    for (const href of shardHrefs) {
+      let shardRel = href
+        .replace(/^\/cadence-clinical\//, "")
+        .replace(/^\.\//, "");
+      if (shardRel.endsWith("/")) {
+        shardRel += "index.html";
+      } else if (!shardRel.endsWith(".html")) {
+        shardRel += ".html";
+      }
+      if (shardRel === "adr/TEMPLATE.html") {
+        continue;
+      }
+      const shardFullPath = path.join(docsDistDir, shardRel);
+      expect(fs.existsSync(shardFullPath)).toBe(true);
+      const shardHtml = fs.readFileSync(shardFullPath, "utf8");
+      const vpDocMatch = shardHtml.match(
+        /<div class="vp-doc[^"]*"[^>]*>([\s\S]*?)<\/main>/i
+      );
+      const vpDocHtml = vpDocMatch ? vpDocMatch[1] : shardHtml;
+      totalCatalogEntries += countTbodyRows(vpDocHtml);
+      if (shardRel.startsWith("adr/") && shardRel !== "adr/index.html") {
+        totalCatalogEntries += (vpDocHtml.match(/<li(?:\s|>)/gi) || []).length;
+      }
+    }
+    expect(totalCatalogEntries).toBeGreaterThanOrEqual(715);
   });
 
   test("navbar items and portal layout render without clipping, overlap, or horizontal scroll across 375px–1920px viewports", async ({
