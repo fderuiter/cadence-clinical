@@ -550,6 +550,7 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
         })
       );
       expect(html).toContain('id="metadata-drawer-overlay"');
+      expect(html).toContain("<div");
       expect(html).toContain('role="dialog"');
       expect(html).toContain('aria-modal="true"');
       expect(html).toContain("Document Metadata");
@@ -577,6 +578,7 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
               {
                 isOpen: false,
                 keepMounted: true,
+                panelTag: "aside",
                 teleport: false,
                 title: "Persistent Readability Drawer",
               },
@@ -587,6 +589,7 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
             ),
         })
       );
+      expect(closedKeepMountedHtml).toContain("<aside");
       expect(closedKeepMountedHtml).toContain("Cached readability state");
       expect(closedKeepMountedHtml).toContain('aria-hidden="true"');
       expect(closedKeepMountedHtml).not.toContain('aria-modal="true"');

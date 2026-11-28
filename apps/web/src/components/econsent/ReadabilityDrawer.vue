@@ -3,6 +3,7 @@
     :model-value="isOpen"
     :teleport="false"
     keep-mounted
+    panel-tag="aside"
     size="sm"
     :panel-class="['readability-drawer', { open: isOpen }]"
     aria-label="Readability Harmonization Assistant"

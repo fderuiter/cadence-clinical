@@ -44,6 +44,10 @@ const props = defineProps({
     type: [String, Array, Object],
     default: "",
   },
+  panelTag: {
+    type: String,
+    default: "",
+  },
   position: {
     type: String,
     default: "right",
@@ -100,8 +104,10 @@ const onBackdropClick = () => {
   closeDrawer();
 };
 
-const panelTag = computed(() =>
-  props.role === "dialog" || props.role === "alertdialog" ? "div" : "aside"
+const resolvedPanelTag = computed(
+  () =>
+    props.panelTag ||
+    (props.role === "dialog" || props.role === "alertdialog" ? "div" : "aside")
 );
 
 const modalStateAttrs = computed(() =>
@@ -148,7 +154,7 @@ defineExpose({
       @click.self="onBackdropClick"
     >
       <component
-        :is="panelTag"
+        :is="resolvedPanelTag"
         :id="id"
         ref="drawerRef"
         :class="[

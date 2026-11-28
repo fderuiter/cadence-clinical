@@ -415,6 +415,7 @@ export const ClinicalDrawer: DefineSlotsComponent<
     overlayId?: string;
     overlayClass?: string | any[] | Record<string, boolean>;
     panelClass?: string | any[] | Record<string, boolean>;
+    panelTag?: "div" | "aside" | string;
     bodyClass?: string | any[] | Record<string, boolean>;
     position?: "right" | "left" | "bottom" | string;
     mobileBottomSheet?: boolean;
