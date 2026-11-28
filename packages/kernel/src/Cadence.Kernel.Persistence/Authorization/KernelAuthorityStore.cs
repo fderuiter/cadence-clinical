@@ -268,41 +268,135 @@ internal sealed class KernelAuthorityStore(
         """;
 
     private const string CollectionInstancePathsSql = """
+        WITH requested_ci AS MATERIALIZED (
+            SELECT
+                ci.id,
+                ci.study_id,
+                ci.study_site_id
+            FROM unnest(@ids) AS req(id)
+            CROSS JOIN LATERAL (
+                SELECT
+                    c.id,
+                    c.study_id,
+                    c.study_site_id
+                FROM kernel.collection_instances AS c
+                WHERE c.tenant_id = @tenant AND c.id = req.id
+                LIMIT 1
+            ) AS ci
+        ),
+        study_scopes AS MATERIALIZED (
+            SELECT
+                ds.study_id,
+                s.sponsor_id
+            FROM (SELECT DISTINCT study_id FROM requested_ci) AS ds
+            CROSS JOIN LATERAL (
+                SELECT st.sponsor_id
+                FROM kernel.studies AS st
+                WHERE st.tenant_id = @tenant AND st.id = ds.study_id
+                LIMIT 1
+            ) AS s
+        ),
+        study_site_scopes AS MATERIALIZED (
+            SELECT
+                dss.study_site_id,
+                ss_site.country
+            FROM (SELECT DISTINCT study_site_id FROM requested_ci) AS dss
+            CROSS JOIN LATERAL (
+                SELECT ss.site_id
+                FROM kernel.study_sites AS ss
+                WHERE ss.tenant_id = @tenant AND ss.id = dss.study_site_id
+                LIMIT 1
+            ) AS ss
+            CROSS JOIN LATERAL (
+                SELECT site.country
+                FROM kernel.sites AS site
+                WHERE site.tenant_id = @tenant AND site.id = ss.site_id
+                LIMIT 1
+            ) AS ss_site
+        )
         SELECT
             ci.id AS "Id",
             s.sponsor_id AS "OrganizationId",
             ci.study_id AS "StudyId",
-            ss_site.country AS "Country",
-            ss.id AS "StudySiteId",
+            ss.country AS "Country",
+            ci.study_site_id AS "StudySiteId",
             FALSE AS "MayBeBlinded"
-        FROM kernel.collection_instances AS ci
-        JOIN kernel.studies AS s
-            ON s.tenant_id = ci.tenant_id AND s.id = ci.study_id
-        JOIN kernel.study_sites AS ss
-            ON ss.tenant_id = ci.tenant_id AND ss.id = ci.study_site_id
-        JOIN kernel.sites AS ss_site
-            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
-        WHERE ci.tenant_id = @tenant AND ci.id = ANY(@ids)
+        FROM requested_ci AS ci
+        JOIN study_scopes AS s
+            ON s.study_id = ci.study_id
+        JOIN study_site_scopes AS ss
+            ON ss.study_site_id = ci.study_site_id
         """;
 
     private static readonly string ObservationPathsSql = $"""
+        WITH requested_obs AS MATERIALIZED (
+            SELECT
+                o.id,
+                o.study_id,
+                o.enrollment_id
+            FROM unnest(@ids) AS req(id)
+            CROSS JOIN LATERAL (
+                SELECT
+                    obs.id,
+                    obs.study_id,
+                    obs.enrollment_id
+                FROM kernel.observations AS obs
+                WHERE obs.tenant_id = @tenant AND obs.id = req.id
+                LIMIT 1
+            ) AS o
+        ),
+        study_scopes AS MATERIALIZED (
+            SELECT
+                ds.study_id,
+                s.sponsor_id,
+                {StudyMayHaveBlindedEvidenceSql("ds.study_id")} AS may_be_blinded
+            FROM (SELECT DISTINCT study_id FROM requested_obs) AS ds
+            CROSS JOIN LATERAL (
+                SELECT st.sponsor_id
+                FROM kernel.studies AS st
+                WHERE st.tenant_id = @tenant AND st.id = ds.study_id
+                LIMIT 1
+            ) AS s
+        ),
+        enrollment_scopes AS MATERIALIZED (
+            SELECT
+                de.enrollment_id,
+                ss.id AS study_site_id,
+                ss_site.country
+            FROM (SELECT DISTINCT enrollment_id FROM requested_obs WHERE enrollment_id IS NOT NULL) AS de
+            CROSS JOIN LATERAL (
+                SELECT e.study_site_id
+                FROM kernel.enrollments AS e
+                WHERE e.tenant_id = @tenant AND e.id = de.enrollment_id
+                LIMIT 1
+            ) AS e
+            CROSS JOIN LATERAL (
+                SELECT
+                    st_site.id,
+                    st_site.site_id
+                FROM kernel.study_sites AS st_site
+                WHERE st_site.tenant_id = @tenant AND st_site.id = e.study_site_id
+                LIMIT 1
+            ) AS ss
+            CROSS JOIN LATERAL (
+                SELECT site.country
+                FROM kernel.sites AS site
+                WHERE site.tenant_id = @tenant AND site.id = ss.site_id
+                LIMIT 1
+            ) AS ss_site
+        )
         SELECT
             o.id AS "Id",
             s.sponsor_id AS "OrganizationId",
             o.study_id AS "StudyId",
-            ss_site.country AS "Country",
-            ss.id AS "StudySiteId",
-            {StudyMayHaveBlindedEvidenceSql("o.study_id")} AS "MayBeBlinded"
-        FROM kernel.observations AS o
-        JOIN kernel.enrollments AS e
-            ON e.tenant_id = o.tenant_id AND e.id = o.enrollment_id
-        JOIN kernel.studies AS s
-            ON s.tenant_id = o.tenant_id AND s.id = o.study_id
-        JOIN kernel.study_sites AS ss
-            ON ss.tenant_id = e.tenant_id AND ss.id = e.study_site_id
-        JOIN kernel.sites AS ss_site
-            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
-        WHERE o.tenant_id = @tenant AND o.id = ANY(@ids)
+            enr.country AS "Country",
+            enr.study_site_id AS "StudySiteId",
+            s.may_be_blinded AS "MayBeBlinded"
+        FROM requested_obs AS o
+        JOIN study_scopes AS s
+            ON s.study_id = o.study_id
+        JOIN enrollment_scopes AS enr
+            ON enr.enrollment_id = o.enrollment_id
         """;
 
     private static readonly string AssertionPathsSql = $"""
@@ -373,51 +467,157 @@ internal sealed class KernelAuthorityStore(
         """;
 
     private const string ObservationClassificationSql = """
+        WITH requested_obs AS MATERIALIZED (
+            SELECT
+                o.id,
+                o.study_id,
+                o.enrollment_id,
+                o.concept_id,
+                CASE WHEN @includeAllValues OR o.value ->> 'type' = 'missing' THEN o.value::text END AS value_json
+            FROM unnest(@ids) AS req(id)
+            CROSS JOIN LATERAL (
+                SELECT
+                    obs.id,
+                    obs.study_id,
+                    obs.enrollment_id,
+                    obs.concept_id,
+                    obs.value
+                FROM kernel.observations AS obs
+                WHERE obs.tenant_id = @tenant AND obs.id = req.id
+                LIMIT 1
+            ) AS o
+        ),
+        study_scopes AS MATERIALIZED (
+            SELECT
+                ds.study_id,
+                s.sponsor_id
+            FROM (SELECT DISTINCT study_id FROM requested_obs) AS ds
+            CROSS JOIN LATERAL (
+                SELECT st.sponsor_id
+                FROM kernel.studies AS st
+                WHERE st.tenant_id = @tenant AND st.id = ds.study_id
+                LIMIT 1
+            ) AS s
+        ),
+        enrollment_scopes AS MATERIALIZED (
+            SELECT
+                de.enrollment_id,
+                ss.id AS study_site_id,
+                ss_site.country
+            FROM (SELECT DISTINCT enrollment_id FROM requested_obs WHERE enrollment_id IS NOT NULL) AS de
+            CROSS JOIN LATERAL (
+                SELECT e.study_site_id
+                FROM kernel.enrollments AS e
+                WHERE e.tenant_id = @tenant AND e.id = de.enrollment_id
+                LIMIT 1
+            ) AS e
+            LEFT JOIN LATERAL (
+                SELECT
+                    st_site.id,
+                    st_site.site_id
+                FROM kernel.study_sites AS st_site
+                WHERE st_site.tenant_id = @tenant AND st_site.id = e.study_site_id
+                LIMIT 1
+            ) AS ss ON e.study_site_id IS NOT NULL
+            LEFT JOIN LATERAL (
+                SELECT site.country
+                FROM kernel.sites AS site
+                WHERE site.tenant_id = @tenant AND site.id = ss.site_id
+                LIMIT 1
+            ) AS ss_site ON ss.site_id IS NOT NULL
+        ),
+        concept_meta AS MATERIALIZED (
+            SELECT
+                dc.concept_id,
+                c.external_code,
+                c.preferred_label,
+                c.definition
+            FROM (SELECT DISTINCT concept_id FROM requested_obs) AS dc
+            CROSS JOIN LATERAL (
+                SELECT
+                    con.external_code,
+                    con.preferred_label,
+                    con.definition
+                FROM kernel.concepts AS con
+                WHERE con.tenant_id = @tenant AND con.id = dc.concept_id
+                LIMIT 1
+            ) AS c
+        )
         SELECT
             o.id AS "Id",
             s.sponsor_id AS "OrganizationId",
             o.study_id AS "StudyId",
-            ss_site.country AS "Country",
-            ss.id AS "StudySiteId",
+            enr.country AS "Country",
+            enr.study_site_id AS "StudySiteId",
             o.concept_id AS "ConceptId",
-            CASE WHEN @includeAllValues OR o.value ->> 'type' = 'missing' THEN o.value::text END AS "ValueJson",
+            o.value_json AS "ValueJson",
             c.external_code AS "ConceptExternalCode",
             c.preferred_label AS "ConceptPreferredLabel",
             c.definition AS "ConceptDefinition",
             ci.collection_spec_id AS "CollectionSpecId",
             cim.item_id AS "ItemId"
-        FROM kernel.observations AS o
-        JOIN kernel.studies AS s
-            ON s.tenant_id = o.tenant_id AND s.id = o.study_id
-        LEFT JOIN kernel.enrollments AS e
-            ON e.tenant_id = o.tenant_id AND e.id = o.enrollment_id
-        LEFT JOIN kernel.study_sites AS ss
-            ON ss.tenant_id = e.tenant_id AND ss.id = e.study_site_id
-        LEFT JOIN kernel.sites AS ss_site
-            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
-        LEFT JOIN kernel.concepts AS c
-            ON c.tenant_id = o.tenant_id AND c.id = o.concept_id
-        LEFT JOIN kernel.collection_instance_members AS cim
-            ON cim.tenant_id = o.tenant_id AND cim.observation_id = o.id
-        LEFT JOIN kernel.collection_instances AS ci
-            ON ci.tenant_id = cim.tenant_id AND ci.id = cim.collection_instance_id
-        WHERE o.tenant_id = @tenant AND o.id = ANY(@ids)
+        FROM requested_obs AS o
+        JOIN study_scopes AS s
+            ON s.study_id = o.study_id
+        LEFT JOIN enrollment_scopes AS enr
+            ON enr.enrollment_id = o.enrollment_id
+        LEFT JOIN concept_meta AS c
+            ON c.concept_id = o.concept_id
+        LEFT JOIN LATERAL (
+            SELECT
+                m.collection_instance_id,
+                m.item_id
+            FROM kernel.collection_instance_members AS m
+            WHERE m.tenant_id = @tenant AND m.observation_id = o.id
+            LIMIT 1
+        ) AS cim ON TRUE
+        LEFT JOIN LATERAL (
+            SELECT inst.collection_spec_id
+            FROM kernel.collection_instances AS inst
+            WHERE inst.tenant_id = @tenant AND inst.id = cim.collection_instance_id
+            LIMIT 1
+        ) AS ci ON cim.collection_instance_id IS NOT NULL
         """;
 
     private const string FindingTargetSiteJoinsSql = """
-        LEFT JOIN kernel.collection_instances AS vf_ci
-            ON d.collection_instance_id IS NOT NULL
-           AND vf_ci.tenant_id = d.tenant_id AND vf_ci.id = d.collection_instance_id AND vf_ci.study_id = d.study_id
-        LEFT JOIN kernel.observations AS vf_obs
-            ON d.observation_id IS NOT NULL
-           AND vf_obs.tenant_id = d.tenant_id AND vf_obs.id = d.observation_id AND vf_obs.study_id = d.study_id
-        LEFT JOIN kernel.enrollments AS vf_enr
-            ON vf_ci.id IS NULL
-           AND COALESCE(vf_obs.enrollment_id, d.enrollment_id) IS NOT NULL
-           AND vf_enr.tenant_id = d.tenant_id AND vf_enr.id = COALESCE(vf_obs.enrollment_id, d.enrollment_id) AND vf_enr.study_id = d.study_id
-        LEFT JOIN kernel.enrollments AS vf_subj_enr
-            ON vf_ci.id IS NULL AND vf_enr.id IS NULL AND d.subject_code_candidate IS NOT NULL
-           AND vf_subj_enr.tenant_id = d.tenant_id AND vf_subj_enr.study_id = d.study_id AND vf_subj_enr.subject_code = d.subject_code_candidate
+        LEFT JOIN LATERAL (
+            SELECT
+                ci.id,
+                ci.study_site_id,
+                ci.collection_spec_id,
+                ci.enrollment_id
+            FROM kernel.collection_instances AS ci
+            WHERE ci.tenant_id = d.tenant_id AND ci.id = d.collection_instance_id AND ci.study_id = d.study_id
+            LIMIT 1
+        ) AS vf_ci ON d.collection_instance_id IS NOT NULL
+        LEFT JOIN LATERAL (
+            SELECT
+                o.id,
+                o.enrollment_id,
+                o.concept_id,
+                o.value
+            FROM kernel.observations AS o
+            WHERE o.tenant_id = d.tenant_id AND o.id = d.observation_id AND o.study_id = d.study_id
+            LIMIT 1
+        ) AS vf_obs ON d.observation_id IS NOT NULL
+        LEFT JOIN LATERAL (
+            SELECT
+                e.id,
+                e.study_site_id
+            FROM kernel.enrollments AS e
+            WHERE e.tenant_id = d.tenant_id
+              AND e.id = COALESCE(vf_obs.enrollment_id, d.enrollment_id)
+              AND e.study_id = d.study_id
+            LIMIT 1
+        ) AS vf_enr ON vf_ci.id IS NULL AND COALESCE(vf_obs.enrollment_id, d.enrollment_id) IS NOT NULL
+        LEFT JOIN LATERAL (
+            SELECT e.study_site_id
+            FROM kernel.enrollments AS e
+            WHERE e.tenant_id = d.tenant_id
+              AND e.study_id = d.study_id
+              AND e.subject_code = d.subject_code_candidate
+            LIMIT 1
+        ) AS vf_subj_enr ON vf_ci.id IS NULL AND vf_enr.id IS NULL AND d.subject_code_candidate IS NOT NULL
         """;
 
     private static readonly string ValidationFindingPathsSql = $"""
@@ -431,7 +631,7 @@ internal sealed class KernelAuthorityStore(
             WHERE d.tenant_id = @tenant AND d.finding_id = ANY(@ids)
             ORDER BY d.finding_id, d.run_id DESC
         ),
-        finding_base AS (
+        finding_base AS MATERIALIZED (
             SELECT * FROM detected
             UNION ALL
             SELECT
@@ -447,6 +647,19 @@ internal sealed class KernelAuthorityStore(
             WHERE vf.tenant_id = @tenant
               AND vf.id = ANY(@ids)
               AND NOT EXISTS (SELECT 1 FROM detected AS d WHERE d.finding_id = vf.id)
+        ),
+        study_scopes AS MATERIALIZED (
+            SELECT
+                ds.study_id AS id,
+                s.sponsor_id,
+                {StudyMayHaveBlindedEvidenceSql("ds.study_id")} AS study_may_be_blinded
+            FROM (SELECT DISTINCT study_id FROM finding_base) AS ds
+            CROSS JOIN LATERAL (
+                SELECT st.sponsor_id
+                FROM kernel.studies AS st
+                WHERE st.tenant_id = @tenant AND st.id = ds.study_id
+                LIMIT 1
+            ) AS s
         )
         SELECT
             d.finding_id AS "Id",
@@ -455,7 +668,7 @@ internal sealed class KernelAuthorityStore(
             ss_site.country AS "Country",
             ss.id AS "StudySiteId",
             (
-                {StudyMayHaveBlindedEvidenceSql("s.id")}
+                s.study_may_be_blinded
                 OR EXISTS (
                     SELECT 1
                     FROM kernel.validation_detections AS vd_blind
@@ -469,19 +682,29 @@ internal sealed class KernelAuthorityStore(
                 )
             ) AS "MayBeBlinded"
         FROM finding_base AS d
-        JOIN kernel.studies AS s
-            ON s.tenant_id = d.tenant_id AND s.id = d.study_id
+        JOIN study_scopes AS s
+            ON s.id = d.study_id
         {FindingTargetSiteJoinsSql}
-        LEFT JOIN kernel.study_sites AS ss
-            ON ss.tenant_id = d.tenant_id
-           AND ss.study_id = d.study_id
-           AND ss.id = COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, vf_subj_enr.study_site_id, d.direct_study_site_id)
-        LEFT JOIN kernel.sites AS ss_site
-            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
+        LEFT JOIN LATERAL (
+            SELECT
+                st_site.id,
+                st_site.site_id
+            FROM kernel.study_sites AS st_site
+            WHERE st_site.tenant_id = d.tenant_id
+              AND st_site.study_id = d.study_id
+              AND st_site.id = COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, vf_subj_enr.study_site_id, d.direct_study_site_id)
+            LIMIT 1
+        ) AS ss ON COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, vf_subj_enr.study_site_id, d.direct_study_site_id) IS NOT NULL
+        LEFT JOIN LATERAL (
+            SELECT site.country
+            FROM kernel.sites AS site
+            WHERE site.tenant_id = d.tenant_id AND site.id = ss.site_id
+            LIMIT 1
+        ) AS ss_site ON ss.site_id IS NOT NULL
         """;
 
     private const string ValidationFindingClassificationSql = $"""
-        WITH detected AS (
+        WITH detected AS MATERIALIZED (
             SELECT DISTINCT ON (d.finding_id)
                 d.tenant_id,
                 d.finding_id,
@@ -492,10 +715,31 @@ internal sealed class KernelAuthorityStore(
                 d.variable,
                 d.observed::text AS observed_json,
         {FindingTargetParseColumnsSql}
-            FROM kernel.validation_detections AS d
-            JOIN kernel.validation_runs AS r
-                ON r.tenant_id = d.tenant_id AND r.id = d.run_id
-            WHERE d.tenant_id = @tenant AND d.finding_id = ANY(@ids)
+            FROM unnest(@ids) AS req(id)
+            CROSS JOIN LATERAL (
+                SELECT
+                    det.tenant_id,
+                    det.finding_id,
+                    det.study_id,
+                    det.run_id,
+                    det.target_kind,
+                    det.dataset,
+                    det.target_key,
+                    det.variable,
+                    det.observed
+                FROM kernel.validation_detections AS det
+                WHERE det.tenant_id = @tenant AND det.finding_id = req.id
+                OFFSET 0
+            ) AS d
+            CROSS JOIN LATERAL (
+                SELECT
+                    vr.id,
+                    vr.completed_at,
+                    vr.created_at
+                FROM kernel.validation_runs AS vr
+                WHERE vr.tenant_id = d.tenant_id AND vr.id = d.run_id
+                LIMIT 1
+            ) AS r
             ORDER BY d.finding_id, r.completed_at DESC, r.created_at DESC, r.id DESC
         )
         SELECT
@@ -521,21 +765,54 @@ internal sealed class KernelAuthorityStore(
             vf_obs_ci.collection_spec_id AS "TargetObsSpecId",
             vf_obs_cim.item_id AS "TargetObsItemId"
         FROM detected AS d
-        JOIN kernel.studies AS s
-            ON s.tenant_id = d.tenant_id AND s.id = d.study_id
+        CROSS JOIN LATERAL (
+            SELECT
+                st.id,
+                st.sponsor_id
+            FROM kernel.studies AS st
+            WHERE st.tenant_id = d.tenant_id AND st.id = d.study_id
+            LIMIT 1
+        ) AS s
         {FindingTargetSiteJoinsSql}
-        LEFT JOIN kernel.study_sites AS ss
-            ON ss.tenant_id = d.tenant_id
-           AND ss.study_id = d.study_id
-           AND ss.id = COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, vf_subj_enr.study_site_id, d.direct_study_site_id)
-        LEFT JOIN kernel.sites AS ss_site
-            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
-        LEFT JOIN kernel.concepts AS vf_obs_c
-            ON vf_obs.id IS NOT NULL AND vf_obs_c.tenant_id = vf_obs.tenant_id AND vf_obs_c.id = vf_obs.concept_id
-        LEFT JOIN kernel.collection_instance_members AS vf_obs_cim
-            ON vf_obs.id IS NOT NULL AND vf_obs_cim.tenant_id = vf_obs.tenant_id AND vf_obs_cim.observation_id = vf_obs.id
-        LEFT JOIN kernel.collection_instances AS vf_obs_ci
-            ON vf_obs_cim.id IS NOT NULL AND vf_obs_ci.tenant_id = vf_obs_cim.tenant_id AND vf_obs_ci.id = vf_obs_cim.collection_instance_id
+        LEFT JOIN LATERAL (
+            SELECT
+                st_site.id,
+                st_site.site_id
+            FROM kernel.study_sites AS st_site
+            WHERE st_site.tenant_id = d.tenant_id
+              AND st_site.study_id = d.study_id
+              AND st_site.id = COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, vf_subj_enr.study_site_id, d.direct_study_site_id)
+            LIMIT 1
+        ) AS ss ON COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, vf_subj_enr.study_site_id, d.direct_study_site_id) IS NOT NULL
+        LEFT JOIN LATERAL (
+            SELECT site.country
+            FROM kernel.sites AS site
+            WHERE site.tenant_id = d.tenant_id AND site.id = ss.site_id
+            LIMIT 1
+        ) AS ss_site ON ss.site_id IS NOT NULL
+        LEFT JOIN LATERAL (
+            SELECT
+                con.external_code,
+                con.preferred_label,
+                con.definition
+            FROM kernel.concepts AS con
+            WHERE con.tenant_id = d.tenant_id AND con.id = vf_obs.concept_id
+            LIMIT 1
+        ) AS vf_obs_c ON vf_obs.id IS NOT NULL
+        LEFT JOIN LATERAL (
+            SELECT
+                m.collection_instance_id,
+                m.item_id
+            FROM kernel.collection_instance_members AS m
+            WHERE m.tenant_id = d.tenant_id AND m.observation_id = vf_obs.id
+            LIMIT 1
+        ) AS vf_obs_cim ON vf_obs.id IS NOT NULL
+        LEFT JOIN LATERAL (
+            SELECT inst.collection_spec_id
+            FROM kernel.collection_instances AS inst
+            WHERE inst.tenant_id = d.tenant_id AND inst.id = vf_obs_cim.collection_instance_id
+            LIMIT 1
+        ) AS vf_obs_ci ON vf_obs_cim.collection_instance_id IS NOT NULL
         """;
 
     private const string EnrollmentSiblingMembersSql = """
@@ -547,18 +824,47 @@ internal sealed class KernelAuthorityStore(
             cim.item_id AS "ItemId",
             obs.id AS "ObservationId",
             obs.concept_id AS "ConceptId",
-            obs.value::text AS "ValueJson",
+            obs.value_json AS "ValueJson",
             c.external_code AS "ConceptExternalCode",
             c.preferred_label AS "ConceptPreferredLabel",
             c.definition AS "ConceptDefinition"
-        FROM kernel.collection_instances AS sib
-        JOIN kernel.collection_instance_members AS cim
-            ON cim.tenant_id = sib.tenant_id AND cim.collection_instance_id = sib.id
-        JOIN kernel.observations AS obs
-            ON obs.tenant_id = cim.tenant_id AND obs.id = cim.observation_id
-        LEFT JOIN kernel.concepts AS c
-            ON c.tenant_id = obs.tenant_id AND c.id = obs.concept_id
-        WHERE sib.tenant_id = @tenant AND sib.enrollment_id = ANY(@enrollmentIds)
+        FROM unnest(@enrollmentIds) AS req(enrollment_id)
+        CROSS JOIN LATERAL (
+            SELECT
+                ci.id,
+                ci.enrollment_id,
+                ci.study_id,
+                ci.collection_spec_id
+            FROM kernel.collection_instances AS ci
+            WHERE ci.tenant_id = @tenant AND ci.enrollment_id = req.enrollment_id
+            OFFSET 0
+        ) AS sib
+        CROSS JOIN LATERAL (
+            SELECT
+                m.item_id,
+                m.observation_id
+            FROM kernel.collection_instance_members AS m
+            WHERE m.tenant_id = @tenant AND m.collection_instance_id = sib.id
+            OFFSET 0
+        ) AS cim
+        CROSS JOIN LATERAL (
+            SELECT
+                o.id,
+                o.concept_id,
+                o.value::text AS value_json
+            FROM kernel.observations AS o
+            WHERE o.tenant_id = @tenant AND o.id = cim.observation_id
+            LIMIT 1
+        ) AS obs
+        LEFT JOIN LATERAL (
+            SELECT
+                con.external_code,
+                con.preferred_label,
+                con.definition
+            FROM kernel.concepts AS con
+            WHERE con.tenant_id = @tenant AND con.id = obs.concept_id
+            LIMIT 1
+        ) AS c ON TRUE
         """;
 
     private const string AttestationPathsSql = $"""

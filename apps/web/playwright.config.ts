@@ -158,7 +158,7 @@ export default defineConfig({
     {
       name: "chromium",
       testIgnore:
-        /(?:web-accessibility|drawer-reflow|staged-demo-subpath)\.spec\.ts/,
+        /(?:web-accessibility|drawer-reflow|split-workspace-reflow|staged-demo-subpath)\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         channel: "chromium",

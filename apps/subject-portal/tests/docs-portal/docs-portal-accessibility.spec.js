@@ -193,11 +193,62 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
       docIndexHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
       (m) => m[1]
     );
-    const dataRowCount = tbodyBlocks.reduce(
+    const topLevelShardRows = tbodyBlocks.reduce(
       (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
       0
     );
-    expect(dataRowCount).toBeGreaterThanOrEqual(715);
+    expect(topLevelShardRows).toBeGreaterThanOrEqual(28);
+
+    const shardHrefs = Array.from(
+      new Set(
+        tbodyBlocks.flatMap((tbody) =>
+          Array.from(tbody.matchAll(/<a\s+[^>]*href="([^"]+)"/gi), (m) => m[1])
+        )
+      )
+    );
+    expect(shardHrefs.length).toBeGreaterThanOrEqual(28);
+
+    const missingShardFiles = [];
+    let indexedEntryCount = 0;
+    for (const href of shardHrefs) {
+      let shardRelPath = href.replace(/^\.\//, "").replace(/#.*$/, "");
+      if (shardRelPath.endsWith("/")) {
+        shardRelPath += "index.html";
+      }
+      const shardFullPath = path.join(docsDistDir, shardRelPath);
+      if (!fs.existsSync(shardFullPath)) {
+        missingShardFiles.push(shardRelPath);
+        continue;
+      }
+
+      const shardHtml = fs.readFileSync(shardFullPath, "utf8");
+      if (shardRelPath.startsWith("adr/")) {
+        const mainHtml =
+          shardHtml.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1] ?? shardHtml;
+        const adrDecisionLinks = Array.from(
+          mainHtml.matchAll(/<li(?:\s[^>]*)?>\s*<a\s+[^>]*href="([^"]+)"/gi),
+          (m) => m[1]
+        ).filter(
+          (targetHref) =>
+            !targetHref.startsWith("../") &&
+            !targetHref.endsWith("/") &&
+            !/(?:^|\/)(?:index|legacy-index|TEMPLATE)\.html$/i.test(targetHref)
+        );
+        indexedEntryCount += adrDecisionLinks.length;
+      } else {
+        const shardTbodies = Array.from(
+          shardHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
+          (m) => m[1]
+        );
+        indexedEntryCount += shardTbodies.reduce(
+          (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
+          0
+        );
+      }
+    }
+
+    expect(missingShardFiles).toEqual([]);
+    expect(indexedEntryCount).toBeGreaterThanOrEqual(715);
   });
 
   test("navbar items and portal layout render without clipping, overlap, or horizontal scroll across 375px–1920px viewports", async ({
