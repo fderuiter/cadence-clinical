@@ -429,6 +429,7 @@ Prior to domain sharding, sequential `ADR-NNNN` numbers were reserved in domain 
 - [ADR-2679: Centralize Curated Lucide Icons and Enforce CLI Emoji Gate](2026-11-25-centralize-lucide-icons-and-cli-emoji-gate.md) (2026-11-25)
 - [ADR-2690: Unified CSS Theme Cascade, Non-Text Border Recalibration, and Shared Theme Controller](2026-11-25-unified-css-cascade-and-shared-theme-controller.md) (2026-11-25)
 - [ADR-2691: Split Generated CDASH Variable Union, Enforce Intra-File Frontend Clone Detection, and Delegate Lazy Kernel Action Wrappers](2026-11-26-deduplicate-cdash-frontend-clones-and-kernel-action-wrappers.md) (2026-11-26)
+- [ADR-2692: Strip Unreachable Non-Demo Route Modules, Remove hls.js, and Tighten Worker CSP](2026-11-27-strip-unreachable-route-modules-and-remove-hls-js.md) (2026-11-27)
 
 ### 7. DevOps, Tooling & CI/CD
 
@@ -632,4 +633,5 @@ Prior to domain sharding, sequential `ADR-NNNN` numbers were reserved in domain 
 - [ADR-2678: Retire Legacy OpenAPI Snapshot, Isolate Legacy Web Client, and Prune Uncalled Web Types](2026-11-24-retire-legacy-openapi-snapshot-and-isolate-legacy-web-client.md) (2026-11-24)
 - [ADR-2509: Retire Remaining Python Reference Sources, Phantom Baselines, and Scanner Residue](2026-11-24-retire-remaining-python-references-and-scanner-residue.md) (2026-11-24)
 - [ADR-2824: Standardize Clinical Typography Utilities, 12px Floor, and AST Lints](2026-11-24-standardize-clinical-typography-utilities-12px-floor-and-ast-lints.md) (2026-11-24)
+- [ADR-2668: Cache Tenant Resolution, Scoped DbContext Connection Leasing, and Pending-Work Tenant Indexing](2026-11-27-cache-tenant-resolution-and-index-pending-work.md) (2026-11-27)
 - [ADR-2834: Tokenized Focus Cascade, Scroll Gutters, and Explicit CSS Transitions](2026-11-27-tokenized-focus-cascade-scroll-gutters-and-explicit-css-transitions.md) (2026-11-27)

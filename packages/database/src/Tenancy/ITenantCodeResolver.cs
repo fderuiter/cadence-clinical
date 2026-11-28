@@ -6,6 +6,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Time;
+
 using Npgsql;
 
 namespace Cadence.Database.Tenancy;
@@ -24,23 +26,47 @@ public interface ITenantCodeResolver
 }
 
 /// <summary>
-/// Resolves active tenant codes against PostgreSQL via <c>kernel.tenant_id_by_code(text)</c> and enumerates
-/// tenant IDs for background workers via <c>kernel.tenant_ids()</c>.
+/// Resolves active tenant codes against PostgreSQL via <c>kernel.tenant_id_by_code(text)</c> with a short-lived
+/// 5-second active-tenant cache (never caching <see langword="null"/> or inactive tenants) and enumerates
+/// tenant IDs via <c>kernel.tenant_ids()</c>.
 /// </summary>
 public sealed class PostgresTenantCodeResolver : ITenantCodeResolver, IDisposable, IAsyncDisposable
 {
+    public static readonly TimeSpan DefaultCacheDuration = TimeSpan.FromSeconds(5);
+
     private const string ResolveByCodeSql = "SELECT kernel.tenant_id_by_code(@code)";
 
     private readonly NpgsqlDataSource _dataSource;
+    private readonly IClock _clock;
+    private readonly TimeSpan _cacheDuration;
+    private readonly bool _ownsDataSource;
+    private readonly ConcurrentDictionary<string, CachedTenantEntry> _cache = new(StringComparer.Ordinal);
 
-    public PostgresTenantCodeResolver(string connectionString)
+    private readonly record struct CachedTenantEntry(Guid TenantId, DateTimeOffset ExpiresAt);
+
+    public PostgresTenantCodeResolver(
+        string connectionString,
+        IClock? clock = null,
+        TimeSpan? cacheDuration = null)
+        : this(
+            CreateDefaultDataSource(connectionString),
+            clock,
+            cacheDuration,
+            ownsDataSource: true)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
-        var normalized = new NpgsqlConnectionStringBuilder(connectionString)
-        {
-            SearchPath = "public",
-        }.ConnectionString;
-        _dataSource = NpgsqlDataSource.Create(normalized);
+    }
+
+    public PostgresTenantCodeResolver(
+        NpgsqlDataSource dataSource,
+        IClock? clock = null,
+        TimeSpan? cacheDuration = null,
+        bool ownsDataSource = false)
+    {
+        ArgumentNullException.ThrowIfNull(dataSource);
+        _dataSource = dataSource;
+        _clock = clock ?? SystemClock.Instance;
+        _cacheDuration = cacheDuration ?? DefaultCacheDuration;
+        _ownsDataSource = ownsDataSource;
     }
 
     public async ValueTask<Guid?> ResolveTenantIdAsync(string tenantCode, CancellationToken cancellationToken = default)
@@ -51,10 +77,22 @@ public sealed class PostgresTenantCodeResolver : ITenantCodeResolver, IDisposabl
         }
 
         string trimmed = tenantCode.Trim();
+        if (TryGetCached(trimmed, out Guid cachedId))
+        {
+            return cachedId;
+        }
+
         await using var command = _dataSource.CreateCommand(ResolveByCodeSql);
         command.Parameters.AddWithValue("code", trimmed);
         object? scalar = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-        return scalar is Guid id ? id : null;
+        if (scalar is Guid id && id != Guid.Empty)
+        {
+            CacheActiveTenant(trimmed, id);
+            return id;
+        }
+
+        _cache.TryRemove(trimmed, out _);
+        return null;
     }
 
     public Guid? ResolveTenantId(string tenantCode)
@@ -65,10 +103,22 @@ public sealed class PostgresTenantCodeResolver : ITenantCodeResolver, IDisposabl
         }
 
         string trimmed = tenantCode.Trim();
+        if (TryGetCached(trimmed, out Guid cachedId))
+        {
+            return cachedId;
+        }
+
         using var command = _dataSource.CreateCommand(ResolveByCodeSql);
         command.Parameters.AddWithValue("code", trimmed);
         object? scalar = command.ExecuteScalar();
-        return scalar is Guid id ? id : null;
+        if (scalar is Guid id && id != Guid.Empty)
+        {
+            CacheActiveTenant(trimmed, id);
+            return id;
+        }
+
+        _cache.TryRemove(trimmed, out _);
+        return null;
     }
 
     public async Task<IReadOnlyList<Guid>> ListActiveTenantIdsAsync(CancellationToken cancellationToken = default)
@@ -94,9 +144,54 @@ public sealed class PostgresTenantCodeResolver : ITenantCodeResolver, IDisposabl
         return ids;
     }
 
-    public void Dispose() => _dataSource.Dispose();
+    public void Dispose()
+    {
+        if (_ownsDataSource)
+        {
+            _dataSource.Dispose();
+        }
+    }
 
-    public ValueTask DisposeAsync() => _dataSource.DisposeAsync();
+    public ValueTask DisposeAsync() =>
+        _ownsDataSource ? _dataSource.DisposeAsync() : ValueTask.CompletedTask;
+
+    private bool TryGetCached(string trimmedTenantCode, out Guid tenantId)
+    {
+        if (_cacheDuration > TimeSpan.Zero
+            && _cache.TryGetValue(trimmedTenantCode, out CachedTenantEntry entry))
+        {
+            if (_clock.UtcNow < entry.ExpiresAt && entry.TenantId != Guid.Empty)
+            {
+                tenantId = entry.TenantId;
+                return true;
+            }
+
+            _cache.TryRemove(trimmedTenantCode, out _);
+        }
+
+        tenantId = Guid.Empty;
+        return false;
+    }
+
+    private void CacheActiveTenant(string trimmedTenantCode, Guid tenantId)
+    {
+        if (_cacheDuration <= TimeSpan.Zero || tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        _cache[trimmedTenantCode] = new CachedTenantEntry(tenantId, _clock.UtcNow + _cacheDuration);
+    }
+
+    private static NpgsqlDataSource CreateDefaultDataSource(string connectionString)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+        var normalized = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            SearchPath = "public",
+        }.ConnectionString;
+        return NpgsqlDataSource.Create(normalized);
+    }
 }
 
 /// <summary>

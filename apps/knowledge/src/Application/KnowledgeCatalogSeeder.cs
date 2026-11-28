@@ -86,7 +86,11 @@ public static class KnowledgeCatalogSeeder
 
     public static async Task EnsureSeededAsync(KnowledgeDbContext db, IClock clock, CancellationToken ct = default)
     {
-        string tenantSuffix = await ResolveSeedTenantSuffixAsync(db, ct).ConfigureAwait(false);
+        var ext = db.GetService<IDbContextOptions>()?.FindExtension<StandaloneTenantOptionsExtension>();
+        Guid? resolvedTenantId = ext?.TenantAccessor is { } accessor
+            ? await accessor.GetCurrentTenantIdAsync(ct).ConfigureAwait(false)
+            : null;
+        string tenantSuffix = FormatSeedTenantSuffix(resolvedTenantId);
         if (IsTenantSeeded(db, tenantSuffix))
         {
             return;
@@ -111,6 +115,12 @@ public static class KnowledgeCatalogSeeder
                 return;
             }
 
+            IDisposable? boundSeedTenantScope = resolvedTenantId is { } activeTenantId
+                && activeTenantId != Guid.Empty
+                && ext?.TenantAccessor is ITenantScope tenantScope
+                    ? tenantScope.Bind(activeTenantId)
+                    : null;
+            using var _boundScope = boundSeedTenantScope;
             using var _ = KnowledgeAuditActorScope.Begin(CatalogServiceAccount);
             DateTimeOffset seededAt = clock.UtcNow;
 
@@ -304,6 +314,11 @@ public static class KnowledgeCatalogSeeder
         }
 
         string? configuredConnectionString = relationalExt?.ConnectionString;
+        if (string.IsNullOrWhiteSpace(configuredConnectionString) && db.Database.IsRelational())
+        {
+            configuredConnectionString = db.Database.GetConnectionString();
+        }
+
         if (!string.IsNullOrWhiteSpace(configuredConnectionString))
         {
             bool isPrivateInMemory =
@@ -316,7 +331,7 @@ public static class KnowledgeCatalogSeeder
                 return (db.Database.GetDbConnection(), null);
             }
 
-            string providerName = relationalExt!.GetType().FullName ?? "relational";
+            string providerName = relationalExt?.GetType().FullName ?? "relational";
             return (null, $"{providerName}|{configuredConnectionString}|{tenantSuffix}");
         }
 
@@ -394,12 +409,8 @@ public static class KnowledgeCatalogSeeder
         return seededStates.Count >= ExpectedSeededSopCount && seededStates.All(s => s.IsComplete);
     }
 
-    private static async Task<string> ResolveSeedTenantSuffixAsync(KnowledgeDbContext db, CancellationToken ct)
+    private static string FormatSeedTenantSuffix(Guid? tenantId)
     {
-        var ext = db.GetService<IDbContextOptions>()?.FindExtension<StandaloneTenantOptionsExtension>();
-        Guid? tenantId = ext?.TenantAccessor is not null
-            ? await ext.TenantAccessor.GetCurrentTenantIdAsync(ct).ConfigureAwait(false)
-            : null;
         if (tenantId is null || tenantId.Value == Guid.Empty || tenantId.Value == DefaultTestTenantGuid)
         {
             return string.Empty;

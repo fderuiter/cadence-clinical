@@ -227,6 +227,46 @@ export default defineComponent({
 });
 `;
 
+function buildSubjectPortalDemoViewStubSource(landmark) {
+  const childrenExpr = landmark.includeSyncStatusLiveRegion
+    ? `[
+      h(
+        "div",
+        {
+          id: "sync-queue-status-text",
+          class: "text-muted",
+          role: "status",
+          "aria-live": "polite",
+        },
+        "Checking sync status..."
+      ),
+    ]`
+    : "undefined";
+
+  return `
+import { defineComponent, h } from "vue";
+
+export default defineComponent({
+  name: "DemoWorkspaceProdStub",
+  render() {
+    return h(
+      "section",
+      {
+        id: ${JSON.stringify(landmark.id)},
+        class: "portal-view",
+        hidden: true,
+        inert: true,
+        role: "region",
+        "aria-label": ${JSON.stringify(landmark.ariaLabel)},
+        tabindex: "0",
+      },
+      ${childrenExpr}
+    );
+  },
+});
+`;
+}
+
 const EMPTY_DEMO_STORE_STUB_SOURCE = `
 const EMPTY_LIST = Object.freeze([]);
 const EMPTY_RECORD = Object.freeze({});
@@ -610,10 +650,80 @@ export function isDemoBuildResolved(appDir, resolved) {
   );
 }
 
+export const WEB_NON_DEMO_STUBBED_VIEWS = Object.freeze([
+  // Unbacked top-level DEMO_AVAILABLE_SCREENS views (apps/web/src/router/availability.js)
+  "AggregateSafetyView.vue",
+  "AuditView.vue",
+  "AuditorView.vue",
+  "CecAdjudicationView.vue",
+  "ConsentAuthoringView.vue",
+  "DeviceInvestigationView.vue",
+  "DocumentsHubView.vue",
+  "ICFBuilderView.vue",
+  "ImagingView.vue",
+  "LabGovernanceView.vue",
+  "LakehouseView.vue",
+  "LaySummaryPortal.vue",
+  "MdrView.vue",
+  "MedicalCodingView.vue",
+  "NotificationsView.vue",
+  "ParticipantWalletView.vue",
+  "ProtocolDigitizationView.vue",
+  "QualityCockpitView.vue",
+  "RulesView.vue",
+  "SensorTelemetryView.vue",
+  "TelehealthDtpView.vue",
+  // Legacy top-level views whose beforeEnter redirects in non-demo builds (apps/web/src/router/index.js)
+  "AmendmentDiffView.vue",
+  "DataLockView.vue",
+  "EcrfView.vue",
+  "ExportWizardView.vue",
+]);
+
+export const SUBJECT_PORTAL_NON_DEMO_VIEW_LANDMARKS = Object.freeze({
+  "ComplianceView.vue": Object.freeze({
+    id: "view-compliance",
+    ariaLabel: "My Compliance Overview",
+    includeSyncStatusLiveRegion: false,
+  }),
+  "ConsentView.vue": Object.freeze({
+    id: "view-consent",
+    ariaLabel: "My Informed Consent Review",
+    includeSyncStatusLiveRegion: false,
+  }),
+  "InboxView.vue": Object.freeze({
+    id: "view-inbox",
+    ariaLabel: "My Notification Inbox",
+    includeSyncStatusLiveRegion: false,
+  }),
+  "LaySummariesView.vue": Object.freeze({
+    id: "view-lay-summaries",
+    ariaLabel: "Plain-Language Clinical Trial Results",
+    includeSyncStatusLiveRegion: false,
+  }),
+  "QuestionnaireView.vue": Object.freeze({
+    id: "view-questionnaire",
+    ariaLabel: "Questionnaire",
+    includeSyncStatusLiveRegion: false,
+  }),
+  "TasksView.vue": Object.freeze({
+    id: "view-tasks",
+    ariaLabel: "My Daily Questionnaires",
+    includeSyncStatusLiveRegion: true,
+  }),
+});
+
+export const SUBJECT_PORTAL_NON_DEMO_STUBBED_VIEWS = Object.freeze(
+  // DEMO_AVAILABLE_SCREENS views (apps/subject-portal/src/router/availability.js)
+  Object.keys(SUBJECT_PORTAL_NON_DEMO_VIEW_LANDMARKS)
+);
+
 export function createDemoFixturesPlugin(appDir) {
   let stripDemoFixtures = false;
   let isDemoStaticBuild = false;
-  const repoRoot = path.resolve(appDir, "../..");
+  const resolvedAppDir = path.resolve(appDir);
+  const appName = path.basename(resolvedAppDir);
+  const repoRoot = path.resolve(resolvedAppDir, "../..");
   const demoSeedPath = path.join(
     repoRoot,
     "packages/demo-fixtures/demo-seed.json"
@@ -631,8 +741,19 @@ export function createDemoFixturesPlugin(appDir) {
     repoRoot,
     "packages/demo-fixtures/src/mocks.js"
   );
-  const viewsDemoPrefix = `${toPosixPath(path.resolve(appDir, "src/views/demo"))}/`;
-  const storesDemoPrefix = `${toPosixPath(path.resolve(appDir, "src/stores/demo"))}/`;
+  const viewsDemoPrefix = `${toPosixPath(path.resolve(resolvedAppDir, "src/views/demo"))}/`;
+  const storesDemoPrefix = `${toPosixPath(path.resolve(resolvedAppDir, "src/stores/demo"))}/`;
+  const stubbedTopLevelViews =
+    appName === "web"
+      ? WEB_NON_DEMO_STUBBED_VIEWS
+      : appName === "subject-portal"
+        ? SUBJECT_PORTAL_NON_DEMO_STUBBED_VIEWS
+        : [];
+  const stubbedTopLevelViewPaths = new Set(
+    stubbedTopLevelViews.map((fileName) =>
+      toPosixPath(path.resolve(resolvedAppDir, "src/views", fileName))
+    )
+  );
 
   function resolveCandidateSource(source, importer) {
     if (!source || source.startsWith("\0")) return null;
@@ -693,6 +814,12 @@ export function createDemoFixturesPlugin(appDir) {
       if (resolvedPath.startsWith(viewsDemoPrefix)) {
         return `${VIRTUAL_DEMO_VIEW_PREFIX}${path.basename(resolvedPath)}`;
       }
+      const candidateViewPath = path.posix.extname(resolvedPath)
+        ? resolvedPath
+        : `${resolvedPath}.vue`;
+      if (stubbedTopLevelViewPaths.has(candidateViewPath)) {
+        return `${VIRTUAL_DEMO_VIEW_PREFIX}${path.basename(candidateViewPath)}`;
+      }
       if (resolvedPath.startsWith(storesDemoPrefix)) {
         return `${VIRTUAL_DEMO_STORE_PREFIX}${path.basename(resolvedPath)}`;
       }
@@ -717,6 +844,13 @@ export function createDemoFixturesPlugin(appDir) {
         return DEMO_TLDTS_SHIM_SOURCE;
       }
       if (id.startsWith(VIRTUAL_DEMO_VIEW_PREFIX)) {
+        if (appName === "subject-portal") {
+          const viewFileName = id.slice(VIRTUAL_DEMO_VIEW_PREFIX.length);
+          const landmark = SUBJECT_PORTAL_NON_DEMO_VIEW_LANDMARKS[viewFileName];
+          if (landmark) {
+            return buildSubjectPortalDemoViewStubSource(landmark);
+          }
+        }
         return EMPTY_DEMO_VIEW_STUB_SOURCE;
       }
       if (id.startsWith(VIRTUAL_DEMO_STORE_PREFIX)) {
@@ -729,8 +863,9 @@ export function createDemoFixturesPlugin(appDir) {
 
 /**
  * Constant-folds zero-argument `isDemoBuild()` calls during `vite build` so Rollup
- * dead-code-eliminates OIDC (`keycloak-js`) and streaming (`hls.js`) branches in demo
- * bundles while preserving `isDemoBuild(env)` overrides and `vi.stubEnv` in Vitest.
+ * dead-code-eliminates OIDC (`keycloak-js`) branches in demo bundles and `vue-i18n`
+ * / demo tab-icon branches in non-demo production bundles while preserving
+ * `isDemoBuild(env)` overrides and `vi.stubEnv` in Vitest.
  *
  * @param {string} appDir - Absolute directory of the Vite app.
  * @returns {import("vite").Plugin}

@@ -26,6 +26,9 @@ public sealed class EtmfExportQueue
         return item.JobId;
     }
 
+    public ValueTask<(string JobId, string? TenantCode)> DequeueWithTenantAsync(CancellationToken ct = default) =>
+        _channel.Reader.ReadAsync(ct);
+
     public bool TryDequeue(out string jobId) =>
         TryDequeue(out jobId, out _);
 

@@ -112,6 +112,8 @@ Indexes:
 - `IX_file_records_StudyId`: (`StudyId`)
 - `IX_file_records_TranscodeStatus`: (`TranscodeStatus`)
 - `IX_file_records_UploadedBy`: (`UploadedBy`)
+- `IX_file_records_pending_conversion_tenant`: (`tenant_id`) where `"ConversionStatus" = 'PENDING' AND NOT "IsDeleted"`
+- `IX_file_records_pending_transcode_tenant`: (`tenant_id`) where `"TranscodeStatus" = 'PENDING' AND NOT "IsDeleted"`
 - `IX_file_records_tenant_id`: (`tenant_id`)
 
 ## fileshare.guest_links

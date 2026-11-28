@@ -2,7 +2,6 @@
   "author": "",
   "dependencies": {
     "demo-fixtures": "workspace:*",
-    "hls.js": "^1.7.4",
     "keycloak-js": "catalog:",
     "lucide-vue-next": "catalog:",
     "openapi-fetch": "^0.13.0",

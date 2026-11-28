@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -102,19 +103,77 @@ public static class ExpectedSchedule
     }
 
     /// <summary>
+    /// Indexes the design's timed activities by <see cref="PlannedVisit.ActivityId"/> in a single pass without sorting
+    /// the entire schedule, normalizing day <c>0</c> to study day <c>1</c> (K-TIME-7, ADR-2487).
+    /// </summary>
+    public static IReadOnlyDictionary<string, PlannedVisit> IndexByActivity(ProtocolDesign design)
+    {
+        ArgumentNullException.ThrowIfNull(design);
+        if (design.PlannedActivities.Count == 0)
+        {
+            return FrozenDictionary<string, PlannedVisit>.Empty;
+        }
+
+        var epochOrder = new Dictionary<string, int>(design.Epochs.Count, StringComparer.Ordinal);
+        for (var i = 0; i < design.Epochs.Count; i++)
+        {
+            var epoch = design.Epochs[i];
+            epochOrder[epoch.Id] = epoch.Order;
+        }
+
+        var byActivity = new Dictionary<string, PlannedVisit>(design.PlannedActivities.Count, StringComparer.Ordinal);
+        for (var i = 0; i < design.PlannedActivities.Count; i++)
+        {
+            var activity = design.PlannedActivities[i];
+            if (activity.Timing is null)
+            {
+                continue;
+            }
+
+            var candidate = new PlannedVisit(
+                activity.Id,
+                activity.Name,
+                activity.EpochId,
+                epochOrder.GetValueOrDefault(activity.EpochId),
+                NormalizeStudyDay(activity.Timing.Day),
+                activity.Timing.WindowBefore,
+                activity.Timing.WindowAfter);
+            if (!byActivity.TryGetValue(candidate.ActivityId, out var existing))
+            {
+                byActivity.Add(candidate.ActivityId, candidate);
+            }
+            else if (PrecedesOnSchedule(candidate, existing))
+            {
+                byActivity[candidate.ActivityId] = candidate;
+            }
+        }
+
+        return byActivity.Count == 0
+            ? FrozenDictionary<string, PlannedVisit>.Empty
+            : byActivity.ToFrozenDictionary(StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Places a single <paramref name="visit"/> on the calendar for <paramref name="referenceStart"/> (study day 1),
+    /// evaluated at <paramref name="asOf"/> in the site's calendar (ADR-2487, ADR-2507).
+    /// </summary>
+    public static ExpectedVisit ComputeVisit(PlannedVisit visit, DateOnly referenceStart, DateOnly asOf)
+    {
+        ArgumentNullException.ThrowIfNull(visit);
+        var target = DateOfStudyDay(referenceStart, visit.StudyDay);
+        var start = target.AddDays(-visit.WindowBefore);
+        var end = target.AddDays(visit.WindowAfter);
+        return new ExpectedVisit(visit, target, start, end, StatusAt(asOf, start, end));
+    }
+
+    /// <summary>
     /// The expected schedule for a participant whose reference start (study day 1) is <paramref name="referenceStart"/>,
     /// evaluated at <paramref name="asOf"/>. Both are dates in the site's calendar: the caller converts instants to the
     /// site's local date.
     /// </summary>
     public static IReadOnlyList<ExpectedVisit> Compute(ProtocolDesign design, DateOnly referenceStart, DateOnly asOf) =>
         [
-            .. Plan(design).Select(visit =>
-            {
-                var target = DateOfStudyDay(referenceStart, visit.StudyDay);
-                var start = target.AddDays(-visit.WindowBefore);
-                var end = target.AddDays(visit.WindowAfter);
-                return new ExpectedVisit(visit, target, start, end, StatusAt(asOf, start, end));
-            }),
+            .. Plan(design).Select(visit => ComputeVisit(visit, referenceStart, asOf)),
         ];
 
     /// <summary>
@@ -153,6 +212,12 @@ public static class ExpectedSchedule
     /// is the reference start and day -1 the day before. There is no day 0; a timing of day 0 is read as day 1.
     /// </summary>
     public static DateOnly DateOfStudyDay(DateOnly referenceStart, int studyDay) => referenceStart.AddDays(OffsetOfStudyDay(studyDay));
+
+    private static bool PrecedesOnSchedule(PlannedVisit candidate, PlannedVisit existing)
+    {
+        var dayComparison = OffsetOfStudyDay(candidate.StudyDay).CompareTo(OffsetOfStudyDay(existing.StudyDay));
+        return dayComparison != 0 ? dayComparison < 0 : candidate.EpochOrder < existing.EpochOrder;
+    }
 
     private static VisitWindowStatus StatusAt(DateOnly asOf, DateOnly start, DateOnly end)
     {

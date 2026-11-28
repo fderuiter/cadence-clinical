@@ -2,6 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Microsoft.AspNetCore.Http;
+
 namespace Cadence.Security.Rbac;
 
 /// <summary>The named authorization policies <c>AddCadenceSecurity()</c> registers (ADR-2516).</summary>
@@ -43,6 +45,45 @@ public sealed record EndpointScopeMetadata(EndpointScopeKind Kind, string? Route
 public interface ITenantAccessVerifier
 {
     ValueTask<bool> IsActiveTenantAsync(string tenantCode, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Per-request memoization slot on <see cref="HttpContext.Items"/> storing a verified active
+/// <c>(TenantCode, TenantId)</c> mapping so authorization, connection binding, seeding, and save interceptors
+/// share one tenant resolution per HTTP request while never caching <see langword="null"/> or inactive tenants.
+/// </summary>
+public static class RequestTenantResolutionCache
+{
+    private static readonly object ItemKey = new();
+
+    private readonly record struct CachedRequestTenant(string TenantCode, Guid TenantId);
+
+    public static bool TryGet(HttpContext? httpContext, string tenantCode, out Guid tenantId)
+    {
+        if (httpContext is not null
+            && !string.IsNullOrWhiteSpace(tenantCode)
+            && httpContext.Items.TryGetValue(ItemKey, out object? raw)
+            && raw is CachedRequestTenant entry
+            && entry.TenantId != Guid.Empty
+            && string.Equals(entry.TenantCode, tenantCode.Trim(), StringComparison.Ordinal))
+        {
+            tenantId = entry.TenantId;
+            return true;
+        }
+
+        tenantId = Guid.Empty;
+        return false;
+    }
+
+    public static void Set(HttpContext? httpContext, string tenantCode, Guid tenantId)
+    {
+        if (httpContext is null || string.IsNullOrWhiteSpace(tenantCode) || tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        httpContext.Items[ItemKey] = new CachedRequestTenant(tenantCode.Trim(), tenantId);
+    }
 }
 
 /// <summary>

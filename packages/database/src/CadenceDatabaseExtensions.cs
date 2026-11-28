@@ -49,6 +49,7 @@ public static partial class CadenceDatabaseExtensions
 
     /// <summary>
     /// Registers <typeparamref name="TDbContext"/> against PostgreSQL with transient-failure retries,
+    /// shared <see cref="NpgsqlDataSource"/> pooling, scoped <see cref="DbContext"/> connection leasing,
     /// <c>cadence.tenant_id</c> session binding + SaveChanges tenant stamping (ADR-2250, K-ID-2),
     /// default 21 CFR Part 11 <see cref="GxPAuditInterceptor"/> hash-chained audit logging + outbox flushing,
     /// a readiness health check, and migrations when <see cref="CadenceMigrationOptions"/> asks for it.
@@ -68,25 +69,52 @@ public static partial class CadenceDatabaseExtensions
             baseConnectionString,
             schema ?? ModuleSchemaFor<TDbContext>());
 
-        if (string.Equals(baseConnectionString.Trim(), UnitTestPlaceholderConnectionString, StringComparison.Ordinal))
+        bool isPlaceholderUnitTestConnection = string.Equals(
+            baseConnectionString.Trim(),
+            UnitTestPlaceholderConnectionString,
+            StringComparison.Ordinal);
+
+        if (isPlaceholderUnitTestConnection)
         {
             builder.Services.AddCadenceInMemoryTenancy();
         }
         else
         {
-            builder.Services.AddCadencePostgresTenancy(baseConnectionString);
+            builder.Services.TryAddKeyedSingleton<NpgsqlDataSource>(
+                typeof(TDbContext),
+                (_, _) => NpgsqlDataSource.Create(connectionString));
+            builder.Services.AddHttpContextAccessor();
+            builder.Services.TryAddSingleton<ITenantCodeResolver>(sp =>
+                new PostgresTenantCodeResolver(
+                    sp.GetRequiredKeyedService<NpgsqlDataSource>(typeof(TDbContext)),
+                    sp.GetService<IClock>(),
+                    ownsDataSource: false));
+            RegisterScopedTenantAccessors(builder.Services);
         }
 
         builder.Services.AddProblemDetails();
         builder.Services.TryAddSingleton<IClock>(SystemClock.Instance);
         builder.Services.TryAddScoped<IAuditActorScope, AmbientAuditActorScope>();
+        builder.Services.TryAddScoped<StandaloneDbContextLeaseManager>();
         builder.Services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IExceptionHandler, StandaloneConcurrencyExceptionHandler>());
 
         builder.Services.AddCadenceDbContext<TDbContext>((sp, options) =>
         {
-            options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure());
-            options.UseCadenceStandaloneTenancy(sp.GetService<ICurrentTenantAccessor>(), isRelational: true);
+            var dataSource = sp.GetKeyedService<NpgsqlDataSource>(typeof(TDbContext));
+            if (dataSource is not null)
+            {
+                options.UseNpgsql(dataSource, npgsql => npgsql.EnableRetryOnFailure());
+            }
+            else
+            {
+                options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure());
+            }
+
+            options.UseCadenceStandaloneTenancy(
+                sp.GetService<ICurrentTenantAccessor>(),
+                isRelational: true,
+                leaseManagerResolver: () => sp.GetService<StandaloneDbContextLeaseManager>());
             configureOptions?.Invoke(sp, options);
             options.AddInterceptors(
                 StandaloneTenantConnectionInterceptor.Instance,
@@ -200,7 +228,8 @@ public static partial class CadenceDatabaseExtensions
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
         services.AddHttpContextAccessor();
-        services.TryAddSingleton<ITenantCodeResolver>(_ => new PostgresTenantCodeResolver(connectionString));
+        services.TryAddSingleton<IClock>(SystemClock.Instance);
+        services.TryAddSingleton<ITenantCodeResolver>(sp => new PostgresTenantCodeResolver(connectionString, sp.GetService<IClock>()));
         RegisterScopedTenantAccessors(services);
         return services;
     }

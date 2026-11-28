@@ -43,7 +43,7 @@ When you add or rename a non-ADR document under `docs/`, run `pnpm cadence gener
 | [Frontend & design system ADRs](adr/frontend/index.md) | Current | Domain shard `frontend` (`ADR-FRONTEND-YYYYMMDD-<slug>`) |
 | [ADR hub & kernel decisions K001–K037](adr/index.md) | Current | Static ADR overview, identifier rules, and K001–K037 decision table |
 | [Clinical Kernel ADRs](adr/kernel/index.md) | Current | Domain shard `kernel` (`ADR-KERNEL-YYYYMMDD-<slug>`) |
-| [Frozen legacy ADRs (ADR-049–ADR-2899)](adr/legacy-index.md) | Historical | Frozen index of the 577 sequential `ADR-NNNN` records in `docs/adr/*.md` |
+| [Frozen legacy ADRs (ADR-049–ADR-2899)](adr/legacy-index.md) | Historical | Frozen index of sequential `ADR-NNNN` records in `docs/adr/*.md` |
 | [Clinical operations & business modules ADRs](adr/operations/index.md) | Current | Domain shard `operations` (`ADR-OPERATIONS-YYYYMMDD-<slug>`) |
 | [Core platform & execution engine ADRs](adr/platform/index.md) | Current | Domain shard `platform` (`ADR-PLATFORM-YYYYMMDD-<slug>`) |
 | [API gateway, security & identity ADRs](adr/security/index.md) | Current | Domain shard `security` (`ADR-SECURITY-YYYYMMDD-<slug>`) |
