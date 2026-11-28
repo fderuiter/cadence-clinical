@@ -924,17 +924,18 @@ onUnmounted(() => {
 
 .viewports-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 12px;
   padding: 12px;
   flex: 1;
   overflow: auto;
+  min-width: 0;
 }
 
 .viewports-grid.axial-only,
 .viewports-grid.sagittal-only,
 .viewports-grid.coronal-only {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .viewport-card {

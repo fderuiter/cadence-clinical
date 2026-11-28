@@ -152,9 +152,7 @@
 }
 
 .modules-layout {
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  gap: 20px;
+  display: block;
   min-width: 0;
 }
 
@@ -164,16 +162,10 @@
   min-width: 0;
 }
 
-@media (max-width: 900px) {
-  .modules-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
+@media (max-width: 1279px) {
   .module-sidebar {
     border-right: none;
-    border-bottom: 1px solid var(--border);
     padding-right: 0;
-    padding-bottom: 16px;
   }
 }
 

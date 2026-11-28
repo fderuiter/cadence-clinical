@@ -424,7 +424,8 @@ function isExpanded(nodeId) {
 function selectArtifact(artifact) {
   selectedArtifactId.value = artifact.code;
   selectedNodeId.value = artifact.id;
-  emit("select-artifact", artifact.code);
+  const triggerEl = nodeRefs.value[artifact.id] || null;
+  emit("select-artifact", artifact.code, triggerEl);
 }
 
 const activeFocusedNodeId = ref(null);

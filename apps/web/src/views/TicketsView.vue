@@ -352,15 +352,31 @@
     </div>
 
     <!-- MAIN WORKSPACE: KANBAN VIEW -->
+    <ClinicalTabs
+      v-if="viewMode === 'kanban' && isCompact"
+      v-model="activeKanbanStage"
+      :tabs="kanbanStageTabs"
+      variant="pills"
+      overflow="wrap"
+      aria-label="Kanban workflow stages"
+      id-prefix="tickets-kanban-stage"
+      class="kanban-stage-tabs"
+    />
+
     <div
       v-if="viewMode === 'kanban'"
       id="tickets-view-panel-kanban"
       role="tabpanel"
       aria-labelledby="tickets-view-tab-kanban"
       class="kanban-board focus-ring-inset"
+      :class="{ 'kanban-board-compact': isCompact }"
       tabindex="0"
     >
-      <div v-for="col in kanbanColumns" :key="col.key" class="kanban-column">
+      <div
+        v-for="col in displayedKanbanColumns"
+        :key="col.key"
+        class="kanban-column"
+      >
         <div class="column-header">
           <div class="column-title-group">
             <span class="column-bullet" :class="col.bulletClass" />
@@ -617,6 +633,7 @@ import {
   ClinicalIcon,
   ClinicalInput,
   ClinicalTabs,
+  useResponsiveSplitWorkspace,
 } from "ui";
 import TicketDetailDrawer from "../components/tickets/TicketDetailDrawer.vue";
 import TicketCreateModal from "../components/tickets/TicketCreateModal.vue";
@@ -665,7 +682,9 @@ const kpis = reactive({
 });
 
 // UI State
+const { isCompact } = useResponsiveSplitWorkspace();
 const viewMode = ref("kanban"); // "kanban" | "table"
+const activeKanbanStage = ref("open");
 const viewModeTabs = [
   { id: "kanban", label: "Kanban" },
   { id: "table", label: "Table" },
@@ -1267,6 +1286,21 @@ const getColumnTickets = (statuses) => {
   const statusArray = Array.isArray(statuses) ? statuses : [statuses];
   return filteredTickets.value.filter((t) => statusArray.includes(t.status));
 };
+
+const kanbanStageTabs = computed(() =>
+  kanbanColumns.map((col) => ({
+    id: col.key,
+    label: col.title,
+    badge: getColumnTickets(col.statuses).length,
+    panelId: "tickets-view-panel-kanban",
+  }))
+);
+
+const displayedKanbanColumns = computed(() =>
+  isCompact.value
+    ? kanbanColumns.filter((col) => col.key === activeKanbanStage.value)
+    : kanbanColumns
+);
 
 // SLA utilities
 const getSlaIcon = (t) => {
@@ -1877,7 +1911,10 @@ const exportAuditTrail = (format) => {
 
 .scope-filter-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .filter-input {
@@ -1888,6 +1925,9 @@ const exportAuditTrail = (format) => {
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-body);
   width: 128px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 @media (pointer: coarse) {
@@ -1936,6 +1976,18 @@ const exportAuditTrail = (format) => {
 }
 
 /* KANBAN BOARD VIEW */
+.kanban-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.kanban-stage-tabs {
+  max-width: 100%;
+}
+
 .kanban-board {
   position: relative;
   display: grid;
@@ -1945,7 +1997,25 @@ const exportAuditTrail = (format) => {
   margin: -6px;
   overflow-x: auto;
   max-width: calc(100% + 12px);
-  align-items: flex-start;
+  align-items: stretch;
+}
+
+.kanban-board-compact {
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  padding: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 1279px) {
+  .kanban-board {
+    grid-template-columns: minmax(0, 1fr);
+    margin: 0;
+    padding: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
 }
 
 .kanban-column {
@@ -1954,7 +2024,8 @@ const exportAuditTrail = (format) => {
   border: 1px solid var(--semantic-color-border);
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 320px);
+  min-width: 0;
+  max-height: max(240px, calc(100dvh - 200px));
 }
 
 .column-header {
@@ -2010,11 +2081,41 @@ const exportAuditTrail = (format) => {
 }
 
 .column-cards {
+  flex: 1 1 auto;
+  min-height: 168px;
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .controls-card {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .scope-filter-group,
+  .filter-group {
+    width: 100%;
+  }
+
+  .scope-filter-input,
+  .filter-input,
+  .filter-select {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .header-action-stack {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .auditor-readonly-note {
+    text-align: left;
+  }
 }
 
 .ticket-card {

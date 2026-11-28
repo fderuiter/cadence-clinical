@@ -550,6 +550,8 @@ function getTimepointClass(tp) {
   gap: 16px;
   color: var(--semantic-color-text-inverse);
   height: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   overflow-y: auto;
 }
 
@@ -557,6 +559,8 @@ function getTimepointClass(tp) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   border-bottom: 1px solid var(--semantic-color-text-dark);
   padding-bottom: 10px;
 }
@@ -588,7 +592,7 @@ function getTimepointClass(tp) {
 
 .tool-btn-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -630,7 +634,7 @@ function getTimepointClass(tp) {
 
 .form-row {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -699,7 +703,8 @@ function getTimepointClass(tp) {
 .annotations-table-wrapper {
   max-height: 160px;
   padding: 6px;
-  overflow-y: auto;
+  overflow: auto;
+  max-width: 100%;
   background-color: var(--semantic-color-surface-sunken);
   border: 1px solid var(--semantic-color-text-dark);
   border-radius: 6px;
@@ -844,8 +849,21 @@ function getTimepointClass(tp) {
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .tool-btn-grid,
+  .form-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .field-input,
+  .field-select {
+    font-size: 1rem;
+    min-height: 44px;
+  }
 }
 
 .metric-item {
@@ -900,7 +918,7 @@ function getTimepointClass(tp) {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 1010;
 }
 
 .modal-card {

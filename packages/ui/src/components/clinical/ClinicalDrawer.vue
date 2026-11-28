@@ -289,6 +289,12 @@ defineExpose({
   flex-shrink: 0;
 }
 
+@media (min-width: 641px) {
+  .clinical-drawer-panel:not(.position-bottom) .clinical-drawer-sheet-handle {
+    display: none;
+  }
+}
+
 .size-sm {
   width: var(
     --semantic-drawer-width-sm,

@@ -963,6 +963,8 @@ function executeChairSignoff() {
   padding: 16px;
   gap: 16px;
   color: var(--semantic-color-text-inverse);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .panel-header {
@@ -978,7 +980,9 @@ function executeChairSignoff() {
 .header-titles {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
 }
 
 .panel-title {
@@ -989,11 +993,14 @@ function executeChairSignoff() {
 
 .role-selector-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   background-color: var(--semantic-color-surface-sunken);
   padding: 4px;
   border-radius: 6px;
   border: 1px solid var(--semantic-color-text-dark);
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .role-tab-btn {
@@ -1072,6 +1079,8 @@ function executeChairSignoff() {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .card-subtitle {
@@ -1103,7 +1112,7 @@ function executeChairSignoff() {
 
 .metrics-preview-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -1162,12 +1171,12 @@ function executeChairSignoff() {
 
 .qualitative-assessment-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
 .full-width {
-  grid-column: span 2;
+  grid-column: 1 / -1;
 }
 
 .form-group {
@@ -1310,8 +1319,46 @@ function executeChairSignoff() {
 
 .side-by-side-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+@media (max-width: 768px) {
+  .side-by-side-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .dual-reader-panel,
+  .reader-form-card,
+  .chair-decision-card {
+    padding: 12px;
+  }
+
+  .metrics-preview-row,
+  .qualitative-assessment-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .role-tab-btn {
+    min-height: 40px;
+  }
+
+  .form-select,
+  .form-input,
+  .form-textarea {
+    font-size: 1rem;
+    min-height: 44px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .post-adjudication-actions,
+  .chair-actions-row,
+  .discordance-banner {
+    flex-wrap: wrap;
+  }
 }
 
 .reader-compare-card {

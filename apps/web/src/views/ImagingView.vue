@@ -149,117 +149,149 @@
     </div>
 
     <!-- Main Workspace Split Layout -->
-    <div class="imaging-workspace-grid">
-      <!-- Left: Series Navigator -->
-      <aside class="series-nav-panel">
-        <div class="nav-panel-header">
-          <span class="panel-heading">Series Envelope</span>
-        </div>
-        <div class="series-list">
-          <template v-for="group in seriesNavigatorGroups" :key="group.key">
-            <div
-              v-if="group.title"
-              class="series-group-title"
-              :class="{ 'margin-top-sm': group.marginTop }"
-            >
-              {{ group.title }}
-            </div>
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <div
-              v-for="s in group.items"
-              :key="`${group.key}-${s.seriesUid}`"
-              class="series-item"
-              :class="{ active: group.activeUid === s.seriesUid }"
-              @click="group.select(s.seriesUid)"
-            >
-              <div class="series-thumb">
-                <ClinicalIcon name="camera" :size="16" />
+    <ClinicalSplitWorkspace
+      ref="imagingSplitRef"
+      v-model="isViewerDrawerOpen"
+      class="imaging-workspace-grid grid-stretch-items"
+      master-width="260px"
+      detail-width="minmax(0, 1fr)"
+      gap="16px"
+      :has-selection="Boolean(activeSeriesUid)"
+      drawer-size="xl"
+      :drawer-title="activeSeriesTitle"
+      drawer-subtitle="DICOM MPR & Oncologic Calipers"
+      close-label="Close DICOM imaging workspace"
+    >
+      <template #master>
+        <!-- Left: Series Navigator -->
+        <aside class="series-nav-panel">
+          <div class="nav-panel-header">
+            <span class="panel-heading">Series Envelope</span>
+          </div>
+          <div class="series-list">
+            <template v-for="group in seriesNavigatorGroups" :key="group.key">
+              <div
+                v-if="group.title"
+                class="series-group-title"
+                :class="{ 'margin-top-sm': group.marginTop }"
+              >
+                {{ group.title }}
               </div>
-              <div class="series-meta">
-                <div class="series-title">
-                  {{ s.description }}
+              <button
+                v-for="s in group.items"
+                :key="`${group.key}-${s.seriesUid}`"
+                type="button"
+                class="series-item"
+                :class="{ active: group.activeUid === s.seriesUid }"
+                :aria-current="
+                  group.activeUid === s.seriesUid ? 'true' : undefined
+                "
+                @click="selectSeriesItem(group, s, $event)"
+              >
+                <div class="series-thumb">
+                  <ClinicalIcon name="camera" :size="16" />
                 </div>
-                <div class="series-tags">
-                  <span class="modality-tag">{{ s.modality }}</span>
-                  <span class="slices-tag">{{ s.instancesCount }} slices</span>
+                <div class="series-meta">
+                  <div class="series-title">
+                    {{ s.description }}
+                  </div>
+                  <div class="series-tags">
+                    <span class="modality-tag">{{ s.modality }}</span>
+                    <span class="slices-tag"
+                      >{{ s.instancesCount }} slices</span
+                    >
+                  </div>
                 </div>
-              </div>
+              </button>
+            </template>
+          </div>
+
+          <!-- Series Volume Info Box -->
+          <div class="volume-info-card">
+            <div class="info-row">
+              <span class="info-label">Voxel Spacing:</span>
+              <span class="info-val">0.75 &times; 0.75 mm</span>
             </div>
-          </template>
-        </div>
-
-        <!-- Series Volume Info Box -->
-        <div class="volume-info-card">
-          <div class="info-row">
-            <span class="info-label">Voxel Spacing:</span>
-            <span class="info-val">0.75 &times; 0.75 mm</span>
+            <div class="info-row">
+              <span class="info-label">Slice Thickness:</span>
+              <span class="info-val">2.50 mm</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">De-ID Hash:</span>
+              <span class="info-val code">a9f8...3e12</span>
+            </div>
           </div>
-          <div class="info-row">
-            <span class="info-label">Slice Thickness:</span>
-            <span class="info-val">2.50 mm</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">De-ID Hash:</span>
-            <span class="info-val code">a9f8...3e12</span>
-          </div>
+        </aside>
+      </template>
+
+      <template #detail>
+        <div class="imaging-detail-grid grid-stretch-items">
+          <!-- Center: MPR Viewer -->
+          <component
+            :is="isCompact ? 'div' : 'main'"
+            class="mpr-viewer-wrapper"
+          >
+            <DicomMprViewer
+              v-if="viewMode === 'single'"
+              :timepoint="selectedTimepoint"
+              viewport-label="Viewport A (Single Timepoint)"
+              :series-uid="activeSeriesUid"
+              :active-annotations="currentAnnotations"
+              :active-tool="activeCaliperTool"
+              @caliper-created="handleCaliperCreated($event, 'single')"
+            />
+
+            <div v-else class="dual-viewports-grid grid-stretch-items">
+              <DicomMprViewer
+                :timepoint="timepointA"
+                viewport-label="Viewport A (Baseline)"
+                :series-uid="activeSeriesUidA"
+                :active-annotations="currentAnnotations"
+                :active-tool="activeCaliperTool"
+                :is-synced="isViewportSynced"
+                :synced-state="sharedSyncState"
+                @update:synced-state="onSyncStateUpdate"
+                @update:is-synced="isViewportSynced = $event"
+                @caliper-created="handleCaliperCreated($event, 'A')"
+              />
+
+              <DicomMprViewer
+                :timepoint="timepointB"
+                viewport-label="Viewport B (Follow-up)"
+                :series-uid="activeSeriesUidB"
+                :active-annotations="currentAnnotations"
+                :active-tool="activeCaliperTool"
+                :is-synced="isViewportSynced"
+                :synced-state="sharedSyncState"
+                @update:synced-state="onSyncStateUpdate"
+                @update:is-synced="isViewportSynced = $event"
+                @caliper-created="handleCaliperCreated($event, 'B')"
+              />
+            </div>
+          </component>
+
+          <!-- Right: Oncology Calipers & Derivation Console -->
+          <aside class="calipers-console-wrapper">
+            <OncologyCalipers
+              :annotations="currentAnnotations"
+              :criteria="selectedCriteria"
+              :derived-response="derivedResponse"
+              @tool-selected="activeCaliperTool = $event"
+              @delete-annotation="handleDeleteAnnotation"
+              @clear-all-annotations="currentAnnotations = []"
+              @assessment-signed="handleAssessmentSigned"
+              @annotation-updated="handleAnnotationUpdated"
+            />
+          </aside>
         </div>
-      </aside>
+      </template>
 
-      <!-- Center: MPR Viewer -->
-      <main class="mpr-viewer-wrapper">
-        <DicomMprViewer
-          v-if="viewMode === 'single'"
-          :timepoint="selectedTimepoint"
-          viewport-label="Viewport A (Single Timepoint)"
-          :series-uid="activeSeriesUid"
-          :active-annotations="currentAnnotations"
-          :active-tool="activeCaliperTool"
-          @caliper-created="handleCaliperCreated($event, 'single')"
-        />
-
-        <div v-else class="dual-viewports-grid">
-          <DicomMprViewer
-            :timepoint="timepointA"
-            viewport-label="Viewport A (Baseline)"
-            :series-uid="activeSeriesUidA"
-            :active-annotations="currentAnnotations"
-            :active-tool="activeCaliperTool"
-            :is-synced="isViewportSynced"
-            :synced-state="sharedSyncState"
-            @update:synced-state="onSyncStateUpdate"
-            @update:is-synced="isViewportSynced = $event"
-            @caliper-created="handleCaliperCreated($event, 'A')"
-          />
-
-          <DicomMprViewer
-            :timepoint="timepointB"
-            viewport-label="Viewport B (Follow-up)"
-            :series-uid="activeSeriesUidB"
-            :active-annotations="currentAnnotations"
-            :active-tool="activeCaliperTool"
-            :is-synced="isViewportSynced"
-            :synced-state="sharedSyncState"
-            @update:synced-state="onSyncStateUpdate"
-            @update:is-synced="isViewportSynced = $event"
-            @caliper-created="handleCaliperCreated($event, 'B')"
-          />
-        </div>
-      </main>
-
-      <!-- Right: Oncology Calipers & Derivation Console -->
-      <aside class="calipers-console-wrapper">
-        <OncologyCalipers
-          :annotations="currentAnnotations"
-          :criteria="selectedCriteria"
-          :derived-response="derivedResponse"
-          @tool-selected="activeCaliperTool = $event"
-          @delete-annotation="handleDeleteAnnotation"
-          @clear-all-annotations="currentAnnotations = []"
-          @assessment-signed="handleAssessmentSigned"
-          @annotation-updated="handleAnnotationUpdated"
-        />
-      </aside>
-    </div>
+      <template #drawer-footer="{ close }">
+        <button type="button" class="btn-sync-toggle" @click="close">
+          Back to Series Navigator
+        </button>
+      </template>
+    </ClinicalSplitWorkspace>
 
     <!-- Dual-Reader Blinded Recording & Committee Chair Tie-Breaker Section -->
     <section class="adjudication-workflow-section">
@@ -355,7 +387,11 @@
 </template>
 
 <script setup>
-import { ClinicalIcon } from "ui";
+import {
+  ClinicalIcon,
+  ClinicalSplitWorkspace,
+  useResponsiveSplitWorkspace,
+} from "ui";
 import { ref, computed, watch } from "vue";
 import DicomMprViewer from "../components/imaging/DicomMprViewer.vue";
 import OncologyCalipers from "../components/imaging/OncologyCalipers.vue";
@@ -363,6 +399,9 @@ import DualReaderAdjudicationPanel from "../components/imaging/DualReaderAdjudic
 import BatchDicomDropzoneModal from "../components/imaging/BatchDicomDropzoneModal.vue";
 
 const isBatchModalOpen = ref(false);
+const imagingSplitRef = ref(null);
+const isViewerDrawerOpen = ref(false);
+const { isCompact } = useResponsiveSplitWorkspace();
 const selectedSubjectId = ref("SUBJ-ONC-001");
 const selectedTimepoint = ref("CYCLE_2_DAY_1");
 const selectedCriteria = ref("RECIST_1_1");
@@ -514,6 +553,23 @@ const seriesNavigatorGroups = computed(() =>
         },
       ]
 );
+
+const activeSeriesTitle = computed(() => {
+  const allItems = seriesNavigatorGroups.value.flatMap((g) => g.items);
+  const currentUid =
+    viewMode.value === "single"
+      ? activeSeriesUid.value
+      : activeSeriesUidA.value;
+  return (
+    allItems.find((item) => item.seriesUid === currentUid)?.description ||
+    "DICOM Series MPR"
+  );
+});
+
+function selectSeriesItem(group, series, event) {
+  group.select(series.seriesUid);
+  imagingSplitRef.value?.openDetail(event?.currentTarget ?? null);
+}
 
 const currentAnnotations = ref([
   {
@@ -768,6 +824,7 @@ function handleBatchIngested(result) {
   flex-direction: column;
   gap: 6px;
   max-width: 800px;
+  min-width: 0;
 }
 
 .header-badge-row {
@@ -817,9 +874,19 @@ function handleBatchIngested(result) {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.selector-box {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .header-select {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   background-color: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -865,14 +932,15 @@ function handleBatchIngested(result) {
 
 .dual-viewports-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   width: 100%;
+  align-items: stretch;
 }
 
 @media (max-width: 1400px) {
   .dual-viewports-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -890,21 +958,32 @@ function handleBatchIngested(result) {
 }
 
 .imaging-workspace-grid {
-  display: grid;
-  grid-template-columns: 260px 1fr 360px;
-  gap: 16px;
   min-height: 580px;
+  min-width: 0;
+  align-items: stretch;
 }
 
-@media (max-width: 1200px) {
+.imaging-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  min-width: 0;
+  align-items: stretch;
+}
+
+@media (max-width: 1279px) {
   .imaging-workspace-grid {
-    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .imaging-detail-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 640px) {
   .dashboard-section {
-    padding: 12px 6px;
+    padding: 12px 8px;
     gap: 12px;
   }
 
@@ -922,9 +1001,16 @@ function handleBatchIngested(result) {
   }
 
   .selector-box,
-  .header-select {
+  .header-select,
+  .btn-batch-upload,
+  .btn-sync-toggle {
     width: 100%;
     box-sizing: border-box;
+    min-height: 44px;
+  }
+
+  .header-select {
+    font-size: 1rem;
   }
 
   .imaging-workspace-grid {
@@ -966,6 +1052,11 @@ function handleBatchIngested(result) {
 }
 
 .series-item {
+  width: 100%;
+  min-height: 44px;
+  font: inherit;
+  text-align: left;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1059,11 +1150,18 @@ function handleBatchIngested(result) {
 .mpr-viewer-wrapper {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .calipers-console-wrapper {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+}
+
+.adjudication-workflow-section {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .trajectory-section {
@@ -1075,12 +1173,16 @@ function handleBatchIngested(result) {
   flex-direction: column;
   gap: 12px;
   box-shadow: var(--shadow-sm);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .trajectory-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .trajectory-title {
