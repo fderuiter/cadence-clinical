@@ -127,12 +127,13 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
         hidden.Groups.Select(g => (g.Kind, g.Count)).Should().BeEquivalentTo(dependents.Groups.Select(g => (g.Kind, g.Count)));
         hidden.Groups.SelectMany(g => g.Objects).Should().OnlyContain(o => o.Ref == null && o.Mask == NotPermitted);
 
+        var governedObjective = NodeRef.For(ProtocolElementId.For(study, "obj.1"), 1).ToString();
         var impact = await GetAsync<KernelAmendmentImpactResponse>(crc, $"protocol-versions/{NodeRef.For(amendment)}/impact", ct);
-        impact.ChangedElements.Should().BeEquivalentTo([new KernelElementChangeResponse("obj.1", null, "Changed", ["/text"])]);
+        impact.ChangedElements.Should().BeEquivalentTo([new KernelElementChangeResponse("obj.1", null, "Changed", ["/text"], governedObjective)]);
         var impacted = impact.Dependents.Groups.SelectMany(g => g.Objects).ToList();
         impacted.Should().ContainSingle(o => o.Ref == ownEnrollment.ToString());
         impacted.Should().ContainSingle(o => o.Kind == NodeKinds.Enrollment && o.Mask == NotPermitted);
-        impacted.Should().Contain(o => o.Ref == NodeRef.For(ProtocolElementId.For(study, "obj.1"), 1).ToString());
+        impacted.Should().Contain(o => o.Ref == governedObjective);
         impact.Schedule.Should().NotBeNull("the design is typed, so the report carries its schedule directives (ADR-2475)");
         using (var refused = await stranger.GetAsync(new Uri($"/api/v1/kernel/protocol-versions/{NodeRef.For(amendment)}/impact", UriKind.Relative), ct))
         {
