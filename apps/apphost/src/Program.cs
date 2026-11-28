@@ -156,12 +156,41 @@ IResourceBuilder<ProjectResource> Service(IResourceBuilder<ProjectResource> proj
     return project;
 }
 
+string ResolveRequiredPath(string configKey, params string[] devSubpath)
+{
+    string? configured = builder.Configuration[configKey];
+    if (string.IsNullOrWhiteSpace(configured))
+    {
+        if (!builder.Environment.IsDevelopment())
+        {
+            throw new InvalidOperationException(
+                $"{configKey} must be set to a fully qualified directory path outside Development.");
+        }
+
+        string[] segments = [builder.Environment.ContentRootPath, ".cadence", .. devSubpath];
+        return System.IO.Path.GetFullPath(System.IO.Path.Combine(segments));
+    }
+
+    if (!System.IO.Path.IsPathFullyQualified(configured))
+    {
+        throw new InvalidOperationException(
+            $"{configKey} must be set to a fully qualified directory path (was '{configured}').");
+    }
+
+    return System.IO.Path.GetFullPath(configured);
+}
+
+string ResolveServiceScratchPath(string serviceName)
+{
+    string baseScratch = ResolveRequiredPath("Scratch:RootPath", "scratch");
+    return System.IO.Path.GetFullPath(System.IO.Path.Combine(baseScratch, serviceName));
+}
+
 var execution = Service(builder.AddProject<Projects.Cadence_Apps_Execution>("execution"))
     .WithEnvironment("DemographicsEncryption__KeyBase64", demographicsEncryptionKey)
     .WithEnvironment("RANDOMIZATION_ALLOCATION_KEY", randomizationAllocationKey)
     .WithEnvironment("CGT_BARCODE_HMAC_KEY", cgtBarcodeHmacKey);
-string etmfStorageRoot = builder.Configuration["Storage:RootPath"]
-    ?? System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cadence-etmf-storage");
+string etmfStorageRoot = ResolveRequiredPath("Storage:RootPath", "storage", "etmf");
 Service(builder.AddProject<Projects.Cadence_Apps_Etmf>("etmf"))
     .WithEnvironment("EXECUTION_SERVICE_URL", execution.GetEndpoint("http"))
     .WithEnvironment("Storage__Provider", "filesystem")
@@ -208,7 +237,8 @@ if (full)
     Service(builder.AddProject<Projects.Cadence_Apps_Designer>("designer"));
     Service(builder.AddProject<Projects.Cadence_Apps_Interop>("interop"))
         .WithEnvironment("FIELD_LOOKUP_HASH_KEY", fieldLookupHashKey)
-        .WithEnvironment("CADENCE_SCE_SIGNING_KEY", sceSigningKey);
+        .WithEnvironment("CADENCE_SCE_SIGNING_KEY", sceSigningKey)
+        .WithEnvironment("Scratch__RootPath", ResolveServiceScratchPath("interop"));
     Service(builder.AddProject<Projects.Cadence_Apps_Quality>("quality"));
     Service(builder.AddProject<Projects.Cadence_Apps_Notifications>("notifications"));
     Service(builder.AddProject<Projects.Cadence_Apps_Safety>("safety"));
@@ -221,15 +251,15 @@ if (full)
     Service(builder.AddProject<Projects.Cadence_Apps_Fileshare>("fileshare"));
     Service(builder.AddProject<Projects.Cadence_Apps_Imaging>("imaging"))
         .WithEnvironment("CADENCE_IMAGING_DEID_SIGNING_KEY", imagingDeidSigningKey)
-        .WithEnvironment("CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY", imagingDeidPseudonymizationKey);
+        .WithEnvironment("CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY", imagingDeidPseudonymizationKey)
+        .WithEnvironment("Scratch__RootPath", ResolveServiceScratchPath("imaging"));
     Service(builder.AddProject<Projects.Cadence_Apps_Payments>("payments"))
         .WithEnvironment("FIELD_ENCRYPTION_KEY", fieldEncryptionKey);
 }
 
 // The gateway is the API entry point the web apps call, through the web dev server's /api proxy. Outside
 // Development it refuses to start without every *_SERVICE_URL, so it is told where each running service is, and a
-// service the profile leaves out gets its usual host port, where nothing listens: its routes answer as that
-// service being down.
+// service the profile leaves out is marked 'disabled' so the gateway answers 503 without polling localhost.
 var gateway = builder.AddProject<Projects.Cadence_Apps_Gateway>("gateway")
     .WithHttpEndpoint(port: ServiceTopology.GatewayPort, name: "http")
     .WithHttpHealthCheck("/healthz/live")
@@ -244,8 +274,7 @@ foreach (var (variable, service) in routes)
 
 foreach (var service in ServiceTopology.Services.Where(s => !routed.Contains(s.UrlVariable)))
 {
-    string url = $"http://localhost:{service.Port}";
-    gateway.WithEnvironment(service.UrlVariable, url);
+    gateway.WithEnvironment(service.UrlVariable, ServiceTopology.DisabledServiceUrl);
 }
 
 // The Clinical Canvas web app (Vite dev server) on port 3000, the redirect URI the cadence-web Keycloak client

@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Storage;
 
@@ -48,6 +49,9 @@ public static class StorageServiceCollectionExtensions
 {
     /// <summary>The configuration section the store reads (<c>Storage__Provider</c>, <c>Storage__BucketName</c>, ...).</summary>
     public const string SectionName = "Storage";
+
+    /// <summary>The configuration section scratch workspaces read (<c>Scratch__RootPath</c>).</summary>
+    public const string ScratchSectionName = "Scratch";
 
     /// <summary>
     /// Registers <see cref="IStoragePort{T}"/> for <c>byte[]</c> from <c>Storage:Provider</c>: <c>s3</c> or
@@ -102,6 +106,31 @@ public static class StorageServiceCollectionExtensions
         }
     }
 
+    /// <summary>
+    /// Registers <see cref="IScratchWorkspaceProvider"/> bound from <c>Scratch:RootPath</c>, validating at startup
+    /// that <c>Scratch:RootPath</c> is a dedicated fully qualified directory with owner-only (<c>0700</c>) permissions.
+    /// </summary>
+    public static IServiceCollection AddCadenceScratchWorkspace(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        services.AddOptions<ScratchWorkspaceOptions>()
+            .Configure<IServiceProvider>((options, sp) =>
+            {
+                var effectiveConfig = sp.GetService<IConfiguration>() ?? configuration;
+                effectiveConfig.GetSection(ScratchSectionName).Bind(options);
+            })
+            .ValidateOnStart();
+
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<ScratchWorkspaceOptions>, ScratchWorkspaceOptionsValidator>());
+        services.TryAddSingleton(sp => sp.GetRequiredService<IOptions<ScratchWorkspaceOptions>>().Value);
+        services.TryAddSingleton<IScratchWorkspaceProvider>(sp =>
+            new FileSystemScratchWorkspaceProvider(sp.GetRequiredService<IOptions<ScratchWorkspaceOptions>>().Value));
+        return services;
+    }
+
     /// <summary>Builds the S3 client for the options, with explicit credentials or the AWS default chain.</summary>
     public static AmazonS3Client CreateClient(S3StorageOptions options)
     {
@@ -152,6 +181,22 @@ public static class StorageServiceCollectionExtensions
         if (provider == "minio" && string.IsNullOrWhiteSpace(options.ServiceUrl))
         {
             throw new InvalidOperationException("Storage:Provider 'minio' needs Storage:ServiceUrl.");
+        }
+    }
+}
+
+internal sealed class ScratchWorkspaceOptionsValidator : IValidateOptions<ScratchWorkspaceOptions>
+{
+    public ValidateOptionsResult Validate(string? name, ScratchWorkspaceOptions options)
+    {
+        try
+        {
+            _ = new FileSystemScratchWorkspaceProvider(options);
+            return ValidateOptionsResult.Success;
+        }
+        catch (InvalidOperationException ex)
+        {
+            return ValidateOptionsResult.Fail(ex.Message);
         }
     }
 }

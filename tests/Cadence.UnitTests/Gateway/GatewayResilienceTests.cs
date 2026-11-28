@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Gateway;
 using Cadence.Testing;
+using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
 using FluentAssertions;
@@ -119,6 +120,7 @@ public sealed class GatewayResilienceTests
         {
             host.UseSetting("OIDC_AUTHORITY", GatewayAuthenticationTests.GatewayFixture.Issuer)
                 .UseSetting("EXECUTION_SERVICE_URL", executionUrl)
+                .UseTestLocalhostFallbacks()
                 .UseTestGatewaySecret()
                 .ConfigureTestServices(services =>
                     services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>

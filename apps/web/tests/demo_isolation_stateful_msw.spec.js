@@ -165,7 +165,7 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
   });
 
   describe("Same-origin API base URL isolation in demo mode", () => {
-    it("targets window.location.origin in demo builds and localhost:8000 in standard builds when unconfigured", () => {
+    it("targets window.location.origin in demo builds and localhost:8000 in development/test builds when unconfigured", () => {
       vi.stubEnv("VITE_API_BASE_URL", "");
       vi.stubEnv("VITE_DEMO_MODE", "false");
       expect(getApiBaseUrl()).toBe("http://localhost:8000");
@@ -175,6 +175,27 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
       expect(getApiBaseUrl()).toBe(window.location.origin);
       expect(getBaseUrl()).toBe(window.location.origin);
       expect(getApiBaseUrl()).not.toContain("localhost:8000");
+    });
+
+    it("fails closed in non-development standard builds when VITE_API_BASE_URL is unset and supports '/' or https URLs", () => {
+      vi.stubEnv("MODE", "production");
+      vi.stubEnv("PROD", true);
+      vi.stubEnv("VITE_DEMO_MODE", "false");
+      vi.stubEnv("VITE_API_BASE_URL", "");
+
+      expect(() => getApiBaseUrl()).toThrow(/VITE_API_BASE_URL/);
+      expect(() => getBaseUrl()).toThrow(/VITE_API_BASE_URL/);
+
+      vi.stubEnv("VITE_API_BASE_URL", "/");
+      expect(getApiBaseUrl()).toBe(window.location.origin);
+      expect(getBaseUrl()).toBe(window.location.origin);
+
+      vi.stubEnv("VITE_API_BASE_URL", "https://gateway.cadence.example/");
+      expect(getApiBaseUrl()).toBe("https://gateway.cadence.example");
+      expect(getBaseUrl()).toBe("https://gateway.cadence.example");
+
+      vi.stubEnv("VITE_API_BASE_URL", "not-a-valid-url");
+      expect(() => getApiBaseUrl()).toThrow(/Invalid VITE_API_BASE_URL/);
     });
   });
 

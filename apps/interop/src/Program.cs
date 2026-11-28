@@ -8,6 +8,7 @@ using Cadence.Database.Signatures;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.FieldProtection;
+using Cadence.Storage;
 using Cadence.Telemetry;
 
 using Microsoft.AspNetCore.Builder;
@@ -16,6 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
+builder.Services.AddCadenceScratchWorkspace(builder.Configuration);
 // Device tokens are stored only as keyed hashes; FIELD_LOOKUP_HASH_KEY is required and validated at startup (#4770).
 builder.Services.AddCadenceLookupHashing();
 builder.Services.AddSingleton<DeviceTokenHasher>();

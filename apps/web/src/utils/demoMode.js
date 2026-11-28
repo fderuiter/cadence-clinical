@@ -10,23 +10,54 @@ import { createDemoRuntime, isDemoBuild } from "demo-fixtures/runtime";
  */
 export { isDemoBuild };
 
+function resolveSameOriginBaseUrl(fallback = "") {
+  return typeof globalThis.location?.origin === "string" &&
+    globalThis.location.origin.startsWith("http")
+    ? globalThis.location.origin.replace(/\/+$/, "")
+    : fallback;
+}
+
 export function resolveGatewayBaseUrl() {
-  const configured = import.meta.env?.VITE_API_BASE_URL;
-  if (configured) return configured;
-  if (import.meta.env?.MODE === "demo") {
-    return typeof globalThis.location?.origin === "string" &&
-      globalThis.location.origin.startsWith("http")
-      ? globalThis.location.origin
-      : "/";
+  const configured = (import.meta.env?.VITE_API_BASE_URL || "").trim();
+  if (configured) {
+    if (configured === "/" || configured.toLowerCase() === "same-origin") {
+      return resolveSameOriginBaseUrl("");
+    }
+    let parsed;
+    try {
+      parsed = new URL(configured);
+    } catch {
+      throw new Error(
+        `Invalid VITE_API_BASE_URL '${configured}': must be an absolute http(s) URL or '/' for same-origin routing.`
+      );
+    }
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      throw new Error(
+        `Invalid VITE_API_BASE_URL '${configured}': must use http: or https: protocol.`
+      );
+    }
+    return configured.replace(/\/+$/, "");
+  }
+  if (import.meta.env.MODE === "demo") {
+    return resolveSameOriginBaseUrl("/");
+  }
+  if (isDemoBuild()) {
+    const demoOrigin = resolveSameOriginBaseUrl("");
+    if (demoOrigin) {
+      return demoOrigin;
+    }
+    return "/";
   }
   if (
-    isDemoBuild() &&
-    typeof globalThis.location?.origin === "string" &&
-    globalThis.location.origin.startsWith("http")
+    (import.meta.env.MODE === "development" ||
+      import.meta.env.MODE === "test") &&
+    !import.meta.env?.PROD
   ) {
-    return globalThis.location.origin;
+    return "http://localhost:8000";
   }
-  return "http://localhost:8000";
+  throw new Error(
+    "VITE_API_BASE_URL must be configured (or set to '/' for explicit same-origin routing) in non-development builds."
+  );
 }
 
 const webDemoRuntime = /* @__PURE__ */ createDemoRuntime({

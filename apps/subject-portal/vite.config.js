@@ -9,7 +9,6 @@ import {
   configureVitePreviewTimeouts,
   createSameOriginApiInDevPlugin,
   createThemeBootstrapPlugin,
-  createViteGatewayProxy,
   injectHoistedCspMeta as injectHoistedPortalCspMeta,
   resolveMergedViteEnv,
   resolveViteOidcOrigin as resolvePortalOidcOrigin,
@@ -24,9 +23,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DEV_PORT = 5174;
-// Where the dev server's /api proxy forwards: the API gateway (the AppHost passes its endpoint; docker compose names
-// the front proxy).
-const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
 
 export { injectHoistedPortalCspMeta, resolvePortalOidcOrigin };
 
@@ -34,9 +30,9 @@ export function buildSubjectPortalCspContent(options = {}) {
   return buildModeAwareCspContent(options);
 }
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/subject-portal/",
-  cacheDir: mode === "demo" ? "node_modules/.vite-demo" : "node_modules/.vite",
+  cacheDir: "node_modules/.vite",
   optimizeDeps: {
     entries: [
       "index.html",
@@ -61,6 +57,7 @@ export default defineConfig(({ mode }) => ({
       rootDir: __dirname,
       devPort: DEV_PORT,
       loadEnv,
+      demoCacheDir: "node_modules/.vite-demo",
     }),
     (() => {
       let resolvedPortalCsp = buildSubjectPortalCspContent();
@@ -176,7 +173,6 @@ export default defineConfig(({ mode }) => ({
   server: {
     port: DEV_PORT,
     strictPort: true,
-    proxy: createViteGatewayProxy(GATEWAY_URL),
   },
   preview: {
     host: "::",
@@ -229,4 +225,4 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-}));
+});

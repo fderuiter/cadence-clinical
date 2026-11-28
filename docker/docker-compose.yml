@@ -26,6 +26,7 @@ x-dotnet-service: &dotnet-service
 
 x-dotnet-env: &dotnet-env
   ASPNETCORE_ENVIRONMENT: Development
+  Cadence__AllowLocalhostFallbacks: "true"
   # Services refuse to start without a secret of at least 32 characters.
   GATEWAY_SECRET: local-dev-gateway-secret-not-for-production # pragma: allowlist secret
   AUDIT_LOG_SECRET_KEY: local-dev-audit-secret-not-for-production # pragma: allowlist secret
@@ -318,8 +319,11 @@ services:
     container_name: cadence-interop
     ports:
       - "8004:8080"
+    volumes:
+      - interop_scratch:/var/lib/cadence/scratch
     environment:
       <<: *db-env
+      Scratch__RootPath: /var/lib/cadence/scratch/interop
       # Local-only HMAC key for device-token lookup hashes (#4770); generate a real one with `openssl rand -base64 32`.
       FIELD_LOOKUP_HASH_KEY: bG9jYWwtZGV2LW9ubHktbG9va3VwLWhhc2gta2V5MDA= # pragma: allowlist secret
       # Local-only HMAC key for SCE database-lock tokens and run signatures (#5382); generate a real one the same way.
@@ -458,8 +462,11 @@ services:
     container_name: cadence-imaging
     ports:
       - "8014:8080"
+    volumes:
+      - imaging_scratch:/var/lib/cadence/scratch
     environment:
       <<: *db-env
+      Scratch__RootPath: /var/lib/cadence/scratch/imaging
       # Local-only keys for de-identification certificates and DICOM UID pseudonyms (#5399); generate real ones with
       # `openssl rand -base64 32`, a different key for each.
       CADENCE_IMAGING_DEID_SIGNING_KEY: bG9jYWwtZGV2LW9ubHktaW1hZ2luZy1kZWlkLXNpZzE= # pragma: allowlist secret
@@ -540,5 +547,7 @@ volumes:
   postgres_data:
   minio_data:
   etmf_storage:
+  interop_scratch:
+  imaging_scratch:
   dotnet_nuget_cache:
   dotnet_msbuild_cache:

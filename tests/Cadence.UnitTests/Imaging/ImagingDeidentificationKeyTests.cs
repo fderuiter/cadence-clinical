@@ -46,7 +46,7 @@ public sealed class ImagingDeidentificationKeyTests
 
         using var host = new StartupValidationFactory<Cadence.Apps.Imaging.Program>(builder =>
         {
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestScratchWorkspace();
             if (Resolve(signing) is { } s) builder.UseSetting(ImagingDeidentificationOptions.SigningKeyConfigurationKey, s);
             if (Resolve(pseudonym) is { } p) builder.UseSetting(ImagingDeidentificationOptions.PseudonymizationKeyConfigurationKey, p);
         });
@@ -63,6 +63,7 @@ public sealed class ImagingDeidentificationKeyTests
         using var host = new StartupValidationFactory<Cadence.Apps.Imaging.Program>(builder => builder
             .UseTestGatewaySecret()
             .UseTestPostgresConnectionString()
+            .UseTestScratchWorkspace()
             .UseTestImagingDeidentificationKeys());
 
         host.ValidateStartup().Should().BeNull();

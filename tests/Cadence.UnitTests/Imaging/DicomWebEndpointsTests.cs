@@ -23,7 +23,9 @@ using Cadence.Deid;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
+using Cadence.Storage;
 using Cadence.Testing;
+using Cadence.Testing.Hosting;
 using Cadence.UnitTests.Security;
 using Cadence.UnitTests.TestSupport;
 
@@ -36,6 +38,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 
 using NSubstitute;
@@ -44,8 +47,27 @@ using Xunit;
 
 namespace Cadence.UnitTests.Imaging;
 
-public sealed class DicomWebEndpointsTests
+public sealed class DicomWebEndpointsTests : IDisposable
 {
+    private readonly string _scratchRoot = Path.Combine(Path.GetTempPath(), $"cadence-dicom-ep-scratch-{Guid.NewGuid():N}");
+    private readonly FileSystemScratchWorkspaceProvider _scratchWorkspace;
+
+    public DicomWebEndpointsTests()
+    {
+        _scratchWorkspace = new FileSystemScratchWorkspaceProvider(
+            new ScratchWorkspaceOptions { RootPath = _scratchRoot });
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_scratchRoot))
+        {
+            Directory.Delete(_scratchRoot, recursive: true);
+        }
+    }
+
+    private DicomIngestionService CreateIngestionService(ImagingDbContext dbContext, DicomDeidentifier? deidentifier = null) =>
+        new(dbContext, deidentifier ?? DicomIngestionServiceTests.TestDeidentifier(), _scratchWorkspace, SystemClock.Instance);
     [Fact(DisplayName = "StoreInstancesAsync_ReturnsBadRequestWithEmptyPayloadCode_WhenRequestPayloadIsZeroBytes")]
     [GxPRequirement("PRD-IMG-002")]
     public async Task StoreInstancesAsync_ReturnsBadRequestWithEmptyPayloadCode_WhenRequestPayloadIsZeroBytes()
@@ -208,7 +230,7 @@ public sealed class DicomWebEndpointsTests
             .UseInMemoryDatabase($"ImagingWadoParentCheck_{Guid.NewGuid():N}")
             .Options;
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, DicomIngestionServiceTests.TestDeidentifier(), SystemClock.Instance);
+        var service = CreateIngestionService(dbContext);
 
         var site1Ingested = await service.IngestInstanceAsync(
             DicomIngestionServiceTests.CreateSampleDicomBytesWithStudyAndModality(
@@ -422,7 +444,7 @@ public sealed class DicomWebEndpointsTests
             .Options;
         await using var dbContext = new ImagingDbContext(options);
         var deidentifier = DicomIngestionServiceTests.TestDeidentifier();
-        var ingested = await new DicomIngestionService(dbContext, deidentifier, SystemClock.Instance).IngestInstanceAsync(
+        var ingested = await CreateIngestionService(dbContext, deidentifier).IngestInstanceAsync(
             DicomIngestionServiceTests.CreateSampleDicomBytesWithPhi("60001"), "SUBJ-6001", "SITE-601", "STUDY-6001", "tester", ct);
         var caller = new DefaultHttpContext();
         caller.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal { UserId = "reader", AssignedStudies = ["STUDY-6001"] };
@@ -451,7 +473,7 @@ public sealed class DicomWebEndpointsTests
             .UseInMemoryDatabase($"BatchMultipartEndpoint_{Guid.NewGuid():N}")
             .Options;
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, DicomIngestionServiceTests.TestDeidentifier(), SystemClock.Instance);
+        var service = CreateIngestionService(dbContext);
 
         string boundary = "----CadenceMultipartBoundary" + Guid.NewGuid().ToString("N");
         byte[] multipartBytes = BuildMultipartPayload(
@@ -499,7 +521,7 @@ public sealed class DicomWebEndpointsTests
             .UseInMemoryDatabase($"BatchRawZipEndpoint_{Guid.NewGuid():N}")
             .Options;
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, DicomIngestionServiceTests.TestDeidentifier(), SystemClock.Instance);
+        var service = CreateIngestionService(dbContext);
 
         byte[] zipBytes = DicomIngestionServiceTests.CreateArchiveBytes(
         [
@@ -507,8 +529,6 @@ public sealed class DicomWebEndpointsTests
             ("DICOM/slice_02.dcm", DicomIngestionServiceTests.CreateSampleDicomBytesWithPhi("6202")),
             ("DICOM/notes.pdf", Encoding.UTF8.GetBytes("%PDF-1.4 note"))
         ]);
-
-        var spoolBefore = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-*").ToHashSet(StringComparer.Ordinal);
 
         await using var innerMs = new MemoryStream(zipBytes, writable: false);
         await using var nonSeekable = new DicomIngestionServiceTests.NonSeekableTestReadStream(innerMs);
@@ -525,29 +545,63 @@ public sealed class DicomWebEndpointsTests
         created.Value!.IngestedSliceCount.Should().Be(2);
         created.Value.SkippedNonDicomCount.Should().Be(1);
 
-        var leakedTempFiles = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-*")
-            .Where(path => !spoolBefore.Contains(path))
-            .ToArray();
-        leakedTempFiles.Should().BeEmpty();
+        Directory.GetFiles(_scratchRoot, "cadence-dicom-*").Should().BeEmpty();
     }
 
     [Fact]
-    public async Task StoreBatchInstancesAsync_SupportsTrailingMultipartMetadataFields_AndCleansTemporarySectionFiles()
+    public async Task StoreBatchInstancesAsync_SupportsTrailingSubjectIdWhenStudyAndSiteLead_SpoolsInScratchAndRejectsFileFirstDeferredScope()
     {
         var ct = TestContext.Current.CancellationToken;
         var options = new DbContextOptionsBuilder<ImagingDbContext>()
             .UseInMemoryDatabase($"BatchDeferredMultipartEndpoint_{Guid.NewGuid():N}")
             .Options;
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, DicomIngestionServiceTests.TestDeidentifier(), SystemClock.Instance);
+        var service = CreateIngestionService(dbContext);
 
+        // 1. Authorized studyId + siteId in leading form fields (or query/headers) with trailing subjectId spools into Scratch:RootPath and cleans up.
         string boundary = "----CadenceDeferredBoundary" + Guid.NewGuid().ToString("N");
         byte[] multipartBytes = BuildMultipartPayload(
             boundary,
-            leadingFields: [],
+            leadingFields:
+            [
+                ("studyId", "STUDY-TRAIL-01"),
+                ("siteId", "SITE-TRAIL-01")
+            ],
             files:
             [
                 ("slice_001.dcm", "application/dicom", DicomIngestionServiceTests.CreateSampleDicomBytesWithPhi("6301"))
+            ],
+            trailingFields:
+            [
+                ("subjectId", "SUBJ-TRAIL-01")
+            ]);
+
+        await using var innerMs = new MemoryStream(multipartBytes, writable: false);
+        await using var bodyStream = new DicomIngestionServiceTests.NonSeekableTestReadStream(innerMs);
+        var recordingScratch = new DicomIngestionServiceTests.RecordingScratchWorkspaceProvider(_scratchWorkspace);
+
+        var httpContext = CreateAuthorizedHttpContext("STUDY-TRAIL-01", "SITE-TRAIL-01");
+        httpContext.Request.Method = "POST";
+        httpContext.Request.ContentType = $"multipart/form-data; boundary={boundary}";
+        httpContext.Request.Body = bodyStream;
+
+        var result = await DicomWebEndpoints.StoreBatchInstancesAsync(httpContext.Request, service, ct, recordingScratch);
+
+        var created = result.Should().BeOfType<Created<BatchIngestionResult>>().Subject;
+        created.Value!.IngestedSliceCount.Should().Be(1);
+        recordingScratch.CreatedFiles.Should().ContainSingle();
+        Path.GetFullPath(recordingScratch.CreatedFiles[0])
+            .Should().StartWith(Path.GetFullPath(_scratchRoot) + Path.DirectorySeparatorChar);
+        Directory.GetFileSystemEntries(_scratchRoot).Should().BeEmpty("spooled multipart files in Scratch:RootPath must be deleted");
+
+        // 2. File-first multipart payload (studyId/siteId deferred until after file section) is rejected before writing any bytes to disk.
+        string deferredBoundary = "----CadenceFileFirstBoundary" + Guid.NewGuid().ToString("N");
+        byte[] fileFirstBytes = BuildMultipartPayload(
+            deferredBoundary,
+            leadingFields: [],
+            files:
+            [
+                ("slice_001.dcm", "application/dicom", DicomIngestionServiceTests.CreateSampleDicomBytesWithPhi("6302"))
             ],
             trailingFields:
             [
@@ -556,25 +610,21 @@ public sealed class DicomWebEndpointsTests
                 ("siteId", "SITE-TRAIL-01")
             ]);
 
-        var spoolBefore = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-part-*.tmp").ToHashSet(StringComparer.Ordinal);
+        await using var fileFirstMs = new MemoryStream(fileFirstBytes, writable: false);
+        await using var fileFirstStream = new DicomIngestionServiceTests.NonSeekableTestReadStream(fileFirstMs);
+        var mockScratch = Substitute.For<IScratchWorkspaceProvider>();
 
-        await using var innerMs = new MemoryStream(multipartBytes, writable: false);
-        await using var bodyStream = new DicomIngestionServiceTests.NonSeekableTestReadStream(innerMs);
+        var fileFirstContext = CreateAuthorizedHttpContext("STUDY-TRAIL-01", "SITE-TRAIL-01");
+        fileFirstContext.Request.Method = "POST";
+        fileFirstContext.Request.ContentType = $"multipart/form-data; boundary={deferredBoundary}";
+        fileFirstContext.Request.Body = fileFirstStream;
 
-        var httpContext = CreateAuthorizedHttpContext("STUDY-TRAIL-01", "SITE-TRAIL-01");
-        httpContext.Request.Method = "POST";
-        httpContext.Request.ContentType = $"multipart/form-data; boundary={boundary}";
-        httpContext.Request.Body = bodyStream;
+        var rejected = await DicomWebEndpoints.StoreBatchInstancesAsync(fileFirstContext.Request, service, ct, mockScratch);
+        rejected.Should().BeAssignableTo<IStatusCodeHttpResult>()
+            .Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        JsonSerializer.Serialize(((IValueHttpResult)rejected).Value).Should().Contain("\"MISSING_SCOPE\"");
 
-        var result = await DicomWebEndpoints.StoreBatchInstancesAsync(httpContext.Request, service, ct);
-
-        var created = result.Should().BeOfType<Created<BatchIngestionResult>>().Subject;
-        created.Value!.IngestedSliceCount.Should().Be(1);
-
-        var leakedPartFiles = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-part-*.tmp")
-            .Where(path => !spoolBefore.Contains(path))
-            .ToArray();
-        leakedPartFiles.Should().BeEmpty();
+        mockScratch.DidNotReceiveWithAnyArgs().CreateFile();
     }
 
     [Fact]
@@ -681,25 +731,25 @@ public sealed class DicomWebEndpointsTests
     }
 
     [Fact]
-    public async Task StoreBatchInstancesAsync_Returns403OutsideStudyProblem_WhenTrailingStudyIsOutsideCallerScope()
+    public async Task StoreBatchInstancesAsync_Returns403OutsideStudyProblem_BeforeSpoolingToDisk_WhenStudyOrSiteIsOutsideCallerScope()
     {
         var ct = TestContext.Current.CancellationToken;
         string boundary = "----CadenceOutOfScopeBoundary" + Guid.NewGuid().ToString("N");
         byte[] multipartBytes = BuildMultipartPayload(
             boundary,
-            leadingFields: [],
+            leadingFields:
+            [
+                ("studyId", "STUDY-OTHER"),
+                ("siteId", "SITE-01")
+            ],
             files:
             [
                 ("slice_001.dcm", "application/dicom", DicomIngestionServiceTests.CreateSampleDicomBytesWithPhi("6401"))
             ],
             trailingFields:
             [
-                ("subjectId", "SUBJ-SCOPE-01"),
-                ("studyId", "STUDY-OTHER"),
-                ("siteId", "SITE-01")
+                ("subjectId", "SUBJ-SCOPE-01")
             ]);
-
-        var spoolBefore = Directory.GetFiles(Path.GetTempPath(), "cadence-multipart-*.tmp").ToHashSet(StringComparer.Ordinal);
 
         await using var innerMs = new MemoryStream(multipartBytes, writable: false);
         await using var bodyStream = new DicomIngestionServiceTests.NonSeekableTestReadStream(innerMs);
@@ -710,22 +760,103 @@ public sealed class DicomWebEndpointsTests
         httpContext.Request.Body = bodyStream;
 
         var mockIngestionService = Substitute.For<IDicomIngestionService>();
+        var recordingScratch = Substitute.For<IScratchWorkspaceProvider>();
 
-        var result = await DicomWebEndpoints.StoreBatchInstancesAsync(httpContext.Request, mockIngestionService, ct);
+        var result = await DicomWebEndpoints.StoreBatchInstancesAsync(httpContext.Request, mockIngestionService, ct, recordingScratch);
 
         var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
         problem.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         problem.ProblemDetails.Title.Should().Be(ClinicalScopeGuard.OutsideStudyTitle);
         problem.ProblemDetails.Detail.Should().Be(ClinicalScopeGuard.OutsideStudyDeniedDetail);
 
-        var leakedFiles = Directory.GetFiles(Path.GetTempPath(), "cadence-multipart-*.tmp")
-            .Where(path => !spoolBefore.Contains(path))
-            .ToArray();
-        leakedFiles.Should().BeEmpty();
-
+        recordingScratch.DidNotReceiveWithAnyArgs().CreateFile();
+        Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-*").Should().BeEmpty();
         await mockIngestionService.DidNotReceiveWithAnyArgs().IngestBatchAsync(
             default!,
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task HttpPostBatch_RejectsUnauthorizedAndFileFirstMultipartUploads_WithoutSpoolingToScratchOrTmpDir()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        string databaseName = $"ImagingPreSpoolHttp_{Guid.NewGuid():N}";
+        int scratchCreateCalls = 0;
+        var countingScratch = new CountingScratchWorkspaceProvider(_scratchWorkspace, () => Interlocked.Increment(ref scratchCreateCalls));
+
+        await using var booted = ServiceHosts.All["imaging"](services =>
+        {
+            services.ReplaceWithInMemoryDbContext<ImagingDbContext>(databaseName);
+            services.RemoveAll<IScratchWorkspaceProvider>();
+            services.AddSingleton<IScratchWorkspaceProvider>(countingScratch);
+        });
+
+        using var crcClient = booted.CreateSignedClient(new GatewayIdentity(
+            UserId: "crc-site-1",
+            Roles: [RoleNormalization.ROLE_CRC],
+            SiteIds: ["SITE-01"],
+            TenantId: "tenant-pre-spool",
+            StudyIds: ["STUDY-ALLOWED"]));
+
+        string boundary1 = "----HttpFileFirst" + Guid.NewGuid().ToString("N");
+        byte[] fileFirstPayload = BuildMultipartPayload(
+            boundary1,
+            leadingFields: [],
+            files: [("slice.dcm", "application/dicom", DicomIngestionServiceTests.CreateSampleDicomBytesWithPhi("6411"))],
+            trailingFields: [("studyId", "STUDY-OTHER"), ("siteId", "SITE-01"), ("subjectId", "SUBJ-01")]);
+        using var mpReq1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/imaging/studies/batch")
+        {
+            Content = new ByteArrayContent(fileFirstPayload)
+        };
+        mpReq1.Content.Headers.ContentType = MediaTypeHeaderValue.Parse($"multipart/form-data; boundary={boundary1}");
+
+        using var mpResp1 = await crcClient.SendAsync(mpReq1, ct);
+        mpResp1.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Volatile.Read(ref scratchCreateCalls).Should().Be(0);
+        Directory.GetFileSystemEntries(_scratchRoot).Should().BeEmpty();
+        Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-*").Should().BeEmpty();
+
+        string boundary2 = "----HttpOutOfScopeHeader" + Guid.NewGuid().ToString("N");
+        byte[] headerScopedPayload = BuildMultipartPayload(
+            boundary2,
+            leadingFields: [],
+            files: [("slice.dcm", "application/dicom", DicomIngestionServiceTests.CreateSampleDicomBytesWithPhi("6412"))],
+            trailingFields: [("subjectId", "SUBJ-01")]);
+        using var mpReq2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/imaging/studies/batch")
+        {
+            Content = new ByteArrayContent(headerScopedPayload)
+        };
+        mpReq2.Content.Headers.ContentType = MediaTypeHeaderValue.Parse($"multipart/form-data; boundary={boundary2}");
+        mpReq2.Headers.Add("X-Upload-Study-Id", "STUDY-OTHER");
+        mpReq2.Headers.Add("X-Upload-Site-Id", "SITE-01");
+
+        using var mpResp2 = await crcClient.SendAsync(mpReq2, ct);
+        mpResp2.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        Volatile.Read(ref scratchCreateCalls).Should().Be(0);
+        Directory.GetFileSystemEntries(_scratchRoot).Should().BeEmpty();
+        Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-*").Should().BeEmpty();
+    }
+
+    private sealed class CountingScratchWorkspaceProvider(IScratchWorkspaceProvider inner, Action onCreate) : IScratchWorkspaceProvider
+    {
+        public string RootPath => inner.RootPath;
+
+        public string CreateDirectory(string prefix = "run")
+        {
+            onCreate();
+            return inner.CreateDirectory(prefix);
+        }
+
+        public (string Path, FileStream Stream) CreateFile(
+            string prefix = "scratch",
+            string extension = ".tmp",
+            FileAccess access = FileAccess.ReadWrite,
+            int bufferSize = 65_536,
+            FileOptions options = FileOptions.Asynchronous)
+        {
+            onCreate();
+            return inner.CreateFile(prefix, extension, access, bufferSize, options);
+        }
     }
 
     [Fact]
@@ -736,7 +867,7 @@ public sealed class DicomWebEndpointsTests
             .UseInMemoryDatabase($"StoreInstancesOverflowDims_{Guid.NewGuid():N}")
             .Options;
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, DicomIngestionServiceTests.TestDeidentifier(), SystemClock.Instance);
+        var service = CreateIngestionService(dbContext);
 
         byte[] headerOnlyDicom = DicomIngestionServiceTests.CreateHeaderOnlyDicomBytes(
             rows: ushort.MaxValue,
@@ -852,10 +983,9 @@ public sealed class DicomWebEndpointsTests
             .UseInMemoryDatabase($"BatchZipBombRawEndpoint_{Guid.NewGuid():N}")
             .Options;
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, DicomIngestionServiceTests.TestDeidentifier(), SystemClock.Instance);
+        var service = CreateIngestionService(dbContext);
 
         byte[] highRatioZip = DicomIngestionServiceTests.CreateZeroFilledZipBytes(entryCount: 8, bytesPerEntry: 16 * 1024 * 1024);
-        var spoolBefore = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-*").ToHashSet(StringComparer.Ordinal);
 
         await using var innerMs = new MemoryStream(highRatioZip, writable: false);
         await using var nonSeekable = new DicomIngestionServiceTests.NonSeekableTestReadStream(innerMs);
@@ -874,10 +1004,7 @@ public sealed class DicomWebEndpointsTests
 
         (await dbContext.ImagingInstanceEnvelopes.CountAsync(ct)).Should().Be(0);
 
-        var leakedTempFiles = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-*")
-            .Where(path => !spoolBefore.Contains(path))
-            .ToArray();
-        leakedTempFiles.Should().BeEmpty();
+        Directory.GetFiles(_scratchRoot, "cadence-dicom-*").Should().BeEmpty();
     }
 
     [Fact]
@@ -888,7 +1015,7 @@ public sealed class DicomWebEndpointsTests
             .UseInMemoryDatabase($"BatchZipBombMultipartEndpoint_{Guid.NewGuid():N}")
             .Options;
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, DicomIngestionServiceTests.TestDeidentifier(), SystemClock.Instance);
+        var service = CreateIngestionService(dbContext);
 
         byte[] highRatioZip = DicomIngestionServiceTests.CreateZeroFilledZipBytes(entryCount: 8, bytesPerEntry: 16 * 1024 * 1024);
         string boundary = "----CadenceZipBombBoundary" + Guid.NewGuid().ToString("N");

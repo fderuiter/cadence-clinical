@@ -16,6 +16,7 @@ using Cadence.Apps.Gateway.Signatures;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
+using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
 using FluentAssertions;
@@ -347,6 +348,7 @@ public sealed class SignatureTokenEndpointTests(SignatureTokenEndpointTests.Fixt
         {
             Gateway = new WebApplicationFactory<Cadence.Apps.Gateway.Program>().WithWebHostBuilder(host => host
                 .UseSetting("OIDC_AUTHORITY", Issuer)
+                .UseTestLocalhostFallbacks()
                 .UseTestGatewaySecret()
                 .ConfigureTestServices(services =>
                 {

@@ -96,21 +96,24 @@ builder.Services.Configure<RateLimiterOptions>(options =>
         _ => new FixedWindowRateLimiterOptions { PermitLimit = SignatureTokenEndpoints.AttemptsPerMinute, Window = TimeSpan.FromMinutes(1) }));
 });
 
-// Each service's address. Only in Development does a missing address fall back to the local port; anywhere
-// else the gateway refuses to start rather than forwarding to localhost, and an address that is not an
-// absolute http(s) URL fails startup in every environment.
-string GetServiceUrl(CadenceService service)
+// Each service's address. Only in Development when Cadence:AllowLocalhostFallbacks is true does a missing address
+// fall back to the local port; anywhere else the gateway refuses to start rather than forwarding to localhost, an
+// address set to 'disabled' answers 503 Service Unavailable, and any non-http(s) URL fails startup.
+bool allowLocalhostFallbacks = builder.Configuration.GetValue<bool>(ServiceTopology.AllowLocalhostFallbacksKey);
+var disabledClusters = new HashSet<string>(StringComparer.Ordinal);
+var resolvedServiceUris = new Dictionary<string, Uri?>(StringComparer.Ordinal);
+foreach (var service in ServiceTopology.Services)
 {
-    if (builder.Configuration[service.UrlVariable] is not { Length: > 0 } url)
+    Uri? resolvedUri = ServiceTopology.ResolveServiceUrlOrDisabled(
+        service,
+        builder.Configuration[service.UrlVariable],
+        builder.Environment.IsDevelopment(),
+        allowLocalhostFallbacks);
+    resolvedServiceUris[service.Name] = resolvedUri;
+    if (resolvedUri is null)
     {
-        return builder.Environment.IsDevelopment()
-            ? service.LocalUrl.ToString()
-            : throw new InvalidOperationException($"{service.UrlVariable} must be set to the service's base URL outside Development.");
+        disabledClusters.Add(service.ClusterId);
     }
-
-    return Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
-        ? url
-        : throw new InvalidOperationException($"{service.UrlVariable} must be an absolute http or https URL (was '{url}').");
 }
 
 // The routes and clusters come from the service topology manifest (#5315). Every route must lead to paths its service
@@ -125,13 +128,19 @@ var routes = ServiceTopology.Services
     .ToArray();
 
 var clusters = ServiceTopology.Services
-    .Select(service => GatewayClusters.Create(service.ClusterId, GetServiceUrl(service), builder.Configuration))
+    .Select(service => resolvedServiceUris[service.Name] is { } serviceUri
+        ? GatewayClusters.Create(service.ClusterId, serviceUri.ToString(), builder.Configuration)
+        : GatewayClusters.CreateDisabled(service.ClusterId, builder.Configuration))
     .ToArray();
 
-string kernelServiceUrl = GetServiceUrl(ServiceTopology.Get("kernel"));
+Uri? kernelServiceUri = resolvedServiceUris["kernel"];
 builder.Services.AddHttpClient(GatewayTenantEntitlementCache.HttpClientName, client =>
 {
-    client.BaseAddress = new Uri(kernelServiceUrl, UriKind.Absolute);
+    if (kernelServiceUri is not null)
+    {
+        client.BaseAddress = kernelServiceUri;
+    }
+
     client.Timeout = TimeSpan.FromSeconds(3);
 });
 builder.Services.TryAddSingleton<ITenantEntitlementCache, GatewayTenantEntitlementCache>();
@@ -164,7 +173,23 @@ api.MapGet("/status", () => TypedResults.Ok(new { mode = "Active", gateway = "Ca
     .AllowAnonymous();
 
 app.MapSignatureTokenEndpoints();
-app.MapReverseProxy();
+app.MapReverseProxy(proxyPipeline =>
+{
+    proxyPipeline.Use(async (context, next) =>
+    {
+        string? clusterId = context.GetReverseProxyFeature().Cluster.Config.ClusterId;
+        if (clusterId is not null && disabledClusters.Contains(clusterId))
+        {
+            await TypedResults.Problem(
+                title: "Service unavailable",
+                detail: "The target clinical service is disabled in this deployment profile.",
+                statusCode: StatusCodes.Status503ServiceUnavailable).ExecuteAsync(context);
+            return;
+        }
+
+        await next();
+    });
+});
 
 await app.RunAsync();
 

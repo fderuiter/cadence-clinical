@@ -82,7 +82,8 @@ public sealed class EtmfCompletenessWebhookTests : IDisposable
         {
             host.UseTestGatewaySecret()
                 .UseTestPostgresConnectionString()
-                .UseTestStorage();
+                .UseTestStorage()
+                .UseSetting("EXECUTION_SERVICE_URL", "http://localhost:8002");
 
             host.ConfigureTestServices(services =>
             {
@@ -1021,5 +1022,83 @@ public sealed class EtmfCompletenessWebhookTests : IDisposable
         public Task<TResult> ExecuteInTransactionAsync<TResult>(
             Func<CancellationToken, Task<TResult>> unitOfWork, CancellationToken cancellationToken) =>
             unitOfWork(cancellationToken);
+    }
+
+    [Fact]
+    public void EtmfHost_InProduction_WithoutExecutionServiceUrl_FailsStartup()
+    {
+        using var host = new StartupValidationFactory<Cadence.Apps.Etmf.Program>(builder => builder
+            .UseEnvironment("Production")
+            .UseTestGatewaySecret()
+            .UseTestPostgresConnectionString()
+            .UseTestStorage()
+            .UseSetting("EXECUTION_SERVICE_URL", null));
+
+        Action boot = () => _ = host.Services;
+        boot.Should().Throw<InvalidOperationException>()
+            .WithMessage("*EXECUTION_SERVICE_URL*outside Development*");
+    }
+
+    [Fact]
+    public void EtmfHost_InDevelopment_WithoutAllowLocalhostFallbacks_FailsStartup()
+    {
+        using var host = new StartupValidationFactory<Cadence.Apps.Etmf.Program>(builder => builder
+            .UseEnvironment("Development")
+            .UseTestGatewaySecret()
+            .UseTestPostgresConnectionString()
+            .UseTestStorage()
+            .UseSetting("EXECUTION_SERVICE_URL", null));
+
+        Action boot = () => _ = host.Services;
+        boot.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Cadence:AllowLocalhostFallbacks*");
+    }
+
+    [Fact]
+    public void EtmfHost_WithMalformedExecutionServiceUrl_FailsStartup()
+    {
+        using var host = new StartupValidationFactory<Cadence.Apps.Etmf.Program>(builder => builder
+            .UseEnvironment("Production")
+            .UseTestGatewaySecret()
+            .UseTestPostgresConnectionString()
+            .UseTestStorage()
+            .UseSetting("EXECUTION_SERVICE_URL", "execution:8002"));
+
+        Action boot = () => _ = host.Services;
+        boot.Should().Throw<InvalidOperationException>()
+            .WithMessage("EXECUTION_SERVICE_URL must be an absolute http or https URL*");
+    }
+
+    [Fact]
+    public async Task WebhookPublisher_WithoutConfiguredBaseAddress_ThrowsInsteadOfSilentlyDropping()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var httpClient = new HttpClient();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["GATEWAY_SECRET"] = TestSecurityContext.GatewaySecret,
+            })
+            .Build();
+        var publisher = new HttpEtmfCompletenessWebhookPublisher(
+            httpClient,
+            new StaticGatewayOptions(TestSecurityContext.GatewaySecret),
+            config,
+            Cadence.Kernel.Time.SystemClock.Instance,
+            NullLogger<HttpEtmfCompletenessWebhookPublisher>.Instance);
+
+        await using var dbContext = new EtmfDbContext(
+            new DbContextOptionsBuilder<EtmfDbContext>().UseInMemoryDatabase($"etmf-null-base-{Guid.NewGuid():N}").Options);
+
+        Func<Task> act = () => publisher.PublishSiteActivationCompletenessAsync(
+            dbContext,
+            StudyId,
+            SiteId,
+            TestSecurityContext.TenantCode,
+            Reason,
+            ct);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*EXECUTION_SERVICE_URL*");
     }
 }

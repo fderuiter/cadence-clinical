@@ -122,39 +122,54 @@ public static class Program
         var matchedStandaloneNames = selectedStandalone.Select(s => s.Name).ToArray();
         var hostJobs = new List<Func<Task<HostExportResult>>>(selectedStandalone.Count + (shouldInspectKernelHost ? 1 : 0));
 
-        foreach (var svc in selectedStandalone)
+        string scratchRoot = Path.Combine(Path.GetTempPath(), $"cadence-openapi-scratch-{Guid.NewGuid():N}");
+        HostExportResult[] results;
+        try
         {
-            var capturedService = svc;
-            hostJobs.Add(() => ExportStandaloneHostJobAsync(capturedService, outputDir));
-        }
-
-        if (shouldInspectKernelHost)
-        {
-            string kernelContentRoot = Path.Combine(repoRoot, "apps", "kernel-api", "src");
-            hostJobs.Add(() => ExportKernelHostJobAsync(
-                kernelContentRoot,
-                outputDir,
-                targetServices,
-                matchedStandaloneNames));
-        }
-
-        using var throttle = new SemaphoreSlim(maxParallelism, maxParallelism);
-        var runningTasks = hostJobs
-            .Select(async job =>
+            foreach (var svc in selectedStandalone)
             {
-                await throttle.WaitAsync();
-                try
-                {
-                    return await job();
-                }
-                finally
-                {
-                    throttle.Release();
-                }
-            })
-            .ToArray();
+                var capturedService = svc;
+                string serviceScratchRoot = Path.Combine(scratchRoot, capturedService.Name);
+                hostJobs.Add(() => ExportStandaloneHostJobAsync(capturedService, outputDir, serviceScratchRoot));
+            }
 
-        HostExportResult[] results = await Task.WhenAll(runningTasks);
+            if (shouldInspectKernelHost)
+            {
+                string kernelContentRoot = Path.Combine(repoRoot, "apps", "kernel-api", "src");
+                string kernelScratchRoot = Path.Combine(scratchRoot, "kernel");
+                hostJobs.Add(() => ExportKernelHostJobAsync(
+                    kernelContentRoot,
+                    outputDir,
+                    targetServices,
+                    matchedStandaloneNames,
+                    kernelScratchRoot));
+            }
+
+            using var throttle = new SemaphoreSlim(maxParallelism, maxParallelism);
+            var runningTasks = hostJobs
+                .Select(async job =>
+                {
+                    await throttle.WaitAsync();
+                    try
+                    {
+                        return await job();
+                    }
+                    finally
+                    {
+                        throttle.Release();
+                    }
+                })
+                .ToArray();
+
+            results = await Task.WhenAll(runningTasks);
+        }
+        finally
+        {
+            if (Directory.Exists(scratchRoot))
+            {
+                Directory.Delete(scratchRoot, recursive: true);
+            }
+        }
 
         var exportedSchemas = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
         bool success = true;
@@ -229,10 +244,12 @@ public static class Program
         return sb.ToString();
     }
 
-    private static Action<IWebHostBuilder> CreateExportHostConfiguration(string contentRoot) =>
+    private static Action<IWebHostBuilder> CreateExportHostConfiguration(string contentRoot, string scratchRoot) =>
         builder => builder
             .UseEnvironment("Development")
             .UseContentRoot(contentRoot)
+            .UseSetting("Cadence:AllowLocalhostFallbacks", "true")
+            .UseSetting("Scratch:RootPath", scratchRoot)
             .UseSetting("GATEWAY_SECRET", Convert.ToHexString(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("OIDC_AUTHORITY", "http://localhost/realms/openapi-export")
             .UseSetting("POSTGRES_CONNECTION_STRING", "Host=localhost;Database=cadence_openapi_export")
@@ -249,13 +266,14 @@ public static class Program
 
     private static async Task<HostExportResult> ExportStandaloneHostJobAsync(
         DotnetServiceRegistration svc,
-        string outputDir)
+        string outputDir,
+        string scratchRoot)
     {
         var result = new HostExportResult();
         result.StdoutLines.Add($"\n[INFO] Compiling OpenAPI specification for .NET service: '{svc.Name}'...");
         try
         {
-            var specObj = await ExportServiceOpenApiAsync(svc, result.StderrLines);
+            var specObj = await ExportServiceOpenApiAsync(svc, result.StderrLines, scratchRoot);
             if (specObj != null)
             {
                 result.ExportedSpecs.Add((svc.Name, specObj));
@@ -283,14 +301,15 @@ public static class Program
         string contentRoot,
         string outputDir,
         HashSet<string> targetServices,
-        IReadOnlyCollection<string> matchedStandaloneNames)
+        IReadOnlyCollection<string> matchedStandaloneNames,
+        string scratchRoot)
     {
         var result = new HostExportResult();
         result.StdoutLines.Add("\n[INFO] Booting Cadence.Kernel.Host once for kernel and module OpenAPI export...");
         try
         {
             using var factory = new WebApplicationFactory<kernel::Cadence.Kernel.Host.Program>();
-            using var configuredFactory = factory.WithWebHostBuilder(CreateExportHostConfiguration(contentRoot));
+            using var configuredFactory = factory.WithWebHostBuilder(CreateExportHostConfiguration(contentRoot, scratchRoot));
             using var client = configuredFactory.CreateClient();
 
             var availableDocuments = new List<string> { "kernel" };
@@ -349,7 +368,10 @@ public static class Program
         }
     }
 
-    private static async Task<JsonObject?> ExportServiceOpenApiAsync(DotnetServiceRegistration svc, List<string> stderrLines)
+    private static async Task<JsonObject?> ExportServiceOpenApiAsync(
+        DotnetServiceRegistration svc,
+        List<string> stderrLines,
+        string scratchRoot)
     {
         var factoryType = typeof(WebApplicationFactory<>).MakeGenericType(svc.ProgramType);
         using var factory = (IDisposable)Activator.CreateInstance(factoryType)!;
@@ -361,7 +383,7 @@ public static class Program
         // The services refuse to start without auth and database settings and, for execution, a demographics
         // key, and for payments, eConsent and interop the field-protection keys (ADR-2494), and for interop the SCE signing key (ADR-2515). Export only reads route metadata and never opens a connection, so throwaway secrets, an
         // unreachable authority and a credential-free connection string are enough.
-        Action<IWebHostBuilder> configureHostBuilder = CreateExportHostConfiguration(svc.ContentRoot);
+        Action<IWebHostBuilder> configureHostBuilder = CreateExportHostConfiguration(svc.ContentRoot, scratchRoot);
         var configuredFactory = withHostBuilderMethod?.Invoke(factory, new object[] { configureHostBuilder }) ?? factory;
 
         var createClientMethod = configuredFactory.GetType().GetMethod("CreateClient", Type.EmptyTypes);

@@ -10,7 +10,6 @@ import {
   configureVitePreviewTimeouts,
   createSameOriginApiInDevPlugin,
   createThemeBootstrapPlugin,
-  createViteGatewayProxy,
   injectHoistedCspMeta as injectHoistedWebCspMeta,
   resolveMergedViteEnv,
   resolveViteOidcOrigin as resolveWebOidcOrigin,
@@ -25,8 +24,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DEV_PORT = 3000;
-// Where the dev server's /api proxy forwards: the API gateway (the AppHost passes its endpoint).
-const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
 const IS_E2E_BUILD = process.env.CADENCE_E2E_BUILD === "1";
 
 export { injectHoistedWebCspMeta, resolveWebOidcOrigin };
@@ -207,7 +204,6 @@ export default defineConfig({
   server: {
     port: DEV_PORT,
     strictPort: true,
-    proxy: createViteGatewayProxy(GATEWAY_URL),
   },
   preview: {
     host: "::",

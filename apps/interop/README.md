@@ -49,7 +49,8 @@ study (#5402,
 [ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)). `POST /sce/execute`
 enforces a server-side sandbox policy: `network_isolated: false`, `filesystem_readonly_root: false` and unapproved
 container images are rejected (`400`), `max_memory_mb`, `timeout_seconds` and `max_output_bytes` are clamped to server
-bounds, `SceDockerEngineDriver` always runs approved R/Python images with `--network=none`, `--read-only`,
+bounds, `SceDockerEngineDriver` allocates per-run container bind-mount workspaces via `IScratchWorkspaceProvider`
+(`Scratch:RootPath`, owner-only `0700` permissions) and always runs approved R/Python images with `--network=none`, `--read-only`,
 `--cap-drop=ALL`, `--security-opt=no-new-privileges` and `--` before the image name, and artifact collection skips
 symbolic links/reparse points and enforces canonical workspace containment and `max_output_bytes` before reading files.
 
@@ -79,15 +80,16 @@ public key alone is `422` and signs nothing. Neither route, nor polling, accepts
 
 ## Key dependencies
 
-- Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Telemetry`, `Cadence.Database`.
+- Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Storage`, `Cadence.Telemetry`, `Cadence.Database`.
 - Packages: `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore`, `FluentValidation` (versions in `Directory.Packages.props`).
 
 ## Configuration and secrets at rest
 
-| Setting                   | Purpose                                                                                                                                                                                               |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `FIELD_LOOKUP_HASH_KEY`   | **Required.** Base64 HMAC-SHA256 key (`openssl rand -base64 32`) for device-token lookup hashes. The service refuses to start without a valid key; there is no default.                               |
-| `CADENCE_SCE_SIGNING_KEY` | **Required.** Base64 HMAC-SHA256 key (`openssl rand -base64 32`) that signs SCE database-lock tokens and run signature blocks. The service refuses to start without a valid key; there is no default. |
+| Setting                   | Purpose                                                                                                                                                                                                     |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FIELD_LOOKUP_HASH_KEY`   | **Required.** Base64 HMAC-SHA256 key (`openssl rand -base64 32`) for device-token lookup hashes. The service refuses to start without a valid key; there is no default.                                     |
+| `CADENCE_SCE_SIGNING_KEY` | **Required.** Base64 HMAC-SHA256 key (`openssl rand -base64 32`) that signs SCE database-lock tokens and run signature blocks. The service refuses to start without a valid key; there is no default.       |
+| `Scratch__RootPath`       | **Required.** Fully qualified, dedicated directory (`Scratch:RootPath`) where `SceDockerEngineDriver` allocates owner-only per-run container bind-mount workspaces. Startup fails without an explicit path. |
 
 Wearable/sensor device tokens are never stored (#4770). `device_registrations`, `sensor_telemetry_streams`,
 `sensor_daily_summaries` and `sensor_safety_alerts` each keep an indexed `DeviceTokenHash`: the keyed HMAC-SHA256
@@ -110,6 +112,9 @@ device is re-registered); run `VACUUM FULL` on those four tables afterwards. See
 ```bash
 export GATEWAY_SECRET="<at least 32 characters>"
 export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=<password>"
+export FIELD_LOOKUP_HASH_KEY="$(openssl rand -base64 32)"
+export CADENCE_SCE_SIGNING_KEY="$(openssl rand -base64 32)"
+export Scratch__RootPath="/var/lib/cadence/interop-scratch"
 dotnet run --project apps/interop/src/Cadence.Apps.Interop.csproj
 ```
 

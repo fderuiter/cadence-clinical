@@ -9,6 +9,7 @@ using Cadence.Apps.Imaging.Services;
 using Cadence.Deid;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
+using Cadence.Storage;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -85,35 +86,42 @@ public static class DicomWebEndpoints
                 $"Payload exceeds maximum {MaxSingleInstanceSizeBytes / (1024 * 1024)} MB single-instance size limit.");
         }
 
-        string subjectId = request.Query["subjectId"].ToString().Trim();
-        string siteId = request.Query["siteId"].ToString().Trim();
-        string studyId = request.Query["studyId"].ToString().Trim();
+        var metadata = DicomMultipartHeaderHelpers.CreateInitialMetadata(request);
 
         await using var pooledPayload = new PooledBlockStream();
         try
         {
             if (request.HasFormContentType && request.Form.Files.Count > 0)
             {
-                if (string.IsNullOrWhiteSpace(subjectId))
-                {
-                    subjectId = request.Form["subjectId"].ToString().Trim();
-                }
-
-                if (string.IsNullOrWhiteSpace(siteId))
-                {
-                    siteId = request.Form["siteId"].ToString().Trim();
-                }
-
-                if (string.IsNullOrWhiteSpace(studyId))
-                {
-                    studyId = request.Form["studyId"].ToString().Trim();
-                }
+                DicomMultipartHeaderHelpers.ApplyFormMetadataField(metadata, "subjectId", request.Form["subjectId"]);
+                DicomMultipartHeaderHelpers.ApplyFormMetadataField(metadata, "siteId", request.Form["siteId"]);
+                DicomMultipartHeaderHelpers.ApplyFormMetadataField(metadata, "studyId", request.Form["studyId"]);
 
                 var file = request.Form.Files[0];
                 if (file.Length > MaxSingleInstanceSizeBytes)
                 {
                     return DicomBatchIngestionStreamCoordinator.PayloadTooLargeResult(
                         $"Payload exceeds maximum {MaxSingleInstanceSizeBytes / (1024 * 1024)} MB single-instance size limit.");
+                }
+
+                if (file.Length == 0)
+                {
+                    return TypedResults.BadRequest(new { code = "EMPTY_PAYLOAD", message = "Request payload cannot be empty." });
+                }
+
+                if (!metadata.HasAuthorizableStudyAndSiteScope)
+                {
+                    return DicomBatchIngestionStreamCoordinator.MissingUploadScopeResult();
+                }
+
+                if (ClinicalScopeGuard.RequireStudyAndSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
+                {
+                    return ClinicalScopeGuard.OutsideStudy();
+                }
+
+                if (!metadata.HasCompleteUploadScope)
+                {
+                    return DicomBatchIngestionStreamCoordinator.MissingUploadScopeResult();
                 }
 
                 await using var fileStream = file.OpenReadStream();
@@ -123,6 +131,29 @@ public static class DicomWebEndpoints
             else
             {
                 using var countingStream = new MaxBytesReadStream(request.Body, MaxSingleInstanceSizeBytes);
+                byte[] prefix = new byte[4];
+                int prefixLength = await countingStream.ReadAtLeastAsync(prefix, prefix.Length, throwOnEndOfStream: false, cancellationToken).ConfigureAwait(false);
+                if (prefixLength == 0)
+                {
+                    return TypedResults.BadRequest(new { code = "EMPTY_PAYLOAD", message = "Request payload cannot be empty." });
+                }
+
+                if (!metadata.HasAuthorizableStudyAndSiteScope)
+                {
+                    return DicomBatchIngestionStreamCoordinator.MissingUploadScopeResult();
+                }
+
+                if (ClinicalScopeGuard.RequireStudyAndSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
+                {
+                    return ClinicalScopeGuard.OutsideStudy();
+                }
+
+                if (!metadata.HasCompleteUploadScope)
+                {
+                    return DicomBatchIngestionStreamCoordinator.MissingUploadScopeResult();
+                }
+
+                await pooledPayload.WriteAsync(prefix.AsMemory(0, prefixLength), cancellationToken).ConfigureAwait(false);
                 await BatchStreamHelpers.CopyPooledAsync(countingStream, pooledPayload, cancellationToken).ConfigureAwait(false);
             }
         }
@@ -136,16 +167,6 @@ public static class DicomWebEndpoints
             return TypedResults.BadRequest(new { code = "EMPTY_PAYLOAD", message = "Request payload cannot be empty." });
         }
 
-        if (BatchRequestMetadata.IsMissingUploadScope(studyId, siteId, subjectId))
-        {
-            return DicomBatchIngestionStreamCoordinator.MissingUploadScopeResult();
-        }
-
-        if (ClinicalScopeGuard.RequireStudyAndSite(request.HttpContext, studyId, siteId) is not null)
-        {
-            return ClinicalScopeGuard.OutsideStudy();
-        }
-
         pooledPayload.Position = 0;
         byte[] payloadBytes = new byte[(int)pooledPayload.Length];
         await pooledPayload.ReadExactlyAsync(payloadBytes, cancellationToken).ConfigureAwait(false);
@@ -154,9 +175,9 @@ public static class DicomWebEndpoints
         {
             var result = await ingestionService.IngestInstanceAsync(
                 payloadBytes,
-                subjectId: subjectId,
-                siteId: siteId,
-                studyId: studyId,
+                subjectId: metadata.SubjectValue,
+                siteId: metadata.SiteValue,
+                studyId: metadata.StudyValue,
                 operatorIdentity: CallerScope.RequiredUserId(request.HttpContext, "An admitted imaging upload has no signed caller."),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -175,7 +196,8 @@ public static class DicomWebEndpoints
     public static Task<IResult> StoreBatchInstancesAsync(
         HttpRequest request,
         IDicomIngestionService ingestionService,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default,
+        [FromServices] IScratchWorkspaceProvider? scratchWorkspace = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(ingestionService);
@@ -184,6 +206,7 @@ public static class DicomWebEndpoints
             request,
             MaxBatchSizeBytes,
             ingestionService,
+            scratchWorkspace,
             cancellationToken);
     }
 

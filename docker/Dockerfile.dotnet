@@ -23,6 +23,7 @@ ENV PATH="$PATH:/root/.dotnet/tools"
 RUN dotnet tool install --global dotnet-ef --version 10.0.15
 
 WORKDIR /workspace
+RUN install -d -m 0700 /var/lib/cadence/scratch
 
 # Isolate container NuGet packages and MSBuild intermediates outside the /workspace bind mount
 ENV NUGET_PACKAGES=/var/cache/cadence/nuget \
@@ -55,7 +56,7 @@ COPY packages/ packages/
 
 RUN set -eu; \
     mkdir -p /manifests; \
-    find apps packages -type f \( -name '*.csproj' -o -name 'Directory.Build.props' -o -name 'Directory.Build.targets' \) -exec cp --parents {} /manifests/ \;; \
+    find apps packages -type f \( -name '*.csproj' -o -name 'Directory.Build.props' -o -name 'Directory.Build.targets' -o -name 'BannedSymbols.txt' \) -exec cp --parents {} /manifests/ \;; \
     find /manifests -type d -exec chmod 0755 {} +; \
     find /manifests -type f -exec chmod 0644 {} +; \
     find /manifests -exec touch -h -d '2026-01-01T00:00:00Z' {} +
@@ -159,6 +160,7 @@ LABEL org.opencontainers.image.title="cadence-${APP_NAME}" \
       org.opencontainers.image.vendor="Cadence Clinical"
 
 WORKDIR /app
+RUN install -d -m 0700 -o app -g app /var/lib/cadence/scratch
 USER app
 
 COPY --from=build /app/publish .

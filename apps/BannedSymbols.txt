@@ -1,0 +1,3 @@
+# Scoped API ban across all clinical services under apps/
+# Services must never write to unmanaged OS temporary directories (CWE-377).
+M:System.IO.Path.GetTempPath; Services under apps/ must not call Path.GetTempPath(); use Cadence.Storage.IScratchWorkspaceProvider (Scratch:RootPath) or Cadence.Storage.IStoragePort<byte[]> instead.

@@ -66,6 +66,34 @@ public static class GatewayClusters
         },
     };
 
+    public static ClusterConfig CreateDisabled(string clusterId, IConfiguration configuration) => new()
+    {
+        ClusterId = clusterId,
+        Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase),
+        HttpRequest = new ForwarderRequestConfig
+        {
+            ActivityTimeout = Seconds(configuration, "GATEWAY_PROXY_TIMEOUT_SECONDS", DefaultProxyTimeoutSeconds),
+        },
+        HealthCheck = new HealthCheckConfig
+        {
+            AvailableDestinationsPolicy = HealthCheckConstants.AvailableDestinations.HealthyAndUnknown,
+            Active = new ActiveHealthCheckConfig
+            {
+                Enabled = false,
+                Interval = Seconds(configuration, "GATEWAY_HEALTH_CHECK_INTERVAL_SECONDS", DefaultHealthCheckIntervalSeconds),
+                Timeout = Seconds(configuration, "GATEWAY_HEALTH_CHECK_TIMEOUT_SECONDS", DefaultHealthCheckTimeoutSeconds),
+                Policy = "ConsecutiveFailures",
+                Path = ReadinessPath,
+            },
+            Passive = new PassiveHealthCheckConfig
+            {
+                Enabled = true,
+                Policy = "TransportFailureRate",
+                ReactivationPeriod = PassiveReactivationPeriod,
+            },
+        },
+    };
+
     private static TimeSpan Seconds(IConfiguration configuration, string key, int defaultSeconds)
     {
         int seconds = configuration.GetValue(key, defaultSeconds);

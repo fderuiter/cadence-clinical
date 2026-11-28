@@ -231,7 +231,7 @@ public sealed class EtmfExportWorker : BackgroundService
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<EtmfDbContext>();
         var clock = scope.ServiceProvider.GetRequiredService<IClock>();
-        var storage = scope.ServiceProvider.GetService<IStoragePort<byte[]>>();
+        var storage = scope.ServiceProvider.GetRequiredService<IStoragePort<byte[]>>();
 
         var job = await db.TmfExportJobs.FirstOrDefaultAsync(j => j.Id == jobId, ct);
         if (job == null)
@@ -276,18 +276,8 @@ public sealed class EtmfExportWorker : BackgroundService
                 ct: ct
             );
 
-            if (storage is not null)
-            {
-                var exportKey = EtmfExportPackager.BuildExportObjectKey(job.StudyId, job.Id);
-                await storage.PutObjectAsync(exportKey, zipBytes, "application/zip", ct: ct);
-            }
-            else
-            {
-                var exportDir = Path.Combine(Path.GetTempPath(), "etmf_exports");
-                Directory.CreateDirectory(exportDir);
-                var filePath = Path.Combine(exportDir, $"{job.Id}.zip");
-                await File.WriteAllBytesAsync(filePath, zipBytes, ct);
-            }
+            var exportKey = EtmfExportPackager.BuildExportObjectKey(job.StudyId, job.Id);
+            await storage.PutObjectAsync(exportKey, zipBytes, "application/zip", ct: ct);
 
             job.Status = "COMPLETED";
             job.ProgressPercentage = 100.0;

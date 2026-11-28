@@ -31,7 +31,7 @@ public sealed record CadenceService(
     /// <summary>The gateway's cluster for this service.</summary>
     public string ClusterId => $"{Name}-cluster";
 
-    /// <summary>The address the gateway uses in Development when <see cref="UrlVariable"/> is not set.</summary>
+    /// <summary>The address used in Development when <see cref="UrlVariable"/> is not set and <see cref="ServiceTopology.AllowLocalhostFallbacksKey"/> is enabled.</summary>
     public Uri LocalUrl => new UriBuilder(Uri.UriSchemeHttp, "localhost", Port).Uri;
 }
 
@@ -45,6 +45,18 @@ public static class ServiceTopology
 {
     /// <summary>The gateway's port: the one address the web apps call.</summary>
     public const int GatewayPort = 8000;
+
+    /// <summary>
+    /// Configuration key (<c>Cadence:AllowLocalhostFallbacks</c> / <c>Cadence__AllowLocalhostFallbacks</c>) required in
+    /// Development before an unset <c>*_SERVICE_URL</c> variable may bind to <see cref="CadenceService.LocalUrl"/>.
+    /// </summary>
+    public const string AllowLocalhostFallbacksKey = "Cadence:AllowLocalhostFallbacks";
+
+    /// <summary>
+    /// Sentinel value (<c>disabled</c>) assigned to <c>*_SERVICE_URL</c> for services intentionally omitted from a
+    /// deployment profile so the gateway returns HTTP <c>503 Service Unavailable</c> instead of polling localhost.
+    /// </summary>
+    public const string DisabledServiceUrl = "disabled";
 
     /// <summary>Every service behind the gateway, in port order.</summary>
     public static IReadOnlyList<CadenceService> Services { get; } =
@@ -73,4 +85,78 @@ public static class ServiceTopology
     public static CadenceService Get(string name) =>
         Services.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.Ordinal))
         ?? throw new ArgumentException($"No service is called '{name}'.", nameof(name));
+
+    /// <summary>
+    /// Resolves and validates <paramref name="service"/>'s base URL from <paramref name="configuredUrl"/>.
+    /// Outside Development, <paramref name="configuredUrl"/> is required; in Development, an unset value falls back to
+    /// <see cref="CadenceService.LocalUrl"/> only when <paramref name="allowLocalhostFallbacks"/> is <see langword="true"/>.
+    /// </summary>
+    /// <param name="service">The target topology service.</param>
+    /// <param name="configuredUrl">The configured URL value for <see cref="CadenceService.UrlVariable"/>.</param>
+    /// <param name="isDevelopment">Whether the current host environment is Development.</param>
+    /// <param name="allowLocalhostFallbacks">Whether explicit Development localhost fallback opt-in (<see cref="AllowLocalhostFallbacksKey"/>) is enabled.</param>
+    /// <returns>The validated absolute <c>http</c> or <c>https</c> <see cref="Uri"/>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="service"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="configuredUrl"/> is missing without allowed fallback or is not an absolute HTTP(S) URL.</exception>
+    public static Uri ResolveServiceUrl(
+        CadenceService service,
+        string? configuredUrl,
+        bool isDevelopment,
+        bool allowLocalhostFallbacks)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+
+        if (string.IsNullOrWhiteSpace(configuredUrl))
+        {
+            if (isDevelopment && allowLocalhostFallbacks)
+            {
+                return service.LocalUrl;
+            }
+
+            throw new InvalidOperationException(
+                isDevelopment
+                    ? $"{service.UrlVariable} must be set, or set '{AllowLocalhostFallbacksKey}' to 'true' in Development to use {service.LocalUrl}."
+                    : $"{service.UrlVariable} must be set to the service's base URL outside Development.");
+        }
+
+        string trimmed = configuredUrl.Trim();
+        if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+            || string.IsNullOrWhiteSpace(uri.Host)
+            || !string.IsNullOrEmpty(uri.UserInfo))
+        {
+            throw new InvalidOperationException(
+                $"{service.UrlVariable} must be an absolute http or https URL (was '{configuredUrl}').");
+        }
+
+        return uri;
+    }
+
+    /// <summary>
+    /// Resolves and validates <paramref name="service"/>'s base URL, returning <see langword="null"/> when
+    /// <paramref name="configuredUrl"/> equals <see cref="DisabledServiceUrl"/> (<c>disabled</c>).
+    /// </summary>
+    /// <param name="service">The target topology service.</param>
+    /// <param name="configuredUrl">The configured URL value or <see cref="DisabledServiceUrl"/>.</param>
+    /// <param name="isDevelopment">Whether the current host environment is Development.</param>
+    /// <param name="allowLocalhostFallbacks">Whether explicit Development localhost fallback opt-in (<see cref="AllowLocalhostFallbacksKey"/>) is enabled.</param>
+    /// <returns>The validated absolute <see cref="Uri"/>, or <see langword="null"/> when the service is disabled.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="service"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="configuredUrl"/> is missing without allowed fallback or is neither an absolute HTTP(S) URL nor <c>disabled</c>.</exception>
+    public static Uri? ResolveServiceUrlOrDisabled(
+        CadenceService service,
+        string? configuredUrl,
+        bool isDevelopment,
+        bool allowLocalhostFallbacks)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+
+        if (!string.IsNullOrWhiteSpace(configuredUrl)
+            && string.Equals(configuredUrl.Trim(), DisabledServiceUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return ResolveServiceUrl(service, configuredUrl, isDevelopment, allowLocalhostFallbacks);
+    }
 }

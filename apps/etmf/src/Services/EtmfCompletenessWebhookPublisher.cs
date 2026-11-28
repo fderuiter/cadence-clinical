@@ -512,11 +512,8 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
 
         if (httpClient.BaseAddress is null)
         {
-            logger.LogWarning(
-                "Skipping eTMF completeness webhook for study {StudyId}: EXECUTION_SERVICE_URL is not configured.",
-                studyId);
-            secretBytes = [];
-            return false;
+            throw new InvalidOperationException(
+                $"Cannot publish eTMF completeness webhook for study '{studyId}': EXECUTION_SERVICE_URL is not configured on HttpClient.BaseAddress.");
         }
 
         secretBytes = resolved;

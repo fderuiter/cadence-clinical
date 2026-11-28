@@ -62,7 +62,8 @@ The claim set and checks are specified in `docs/SDLC/Signature_Token_Cryptograph
 | `OIDC_SIGNATURE_CLIENT_ID`              | no (default `cadence-esignature`) | Keycloak client with only direct access grants enabled, used to re-check signer passwords.                                       |
 | `OIDC_SIGNATURE_CLIENT_SECRET`          | no                                | That client's secret, when it is confidential.                                                                                   |
 | `OIDC_TOKEN_ENDPOINT`                   | no                                | Token endpoint override; defaults to `<realm>/protocol/openid-connect/token` beside `OIDC_METADATA_ADDRESS` or `OIDC_AUTHORITY`. |
-| `<SERVICE>_SERVICE_URL`                 | outside Development               | Backend base URLs, e.g. `EXECUTION_SERVICE_URL`; absolute http(s) URLs.                                                          |
+| `<SERVICE>_SERVICE_URL`                 | yes (unless fallback enabled)     | Backend base URLs, e.g. `EXECUTION_SERVICE_URL`; absolute http(s) URLs, or `"disabled"` to answer `503` without forwarding.      |
+| `Cadence__AllowLocalhostFallbacks`      | no (default `false`, Dev only)    | Set `true` in Development to allow unset `<SERVICE>_SERVICE_URL` entries to fall back to `http://localhost:<port>`.              |
 | `GATEWAY_PROXY_TIMEOUT_SECONDS`         | no (default `30`)                 | Idle time after which a proxied request fails with 504.                                                                          |
 | `GATEWAY_HEALTH_CHECK_INTERVAL_SECONDS` | no (default `10`)                 | How often each service's `/healthz/ready` is probed.                                                                             |
 | `GATEWAY_HEALTH_CHECK_TIMEOUT_SECONDS`  | no (default `5`)                  | Time limit for one probe.                                                                                                        |
@@ -74,8 +75,8 @@ The claim set and checks are specified in `docs/SDLC/Signature_Token_Cryptograph
 Each route forwards a whole path prefix to one service. The routes, clusters and address keys come from the service
 topology manifest ([`packages/topology`](../../packages/topology/README.md), #5315). Service addresses come from `<SERVICE>_SERVICE_URL`. In
 Development a missing address defaults to `http://localhost:<port>` (the ports in
-[docs/LOCAL_DEV_ENVIRONMENT.md](../../docs/LOCAL_DEV_ENVIRONMENT.md)); in any other environment the gateway refuses to
-start without it. An address that is not an absolute http or https URL fails startup everywhere
+[docs/LOCAL_DEV_ENVIRONMENT.md](../../docs/LOCAL_DEV_ENVIRONMENT.md)) only when `Cadence:AllowLocalhostFallbacks` is `true`; otherwise the gateway refuses to
+start without it. Setting `<SERVICE>_SERVICE_URL=disabled` omits the YARP cluster and answers `503 Service Unavailable` (`SERVICE_DISABLED`) on that service's prefixes. An address that is neither `"disabled"` nor an absolute http or https URL fails startup everywhere
 (`tests/Cadence.UnitTests/Gateway/GatewayServiceUrlValidationTests.cs`).
 
 | Path prefix                  | Service                                                                  | Address key                 |

@@ -10,26 +10,48 @@ import { isDemoBuild } from "../utils/demoMode.js";
 
 // Where the portal sends API calls. In the Vite dev server this is the portal's own origin, and its /api proxy forwards
 // to the gateway, which sends no CORS headers (#5451); demo builds resolve to same-origin for MSW interception, while
-// standard builds and tests default to the gateway's published port.
+// non-development standard builds require explicit VITE_API_BASE_URL (or '/' for same-origin routing).
+function resolvePortalSameOriginBaseUrl() {
+  return typeof globalThis.location?.origin === "string" &&
+    globalThis.location.origin.startsWith("http")
+    ? globalThis.location.origin.replace(/\/+$/, "")
+    : "";
+}
+
 export function getApiBaseUrl() {
-  const configured = import.meta.env?.VITE_API_BASE_URL;
+  const configured = (import.meta.env?.VITE_API_BASE_URL || "").trim();
   if (configured) {
+    if (configured === "/" || configured.toLowerCase() === "same-origin") {
+      return resolvePortalSameOriginBaseUrl();
+    }
+    let parsed;
+    try {
+      parsed = new URL(configured);
+    } catch {
+      throw new Error(
+        `Invalid VITE_API_BASE_URL '${configured}': must be an absolute http(s) URL or '/' for same-origin routing.`
+      );
+    }
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      throw new Error(
+        `Invalid VITE_API_BASE_URL '${configured}': must use http: or https: protocol.`
+      );
+    }
     return configured.replace(/\/+$/, "");
   }
-  if (import.meta.env.MODE === "demo") {
-    return typeof globalThis.location?.origin === "string" &&
-      globalThis.location.origin.startsWith("http")
-      ? globalThis.location.origin.replace(/\/+$/, "")
-      : "";
+  if (import.meta.env.MODE === "demo" || isDemoBuild()) {
+    return resolvePortalSameOriginBaseUrl();
   }
   if (
-    isDemoBuild() &&
-    typeof globalThis.location?.origin === "string" &&
-    globalThis.location.origin.startsWith("http")
+    (import.meta.env.MODE === "development" ||
+      import.meta.env.MODE === "test") &&
+    !import.meta.env?.PROD
   ) {
-    return globalThis.location.origin.replace(/\/+$/, "");
+    return "http://localhost:8000";
   }
-  return "http://localhost:8000";
+  throw new Error(
+    "VITE_API_BASE_URL must be configured (or set to '/' for explicit same-origin routing) in non-development builds."
+  );
 }
 
 // Auth Fetch Helpers

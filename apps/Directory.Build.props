@@ -1,0 +1,9 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <ItemGroup>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt"
+                     Condition="Exists('$(MSBuildThisFileDirectory)BannedSymbols.txt')"
+                     Visible="false" />
+  </ItemGroup>
+</Project>

@@ -85,6 +85,7 @@ public class FieldProtectionHostWiringTests
             .WithWebHostBuilder(builder => builder
                 .UseTestGatewaySecret()
                 .UseTestPostgresConnectionString()
+                .UseTestScratchWorkspace()
                 .UseTestFieldProtectionKeys()
                 .UseTestSceSigningKey()
                 .ConfigureTestServices(services => services.RemoveBackgroundHostedServices()));
@@ -122,6 +123,7 @@ public class FieldProtectionHostWiringTests
             .WithWebHostBuilder(builder => builder
                 .UseTestGatewaySecret()
                 .UseTestPostgresConnectionString()
+                .UseTestScratchWorkspace()
                 .UseTestFieldProtectionKeys()
                 .UseTestSceSigningKey()
                 .ConfigureTestServices(services => services.RemoveBackgroundHostedServices()));

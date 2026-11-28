@@ -205,22 +205,44 @@ export function resolveMergedViteEnv(resolved, rootDir, loadEnv) {
 
 /**
  * Vite plugin ensuring `serve` in `development` mode points `VITE_API_BASE_URL` at the local dev server
- * when unset so `/api` requests flow through Vite's same-origin gateway proxy without CORS errors.
+ * when unset so `/api` requests flow through Vite's same-origin gateway proxy without CORS errors,
+ * without mutating `process.env` or leaking localhost URLs into non-development modes.
  *
  * @param {{ rootDir: string, devPort: number, loadEnv: (mode: string, envDir: string, prefixes?: string | string[]) => Record<string, string> }} options
  * @returns {import("vite").Plugin}
  */
-export function createSameOriginApiInDevPlugin({ rootDir, devPort, loadEnv }) {
+export function createSameOriginApiInDevPlugin({
+  rootDir,
+  devPort,
+  loadEnv,
+  demoCacheDir,
+}) {
   return {
     name: "same-origin-api-in-dev",
     config(_config, { command, mode }) {
-      if (
-        command === "serve" &&
-        mode === "development" &&
-        !loadEnv(mode, rootDir, "VITE_API_BASE_URL").VITE_API_BASE_URL
-      ) {
-        process.env.VITE_API_BASE_URL = `http://localhost:${devPort}`;
+      const patch = {};
+      if (demoCacheDir && mode === "demo") {
+        patch.cacheDir = demoCacheDir;
       }
+      const gatewayProxy = resolveViteGatewayProxy({ command, mode });
+      if (gatewayProxy) {
+        patch.server = { proxy: gatewayProxy };
+      }
+      if (command === "serve" && mode === "development") {
+        const configured =
+          (process.env.VITE_API_BASE_URL || "").trim() ||
+          (
+            loadEnv(mode, rootDir, "VITE_API_BASE_URL").VITE_API_BASE_URL || ""
+          ).trim();
+        if (!configured) {
+          patch.define = {
+            "import.meta.env.VITE_API_BASE_URL": JSON.stringify(
+              `http://localhost:${devPort}`
+            ),
+          };
+        }
+      }
+      return Object.keys(patch).length > 0 ? patch : undefined;
     },
   };
 }
@@ -238,16 +260,45 @@ export function configureVitePreviewTimeouts(server) {
 }
 
 /**
- * Builds the shared `/api` Vite dev-server proxy rule forwarding to the API gateway.
+ * Builds the shared `/api` Vite server proxy rule forwarding to the API gateway.
+ * Proxy TLS certificate verification (`secure: true`) is enforced outside `development` mode.
  *
  * @param {string} gatewayUrl
+ * @param {{ mode?: string }} [options]
  */
-export function createViteGatewayProxy(gatewayUrl) {
+export function createViteGatewayProxy(
+  gatewayUrl,
+  { mode = "production" } = {}
+) {
   return {
     "/api": {
       target: gatewayUrl,
       changeOrigin: true,
-      secure: false,
+      secure: mode !== "development",
     },
   };
+}
+
+/**
+ * Resolves the `/api` Vite server proxy configuration for the active command and mode.
+ * Only `serve` in `development` mode falls back to `http://localhost:8000`; non-development
+ * configurations omit `/api` proxy rules unless `CADENCE_GATEWAY_URL` is explicitly set.
+ *
+ * @param {{ command?: string, mode?: string, env?: Record<string, string | undefined> }} [options]
+ */
+export function resolveViteGatewayProxy({
+  command = "build",
+  mode = "production",
+  env = process.env,
+} = {}) {
+  const explicitGatewayUrl = (env.CADENCE_GATEWAY_URL || "").trim();
+  const gatewayUrl =
+    explicitGatewayUrl ||
+    (command === "serve" && mode === "development"
+      ? "http://localhost:8000"
+      : "");
+  if (!gatewayUrl) {
+    return undefined;
+  }
+  return createViteGatewayProxy(gatewayUrl, { mode });
 }
