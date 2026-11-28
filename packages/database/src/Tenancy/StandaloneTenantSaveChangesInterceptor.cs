@@ -59,7 +59,7 @@ public sealed class StandaloneTenantSaveChangesInterceptor : SaveChangesIntercep
         {
             var ext = context.GetService<IDbContextOptions>()?.FindExtension<StandaloneTenantOptionsExtension>();
             Guid? tenantId = ext?.TenantAccessor?.GetCurrentTenantId();
-            StampTenantIds(context, ext, tenantId);
+            StampTenantIds(context, ext, tenantId, forceResolveForAuditEntries: false);
             Cadence.Database.Concurrency.StandaloneConcurrencyTokenInterceptor.IncrementConcurrencyTokens(context);
         }
 
@@ -71,7 +71,7 @@ public sealed class StandaloneTenantSaveChangesInterceptor : SaveChangesIntercep
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        if (eventData.Context is { } context)
+        if (eventData.Context is { } context && !HasRegisteredGxPAuditInterceptor(context))
         {
             await StampTenantIdsAsync(context, cancellationToken).ConfigureAwait(false);
             Cadence.Database.Concurrency.StandaloneConcurrencyTokenInterceptor.IncrementConcurrencyTokens(context);
@@ -80,20 +80,61 @@ public sealed class StandaloneTenantSaveChangesInterceptor : SaveChangesIntercep
         return await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
     }
 
-    internal static async ValueTask StampTenantIdsAsync(DbContext context, CancellationToken cancellationToken = default)
+    internal static bool HasRegisteredGxPAuditInterceptor(DbContext context) =>
+        context.GetService<IDbContextOptions>()?
+            .FindExtension<CoreOptionsExtension>()?
+            .Interceptors?
+            .OfType<GxPAuditInterceptor>()
+            .Any() is true;
+
+    internal static async ValueTask<Guid> StampTenantIdsAsync(
+        DbContext context,
+        CancellationToken cancellationToken = default,
+        bool forceResolveForAuditEntries = false)
     {
         var ext = context.GetService<IDbContextOptions>()?.FindExtension<StandaloneTenantOptionsExtension>();
         Guid? tenantId = ext?.TenantAccessor is not null
             ? await ext.TenantAccessor.GetCurrentTenantIdAsync(cancellationToken).ConfigureAwait(false)
             : null;
-        StampTenantIds(context, ext, tenantId);
+        return StampTenantIds(context, ext, tenantId, forceResolveForAuditEntries);
     }
 
-    private static void StampTenantIds(DbContext context, StandaloneTenantOptionsExtension? ext, Guid? resolvedTenantId)
+    internal static void StampAuditEntries(
+        DbContext context,
+        IReadOnlyList<Cadence.Core.Domain.Audit.AuditLogEntry> addedAuditEntries,
+        Guid targetTenantId)
     {
-        bool hasTenantScopedWrite = context.ChangeTracker.Entries()
-            .Any(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted
-                && e.Metadata.FindProperty(StandaloneTenantModelExtensions.TenantPropertyName) is not null);
+        if (addedAuditEntries.Count == 0)
+        {
+            return;
+        }
+
+        var auditEntityType = context.Model.FindEntityType(typeof(Cadence.Core.Domain.Audit.AuditLogEntry));
+        if (auditEntityType?.FindProperty(StandaloneTenantModelExtensions.TenantPropertyName) is null)
+        {
+            return;
+        }
+
+        foreach (var auditEntry in addedAuditEntries)
+        {
+            StampAddedTenantProperty(context.Entry(auditEntry).Property(StandaloneTenantModelExtensions.TenantPropertyName), targetTenantId);
+        }
+    }
+
+    private static Guid StampTenantIds(
+        DbContext context,
+        StandaloneTenantOptionsExtension? ext,
+        Guid? resolvedTenantId,
+        bool forceResolveForAuditEntries)
+    {
+        bool auditTableIsTenantScoped = forceResolveForAuditEntries
+            && context.Model.FindEntityType(typeof(Cadence.Core.Domain.Audit.AuditLogEntry))?
+                .FindProperty(StandaloneTenantModelExtensions.TenantPropertyName) is not null;
+
+        bool hasTenantScopedWrite = auditTableIsTenantScoped
+            || context.ChangeTracker.Entries()
+                .Any(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted
+                    && e.Metadata.FindProperty(StandaloneTenantModelExtensions.TenantPropertyName) is not null);
 
         if (hasTenantScopedWrite && ext?.TenantAccessor is { IsSystemSuppressed: false } accessor)
         {
@@ -119,12 +160,13 @@ public sealed class StandaloneTenantSaveChangesInterceptor : SaveChangesIntercep
                 && e.Metadata.FindProperty(StandaloneTenantModelExtensions.TenantPropertyName) is not null)
             .ToList();
 
-        if (tenantEntries.Count == 0)
+        if (tenantEntries.Count == 0 && !auditTableIsTenantScoped)
         {
-            return;
+            return Guid.Empty;
         }
 
-        if (ext?.TenantAccessor is { IsSystemSuppressed: false, IsHttpWriteExemptFromExpiry: false, CurrentTenantScoping: { } scoping })
+        if (tenantEntries.Count > 0
+            && ext?.TenantAccessor is { IsSystemSuppressed: false, IsHttpWriteExemptFromExpiry: false, CurrentTenantScoping: { } scoping })
         {
             EnforceEntityScopingCaps(tenantEntries, scoping);
         }
@@ -158,28 +200,35 @@ public sealed class StandaloneTenantSaveChangesInterceptor : SaveChangesIntercep
             PropertyEntry prop = entry.Property(StandaloneTenantModelExtensions.TenantPropertyName);
             if (entry.State == EntityState.Added)
             {
-                if (prop.Metadata.ClrType == typeof(string))
-                {
-                    if (targetTenantId != Guid.Empty)
-                    {
-                        prop.CurrentValue = targetTenantId.ToString("D");
-                    }
-                    else if (prop.CurrentValue is not string current || !Guid.TryParse(current, out _))
-                    {
-                        prop.CurrentValue = Guid.Empty.ToString("D");
-                    }
-                }
-                else
-                {
-                    if (targetTenantId != Guid.Empty || prop.CurrentValue is not Guid existingGuid || existingGuid == Guid.Empty)
-                    {
-                        prop.CurrentValue = targetTenantId;
-                    }
-                }
+                StampAddedTenantProperty(prop, targetTenantId);
             }
             else if (entry.State == EntityState.Modified)
             {
                 prop.IsModified = false;
+            }
+        }
+
+        return targetTenantId;
+    }
+
+    private static void StampAddedTenantProperty(PropertyEntry prop, Guid targetTenantId)
+    {
+        if (prop.Metadata.ClrType == typeof(string))
+        {
+            if (targetTenantId != Guid.Empty)
+            {
+                prop.CurrentValue = targetTenantId.ToString("D");
+            }
+            else if (prop.CurrentValue is not string current || !Guid.TryParse(current, out _))
+            {
+                prop.CurrentValue = Guid.Empty.ToString("D");
+            }
+        }
+        else
+        {
+            if (targetTenantId != Guid.Empty || prop.CurrentValue is not Guid existingGuid || existingGuid == Guid.Empty)
+            {
+                prop.CurrentValue = targetTenantId;
             }
         }
     }

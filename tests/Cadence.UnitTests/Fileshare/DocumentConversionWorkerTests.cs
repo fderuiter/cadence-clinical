@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Cadence.Apps.Fileshare.Domain;
 using Cadence.Apps.Fileshare.Infrastructure.Persistence;
 using Cadence.Apps.Fileshare.Workers;
+using Cadence.Database;
+using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
 
 using FluentAssertions;
@@ -162,5 +164,74 @@ public sealed class DocumentConversionWorkerTests
         await worker.ProcessPendingConversionsAsync(TestContext.Current.CancellationToken);
 
         await mockProcessor.DidNotReceive().ConvertToPdfAsync(Arg.Any<FileRecord>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ProcessPendingConversionsAsync_WithMultiTenantResolverAndOnlyOnePendingTenant_ProcessesPendingTenantOnly()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var dbName = $"ConversionMultiTenant_{Guid.NewGuid():N}";
+        var activeTenantIds = new Guid[200];
+        for (int i = 0; i < activeTenantIds.Length; i++)
+        {
+            activeTenantIds[i] = Guid.NewGuid();
+        }
+
+        Guid targetTenant = activeTenantIds[17];
+
+        var resolver = Substitute.For<Cadence.Database.Tenancy.ITenantCodeResolver>();
+        resolver.ListActiveTenantIdsAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<System.Collections.Generic.IReadOnlyList<Guid>>(activeTenantIds));
+
+        var services = new ServiceCollection();
+        services.AddSingleton(resolver);
+        services.AddScoped<Cadence.Database.Tenancy.CurrentTenantAccessor>(sp =>
+            new Cadence.Database.Tenancy.CurrentTenantAccessor(
+                sp.GetRequiredService<Cadence.Database.Tenancy.ITenantCodeResolver>()));
+        services.AddScoped<Cadence.Database.Tenancy.ICurrentTenantAccessor>(sp =>
+            sp.GetRequiredService<Cadence.Database.Tenancy.CurrentTenantAccessor>());
+        services.AddScoped<Cadence.Database.Tenancy.ITenantScope>(sp =>
+            sp.GetRequiredService<Cadence.Database.Tenancy.CurrentTenantAccessor>());
+        services.AddScoped(sp =>
+        {
+            var accessor = sp.GetRequiredService<Cadence.Database.Tenancy.ICurrentTenantAccessor>();
+            var optionsBuilder = new DbContextOptionsBuilder<FileshareDbContext>();
+            optionsBuilder.UseInMemoryDatabase(dbName);
+            optionsBuilder.UseCadenceStandaloneTenancy(accessor, isRelational: false);
+            optionsBuilder.AddInterceptors(Cadence.Database.Tenancy.StandaloneTenantSaveChangesInterceptor.Instance);
+            return new FileshareDbContext(optionsBuilder.Options);
+        });
+
+        var mockProcessor = Substitute.For<IDocumentConverterProcessor>();
+        mockProcessor.ConvertToPdfAsync(Arg.Any<FileRecord>(), Arg.Any<CancellationToken>())
+            .Returns("docs/tenant-17.pdf");
+        services.AddScoped(_ => mockProcessor);
+
+        using var provider = services.BuildServiceProvider();
+
+        using (var seedScope = provider.CreateScope())
+        {
+            using var _ = seedScope.ServiceProvider.GetRequiredService<Cadence.Database.Tenancy.ITenantScope>().Bind(targetTenant);
+            var seedDb = seedScope.ServiceProvider.GetRequiredService<FileshareDbContext>();
+            seedDb.FileRecords.Add(new FileRecord("doc-t17")
+            {
+                Filename = "tenant17.docx",
+                ObjectKey = "docs/tenant-17",
+                UploadedAt = FixedTimestamp,
+                ConversionStatus = "PENDING",
+            });
+            await seedDb.SaveChangesAsync(ct);
+        }
+
+        var worker = new DocumentConversionWorker(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            Options.Create(new FileshareWorkerOptions { BatchSize = 10, MaxConcurrentJobs = 2 }),
+            NullLogger<DocumentConversionWorker>.Instance);
+
+        await worker.ProcessPendingConversionsAsync(ct);
+
+        await mockProcessor.Received(1).ConvertToPdfAsync(
+            Arg.Is<FileRecord>(f => f.Id == "doc-t17"),
+            Arg.Any<CancellationToken>());
     }
 }

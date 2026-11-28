@@ -264,9 +264,8 @@ internal sealed class KernelCollectionInstanceRecords(
         var designsByVersion = rawVersions.ToDictionary(
             v => v.Id,
             v => ProtocolDesignDocument.Read(v.Content).Design);
-        var specsByVersion = designsByVersion.ToDictionary(
-            kv => kv.Key,
-            kv => kv.Value?.CollectionSpecs ?? []);
+        var specsByVersion = IndexSpecsByVersion(designsByVersion);
+        var visitsByVersion = IndexPlannedVisitsByVersion(designsByVersion);
 
         var allMemberIds = instances.SelectMany(c => c.Members.Select(m => m.ObservationId)).Distinct().ToList();
         var observations = allMemberIds.Count == 0
@@ -287,14 +286,11 @@ internal sealed class KernelCollectionInstanceRecords(
             .. allMemberIds.Select(o => NodeRef.For(o)),
         ];
         var scoped = await ScopedAssertions.ReadAsync(db, allScopes, cancellationToken).ConfigureAwait(false);
-        var allLocks = scoped.Locks();
+        var lockIndex = new BatchLockIndex(scoped.Locks());
         var allMemberGuids = allMemberIds.Select(o => o.Value).ToHashSet();
         var allMemberAssertions = scoped
             .About(a => a.TargetKind == NodeKinds.Observation && allMemberGuids.Contains(a.TargetId));
-        var verifiedRevisions = allMemberAssertions
-            .Where(a => a.Kind == AssertionKind.Verified && a.RetractedAt is null && a.Revision is not null)
-            .Select(a => (a.Target.Id, Revision: a.Revision!.Value))
-            .ToHashSet();
+        var assertionIndex = new BatchAssertionIndex(allMemberAssertions);
 
         var instanceGuids = instances.Select(i => i.Id.Value).ToList();
         var rawSignatures = await db.Attestations.AsNoTracking()
@@ -305,25 +301,32 @@ internal sealed class KernelCollectionInstanceRecords(
         var signaturesByInstance = rawSignatures.ToLookup(a => a.TargetId, a => a.TargetContentHash);
         var activeErrorTargets = await KernelValidationStore.LoadActiveErrorFindingTargetsAsync(db, first.StudyId, cancellationToken)
             .ConfigureAwait(false);
+        var errorIndex = new BatchErrorTargetIndex(activeErrorTargets);
         var enrollmentEntity = await db.Enrollments.AsNoTracking()
             .SingleOrDefaultAsync(e => e.Id == enrollment, cancellationToken)
             .ConfigureAwait(false);
         var enrollmentReferenceAt = ResolveEnrollmentReferenceAt(enrollmentEntity);
 
-        return
-        [
-            .. instances.Select(instance => ToSummary(
+        var summaries = new List<CollectionInstanceSummary>(instances.Count);
+        foreach (var instance in instances)
+        {
+            specsByVersion.TryGetValue(instance.ProtocolVersionId, out var specsForVersion);
+            CollectionSpec? spec = null;
+            specsForVersion?.TryGetValue(instance.CollectionSpecId, out spec);
+            visitsByVersion.TryGetValue(instance.ProtocolVersionId, out var visitsForVersion);
+            summaries.Add(ToSummary(
                 instance,
-                designsByVersion.GetValueOrDefault(instance.ProtocolVersionId),
-                specsByVersion.GetValueOrDefault(instance.ProtocolVersionId) ?? [],
+                spec,
+                visitsForVersion,
                 observations,
-                allLocks,
-                allMemberAssertions,
-                verifiedRevisions,
+                lockIndex,
+                assertionIndex,
                 signaturesByInstance[instance.Id.Value],
-                activeErrorTargets,
-                enrollmentReferenceAt)),
-        ];
+                errorIndex,
+                enrollmentReferenceAt));
+        }
+
+        return summaries;
     }
 
     public async Task<CollectionInstanceHeader?> FindHeaderAsync(
@@ -717,9 +720,7 @@ internal sealed class KernelCollectionInstanceRecords(
         var designsByVersion = rawVersions.ToDictionary(
             v => v.Id,
             v => ProtocolDesignDocument.Read(v.Content).Design);
-        var specsByVersion = designsByVersion.ToDictionary(
-            kv => kv.Key,
-            kv => kv.Value?.CollectionSpecs ?? []);
+        var specsByVersion = IndexSpecsByVersion(designsByVersion);
         var designsByStudy = rawVersions
             .Select(v => (v.StudyId, Design: designsByVersion[v.Id]))
             .Where(x => x.Design is not null)
@@ -734,9 +735,14 @@ internal sealed class KernelCollectionInstanceRecords(
             .Concat(observations.Values.Where(o => blindedMemberIds.Contains(o.Id)).Select(o => o.ConceptId))
             .Distinct()
             .ToList();
-        var concepts = conceptIds.Count == 0
-            ? []
-            : await db.Concepts.AsNoTracking()
+        Dictionary<ConceptId, BlindedConceptMetadata> concepts;
+        if (conceptIds.Count == 0)
+        {
+            concepts = [];
+        }
+        else
+        {
+            concepts = await db.Concepts.AsNoTracking()
                 .Where(c => conceptIds.Contains(c.Id))
                 .Select(c => new { c.Id, c.ExternalCode, c.PreferredLabel, c.Definition })
                 .ToDictionaryAsync(
@@ -744,28 +750,32 @@ internal sealed class KernelCollectionInstanceRecords(
                     c => new BlindedConceptMetadata(c.ExternalCode, c.PreferredLabel, c.Definition),
                     cancellationToken)
                 .ConfigureAwait(false);
+        }
+
+        var blindingByStudy = new Dictionary<StudyId, BatchFormBlindingLookup>(blindedStudyIds.Count);
+        foreach (var studyId in blindedStudyIds)
+        {
+            var studyDesigns = designsByStudy.GetValueOrDefault(studyId) ?? [];
+            blindingByStudy[studyId] = new BatchFormBlindingLookup(_blinding, concepts, studyDesigns);
+        }
 
         var targets = new Dictionary<CollectionInstanceId, CollectionInstanceQueryTarget>(forms.Count);
         foreach (var form in forms)
         {
             var isUnblinded = unblindedEnrollments.Contains(form.EnrollmentId);
             IReadOnlySet<string> blindedItems = FrozenSet<string>.Empty;
-            var blindedObservations = new HashSet<ObservationId>();
+            IReadOnlySet<ObservationId> blindedObservations = FrozenSet<ObservationId>.Empty;
             if (!isUnblinded)
             {
-                var specs = specsByVersion.GetValueOrDefault(form.ProtocolVersionId) ?? [];
-                var spec = specs.FirstOrDefault(s => string.Equals(s.Id, form.CollectionSpecId, StringComparison.Ordinal));
+                specsByVersion.TryGetValue(form.ProtocolVersionId, out var specsForVersion);
+                CollectionSpec? spec = null;
+                specsForVersion?.TryGetValue(form.CollectionSpecId, out spec);
                 var items = spec?.Items ?? [];
                 var title = string.IsNullOrWhiteSpace(spec?.Name) ? null : spec.Name;
-                var designs = designsByStudy.GetValueOrDefault(form.StudyId) ?? [];
-                (blindedItems, blindedObservations) = ClassifyQueryTargetBlinding(
-                    _blinding,
-                    form,
-                    title,
-                    items,
-                    observations,
-                    concepts,
-                    designs);
+                if (blindingByStudy.TryGetValue(form.StudyId, out var studyBlinding))
+                {
+                    (blindedItems, blindedObservations) = studyBlinding.ClassifyQueryTarget(form, title, items, observations);
+                }
             }
 
             var observationRevisions = new Dictionary<ObservationId, int>(form.Members.Count);
@@ -1227,9 +1237,8 @@ internal sealed class KernelCollectionInstanceRecords(
         var designsByVersion = rawStudyVersions.ToDictionary(
             v => v.Id,
             v => ProtocolDesignDocument.Read(v.Content).Design);
-        var specsByVersion = designsByVersion.ToDictionary(
-            kv => kv.Key,
-            kv => kv.Value?.CollectionSpecs ?? []);
+        var specsByVersion = IndexSpecsByVersion(designsByVersion);
+        var visitsByVersion = IndexPlannedVisitsByVersion(designsByVersion);
         var designsByStudy = rawStudyVersions
             .Select(v => (v.StudyId, Design: designsByVersion[v.Id]))
             .Where(x => x.Design is not null)
@@ -1267,9 +1276,10 @@ internal sealed class KernelCollectionInstanceRecords(
             .Distinct()
             .ToList();
         var scoped = await ScopedAssertions.ReadAsync(db, scopes, cancellationToken).ConfigureAwait(false);
-        var allLocks = scoped.Locks();
+        var lockIndex = new BatchLockIndex(scoped.Locks());
         var allMemberGuids = allMemberIds.Select(o => o.Value).ToHashSet();
         var allMemberAssertions = scoped.About(a => a.TargetKind == NodeKinds.Observation && allMemberGuids.Contains(a.TargetId));
+        var assertionIndex = new BatchAssertionIndex(allMemberAssertions);
 
         var instanceGuids = instances.Select(i => i.Id.Value).ToList();
         var rawSignatures = await db.Attestations.AsNoTracking()
@@ -1279,20 +1289,39 @@ internal sealed class KernelCollectionInstanceRecords(
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         var signaturesByInstance = rawSignatures.ToLookup(a => a.TargetId);
-        var errorTargetsByStudy = new Dictionary<StudyId, IReadOnlyList<(ValidationFindingId Id, FindingTarget Target)>>();
-        foreach (var studyId in instances.Select(i => i.StudyId).Distinct())
+        var errorIndexesByStudy = new Dictionary<StudyId, BatchErrorTargetIndex>(studyIds.Count);
+        var blindingByStudy = new Dictionary<StudyId, BatchFormBlindingLookup>(studyIds.Count);
+        foreach (var studyId in studyIds)
         {
-            errorTargetsByStudy[studyId] = await KernelValidationStore.LoadActiveErrorFindingTargetsAsync(db, studyId, cancellationToken)
+            var studyErrorTargets = await KernelValidationStore.LoadActiveErrorFindingTargetsAsync(db, studyId, cancellationToken)
                 .ConfigureAwait(false);
+            errorIndexesByStudy[studyId] = new BatchErrorTargetIndex(studyErrorTargets);
+            var studyDesigns = designsByStudy.GetValueOrDefault(studyId) ?? [];
+            blindingByStudy[studyId] = BatchFormBlindingLookup.FromConcepts(blinding, concepts, studyDesigns);
         }
 
-        var allItems = instances
-            .SelectMany(instance =>
-                (specsByVersion.GetValueOrDefault(instance.ProtocolVersionId) ?? [])
-                    .FirstOrDefault(s => string.Equals(s.Id, instance.CollectionSpecId, StringComparison.Ordinal))
-                    ?.Items ?? [])
-            .ToList();
-        var codelistGroups = await LoadCodelistGroupsAsync(db, allItems, cancellationToken).ConfigureAwait(false);
+        var distinctReferencedSpecs = new Dictionary<(ProtocolVersionId VersionId, string SpecId), CollectionSpec>();
+        foreach (var instance in instances)
+        {
+            var specKey = (instance.ProtocolVersionId, instance.CollectionSpecId);
+            if (!distinctReferencedSpecs.ContainsKey(specKey)
+                && specsByVersion.TryGetValue(instance.ProtocolVersionId, out var specsForVersion)
+                && specsForVersion.TryGetValue(instance.CollectionSpecId, out var matchedSpec))
+            {
+                distinctReferencedSpecs.Add(specKey, matchedSpec);
+            }
+        }
+
+        var codelistGroups = await LoadCodelistGroupsAsync(
+            db,
+            distinctReferencedSpecs.Values.SelectMany(s => s.Items),
+            cancellationToken).ConfigureAwait(false);
+        var itemCodelistsBySpec = new Dictionary<(ProtocolVersionId VersionId, string SpecId), IReadOnlyDictionary<string, IReadOnlyList<CodelistOptionView>>?>(
+            distinctReferencedSpecs.Count);
+        foreach (var (specKey, matchedSpec) in distinctReferencedSpecs)
+        {
+            itemCodelistsBySpec[specKey] = MapItemCodelists(matchedSpec.Items, codelistGroups);
+        }
 
         var enrollmentIds = instances.Select(i => i.EnrollmentId).Distinct().ToList();
         var enrollmentEntities = await db.Enrollments.AsNoTracking()
@@ -1303,11 +1332,12 @@ internal sealed class KernelCollectionInstanceRecords(
         var records = new List<CollectionInstanceRecord>(instances.Count);
         foreach (var instance in instances)
         {
-            var specs = specsByVersion.GetValueOrDefault(instance.ProtocolVersionId) ?? [];
-            var spec = specs.FirstOrDefault(s => string.Equals(s.Id, instance.CollectionSpecId, StringComparison.Ordinal));
+            specsByVersion.TryGetValue(instance.ProtocolVersionId, out var specsForVersion);
+            CollectionSpec? spec = null;
+            specsForVersion?.TryGetValue(instance.CollectionSpecId, out spec);
             var items = spec?.Items ?? [];
             var collectionTitle = string.IsNullOrWhiteSpace(spec?.Name) ? null : spec.Name;
-            var itemCodelists = MapItemCodelists(items, codelistGroups);
+            itemCodelistsBySpec.TryGetValue((instance.ProtocolVersionId, instance.CollectionSpecId), out var itemCodelists);
 
             var values = instance.Members
                 .Where(m => observations.ContainsKey(m.ObservationId))
@@ -1320,15 +1350,13 @@ internal sealed class KernelCollectionInstanceRecords(
                 .ToList();
 
             var memberGuids = instance.Members.Select(m => m.ObservationId.Value).ToHashSet();
-            var coveringLocks = allLocks
-                .Where(l =>
-                    (l.Scope.Kind == NodeKinds.Study && l.Scope.Id == instance.StudyId.Value)
-                    || (l.Scope.Kind == NodeKinds.StudySite && l.Scope.Id == instance.StudySiteId.Value)
-                    || (l.Scope.Kind == NodeKinds.Enrollment && l.Scope.Id == instance.EnrollmentId.Value)
-                    || (l.Scope.Kind == NodeKinds.CollectionInstance && l.Scope.Id == instance.Id.Value)
-                    || (l.Scope.Kind == NodeKinds.Observation && memberGuids.Contains(l.Scope.Id)))
-                .ToList();
-            var assertions = FilterFormAssertions(allMemberAssertions, memberGuids);
+            var coveringLocks = lockIndex.ForForm(
+                instance.StudyId.Value,
+                instance.StudySiteId.Value,
+                instance.EnrollmentId.Value,
+                instance.Id.Value,
+                memberGuids);
+            var assertions = assertionIndex.ForForm(memberGuids);
 
             string? contentHash = values.Count == 0
                 ? null
@@ -1340,15 +1368,19 @@ internal sealed class KernelCollectionInstanceRecords(
                     SignedValues(instance, observations, a.RecordedAt, a.TargetContentHash)))
                 .ToList();
 
-            var studyDesigns = designsByStudy.GetValueOrDefault(instance.StudyId) ?? [];
-            var (blindedItemIds, blindedObservationIds) = ClassifyBlindedMembers(blinding, instance, collectionTitle, items, observations, concepts, studyDesigns, attestations);
-            var activeErrorTargets = errorTargetsByStudy[instance.StudyId];
-            var (complete, missingRequired, openQueries, answeredQueries, errorFindings, blockers) =
-                EvaluateFormReadiness(items, values, assertions, instance.Id.Value, memberGuids, activeErrorTargets);
+            var (blindedItemIds, blindedObservationIds) = blindingByStudy[instance.StudyId].ClassifyForm(
+                instance,
+                collectionTitle,
+                items,
+                observations,
+                attestations);
+            var errorFindings = errorIndexesByStudy[instance.StudyId].CountForForm(instance.Id.Value, memberGuids);
+            var (complete, missingRequired, openQueries, answeredQueries, _, blockers) =
+                EvaluateFormReadinessWithErrorCount(items, values, assertions, errorFindings);
 
             var matchedEnrollment = enrollmentEntities.GetValueOrDefault(instance.EnrollmentId);
             var enrollmentReferenceAt = ResolveEnrollmentReferenceAt(matchedEnrollment);
-            var governingDesign = designsByVersion.GetValueOrDefault(instance.ProtocolVersionId);
+            visitsByVersion.TryGetValue(instance.ProtocolVersionId, out var visitsForVersion);
             records.Add(new CollectionInstanceRecord(
                 instance.Id,
                 instance.EnrollmentId,
@@ -1380,7 +1412,7 @@ internal sealed class KernelCollectionInstanceRecords(
                 blindedObservationIds,
                 itemCodelists,
                 enrollmentReferenceAt,
-                AssessVisitTiming(governingDesign, instance.PlannedActivityId, instance.CollectedAt, enrollmentReferenceAt),
+                AssessVisitTiming(visitsForVersion, instance.PlannedActivityId, instance.CollectedAt, enrollmentReferenceAt),
                 VisitTimingEvaluated: true));
         }
 
@@ -1441,19 +1473,55 @@ internal sealed class KernelCollectionInstanceRecords(
         return mapped;
     }
 
+    private static Dictionary<ProtocolVersionId, IReadOnlyDictionary<string, CollectionSpec>> IndexSpecsByVersion(
+        IReadOnlyDictionary<ProtocolVersionId, ProtocolDesign?> designsByVersion)
+    {
+        var result = new Dictionary<ProtocolVersionId, IReadOnlyDictionary<string, CollectionSpec>>(designsByVersion.Count);
+        foreach (var (versionId, design) in designsByVersion)
+        {
+            if (design is null || design.CollectionSpecs.Count == 0)
+            {
+                result[versionId] = FrozenDictionary<string, CollectionSpec>.Empty;
+                continue;
+            }
+
+            var byId = new Dictionary<string, CollectionSpec>(design.CollectionSpecs.Count, StringComparer.Ordinal);
+            foreach (var spec in design.CollectionSpecs)
+            {
+                byId.TryAdd(spec.Id, spec);
+            }
+
+            result[versionId] = byId;
+        }
+
+        return result;
+    }
+
+    private static Dictionary<ProtocolVersionId, IReadOnlyDictionary<string, PlannedVisit>> IndexPlannedVisitsByVersion(
+        IReadOnlyDictionary<ProtocolVersionId, ProtocolDesign?> designsByVersion)
+    {
+        var result = new Dictionary<ProtocolVersionId, IReadOnlyDictionary<string, PlannedVisit>>(designsByVersion.Count);
+        foreach (var (versionId, design) in designsByVersion)
+        {
+            result[versionId] = design is null
+                ? FrozenDictionary<string, PlannedVisit>.Empty
+                : ExpectedSchedule.IndexByActivity(design);
+        }
+
+        return result;
+    }
+
     private static CollectionInstanceSummary ToSummary(
         CollectionInstance instance,
-        ProtocolDesign? governingDesign,
-        IReadOnlyList<CollectionSpec> specs,
+        CollectionSpec? spec,
+        IReadOnlyDictionary<string, PlannedVisit>? visitsByActivity,
         IReadOnlyDictionary<ObservationId, ObservationSummaryRow> observations,
-        IReadOnlyList<LockView> allLocks,
-        IReadOnlyList<AssertionView> allMemberAssertions,
-        IReadOnlySet<(Guid ObservationId, int Revision)> verifiedRevisions,
+        BatchLockIndex lockIndex,
+        BatchAssertionIndex assertionIndex,
         IEnumerable<string> signatureHashes,
-        IReadOnlyList<(ValidationFindingId Id, FindingTarget Target)> activeErrorTargets,
+        BatchErrorTargetIndex errorIndex,
         DateTimeOffset? enrollmentReferenceAt = null)
     {
-        var spec = specs.FirstOrDefault(s => string.Equals(s.Id, instance.CollectionSpecId, StringComparison.Ordinal));
         var specItems = spec?.Items ?? [];
         var collectionTitle = string.IsNullOrWhiteSpace(spec?.Name) ? null : spec.Name;
 
@@ -1478,15 +1546,15 @@ internal sealed class KernelCollectionInstanceRecords(
         var missingRequiredCount = missingRequired.Count;
         var recordedCount = recordedMembers.Count;
 
-        var verifiedCount = recordedMembers.Count(m => verifiedRevisions.Contains((m.Observation.Id.Value, m.Observation.Revision)));
+        var verifiedCount = recordedMembers.Count(m => assertionIndex.IsVerified(m.Observation.Id.Value, m.Observation.Revision));
         var unverifiedCount = recordedCount - verifiedCount;
 
         var memberGuids = instance.Members.Select(m => m.ObservationId.Value).ToHashSet();
-        var assertions = FilterFormAssertions(allMemberAssertions, memberGuids);
+        var assertions = assertionIndex.ForForm(memberGuids);
         var (activeQueryAssertionIds, answeredQueryAssertionIds) = ExtractActiveQueryAssertionIds(assertions);
         var openQueryCount = activeQueryAssertionIds.Count - answeredQueryAssertionIds.Count;
         var answeredQueryCount = answeredQueryAssertionIds.Count;
-        var openErrorFindingCount = CountFormErrorFindings(instance.Id.Value, memberGuids, activeErrorTargets);
+        var openErrorFindingCount = errorIndex.CountForForm(instance.Id.Value, memberGuids);
         var complete = (itemCount == 0 || recordedCount > 0)
             && CollectionReadiness.IsComplete(missingRequiredCount, openQueryCount, answeredQueryCount, openErrorFindingCount);
         var blockers = CollectionReadiness.BuildBlockers(
@@ -1496,16 +1564,12 @@ internal sealed class KernelCollectionInstanceRecords(
             answeredQueryCount,
             openErrorFindingCount);
 
-        var coveringLocks = allLocks
-            .Where(l =>
-                (l.Scope.Kind == NodeKinds.Study && l.Scope.Id == instance.StudyId.Value)
-                || (l.Scope.Kind == NodeKinds.StudySite && l.Scope.Id == instance.StudySiteId.Value)
-                || (l.Scope.Kind == NodeKinds.Enrollment && l.Scope.Id == instance.EnrollmentId.Value)
-                || (l.Scope.Kind == NodeKinds.CollectionInstance && l.Scope.Id == instance.Id.Value)
-                || (l.Scope.Kind == NodeKinds.Observation && memberGuids.Contains(l.Scope.Id)))
-            .ToList();
-        var locked = coveringLocks.Any(l => l.Kind == LockKind.Locked);
-        var frozen = coveringLocks.Any(l => l.Kind == LockKind.Frozen);
+        var (locked, frozen, coveringLockCount) = lockIndex.SummarizeForForm(
+            instance.StudyId.Value,
+            instance.StudySiteId.Value,
+            instance.EnrollmentId.Value,
+            instance.Id.Value,
+            memberGuids);
 
         string? contentHash = memberObservations.Count == 0
             ? null
@@ -1537,7 +1601,7 @@ internal sealed class KernelCollectionInstanceRecords(
             unverifiedCount,
             locked,
             frozen,
-            coveringLocks.Count,
+            coveringLockCount,
             signed,
             signatureSuperseded,
             hashes.Count,
@@ -1548,7 +1612,7 @@ internal sealed class KernelCollectionInstanceRecords(
             enrollmentReferenceAt,
             activeQueryAssertionIds,
             answeredQueryAssertionIds,
-            AssessVisitTiming(governingDesign, instance.PlannedActivityId, instance.CollectedAt, enrollmentReferenceAt),
+            AssessVisitTiming(visitsByActivity, instance.PlannedActivityId, instance.CollectedAt, enrollmentReferenceAt),
             VisitTimingEvaluated: true);
     }
 
@@ -1556,18 +1620,29 @@ internal sealed class KernelCollectionInstanceRecords(
         ProtocolDesign? design,
         string? plannedActivityId,
         DateTimeOffset collectedAt,
+        DateTimeOffset? enrollmentReferenceAt) =>
+        design is null || string.IsNullOrWhiteSpace(plannedActivityId) || enrollmentReferenceAt is null
+            ? null
+            : AssessVisitTiming(ExpectedSchedule.IndexByActivity(design), plannedActivityId, collectedAt, enrollmentReferenceAt);
+
+    private static VisitTimingAssessment? AssessVisitTiming(
+        IReadOnlyDictionary<string, PlannedVisit>? visitsByActivity,
+        string? plannedActivityId,
+        DateTimeOffset collectedAt,
         DateTimeOffset? enrollmentReferenceAt)
     {
-        if (design is null || string.IsNullOrWhiteSpace(plannedActivityId) || enrollmentReferenceAt is not { } anchor)
+        if (visitsByActivity is null
+            || string.IsNullOrWhiteSpace(plannedActivityId)
+            || enrollmentReferenceAt is not { } anchor
+            || !visitsByActivity.TryGetValue(plannedActivityId, out var planned))
         {
             return null;
         }
 
         var referenceStart = DateOnly.FromDateTime(anchor.DateTime);
         var actualDate = DateOnly.FromDateTime(collectedAt.ToOffset(anchor.Offset).DateTime);
-        var expected = ExpectedSchedule.Compute(design, referenceStart, actualDate)
-            .FirstOrDefault(v => string.Equals(v.Visit.ActivityId, plannedActivityId, StringComparison.Ordinal));
-        return expected is null ? null : ExpectedSchedule.Assess(expected, actualDate);
+        var expected = ExpectedSchedule.ComputeVisit(planned, referenceStart, actualDate);
+        return ExpectedSchedule.Assess(expected, actualDate);
     }
 
     private static DateTimeOffset? ResolveEnrollmentReferenceAt(Enrollment? enrollment)
@@ -1669,7 +1744,24 @@ internal sealed class KernelCollectionInstanceRecords(
         IReadOnlyList<AssertionView> assertions,
         Guid instanceGuid,
         IReadOnlySet<Guid> memberGuids,
-        IReadOnlyList<(ValidationFindingId Id, FindingTarget Target)> activeErrorTargets)
+        IReadOnlyList<(ValidationFindingId Id, FindingTarget Target)> activeErrorTargets) =>
+        EvaluateFormReadinessWithErrorCount(
+            items,
+            values,
+            assertions,
+            CountFormErrorFindings(instanceGuid, memberGuids, activeErrorTargets));
+
+    private static (
+        bool Complete,
+        IReadOnlyList<string> MissingRequired,
+        int OpenQueries,
+        int AnsweredQueries,
+        int ErrorFindings,
+        IReadOnlyList<string> Blockers) EvaluateFormReadinessWithErrorCount(
+        IReadOnlyList<CollectionItem> items,
+        IReadOnlyList<CollectedValueView> values,
+        IReadOnlyList<AssertionView> assertions,
+        int errorFindings)
     {
         var recordedItems = values
             .Where(v => v.Value is not MissingValue { Reason: NullFlavor.NotAsked })
@@ -1680,7 +1772,6 @@ internal sealed class KernelCollectionInstanceRecords(
             .Select(i => i.Id)
             .ToList();
         var (openQueries, answeredQueries) = CountActiveQueries(assertions);
-        var errorFindings = CountFormErrorFindings(instanceGuid, memberGuids, activeErrorTargets);
         var complete = (items.Count == 0 || recordedItems.Count > 0)
             && CollectionReadiness.IsComplete(missingRequired.Count, openQueries, answeredQueries, errorFindings);
         var blockers = CollectionReadiness.BuildBlockers(missingRequired, missingRequired.Count, openQueries, answeredQueries, errorFindings);
@@ -1706,7 +1797,7 @@ internal sealed class KernelCollectionInstanceRecords(
         return string.Equals(hash, signedHash, StringComparison.Ordinal) ? signed : null;
     }
 
-    private static (IReadOnlySet<string> BlindedItems, IReadOnlySet<ObservationId> BlindedObservations) ClassifyBlindedMembers(
+    internal static (IReadOnlySet<string> BlindedItems, IReadOnlySet<ObservationId> BlindedObservations) ClassifyBlindedMembers(
         IBlindedTreatmentClassifier blinding,
         CollectionInstance instance,
         string? collectionTitle,
@@ -1792,7 +1883,7 @@ internal sealed class KernelCollectionInstanceRecords(
             blindedObservations.Count == 0 ? FrozenSet<ObservationId>.Empty : blindedObservations.ToFrozenSet());
     }
 
-    private static (IReadOnlySet<string> BlindedItems, HashSet<ObservationId> BlindedObservations) ClassifyQueryTargetBlinding(
+    internal static (IReadOnlySet<string> BlindedItems, HashSet<ObservationId> BlindedObservations) ClassifyQueryTargetBlinding(
         IBlindedTreatmentClassifier blinding,
         QueryTargetFormRow form,
         string? collectionTitle,
@@ -1921,31 +2012,58 @@ internal sealed class KernelCollectionInstanceRecords(
             .ToDictionary(g => g.Key, g => (IReadOnlyList<ProtocolDesign>)g.Select(x => x.Design!).ToList());
 
         var result = new Dictionary<ObservationId, CollectionObservationProjection>(obsRows.Count);
+        var structuralByStudy = new Dictionary<StudyId, Dictionary<(ConceptId ConceptId, string? SpecId, string? ItemId, BlindedConceptMetadata? Meta), bool>>(studyIds.Count);
         foreach (var row in obsRows)
         {
             var studyDesigns = designsByStudy.GetValueOrDefault(row.StudyId) ?? [];
-            var isBlinded = _blinding.IsBlindedObservation(
-                row.ConceptId,
-                row.Value,
-                row.ConceptMeta,
-                row.CollectionSpecId,
-                row.ItemId,
-                studyDesigns);
+            bool isBlinded;
+            if (row.Value is MissingValue { Reason: NullFlavor.Masked })
+            {
+                isBlinded = _blinding.IsBlindedObservation(
+                    row.ConceptId,
+                    row.Value,
+                    row.ConceptMeta,
+                    row.CollectionSpecId,
+                    row.ItemId,
+                    studyDesigns);
+            }
+            else
+            {
+                if (!structuralByStudy.TryGetValue(row.StudyId, out var studyCache))
+                {
+                    studyCache = [];
+                    structuralByStudy[row.StudyId] = studyCache;
+                }
+
+                var key = (row.ConceptId, row.CollectionSpecId, row.ItemId, row.ConceptMeta);
+                if (!studyCache.TryGetValue(key, out isBlinded))
+                {
+                    isBlinded = _blinding.IsBlindedObservation(
+                        row.ConceptId,
+                        value: null,
+                        row.ConceptMeta,
+                        row.CollectionSpecId,
+                        row.ItemId,
+                        studyDesigns);
+                    studyCache[key] = isBlinded;
+                }
+            }
+
             result[row.Id] = new CollectionObservationProjection(row.Revision, isBlinded);
         }
 
         return result;
     }
 
-    private sealed record MemberObservationRow(string ItemId, ObservationId ObservationId);
+    internal sealed record MemberObservationRow(string ItemId, ObservationId ObservationId);
 
     private sealed record ObservationSummaryRow(ObservationId Id, ObservationValue Value, int Revision);
 
     private sealed record ObservationProjectionRow(Guid Id, int Revision, bool IsBlinded);
 
-    private sealed record QueryTargetObservationRow(ObservationId Id, ConceptId ConceptId, ObservationValue Value, int Revision);
+    internal sealed record QueryTargetObservationRow(ObservationId Id, ConceptId ConceptId, ObservationValue Value, int Revision);
 
-    private sealed record QueryTargetFormRow(
+    internal sealed record QueryTargetFormRow(
         CollectionInstanceId Id,
         EnrollmentId EnrollmentId,
         StudyId StudyId,
@@ -1968,4 +2086,665 @@ internal sealed class KernelCollectionInstanceRecords(
         ObservationId? ObservationId,
         int? Revision,
         ObservationValue? Value);
+}
+
+internal sealed class BatchAssertionIndex
+{
+    private readonly Dictionary<Guid, List<(AssertionView View, int Ordinal)>> _byObservationId = [];
+    private readonly Dictionary<Guid, List<(AssertionView View, int Ordinal)>> _byQueryId = [];
+    private readonly HashSet<(Guid ObservationId, int Revision)> _verifiedRevisions = [];
+
+    public BatchAssertionIndex(IReadOnlyList<AssertionView> allAssertions)
+    {
+        ArgumentNullException.ThrowIfNull(allAssertions);
+        for (var i = 0; i < allAssertions.Count; i++)
+        {
+            var assertion = allAssertions[i];
+            if (string.Equals(assertion.Target.Kind, NodeKinds.Observation, StringComparison.Ordinal))
+            {
+                if (!_byObservationId.TryGetValue(assertion.Target.Id, out var obsList))
+                {
+                    obsList = [];
+                    _byObservationId.Add(assertion.Target.Id, obsList);
+                }
+
+                obsList.Add((assertion, i));
+
+                if (assertion.Kind == AssertionKind.Verified
+                    && assertion.RetractedAt is null
+                    && assertion.Revision is { } verifiedRevision)
+                {
+                    _verifiedRevisions.Add((assertion.Target.Id, verifiedRevision));
+                }
+            }
+            else if (string.Equals(assertion.Target.Kind, NodeKinds.Assertion, StringComparison.Ordinal))
+            {
+                if (!_byQueryId.TryGetValue(assertion.Target.Id, out var queryList))
+                {
+                    queryList = [];
+                    _byQueryId.Add(assertion.Target.Id, queryList);
+                }
+
+                queryList.Add((assertion, i));
+            }
+        }
+    }
+
+    public bool IsVerified(Guid observationGuid, int revision) =>
+        _verifiedRevisions.Contains((observationGuid, revision));
+
+    public IReadOnlyList<AssertionView> ForForm(IReadOnlySet<Guid> memberObservationGuids)
+    {
+        if (_byObservationId.Count == 0 || memberObservationGuids.Count == 0)
+        {
+            return [];
+        }
+
+        List<(AssertionView View, int Ordinal)>? matched = null;
+        HashSet<Guid>? addedQueryIds = null;
+        foreach (var obsGuid in memberObservationGuids)
+        {
+            if (!_byObservationId.TryGetValue(obsGuid, out var obsAssertions))
+            {
+                continue;
+            }
+
+            matched ??= new List<(AssertionView View, int Ordinal)>(obsAssertions.Count);
+            for (var i = 0; i < obsAssertions.Count; i++)
+            {
+                var entry = obsAssertions[i];
+                matched.Add(entry);
+                if (entry.View.Kind == AssertionKind.Queried
+                    && _byQueryId.TryGetValue(entry.View.AssertionId.Value, out var queryTargets))
+                {
+                    addedQueryIds ??= [];
+                    if (addedQueryIds.Add(entry.View.AssertionId.Value))
+                    {
+                        matched.AddRange(queryTargets);
+                    }
+                }
+            }
+        }
+
+        if (matched is null || matched.Count == 0)
+        {
+            return [];
+        }
+
+        if (matched.Count == 1)
+        {
+            return [matched[0].View];
+        }
+
+        matched.Sort(static (x, y) => x.Ordinal.CompareTo(y.Ordinal));
+        var ordered = new AssertionView[matched.Count];
+        for (var i = 0; i < matched.Count; i++)
+        {
+            ordered[i] = matched[i].View;
+        }
+
+        return ordered;
+    }
+}
+
+internal sealed class BatchLockIndex
+{
+    private readonly Dictionary<ScopeKey, List<(LockView Lock, int Ordinal)>> _byScope = new(ScopeKeyComparer.Instance);
+
+    public BatchLockIndex(IReadOnlyList<LockView> allLocks)
+    {
+        ArgumentNullException.ThrowIfNull(allLocks);
+        for (var i = 0; i < allLocks.Count; i++)
+        {
+            var lockView = allLocks[i];
+            var key = new ScopeKey(lockView.Scope.Kind, lockView.Scope.Id);
+            if (!_byScope.TryGetValue(key, out var list))
+            {
+                list = [];
+                _byScope.Add(key, list);
+            }
+
+            list.Add((lockView, i));
+        }
+    }
+
+    public IReadOnlyList<LockView> ForForm(
+        Guid studyGuid,
+        Guid studySiteGuid,
+        Guid enrollmentGuid,
+        Guid instanceGuid,
+        IReadOnlySet<Guid> memberObservationGuids)
+    {
+        if (_byScope.Count == 0)
+        {
+            return [];
+        }
+
+        List<(LockView Lock, int Ordinal)>? matched = null;
+        AppendScopeLocks(new ScopeKey(NodeKinds.Study, studyGuid), ref matched);
+        AppendScopeLocks(new ScopeKey(NodeKinds.StudySite, studySiteGuid), ref matched);
+        AppendScopeLocks(new ScopeKey(NodeKinds.Enrollment, enrollmentGuid), ref matched);
+        AppendScopeLocks(new ScopeKey(NodeKinds.CollectionInstance, instanceGuid), ref matched);
+        foreach (var obsGuid in memberObservationGuids)
+        {
+            AppendScopeLocks(new ScopeKey(NodeKinds.Observation, obsGuid), ref matched);
+        }
+
+        if (matched is null || matched.Count == 0)
+        {
+            return [];
+        }
+
+        if (matched.Count == 1)
+        {
+            return [matched[0].Lock];
+        }
+
+        matched.Sort(static (x, y) => x.Ordinal.CompareTo(y.Ordinal));
+        var ordered = new LockView[matched.Count];
+        for (var i = 0; i < matched.Count; i++)
+        {
+            ordered[i] = matched[i].Lock;
+        }
+
+        return ordered;
+    }
+
+    public (bool Locked, bool Frozen, int Count) SummarizeForForm(
+        Guid studyGuid,
+        Guid studySiteGuid,
+        Guid enrollmentGuid,
+        Guid instanceGuid,
+        IReadOnlySet<Guid> memberObservationGuids)
+    {
+        if (_byScope.Count == 0)
+        {
+            return (false, false, 0);
+        }
+
+        var locked = false;
+        var frozen = false;
+        var count = 0;
+        AccumulateScopeSummary(new ScopeKey(NodeKinds.Study, studyGuid), ref locked, ref frozen, ref count);
+        AccumulateScopeSummary(new ScopeKey(NodeKinds.StudySite, studySiteGuid), ref locked, ref frozen, ref count);
+        AccumulateScopeSummary(new ScopeKey(NodeKinds.Enrollment, enrollmentGuid), ref locked, ref frozen, ref count);
+        AccumulateScopeSummary(new ScopeKey(NodeKinds.CollectionInstance, instanceGuid), ref locked, ref frozen, ref count);
+        foreach (var obsGuid in memberObservationGuids)
+        {
+            AccumulateScopeSummary(new ScopeKey(NodeKinds.Observation, obsGuid), ref locked, ref frozen, ref count);
+        }
+
+        return (locked, frozen, count);
+    }
+
+    private void AppendScopeLocks(ScopeKey key, ref List<(LockView Lock, int Ordinal)>? matched)
+    {
+        if (_byScope.TryGetValue(key, out var entries))
+        {
+            matched ??= new List<(LockView Lock, int Ordinal)>(entries.Count);
+            matched.AddRange(entries);
+        }
+    }
+
+    private void AccumulateScopeSummary(ScopeKey key, ref bool locked, ref bool frozen, ref int count)
+    {
+        if (!_byScope.TryGetValue(key, out var entries))
+        {
+            return;
+        }
+
+        count += entries.Count;
+        for (var i = 0; i < entries.Count; i++)
+        {
+            var kind = entries[i].Lock.Kind;
+            if (kind == LockKind.Locked)
+            {
+                locked = true;
+            }
+            else if (kind == LockKind.Frozen)
+            {
+                frozen = true;
+            }
+        }
+    }
+
+    private readonly record struct ScopeKey(string Kind, Guid Id);
+
+    private sealed class ScopeKeyComparer : IEqualityComparer<ScopeKey>
+    {
+        public static readonly ScopeKeyComparer Instance = new();
+
+        public bool Equals(ScopeKey x, ScopeKey y) =>
+            x.Id == y.Id && string.Equals(x.Kind, y.Kind, StringComparison.Ordinal);
+
+        public int GetHashCode(ScopeKey obj) =>
+            HashCode.Combine(StringComparer.Ordinal.GetHashCode(obj.Kind), obj.Id);
+    }
+}
+
+internal sealed class BatchErrorTargetIndex
+{
+    private readonly Dictionary<Guid, int> _byDatasetRecordGuid = [];
+    private readonly Dictionary<Guid, int> _byObservationGuid = [];
+
+    public BatchErrorTargetIndex(IReadOnlyList<(ValidationFindingId Id, FindingTarget Target)> activeErrorTargets)
+    {
+        ArgumentNullException.ThrowIfNull(activeErrorTargets);
+        for (var i = 0; i < activeErrorTargets.Count; i++)
+        {
+            var target = activeErrorTargets[i].Target;
+            if (target.Kind == FindingTargetKind.DatasetRecord
+                && Guid.TryParse(target.Key, out var recordGuid))
+            {
+                _byDatasetRecordGuid[recordGuid] = _byDatasetRecordGuid.GetValueOrDefault(recordGuid) + 1;
+            }
+            else if (target.Kind == FindingTargetKind.Observation
+                && target.Node is { Kind: NodeKinds.Observation } obsNode)
+            {
+                _byObservationGuid[obsNode.Id] = _byObservationGuid.GetValueOrDefault(obsNode.Id) + 1;
+            }
+        }
+    }
+
+    public int CountForForm(Guid instanceGuid, IReadOnlySet<Guid> memberObservationGuids)
+    {
+        var count = _byDatasetRecordGuid.GetValueOrDefault(instanceGuid);
+        if (_byObservationGuid.Count == 0)
+        {
+            return count;
+        }
+
+        foreach (var obsGuid in memberObservationGuids)
+        {
+            count += _byObservationGuid.GetValueOrDefault(obsGuid);
+        }
+
+        return count;
+    }
+}
+
+internal sealed class BatchFormBlindingLookup(
+    IBlindedTreatmentClassifier blinding,
+    IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptsById,
+    IReadOnlyList<ProtocolDesign> designs)
+{
+    private readonly Dictionary<SpecKey, SpecBlindingEntry> _specCache = [];
+    private readonly Dictionary<MemberBlindingKey, bool> _memberCache = [];
+    private readonly Dictionary<UnmappedSignedItemKey, bool> _unmappedSignedItemCache = [];
+    private readonly Dictionary<ObservationBlindingKey, bool> _queryObservationCache = [];
+
+    public static BatchFormBlindingLookup FromConcepts(
+        IBlindedTreatmentClassifier blinding,
+        IReadOnlyDictionary<ConceptId, Concept> concepts,
+        IReadOnlyList<ProtocolDesign> designs)
+    {
+        var metadata = new Dictionary<ConceptId, BlindedConceptMetadata>(concepts.Count);
+        foreach (var (id, concept) in concepts)
+        {
+            if (BlindedObservationClassifier.ToMetadata(concept) is { } meta)
+            {
+                metadata[id] = meta;
+            }
+        }
+
+        return new BatchFormBlindingLookup(blinding, metadata, designs);
+    }
+
+    public (IReadOnlySet<string> BlindedItems, IReadOnlySet<ObservationId> BlindedObservations) ClassifyForm(
+        CollectionInstance instance,
+        string? collectionTitle,
+        IReadOnlyList<CollectionItem> items,
+        IReadOnlyDictionary<ObservationId, Observation> observations,
+        IReadOnlyList<FormAttestationView> attestations)
+    {
+        var specEntry = GetOrCreateSpecEntry(instance.ProtocolVersionId, instance.CollectionSpecId, collectionTitle, items);
+        HashSet<string>? extraBlindedItems = null;
+        HashSet<ObservationId>? blindedObservations = null;
+
+        foreach (var member in instance.Members)
+        {
+            if (!observations.TryGetValue(member.ObservationId, out var obs))
+            {
+                continue;
+            }
+
+            if (specEntry.SpecBlinded || specEntry.BlindedItemIds.Contains(member.ItemId))
+            {
+                blindedObservations ??= [];
+                blindedObservations.Add(obs.Id);
+                continue;
+            }
+
+            specEntry.ItemsById.TryGetValue(member.ItemId, out var specItem);
+            bool memberBlinded;
+            if (HasMaskedValue(obs))
+            {
+                // Evaluate per-observation/per-revision masked values directly so masked values never taint
+                // structural memo entries shared with unmasked sibling observations (K-AUTH-4).
+                var conceptMeta = ResolveConcept(obs.ConceptId);
+                memberBlinded = blinding.IsBlindedCollectionItem(
+                        instance.CollectionSpecId,
+                        collectionTitle,
+                        specItem,
+                        obs.Value,
+                        conceptMeta,
+                        designs)
+                    || blinding.IsBlindedObservation(
+                        obs.ConceptId,
+                        obs.Value,
+                        conceptMeta,
+                        instance.CollectionSpecId,
+                        member.ItemId,
+                        designs)
+                    || obs.Revisions.Any(r => blinding.IsBlindedObservation(
+                        obs.ConceptId,
+                        r.Value,
+                        conceptMeta,
+                        instance.CollectionSpecId,
+                        member.ItemId,
+                        designs));
+            }
+            else
+            {
+                memberBlinded = IsStructurallyBlindedMember(
+                    instance.ProtocolVersionId,
+                    instance.CollectionSpecId,
+                    collectionTitle,
+                    member.ItemId,
+                    specItem,
+                    obs.ConceptId);
+            }
+
+            if (memberBlinded)
+            {
+                extraBlindedItems ??= new HashSet<string>(StringComparer.Ordinal);
+                extraBlindedItems.Add(member.ItemId);
+                blindedObservations ??= [];
+                blindedObservations.Add(obs.Id);
+            }
+        }
+
+        for (var a = 0; a < attestations.Count; a++)
+        {
+            var signedValues = attestations[a].SignedValues;
+            if (signedValues is null)
+            {
+                continue;
+            }
+
+            for (var s = 0; s < signedValues.Count; s++)
+            {
+                var signedValue = signedValues[s];
+                if (specEntry.SpecBlinded
+                    || specEntry.BlindedItemIds.Contains(signedValue.ItemId)
+                    || (extraBlindedItems is not null && extraBlindedItems.Contains(signedValue.ItemId)))
+                {
+                    blindedObservations ??= [];
+                    blindedObservations.Add(signedValue.ObservationId);
+                    continue;
+                }
+
+                specEntry.ItemsById.TryGetValue(signedValue.ItemId, out var specItem);
+                var conceptMeta = specItem is not null ? ResolveConcept(specItem.Concept.ConceptId) : null;
+                bool signedBlinded;
+                if (signedValue.Value is MissingValue { Reason: NullFlavor.Masked })
+                {
+                    signedBlinded = blinding.IsBlindedCollectionItem(
+                        instance.CollectionSpecId,
+                        collectionTitle,
+                        specItem,
+                        signedValue.Value,
+                        conceptMeta,
+                        designs);
+                }
+                else if (specItem is not null)
+                {
+                    // Non-masked mapped spec items were already classified in specEntry.BlindedItemIds.
+                    signedBlinded = false;
+                }
+                else
+                {
+                    var unmappedKey = new UnmappedSignedItemKey(instance.ProtocolVersionId, instance.CollectionSpecId, collectionTitle, signedValue.ItemId);
+                    if (!_unmappedSignedItemCache.TryGetValue(unmappedKey, out signedBlinded))
+                    {
+                        signedBlinded = blinding.IsBlindedCollectionItem(
+                            instance.CollectionSpecId,
+                            collectionTitle,
+                            item: null,
+                            value: null,
+                            concept: null,
+                            designs);
+                        _unmappedSignedItemCache[unmappedKey] = signedBlinded;
+                    }
+                }
+
+                if (signedBlinded)
+                {
+                    extraBlindedItems ??= new HashSet<string>(StringComparer.Ordinal);
+                    extraBlindedItems.Add(signedValue.ItemId);
+                    blindedObservations ??= [];
+                    blindedObservations.Add(signedValue.ObservationId);
+                }
+            }
+        }
+
+        IReadOnlySet<string> finalItems;
+        if (extraBlindedItems is null)
+        {
+            finalItems = specEntry.BlindedItemIds;
+        }
+        else
+        {
+            extraBlindedItems.UnionWith(specEntry.BlindedItemIds);
+            finalItems = extraBlindedItems.ToFrozenSet(StringComparer.Ordinal);
+        }
+
+        IReadOnlySet<ObservationId> finalObservations = blindedObservations is null
+            ? FrozenSet<ObservationId>.Empty
+            : blindedObservations.ToFrozenSet();
+        return (finalItems, finalObservations);
+    }
+
+    internal (IReadOnlySet<string> BlindedItems, IReadOnlySet<ObservationId> BlindedObservations) ClassifyQueryTarget(
+        KernelCollectionInstanceRecords.QueryTargetFormRow form,
+        string? collectionTitle,
+        IReadOnlyList<CollectionItem> items,
+        IReadOnlyDictionary<ObservationId, KernelCollectionInstanceRecords.QueryTargetObservationRow> observations)
+    {
+        var specEntry = GetOrCreateSpecEntry(form.ProtocolVersionId, form.CollectionSpecId, collectionTitle, items);
+        HashSet<string>? extraBlindedItems = null;
+        HashSet<ObservationId>? blindedObservations = null;
+
+        for (var i = 0; i < form.Members.Count; i++)
+        {
+            var member = form.Members[i];
+            if (!observations.TryGetValue(member.ObservationId, out var obs))
+            {
+                continue;
+            }
+
+            if (specEntry.SpecBlinded || specEntry.BlindedItemIds.Contains(member.ItemId))
+            {
+                blindedObservations ??= [];
+                blindedObservations.Add(obs.Id);
+                continue;
+            }
+
+            bool obsBlinded;
+            if (obs.Value is MissingValue { Reason: NullFlavor.Masked })
+            {
+                obsBlinded = blinding.IsBlindedObservation(
+                    obs.ConceptId,
+                    obs.Value,
+                    ResolveConcept(obs.ConceptId),
+                    form.CollectionSpecId,
+                    member.ItemId,
+                    designs);
+            }
+            else
+            {
+                var obsKey = new ObservationBlindingKey(form.CollectionSpecId, member.ItemId, obs.ConceptId);
+                if (!_queryObservationCache.TryGetValue(obsKey, out obsBlinded))
+                {
+                    obsBlinded = blinding.IsBlindedObservation(
+                        obs.ConceptId,
+                        value: null,
+                        ResolveConcept(obs.ConceptId),
+                        form.CollectionSpecId,
+                        member.ItemId,
+                        designs);
+                    _queryObservationCache[obsKey] = obsBlinded;
+                }
+            }
+
+            if (obsBlinded)
+            {
+                extraBlindedItems ??= new HashSet<string>(StringComparer.Ordinal);
+                extraBlindedItems.Add(member.ItemId);
+                blindedObservations ??= [];
+                blindedObservations.Add(obs.Id);
+            }
+        }
+
+        IReadOnlySet<string> finalItems;
+        if (extraBlindedItems is null)
+        {
+            finalItems = specEntry.BlindedItemIds;
+        }
+        else
+        {
+            extraBlindedItems.UnionWith(specEntry.BlindedItemIds);
+            finalItems = extraBlindedItems.ToFrozenSet(StringComparer.Ordinal);
+        }
+
+        IReadOnlySet<ObservationId> finalObservations = blindedObservations is null
+            ? FrozenSet<ObservationId>.Empty
+            : blindedObservations.ToFrozenSet();
+        return (finalItems, finalObservations);
+    }
+
+    private SpecBlindingEntry GetOrCreateSpecEntry(
+        ProtocolVersionId protocolVersionId,
+        string collectionSpecId,
+        string? collectionTitle,
+        IReadOnlyList<CollectionItem> items)
+    {
+        var key = new SpecKey(protocolVersionId, collectionSpecId, collectionTitle);
+        if (_specCache.TryGetValue(key, out var existing) && ReferenceEquals(existing.SourceItems, items))
+        {
+            return existing;
+        }
+
+        var specBlinded = blinding.IsBlindedCollectionSpec(collectionSpecId, collectionTitle, designs: designs);
+        var itemsById = new Dictionary<string, CollectionItem>(items.Count, StringComparer.Ordinal);
+        HashSet<string>? blindedItems = null;
+        for (var i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            itemsById.TryAdd(item.Id, item);
+            if (specBlinded
+                || blinding.IsBlindedCollectionItem(
+                    collectionSpecId,
+                    collectionTitle,
+                    item,
+                    value: null,
+                    ResolveConcept(item.Concept.ConceptId),
+                    designs))
+            {
+                blindedItems ??= new HashSet<string>(StringComparer.Ordinal);
+                blindedItems.Add(item.Id);
+            }
+        }
+
+        var frozenBlinded = blindedItems is null
+            ? FrozenSet<string>.Empty
+            : blindedItems.ToFrozenSet(StringComparer.Ordinal);
+        var created = new SpecBlindingEntry(specBlinded, items, itemsById, frozenBlinded);
+        _specCache[key] = created;
+        return created;
+    }
+
+    private bool IsStructurallyBlindedMember(
+        ProtocolVersionId protocolVersionId,
+        string collectionSpecId,
+        string? collectionTitle,
+        string itemId,
+        CollectionItem? specItem,
+        ConceptId observationConceptId)
+    {
+        var key = new MemberBlindingKey(
+            protocolVersionId,
+            collectionSpecId,
+            collectionTitle,
+            itemId,
+            observationConceptId,
+            specItem is not null);
+        if (_memberCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        var conceptMeta = ResolveConcept(observationConceptId);
+        var isBlinded = blinding.IsBlindedCollectionItem(
+                collectionSpecId,
+                collectionTitle,
+                specItem,
+                value: null,
+                conceptMeta,
+                designs)
+            || blinding.IsBlindedObservation(
+                observationConceptId,
+                value: null,
+                conceptMeta,
+                collectionSpecId,
+                itemId,
+                designs);
+        _memberCache[key] = isBlinded;
+        return isBlinded;
+    }
+
+    private BlindedConceptMetadata? ResolveConcept(ConceptId id) =>
+        conceptsById.TryGetValue(id, out var found) ? found : null;
+
+    private static bool HasMaskedValue(Observation obs)
+    {
+        if (obs.Value is MissingValue { Reason: NullFlavor.Masked })
+        {
+            return true;
+        }
+
+        foreach (var revision in obs.Revisions)
+        {
+            if (revision.Value is MissingValue { Reason: NullFlavor.Masked })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private sealed record SpecBlindingEntry(
+        bool SpecBlinded,
+        IReadOnlyList<CollectionItem> SourceItems,
+        Dictionary<string, CollectionItem> ItemsById,
+        FrozenSet<string> BlindedItemIds);
+
+    private readonly record struct SpecKey(ProtocolVersionId ProtocolVersionId, string CollectionSpecId, string? CollectionTitle);
+
+    private readonly record struct MemberBlindingKey(
+        ProtocolVersionId ProtocolVersionId,
+        string CollectionSpecId,
+        string? CollectionTitle,
+        string ItemId,
+        ConceptId ObservationConceptId,
+        bool HasSpecItem);
+
+    private readonly record struct UnmappedSignedItemKey(
+        ProtocolVersionId ProtocolVersionId,
+        string CollectionSpecId,
+        string? CollectionTitle,
+        string ItemId);
+
+    private readonly record struct ObservationBlindingKey(string CollectionSpecId, string ItemId, ConceptId ConceptId);
 }

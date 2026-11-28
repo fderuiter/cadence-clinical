@@ -974,7 +974,8 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     }
     expect(headCsp.content).toContain("script-src 'self'");
     expect(headCsp.content).toContain("media-src 'self' blob:");
-    expect(headCsp.content).toContain("worker-src 'self' blob:");
+    expect(headCsp.content).toContain("worker-src 'self'");
+    expect(headCsp.content).not.toContain("worker-src 'self' blob:");
     expect(headCsp.content).toContain("connect-src 'self'");
     expect(headCsp.content).toContain("frame-src 'self' blob:");
     expect(headCsp.content).not.toContain("localhost");
@@ -1021,7 +1022,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await page.locator(".media-preview-modal .close-modal-btn").click();
     await expect(pdfIframe).toBeHidden();
 
-    // 2. Regulated video preview in demo mode (no eager hls.js per ADR-2537) + runtime MediaSource & Worker blob: CSP verification (ADR-2498)
+    // 2. Regulated native HTML5 video preview in demo mode (ADR-2692) + runtime MediaSource blob: CSP verification (ADR-2498)
     const hlsPreviewBtn = page.locator(
       'button[aria-label="Preview DEMO-01-Site-Initiation-Briefing.mp4"]'
     );
@@ -1039,26 +1040,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
       )
       .toContain("/api/v1/fileshare/demo-stream/master.m3u8");
 
-    const blobMediaAndWorkerProbe = await videoEl.evaluate(async (el) => {
-      const workerBlob = new Blob(
-        ['self.onmessage = (e) => self.postMessage("ack:" + e.data);'],
-        { type: "application/javascript" }
-      );
-      const workerUrl = URL.createObjectURL(workerBlob);
-      let workerReply: string;
-      try {
-        const worker = new Worker(workerUrl);
-        workerReply = await new Promise<string>((resolve, reject) => {
-          worker.onmessage = (ev) => resolve(String(ev.data));
-          worker.onerror = (err) =>
-            reject(new Error(err.message || "Worker CSP error"));
-          worker.postMessage("csp");
-        });
-        worker.terminate();
-      } finally {
-        URL.revokeObjectURL(workerUrl);
-      }
-
+    const blobMediaProbe = await videoEl.evaluate(async (el) => {
       const mediaSource = new MediaSource();
       const mediaBlobUrl = URL.createObjectURL(mediaSource);
       try {
@@ -1070,7 +1052,6 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
           setTimeout(() => resolve(), 250);
         });
         return {
-          workerReply,
           assignedSrc:
             (el as HTMLVideoElement).currentSrc || el.getAttribute("src") || "",
         };
@@ -1078,8 +1059,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
         URL.revokeObjectURL(mediaBlobUrl);
       }
     });
-    expect(blobMediaAndWorkerProbe.workerReply).toBe("ack:csp");
-    expect(blobMediaAndWorkerProbe.assignedSrc).toMatch(/^blob:/);
+    expect(blobMediaProbe.assignedSrc).toMatch(/^blob:/);
 
     await expectNoWcagViolations(
       page,

@@ -1,148 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace Cadence.ToolingCore.Services;
 
 public static partial class DocIndexSyncService
 {
-    public static string TruncateTableCellDescription(string cleaned, int maxLength = 120)
-    {
-        if (string.IsNullOrWhiteSpace(cleaned))
-        {
-            return string.Empty;
-        }
-
-        if (cleaned.Length <= maxLength)
-        {
-            return BalanceInlineBackticks(cleaned, appendEllipsis: false, maxLength);
-        }
-
-        int cutLength = Math.Max(1, maxLength - 3);
-        string prefix = cleaned[..cutLength].TrimEnd('\\');
-        return BalanceInlineBackticks(prefix, appendEllipsis: true, maxLength);
-    }
-
-    private static string BalanceInlineBackticks(string text, bool appendEllipsis, int maxLength)
-    {
-        int unclosedOpenerPos = FindUnclosedBacktickRun(text, out int unclosedLen);
-        if (unclosedOpenerPos < 0)
-        {
-            return appendEllipsis ? text + "..." : text;
-        }
-
-        string beforeOpener = text[..unclosedOpenerPos];
-        string insideSpan = text[(unclosedOpenerPos + unclosedLen)..];
-        if (string.IsNullOrWhiteSpace(insideSpan))
-        {
-            string trimmed = beforeOpener.TrimEnd();
-            return appendEllipsis ? trimmed + "..." : trimmed;
-        }
-
-        string closer = new('`', unclosedLen);
-        if (appendEllipsis)
-        {
-            int maxPrefixBeforeEllipsis = Math.Max(unclosedOpenerPos + unclosedLen + 1, maxLength - 3 - unclosedLen);
-            string bounded = text.Length > maxPrefixBeforeEllipsis
-                ? text[..maxPrefixBeforeEllipsis].TrimEnd('\\')
-                : text;
-            if (bounded.Length <= unclosedOpenerPos + unclosedLen)
-            {
-                return beforeOpener.TrimEnd() + "...";
-            }
-
-            return bounded + "..." + closer;
-        }
-
-        return text + closer;
-    }
-
-    public static int FindUnclosedBacktickRun(string line, out int unclosedLen)
-    {
-        int pos = 0;
-        while (pos < line.Length)
-        {
-            if (line[pos] == '\\' && pos + 1 < line.Length)
-            {
-                pos += 2;
-                continue;
-            }
-
-            if (line[pos] != '`')
-            {
-                pos++;
-                continue;
-            }
-
-            int runLen = 0;
-            while (pos + runLen < line.Length && line[pos + runLen] == '`')
-            {
-                runLen++;
-            }
-
-            // Search for a matching backtick run of exact length `runLen`.
-            int search = pos + runLen;
-            int matchedClose = -1;
-            while (search < line.Length)
-            {
-                if (line[search] == '\\' && search + 1 < line.Length)
-                {
-                    search += 2;
-                    continue;
-                }
-
-                if (line[search] != '`')
-                {
-                    search++;
-                    continue;
-                }
-
-                int candidateLen = 0;
-                while (search + candidateLen < line.Length && line[search + candidateLen] == '`')
-                {
-                    candidateLen++;
-                }
-
-                if (candidateLen == runLen)
-                {
-                    matchedClose = search;
-                    break;
-                }
-
-                search += candidateLen;
-            }
-
-            if (matchedClose >= 0)
-            {
-                pos = matchedClose + runLen;
-                continue;
-            }
-
-            // CommonMark treats a standalone empty ` `` ` (with no content inside a cell) as literal text,
-            // whereas single unclosed backticks or cut code spans break inline code parsing.
-            if (runLen == 1)
-            {
-                unclosedLen = runLen;
-                return pos;
-            }
-
-            // For multi-backtick runs (>= 2), flag when non-whitespace content follows before the next pipe or end of line.
-            int nextPipe = line.IndexOf('|', pos + runLen);
-            string remainderInCell = nextPipe >= 0
-                ? line[(pos + runLen)..nextPipe]
-                : line[(pos + runLen)..];
-            if (!string.IsNullOrWhiteSpace(remainderInCell))
-            {
-                unclosedLen = runLen;
-                return pos;
-            }
-
-            pos += runLen;
-        }
-
-        unclosedLen = 0;
-        return -1;
-    }
-
     public static List<string> ValidateMarkdownTableLines(IReadOnlyList<string> lines, string displayPath)
     {
         var errors = new List<string>();
@@ -233,6 +96,194 @@ public static partial class DocIndexSyncService
         return errors;
     }
 
+    /// <summary>
+    /// Validates that data rows within every Markdown table are sorted alphabetically by their primary
+    /// link target (<see cref="CompareSortKeys"/>).
+    /// </summary>
+    public static List<string> ValidateTableRowSorting(IReadOnlyList<string> lines, string displayPath)
+    {
+        var errors = new List<string>();
+        char fenceChar = '\0';
+        int fenceLen = 0;
+        bool inHtmlComment = false;
+        bool inTable = false;
+        int tableRowIndex = 0;
+        string? prevSortKey = null;
+
+        for (int i = 0; i < lines.Count; i++)
+        {
+            string rawLine = lines[i].TrimEnd('\r');
+            string trimmed = rawLine.Trim();
+
+            if (TryMatchFenceLine(rawLine, out char markerChar, out int markerLen, out bool hasInfo))
+            {
+                if (fenceChar == '\0')
+                {
+                    fenceChar = markerChar;
+                    fenceLen = markerLen;
+                    inTable = false;
+                    prevSortKey = null;
+                    continue;
+                }
+
+                if (markerChar == fenceChar && markerLen >= fenceLen && !hasInfo)
+                {
+                    fenceChar = '\0';
+                    fenceLen = 0;
+                    continue;
+                }
+            }
+
+            if (fenceChar != '\0')
+            {
+                continue;
+            }
+
+            if (inHtmlComment)
+            {
+                if (trimmed.Contains("-->", StringComparison.Ordinal))
+                {
+                    inHtmlComment = false;
+                }
+
+                continue;
+            }
+
+            if (trimmed.StartsWith("<!--", StringComparison.Ordinal) && !trimmed.StartsWith('|'))
+            {
+                if (!trimmed.Contains("-->", StringComparison.Ordinal))
+                {
+                    inHtmlComment = true;
+                }
+
+                inTable = false;
+                prevSortKey = null;
+                continue;
+            }
+
+            if (!IsPipeTableRowCandidate(trimmed))
+            {
+                inTable = false;
+                prevSortKey = null;
+                continue;
+            }
+
+            if (!inTable)
+            {
+                string nextTrimmed = (i + 1 < lines.Count) ? lines[i + 1].Trim() : string.Empty;
+                if (IsGfmDelimiterRow(nextTrimmed))
+                {
+                    inTable = true;
+                    tableRowIndex = 0;
+                    prevSortKey = null;
+                }
+
+                continue;
+            }
+
+            tableRowIndex++;
+            if (tableRowIndex == 1 && IsGfmDelimiterRow(trimmed))
+            {
+                continue;
+            }
+
+            string? currentSortKey = TryExtractRowPrimaryTarget(trimmed);
+            if (string.IsNullOrEmpty(currentSortKey))
+            {
+                continue;
+            }
+
+            if (prevSortKey is not null && CompareSortKeys(prevSortKey, currentSortKey) > 0)
+            {
+                errors.Add($"{displayPath}:{i + 1} - Row target '{currentSortKey}' is out of alphabetical order after '{prevSortKey}'.");
+            }
+
+            prevSortKey = currentSortKey;
+        }
+
+        return errors;
+    }
+
+    private static List<string> FindForbiddenPerAdrRowsInHub(IReadOnlyList<string> hubLines)
+    {
+        var errors = new List<string>();
+        for (int i = 0; i < hubLines.Count; i++)
+        {
+            string trimmed = hubLines[i].Trim();
+            if (!IsPipeTableRowCandidate(trimmed) || IsGfmDelimiterRow(trimmed))
+            {
+                continue;
+            }
+
+            string? rawTarget = TryExtractRowPrimaryTarget(trimmed);
+            if (string.IsNullOrEmpty(rawTarget))
+            {
+                continue;
+            }
+
+            string clean = NormalizeRelativePath(rawTarget.Split('#')[0]);
+            if (!clean.StartsWith("adr/", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (IsAllowedHubAdrTarget(clean))
+            {
+                continue;
+            }
+
+            errors.Add($"docs/DOCUMENTATION_INDEX.md:{i + 1} - Forbidden per-ADR entry '{clean}'; list ADRs only in 'docs/adr/<domain>/index.md' or 'docs/adr/legacy-index.md'.");
+        }
+
+        return errors;
+    }
+
+    private static bool IsAllowedHubAdrTarget(string cleanTarget)
+    {
+        if (cleanTarget.Equals("adr/index.md", StringComparison.OrdinalIgnoreCase) ||
+            cleanTarget.Equals("adr/TEMPLATE.md", StringComparison.OrdinalIgnoreCase) ||
+            cleanTarget.Equals("adr/legacy-index.md", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        string[] parts = cleanTarget.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 3 &&
+               parts[0].Equals("adr", StringComparison.OrdinalIgnoreCase) &&
+               AdrValidatorService.IsValidDomain(parts[1]) &&
+               parts[2].Equals("index.md", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? TryExtractRowPrimaryTarget(string trimmedRow)
+    {
+        string firstCell = ExtractFirstTableCell(trimmedRow);
+        Match linkMatch = MarkdownLinkRegex().Match(firstCell);
+        return linkMatch.Success ? linkMatch.Groups[1].Value.Trim() : null;
+    }
+
+    private static string ExtractFirstTableCell(string trimmedRow)
+    {
+        int start = trimmedRow.StartsWith('|') ? 1 : 0;
+        int i = start;
+        while (i < trimmedRow.Length)
+        {
+            if (trimmedRow[i] == '\\' && i + 1 < trimmedRow.Length)
+            {
+                i += 2;
+                continue;
+            }
+
+            if (trimmedRow[i] == '|')
+            {
+                return trimmedRow[start..i].Trim();
+            }
+
+            i++;
+        }
+
+        return trimmedRow[start..].Trim();
+    }
+
     private static bool TryMatchFenceLine(string line, out char markerChar, out int markerLen, out bool hasInfo)
     {
         string trimmedStart = line.TrimStart();
@@ -248,7 +299,6 @@ public static partial class DocIndexSyncService
             if (count >= 3)
             {
                 string rest = trimmedStart[count..].Trim();
-                // Per CommonMark, backtick fences cannot contain backticks in their info string (otherwise it's inline code).
                 if (ch == '`' && rest.Contains('`'))
                 {
                     markerChar = '\0';

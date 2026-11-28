@@ -722,6 +722,10 @@ namespace Cadence.Apps.Etmf.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId");
 
+                    b.HasIndex("TenantId", "CreatedAt")
+                        .HasDatabaseName("IX_tmf_export_jobs_queued_tenant_created")
+                        .HasFilter("\"Status\" = 'QUEUED'");
+
                     b.ToTable("tmf_export_jobs", (string)null);
                 });
 

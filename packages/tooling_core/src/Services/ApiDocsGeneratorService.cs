@@ -17,6 +17,9 @@ public static class ApiDocsGeneratorService
 {
     private static readonly string[] HttpMethods = ["get", "put", "post", "delete", "options", "head", "patch", "trace"];
 
+    private static bool IsDocIndexShardFile(string fileName) =>
+        string.Equals(fileName, "DOC_INDEX.md", StringComparison.OrdinalIgnoreCase);
+
     public static int GenerateApiDocs(
         bool validate = false,
         string? repoRoot = null,
@@ -54,7 +57,11 @@ public static class ApiDocsGeneratorService
             }
 
             var stale = Directory.Exists(docsDir)
-                ? Directory.GetFiles(docsDir, "*.md").Select(f => Path.GetFileName(f)).Where(n => !expected.ContainsKey(n)).OrderBy(n => n, StringComparer.Ordinal).ToList()
+                ? Directory.GetFiles(docsDir, "*.md")
+                    .Select(f => Path.GetFileName(f))
+                    .Where(n => !IsDocIndexShardFile(n) && !expected.ContainsKey(n))
+                    .OrderBy(n => n, StringComparer.Ordinal)
+                    .ToList()
                 : [];
             drift.AddRange(stale.Select(n => $"{n} (no spec in docs/openapi)"));
 
@@ -143,7 +150,7 @@ public static class ApiDocsGeneratorService
                         !p["docs/api/".Length..].Contains('/') &&
                         p.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
             .Select(Path.GetFileName)
-            .Where(n => !string.IsNullOrEmpty(n) && !expected.ContainsKey(n!))
+            .Where(n => !string.IsNullOrEmpty(n) && !IsDocIndexShardFile(n!) && !expected.ContainsKey(n!))
             .Select(n => n!)
             .OrderBy(n => n, StringComparer.Ordinal)
             .ToList();

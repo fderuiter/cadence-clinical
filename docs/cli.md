@@ -21,23 +21,23 @@ pnpm cadence scaffold post "Ship Kernel Phase 3"
 
 Some commands also have a `make` target. Those targets use `pnpm cadence` and share its on-demand CLI build.
 
-| `make` target                            | Runs                                          |
-| ---------------------------------------- | --------------------------------------------- |
-| `make doctor`                            | `cadence doctor --auto-fix`                   |
-| `make ports`                             | `cadence check-ports`                         |
-| `make dev`                               | `cadence dev`                                 |
-| `make fix`                               | `cadence fix`                                 |
-| `make check`                             | `cadence check`                               |
-| `make action-pinning`                    | `cadence check workflow-security`             |
-| `make test`                              | `cadence test`                                |
-| `make verify`                            | `cadence check`, `pnpm test`, `cadence test`  |
-| `make ci`                                | `cadence ci`                                  |
-| `make sync-gxp`, `make gxp-sync`         | `cadence gxp sync`                            |
-| `make rtm`                               | `cadence gxp validate`                        |
-| `make gxp-snapshot`                      | `CADENCE_GXP_SNAPSHOT=1 cadence gxp snapshot` |
-| `make adr TITLE="..."`                   | `cadence scaffold adr "<title>"`              |
-| `make post TITLE="..."`                  | `cadence scaffold post "<title>"`             |
-| `make db-reset`, `make db-reset-offline` | `cadence db reset`                            |
+| `make` target                            | Runs                                                 |
+| ---------------------------------------- | ---------------------------------------------------- |
+| `make doctor`                            | `cadence doctor --auto-fix`                          |
+| `make ports`                             | `cadence check-ports`                                |
+| `make dev`                               | `cadence dev`                                        |
+| `make fix`                               | `cadence fix`                                        |
+| `make check`                             | `cadence check`                                      |
+| `make action-pinning`                    | `cadence check workflow-security`                    |
+| `make test`                              | `cadence test`                                       |
+| `make verify`                            | `cadence check`, `pnpm test`, `cadence test`         |
+| `make ci`                                | `cadence ci`                                         |
+| `make sync-gxp`, `make gxp-sync`         | `cadence gxp sync`                                   |
+| `make rtm`                               | `cadence gxp validate`                               |
+| `make gxp-snapshot`                      | `CADENCE_GXP_SNAPSHOT=1 cadence gxp snapshot`        |
+| `make adr DOMAIN="..." TITLE="..."`      | `cadence scaffold adr --domain "<domain>" "<title>"` |
+| `make post TITLE="..."`                  | `cadence scaffold post "<title>"`                    |
+| `make db-reset`, `make db-reset-offline` | `cadence db reset`                                   |
 
 `make wizard` and `make setup` run `scripts/setup_wizard.sh` directly (`make setup` passes `--dev --minimal`), which bootstraps the `.NET 10` SDK and delegates workspace provisioning to `cadence doctor --auto-fix`. `cadence wizard onboarding` runs the same script.
 
@@ -371,7 +371,7 @@ Resolves the repository root from any working directory (`Cadence.sln`) and runs
 1. `dotnet format whitespace` and `dotnet format style` in the repository root (scoped to changed C# files by default; full `Cadence.sln` with `--full`).
 2. Synthesized documentation marker regions (`GateDocs.Write`) across `docs/cli.md`, `docs/CI.md`, `docs/LOCAL_DEV_ENVIRONMENT.md`, `ARCHITECTURE.md`, `docs/OPERATIONAL_DATABASE.md`, and `docs/SDLC/Signature_Token_Cryptographic_Contract.md`, followed by root-wide Prettier auto-formatting across tracked JS, TS, Vue, CSS, JSON, Markdown and YAML files respecting `.prettierignore`.
 3. `baselines/secrets/` shard normalization (`SecretsBaselineCleanerService.CleanSecretsBaseline`) and upper-case `@req:PRD-...` tag sanitization in `docs/**/*.md` (excluding `docs/SDLC/runs/`).
-4. ADR index synchronization (`docs/adr/index.md`) and schema validation (`AdrValidatorService.ValidateAdrs` without git diff), documentation index sync (`docs/DOCUMENTATION_INDEX.md`), and demo study manifest sync (`packages/demo-fixtures`).
+4. ADR domain shard synchronization (`docs/adr/<domain>/index.md`) and schema validation (`AdrValidatorService.ValidateAdrs` without git diff), category documentation shard sync (`docs/ROOT_INDEX.md`, `docs/<category>/INDEX.md`, `docs/<category>/DOC_INDEX.md`), and demo study manifest sync (`packages/demo-fixtures`).
 5. Diff-based EF Core schema documentation (`docs/schema/`): runs `generate-schema-doc` when EF Core entities, configurations, or migrations changed (or with `--full`), skipping otherwise.
 6. Diff-based OpenAPI specifications, API Markdown pages, and web TypeScript client types: exports `docs/openapi/` and regenerates `docs/api/` when backend C# contracts changed (or with `--openapi` / `--full`), and runs `pnpm --filter web run generate:api` whenever OpenAPI specs are exported or `apps/web/src/api/generated/` is stale so `check api-clients` passes.
 
@@ -414,7 +414,7 @@ Paths are relative to the repository root. "Calls" is the method the command run
 | `pre-commit-openapi`          | Runs the quick staged-file `openapi` check: exports specs only for dependent services affected by staged C# files, or verifies staged `docs/api` against staged `docs/openapi` without booting hosts when no C# backend contracts are staged. It does not stage anything.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | `PreCommitOpenApiService.ExecutePreCommitOpenApi`                                         |
 | `validate-api-clients`        | Checks that `apps/web/src/api/generated/` matches every auto-discovered `docs/openapi/*_openapi.json` service and module contract (excluding `cdisc_openapi.json`) plus Canvas contracts (`apps/web/scripts/generate-api-types.js --check`), then runs `pnpm --filter web exec tsc --noEmit`, which typechecks the `apps/web/src/api` clients against their generated OpenAPI types. Exits `1` on stale generated types or a type error. This is the `api-clients` gate.                                                                                                                                                                                                                                                                                                                                       | `ApiClientValidatorService.ValidateApiClients`                                            |
 | `generate-cli-docs`           | Without options, synthesizes the generated documentation marker regions in `docs/cli.md`, `docs/CI.md`, `docs/LOCAL_DEV_ENVIRONMENT.md`, `ARCHITECTURE.md`, `docs/OPERATIONAL_DATABASE.md`, and `docs/SDLC/Signature_Token_Cryptographic_Contract.md` from live code metadata. With `--check`, runs the `cli-docs` gate: fails when any marker region is missing, malformed, or stale, or when `docs/cli.md` lacks the required headings or a command registered in `Program.cs`.                                                                                                                                                                                                                                                                                                                              | `GateDocs.Write` (`packages/cli/src/Services`), `CliDocsGeneratorService.GenerateCliDocs` |
-| `generate-doc-index`          | Scans markdown files in `docs/` and updates `docs/DOCUMENTATION_INDEX.md` organized by category. Option: `--check` (verify index completeness without editing; exits `1` on unindexed files). This is the `validate-doc-index` gate.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `DocIndexSyncService.SyncDocIndex`                                                        |
+| `generate-doc-index`          | Scans non-ADR markdown files in `docs/` and updates their owning category documentation shards (`docs/ROOT_INDEX.md`, `docs/<category>/INDEX.md`, `docs/<category>/DOC_INDEX.md`) sorted alphabetically by file path while keeping `docs/DOCUMENTATION_INDEX.md` static. Option: `--check` (verify shard coverage, per-ADR hub omission, and alphabetical row sorting without editing; exits `1` on drift). This is the `validate-doc-index` gate.                                                                                                                                                                                                                                                                                                                                                             | `DocIndexSyncService.SyncDocIndex`                                                        |
 | `generate-demo-manifest`      | Validates the canonical synthetic demo study manifest (`CADENCE-101`, sites, participants, RFC 9562 UUIDv8 identifiers, and eleven realm personas) in memory from `packages/demo-fixtures/demo-seed.json` and `docker/cadence-realm.json` without writing committed `manifest.js` or `manifest.d.ts` artifacts. Option: `--check` (alias for parity check). This is the `demo-manifest` gate.                                                                                                                                                                                                                                                                                                                                                                                                                  | `DemoManifestGeneratorService.GenerateDemoManifest`                                       |
 | `generate-rtm`                | Builds the traceability matrix from requirements in `docs/`, `@req` tags in tests and `report_dotnet.trx`. Writes `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`. Options: `--validate` (write nothing; fail if a mapped test failed), `--draft` (mark tests as unverified when the report is missing).                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `RtmGeneratorService.GenerateRtm` (`packages/compliance/src`)                             |
 | `compliance-utility`          | With `--sanitize`, upper-cases `@req:PRD-...` tags in `docs/**/*.md`, skipping `docs/SDLC/runs/`. Without it, does nothing.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `ComplianceUtilityService.ExecuteComplianceUtility`                                       |
@@ -568,15 +568,19 @@ Same as the `extract-env-vars` tool command, including the `--check` option. It 
 
 Runs `bash scripts/migrate_service_wizard.sh <name>` in the current directory, passing `<name>` as the first positional argument (`$1`) to the wizard script. Needs `bash`, so it does not work on plain Windows.
 
-#### `cadence scaffold adr <title>`
+#### `cadence scaffold adr --domain <slug> <title>`
 
-Creates `docs/adr/<yyyy-mm-dd>-<slug>.md` from a built-in template. The ADR number is one more than the highest `ADR-<n>:` found on the first line of existing ADRs, or 100 if there are none. Fails if the file already exists. Appends a link to `docs/adr/index.md` if that file exists.
+Creates `docs/adr/<domain>/<yyyy-mm-dd>-<slug>.md` from a built-in 6-section template using `IClock` (`UtcNow`), headed `# ADR-<DOMAIN>-<YYYYMMDD>-<slug>: <title>`, and inserts a link sorted alphabetically by filename into `docs/adr/<domain>/index.md` without modifying `docs/adr/index.md` or `docs/adr/legacy-index.md`. Fails with exit code `1` if `--domain` is unknown, `<title>` produces an empty slug, or the file already exists.
 
-The title is required. With make, pass it as `make adr TITLE="Use X for Y"`.
+Both `--domain` (`-d`) and `<title>` are required. Supported domain slugs: `kernel`, `platform`, `security`, `standards`, `operations`, `compliance`, `frontend`, `tooling`. With make, pass `make adr DOMAIN="security" TITLE="Use X for Y"`.
+
+| Option                | Description                                                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `-d\|--domain <slug>` | Target ADR domain shard (`kernel`, `platform`, `security`, `standards`, `operations`, `compliance`, `frontend`, `tooling`). Required. |
 
 #### `cadence scaffold post <title>`
 
-Creates `docs/blog/<yyyy-mm-dd>-<slug>.md` with YAML frontmatter (`title`, `date`, `authors`, `summary`, `tags`, `draft`, `related`) and structured Markdown sections, synchronizing `docs/DOCUMENTATION_INDEX.md` under `## Engineering blog` when published. Posts start with `draft: true` by default so drafts stay excluded from `docs/DOCUMENTATION_INDEX.md`, public index pages, site search, and `/feed.xml` until flipped to `draft: false` and synced with `pnpm cadence generate-doc-index` (or created immediately with `--publish`). Fails with exit code `1` if the title produces an empty slug or the dated file already exists.
+Creates `docs/blog/<yyyy-mm-dd>-<slug>.md` with YAML frontmatter (`title`, `date`, `authors`, `summary`, `tags`, `draft`, `related`) and structured Markdown sections, synchronizing `docs/blog/DOC_INDEX.md` under `## Engineering blog` when published while keeping `docs/DOCUMENTATION_INDEX.md` static. Posts start with `draft: true` by default so drafts stay excluded from `docs/blog/DOC_INDEX.md`, public index pages, site search, and `/feed.xml` until flipped to `draft: false` and synced with `pnpm cadence generate-doc-index` (or created immediately with `--publish`). Fails with exit code `1` if the title produces an empty slug or the dated file already exists.
 
 The title is required. With make, pass it as `make post TITLE="Ship X"`.
 

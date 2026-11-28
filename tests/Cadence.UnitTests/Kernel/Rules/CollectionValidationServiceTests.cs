@@ -251,6 +251,120 @@ public sealed class CollectionValidationServiceTests
         unblindedPackPreview.Violations.Select(v => v.RuleId).Should().Equal("BLIND-CROSS-FORM");
     }
 
+    [Fact(DisplayName = "CollectionValidationService_PreHydratedPreviewRulePackSkipsListForStudyAndPreservesMasking")]
+    [Trait("Category", "Unit")]
+    public async Task CollectionValidationServicePreHydratedPreviewRulePackSkipsListForStudyAndPreservesMasking()
+    {
+        var unblindedEnrollment = EnrollmentId.New();
+        var blindedEnrollment = EnrollmentId.New();
+        var hiddenEnrollment = EnrollmentId.New();
+
+        var unblindedRand = Form(
+            unblindedEnrollment,
+            ParticipantId.New(),
+            "randomization",
+            BaseTime.AddMinutes(1),
+            ("treatment_assignment", new TextValue("ACTIVE_DRUG")));
+        var unblindedVitals = Form(
+            unblindedEnrollment,
+            ParticipantId.New(),
+            "vitals",
+            BaseTime.AddMinutes(2),
+            ("sbp", new QuantityValue(135m, "mm[Hg]")));
+
+        var blindedRand = Form(
+            blindedEnrollment,
+            ParticipantId.New(),
+            "randomization",
+            BaseTime.AddMinutes(3),
+            ("treatment_assignment", new TextValue("ACTIVE_DRUG")));
+        var blindedVitals = Form(
+            blindedEnrollment,
+            ParticipantId.New(),
+            "vitals",
+            BaseTime.AddMinutes(4),
+            ("sbp", new QuantityValue(135m, "mm[Hg]")));
+
+        var hiddenRand = Form(
+            hiddenEnrollment,
+            ParticipantId.New(),
+            "randomization",
+            BaseTime.AddMinutes(5),
+            ("treatment_assignment", new TextValue("ACTIVE_DRUG")));
+        var hiddenVitals = Form(
+            hiddenEnrollment,
+            ParticipantId.New(),
+            "vitals",
+            BaseTime.AddMinutes(6),
+            ("sbp", new QuantityValue(135m, "mm[Hg]")));
+
+        IReadOnlyList<CollectionInstanceRecord> studyForms =
+        [
+            unblindedRand,
+            unblindedVitals,
+            blindedRand,
+            blindedVitals,
+            hiddenRand,
+            hiddenVitals,
+        ];
+
+        var pack = new RulePack(
+            RuleAuthority.Sponsor,
+            "Pre-hydrated preview parity pack",
+            [
+                MakeRule(
+                    "BLIND-CROSS-FORM",
+                    "vitals",
+                    And(
+                        Eq(Var("sbp"), Num(135m)),
+                        Eq(Var("randomization.treatment_assignment"), Txt("ACTIVE_DRUG")))),
+            ]);
+
+        var packId = LibraryItemId.New();
+        var registry = new StubStandardsRegistry(Study, packId, "sponsor.prehydrated", pack);
+        var collectionStore = new StubCollectionRecords(studyForms);
+        var visibility = new StubNodeVisibility(new Dictionary<NodeRef, MaskReason>
+        {
+            [NodeRef.For(hiddenEnrollment)] = MaskReason.NotPermitted,
+        });
+        var service = new CollectionValidationService(
+            new RulePackLoader(registry),
+            registry,
+            new DotNetRuleEvaluator(),
+            collectionStore,
+            new StubValidationFindings(),
+            visibility: visibility);
+
+        var caller = Actor.Person("cra@cadence.test");
+        var unblindedSet = new HashSet<EnrollmentId> { unblindedEnrollment };
+        var ct = TestContext.Current.CancellationToken;
+
+        var prehydratedPreview = await service.PreviewRulePackAsync(
+            Tenant,
+            Study,
+            packId,
+            studyForms,
+            AsOf,
+            caller,
+            unblindedSet,
+            ct);
+        collectionStore.ListForStudyCalls.Should().Be(0, "pre-hydrated PreviewRulePackAsync must reuse supplied studyForms without calling ListForStudyAsync");
+        prehydratedPreview.FormsEvaluated.Should().Be(4, "hiddenEnrollment's 2 forms are masked by INodeVisibility");
+        prehydratedPreview.Violations.Should().ContainSingle()
+            .Which.FormId.Should().Be(unblindedVitals.CollectionInstanceId);
+
+        var storeFetchedPreview = await service.PreviewRulePackAsync(
+            Tenant,
+            Study,
+            packId,
+            AsOf,
+            caller,
+            unblindedSet,
+            ct);
+        collectionStore.ListForStudyCalls.Should().Be(1);
+        prehydratedPreview.Should().BeEquivalentTo(storeFetchedPreview);
+    }
+
     [Fact(DisplayName = "CollectionValidationService_ScalesLinearlyWithFormsPerEnrollment")]
     [Trait("Category", "Unit")]
     public async Task CollectionValidationServiceScalesLinearlyWithFormsPerEnrollment()
@@ -453,6 +567,8 @@ public sealed class CollectionValidationServiceTests
 
     private sealed class StubCollectionRecords(IReadOnlyList<CollectionInstanceRecord> records) : ICollectionInstanceRecords
     {
+        public int ListForStudyCalls { get; private set; }
+
         public Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken) =>
             Task.FromResult(records.FirstOrDefault(r => r.CollectionInstanceId == instance));
 
@@ -462,8 +578,32 @@ public sealed class CollectionValidationServiceTests
         public Task<IReadOnlyList<CollectionInstanceRecord>> ListRecordsForEnrollmentAsync(TenantId tenant, EnrollmentId enrollment, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<CollectionInstanceRecord>>([.. records.Where(r => r.EnrollmentId == enrollment)]);
 
-        public Task<IReadOnlyList<CollectionInstanceRecord>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<CollectionInstanceRecord>>([.. records.Where(r => r.StudyId == study)]);
+        public Task<IReadOnlyList<CollectionInstanceRecord>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken)
+        {
+            ListForStudyCalls++;
+            return Task.FromResult<IReadOnlyList<CollectionInstanceRecord>>([.. records.Where(r => r.StudyId == study)]);
+        }
+    }
+
+    private sealed class StubNodeVisibility(IReadOnlyDictionary<NodeRef, MaskReason> configuredMasks) : INodeVisibility
+    {
+        public ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
+            TenantId tenant,
+            Actor reader,
+            IReadOnlyCollection<NodeRef> nodes,
+            CancellationToken cancellationToken)
+        {
+            var matched = new Dictionary<NodeRef, MaskReason>();
+            foreach (var node in nodes)
+            {
+                if (configuredMasks.TryGetValue(node, out var reason))
+                {
+                    matched[node] = reason;
+                }
+            }
+
+            return ValueTask.FromResult<IReadOnlyDictionary<NodeRef, MaskReason>>(matched);
+        }
     }
 
     private sealed class StubValidationFindings : IValidationFindings

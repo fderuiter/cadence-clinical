@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Fileshare.Domain;
 using Cadence.Apps.Fileshare.Infrastructure.Persistence;
-using Cadence.Database.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +15,9 @@ namespace Cadence.Apps.Fileshare.Workers;
 
 public sealed class MediaTranscoderWorker : FileshareWorkerBase
 {
+    private const string PendingTranscodeTenantsSql =
+        "SELECT \"fileshare\".\"pending_transcode_tenant_ids\"() AS \"Value\"";
+
     public MediaTranscoderWorker(
         IServiceScopeFactory scopeFactory,
         IOptions<FileshareWorkerOptions> options,
@@ -29,30 +31,12 @@ public sealed class MediaTranscoderWorker : FileshareWorkerBase
     protected override Task ProcessPendingAsync(CancellationToken stoppingToken)
         => ProcessPendingTranscodesAsync(stoppingToken);
 
-    public async Task ProcessPendingTranscodesAsync(CancellationToken ct)
-    {
-        using var discoveryScope = ScopeFactory.CreateScope();
-        var resolver = discoveryScope.ServiceProvider.GetService<ITenantCodeResolver>();
-        var tenantScope = discoveryScope.ServiceProvider.GetService<ITenantScope>();
-        if (resolver is not null && tenantScope is not null)
-        {
-            var tenantIds = await resolver.ListActiveTenantIdsAsync(ct).ConfigureAwait(false);
-            if (tenantIds.Count > 0)
-            {
-                foreach (Guid tenantId in tenantIds)
-                {
-                    using (tenantScope.Bind(tenantId))
-                    {
-                        await ProcessPendingForCurrentContextAsync(ct).ConfigureAwait(false);
-                    }
-                }
-
-                return;
-            }
-        }
-
-        await ProcessPendingForCurrentContextAsync(ct).ConfigureAwait(false);
-    }
+    public Task ProcessPendingTranscodesAsync(CancellationToken ct) =>
+        ProcessForDiscoveredTenantsAsync(
+            PendingTranscodeTenantsSql,
+            static f => f.TranscodeStatus == "PENDING" && !f.IsDeleted,
+            ProcessPendingForCurrentContextAsync,
+            ct);
 
     private async Task ProcessPendingForCurrentContextAsync(CancellationToken ct)
     {

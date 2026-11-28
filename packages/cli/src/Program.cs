@@ -76,7 +76,7 @@ public static class Program
         AddCommand(root, "pre-commit-openapi", "Runs the quick OpenAPI check used by the pre-commit hook", () => PreCommitOpenApiService.ExecutePreCommitOpenApi(quick: true));
         AddCommand(root, "validate-api-clients", "Typechecks the web API clients against their OpenAPI types", () => ApiClientValidatorService.ValidateApiClients());
         AddCommand(root, "generate-cli-docs", "Synthesizes generated doc regions in CLI, CI, dev-env, architecture, database and signature guides; --check verifies parity", ToolCommands.ConfigureGenerateCliDocs);
-        AddCommand(root, "generate-doc-index", "Synchronizes docs/DOCUMENTATION_INDEX.md with all repository markdown documents", ToolCommands.ConfigureGenerateDocIndex);
+        AddCommand(root, "generate-doc-index", "Synchronizes category documentation index shards under docs/ with repository markdown documents", ToolCommands.ConfigureGenerateDocIndex);
         AddCommand(root, "generate-demo-manifest", "Validates canonical demo-seed.json and cadence-realm.json parity in memory without writing manifest files", ToolCommands.ConfigureGenerateDemoManifest);
         AddCommand(root, "generate-rtm", "Regenerates the Requirements Traceability Matrix", ToolCommands.ConfigureGenerateRtm);
         AddCommand(root, "compliance-utility", "Sanitizes document paths and requirement prefixes", ToolCommands.ConfigureComplianceUtility);

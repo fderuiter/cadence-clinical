@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 using Cadence.ToolingCore.Markdown;
@@ -19,9 +20,6 @@ public static partial class DocIndexSyncService
 
     [GeneratedRegex(@"<!--[\s\S]*?-->")]
     private static partial Regex HtmlCommentRegex();
-
-    [GeneratedRegex(@"^\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|")]
-    private static partial Regex TableRow3ColRegex();
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRegex();
@@ -43,6 +41,65 @@ public static partial class DocIndexSyncService
 
     [GeneratedRegex(@"\b(?:python|fastapi|pydantic|sqlalchemy|sqlmodel|alembic|pytest|uvicorn|starlette|asgi|ruff|uv|mypy|poetry|hatch|celery|neo4j|cypher|apoc)\b|\.py\b", RegexOptions.IgnoreCase)]
     private static partial Regex PreKernelPythonOrNeo4jRegex();
+
+    public static bool IsDraftMarkdownFile(string fullPath)
+    {
+        if (!File.Exists(fullPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            string[] lines = File.ReadAllLines(fullPath);
+            var parsed = YamlFrontmatterParser.Parse(lines);
+            return parsed.HasFrontmatter && parsed.IsDraft;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+    }
+
+    private static bool IsDatedBlogPostPath(string relPath)
+    {
+        string normalized = NormalizePath(relPath);
+        if (normalized.StartsWith("docs/", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized[5..];
+        }
+
+        return normalized.StartsWith("blog/", StringComparison.OrdinalIgnoreCase) &&
+               !normalized.Equals("blog/index.md", StringComparison.OrdinalIgnoreCase) &&
+               !normalized.Equals("blog/DOC_INDEX.md", StringComparison.Ordinal);
+    }
+
+    public static string DetermineCategory(string relPath)
+    {
+        if (relPath.StartsWith("blog/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.StartsWith("docs/blog/", StringComparison.OrdinalIgnoreCase)) return "## Engineering blog";
+        if (relPath.StartsWith("architecture/repository-migration/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.StartsWith("architecture/", StringComparison.OrdinalIgnoreCase) && relPath.Contains("repository-migration", StringComparison.OrdinalIgnoreCase)) return "## Former repository migration program";
+        if (relPath.StartsWith("kernel/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.StartsWith("architecture/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.StartsWith("ai/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.StartsWith("ux/", StringComparison.OrdinalIgnoreCase)) return "## Kernel and roadmap";
+        if (relPath.StartsWith("adr/", StringComparison.OrdinalIgnoreCase)) return "## Architecture decision records";
+        if (relPath.StartsWith("SDLC/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.Equals("SRS.md", StringComparison.OrdinalIgnoreCase)) return "## Requirements, validation and GxP";
+        if (relPath.StartsWith("migration/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.Equals("PYTHON_REFERENCE_INVENTORY.md", StringComparison.OrdinalIgnoreCase)) return "## Python-to-.NET port (completed)";
+        if (relPath.StartsWith("specs/", StringComparison.OrdinalIgnoreCase)) return "## Design proposals";
+        if (relPath.StartsWith("CDISC/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.StartsWith("NCI/", StringComparison.OrdinalIgnoreCase)) return "## Standards reference material";
+        if (relPath.StartsWith("agents/", StringComparison.OrdinalIgnoreCase)) return "## Repository policies";
+        if (relPath.StartsWith("strategy/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.Equals("FUNCTIONAL_PRODUCT_SPECIFICATION.md", StringComparison.OrdinalIgnoreCase) ||
+            relPath.Equals("FEATURE_MATRIX.md", StringComparison.OrdinalIgnoreCase) ||
+            relPath.Equals("COMPETITIVE_ANALYSIS_AND_MARKET_SUPERIORITY.md", StringComparison.OrdinalIgnoreCase)) return "## Product";
+
+        return "## Developing and running";
+    }
 
     public static string DetermineStatus(string relPath, string fileContent)
     {
@@ -99,6 +156,7 @@ public static partial class DocIndexSyncService
         string normalizedPath = relPath.Replace('\\', '/');
         string fileName = Path.GetFileName(normalizedPath);
         if (fileName.Equals("index.md", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Equals("legacy-index.md", StringComparison.OrdinalIgnoreCase) ||
             fileName.Equals("TEMPLATE.md", StringComparison.OrdinalIgnoreCase) ||
             string.IsNullOrWhiteSpace(fileContent))
         {
@@ -125,82 +183,6 @@ public static partial class DocIndexSyncService
         }
 
         return PreKernelPythonOrNeo4jRegex().IsMatch(fileContent);
-    }
-
-    private static string ReconcileAdrRowStatuses(string indexContent, string docsDir, out List<string> updatedPaths)
-    {
-        updatedPaths = [];
-        string[] lines = indexContent.Split('\n');
-        bool inAdrSection = false;
-
-        for (int i = 0; i < lines.Length; i++)
-        {
-            string hasCr = lines[i].EndsWith('\r') ? "\r" : "";
-            string line = hasCr.Length > 0 ? lines[i][..^1] : lines[i];
-            string trimmed = line.Trim();
-
-            if (trimmed.StartsWith("## ", StringComparison.Ordinal))
-            {
-                inAdrSection = trimmed.Equals("## Architecture decision records", StringComparison.OrdinalIgnoreCase);
-                continue;
-            }
-
-            if (!inAdrSection || !trimmed.StartsWith('|'))
-            {
-                continue;
-            }
-
-            Match rowMatch = TableRow3ColRegex().Match(line);
-            if (!rowMatch.Success)
-            {
-                continue;
-            }
-
-            string docCell = rowMatch.Groups[1].Value.Trim();
-            string statusCell = rowMatch.Groups[2].Value.Trim();
-            if (docCell.Equals("Document", StringComparison.OrdinalIgnoreCase) ||
-                statusCell.StartsWith("---", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            Match linkMatch = MarkdownLinkRegex().Match(docCell);
-            if (!linkMatch.Success)
-            {
-                continue;
-            }
-
-            string rawTarget = linkMatch.Groups[1].Value;
-            int anchorIdx = rawTarget.IndexOf('#');
-            if (anchorIdx >= 0)
-            {
-                rawTarget = rawTarget[..anchorIdx];
-            }
-
-            string normTarget = NormalizePath(rawTarget);
-            if (!normTarget.StartsWith("adr/", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            string fullPath = Path.Combine(docsDir, normTarget.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(fullPath))
-            {
-                continue;
-            }
-
-            string expectedStatus = DetermineStatus(normTarget, File.ReadAllText(fullPath));
-            if (!string.Equals(statusCell, expectedStatus, StringComparison.Ordinal))
-            {
-                Group statusGroup = rowMatch.Groups[2];
-                string prefix = line[..statusGroup.Index].TrimEnd();
-                string suffix = line[(statusGroup.Index + statusGroup.Length)..].TrimStart();
-                lines[i] = $"{prefix} {expectedStatus} {suffix}{hasCr}";
-                updatedPaths.Add(normTarget);
-            }
-        }
-
-        return string.Join('\n', lines);
     }
 
     public static (string Title, string Description) ExtractDocMetadata(string fullPath, string relPath)
@@ -309,9 +291,7 @@ public static partial class DocIndexSyncService
             description = title;
         }
 
-        // Clean up markdown in title if any
         title = title.Replace("`", "").Trim();
-
         return (title, description);
     }
 
@@ -336,5 +316,177 @@ public static partial class DocIndexSyncService
             .Replace("**", "");
         cleaned = InlineLinkRegex().Replace(cleaned, "$1");
         return CollapseWhitespace(cleaned);
+    }
+
+    public static string TruncateTableCellDescription(string cleaned, int maxLength = 120)
+    {
+        if (string.IsNullOrWhiteSpace(cleaned))
+        {
+            return string.Empty;
+        }
+
+        if (cleaned.Length <= maxLength)
+        {
+            return BalanceInlineBackticks(cleaned, appendEllipsis: false, maxLength);
+        }
+
+        int cutLength = Math.Max(1, maxLength - 3);
+        string prefix = cleaned[..cutLength].TrimEnd('\\');
+        return BalanceInlineBackticks(prefix, appendEllipsis: true, maxLength);
+    }
+
+    private static string BalanceInlineBackticks(string text, bool appendEllipsis, int maxLength)
+    {
+        int unclosedOpenerPos = FindUnclosedBacktickRun(text, out int unclosedLen);
+        if (unclosedOpenerPos < 0)
+        {
+            return appendEllipsis ? text + "..." : text;
+        }
+
+        string beforeOpener = text[..unclosedOpenerPos];
+        string insideSpan = text[(unclosedOpenerPos + unclosedLen)..];
+        if (string.IsNullOrWhiteSpace(insideSpan))
+        {
+            string trimmed = beforeOpener.TrimEnd();
+            return appendEllipsis ? trimmed + "..." : trimmed;
+        }
+
+        string closer = new('`', unclosedLen);
+        if (appendEllipsis)
+        {
+            int maxPrefixBeforeEllipsis = Math.Max(unclosedOpenerPos + unclosedLen + 1, maxLength - 3 - unclosedLen);
+            string bounded = text.Length > maxPrefixBeforeEllipsis
+                ? text[..maxPrefixBeforeEllipsis].TrimEnd('\\')
+                : text;
+            if (bounded.Length <= unclosedOpenerPos + unclosedLen)
+            {
+                return beforeOpener.TrimEnd() + "...";
+            }
+
+            return bounded + "..." + closer;
+        }
+
+        return text + closer;
+    }
+
+    public static int FindUnclosedBacktickRun(string line, out int unclosedLen)
+    {
+        int pos = 0;
+        while (pos < line.Length)
+        {
+            if (line[pos] == '\\' && pos + 1 < line.Length)
+            {
+                pos += 2;
+                continue;
+            }
+
+            if (line[pos] != '`')
+            {
+                pos++;
+                continue;
+            }
+
+            int runLen = 0;
+            while (pos + runLen < line.Length && line[pos + runLen] == '`')
+            {
+                runLen++;
+            }
+
+            int search = pos + runLen;
+            int matchedClose = -1;
+            while (search < line.Length)
+            {
+                if (line[search] == '\\' && search + 1 < line.Length)
+                {
+                    search += 2;
+                    continue;
+                }
+
+                if (line[search] != '`')
+                {
+                    search++;
+                    continue;
+                }
+
+                int candidateLen = 0;
+                while (search + candidateLen < line.Length && line[search + candidateLen] == '`')
+                {
+                    candidateLen++;
+                }
+
+                if (candidateLen == runLen)
+                {
+                    matchedClose = search;
+                    break;
+                }
+
+                search += candidateLen;
+            }
+
+            if (matchedClose >= 0)
+            {
+                pos = matchedClose + runLen;
+                continue;
+            }
+
+            if (runLen == 1)
+            {
+                unclosedLen = runLen;
+                return pos;
+            }
+
+            int nextPipe = line.IndexOf('|', pos + runLen);
+            string remainderInCell = nextPipe >= 0
+                ? line[(pos + runLen)..nextPipe]
+                : line[(pos + runLen)..];
+            if (!string.IsNullOrWhiteSpace(remainderInCell))
+            {
+                unclosedLen = runLen;
+                return pos;
+            }
+
+            pos += runLen;
+        }
+
+        unclosedLen = 0;
+        return -1;
+    }
+
+    private static string GetShardRelativeHref(string shardDirFull, string docFullPath) =>
+        Path.GetRelativePath(shardDirFull, docFullPath).Replace('\\', '/');
+
+    private static List<string> RenderDocRows(List<MarkdownDocInfo> docs, string shardDirFull, bool hasStatusCol)
+    {
+        var result = new List<string>();
+        foreach (var doc in docs.OrderBy(d => GetShardRelativeHref(shardDirFull, d.FullPath), Comparer<string>.Create(CompareSortKeys)))
+        {
+            result.Add(RenderSingleDocRow(doc, shardDirFull, hasStatusCol, includeBlogDate: IsDatedBlogPostPath(doc.RelativePath)));
+        }
+
+        return result;
+    }
+
+    private static string RenderSingleDocRow(MarkdownDocInfo doc, string shardDirFull, bool hasStatusCol, bool includeBlogDate)
+    {
+        string fileContent = File.Exists(doc.FullPath) ? File.ReadAllText(doc.FullPath) : "";
+        var (title, desc) = ExtractDocMetadata(doc.FullPath, doc.RelativePath);
+        string status = DetermineStatus(doc.RelativePath, fileContent);
+        string href = GetShardRelativeHref(shardDirFull, doc.FullPath);
+
+        if (includeBlogDate)
+        {
+            string isoDate = ExtractBlogPostDate(doc.FullPath, doc.RelativePath);
+            if (!string.IsNullOrEmpty(isoDate) && !desc.StartsWith(isoDate, StringComparison.Ordinal))
+            {
+                desc = $"{isoDate} — {desc}";
+            }
+        }
+
+        title = title.Replace("|", "\\|", StringComparison.Ordinal);
+        desc = desc.Replace("|", "\\|", StringComparison.Ordinal);
+
+        return hasStatusCol
+            ? $"| [{title}]({href}) | {status} | {desc} |"
+            : $"| [{title}]({href}) | {desc} |";
     }
 }

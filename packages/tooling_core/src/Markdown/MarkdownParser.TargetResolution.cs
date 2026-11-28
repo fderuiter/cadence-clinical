@@ -342,6 +342,7 @@ public static partial class MarkdownParser
         string rel = Path.GetRelativePath(repoRoot, normalizedFull).Replace('\\', '/');
         if (!rel.StartsWith("docs/blog/", StringComparison.OrdinalIgnoreCase) ||
             rel.Equals("docs/blog/index.md", StringComparison.OrdinalIgnoreCase) ||
+            rel.Equals("docs/blog/DOC_INDEX.md", StringComparison.OrdinalIgnoreCase) ||
             !rel.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
         {
             draftCache[normalizedFull] = false;

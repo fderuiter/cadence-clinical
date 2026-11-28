@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Cadence.Apps.Fileshare.Domain;
 using Cadence.Apps.Fileshare.Infrastructure.Persistence;
 using Cadence.Apps.Fileshare.Workers;
+using Cadence.Database;
+using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
 
 using FluentAssertions;
@@ -162,5 +164,74 @@ public sealed class MediaTranscoderWorkerTests
         await worker.ProcessPendingTranscodesAsync(TestContext.Current.CancellationToken);
 
         await mockProcessor.DidNotReceive().TranscodeToHlsAsync(Arg.Any<FileRecord>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ProcessPendingTranscodesAsync_WithMultiTenantResolverAndOnlyOnePendingTenant_ProcessesPendingTenantOnly()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var dbName = $"TranscodeMultiTenant_{Guid.NewGuid():N}";
+        var activeTenantIds = new Guid[200];
+        for (int i = 0; i < activeTenantIds.Length; i++)
+        {
+            activeTenantIds[i] = Guid.NewGuid();
+        }
+
+        Guid targetTenant = activeTenantIds[42];
+
+        var resolver = Substitute.For<Cadence.Database.Tenancy.ITenantCodeResolver>();
+        resolver.ListActiveTenantIdsAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<System.Collections.Generic.IReadOnlyList<Guid>>(activeTenantIds));
+
+        var services = new ServiceCollection();
+        services.AddSingleton(resolver);
+        services.AddScoped<Cadence.Database.Tenancy.CurrentTenantAccessor>(sp =>
+            new Cadence.Database.Tenancy.CurrentTenantAccessor(
+                sp.GetRequiredService<Cadence.Database.Tenancy.ITenantCodeResolver>()));
+        services.AddScoped<Cadence.Database.Tenancy.ICurrentTenantAccessor>(sp =>
+            sp.GetRequiredService<Cadence.Database.Tenancy.CurrentTenantAccessor>());
+        services.AddScoped<Cadence.Database.Tenancy.ITenantScope>(sp =>
+            sp.GetRequiredService<Cadence.Database.Tenancy.CurrentTenantAccessor>());
+        services.AddScoped(sp =>
+        {
+            var accessor = sp.GetRequiredService<Cadence.Database.Tenancy.ICurrentTenantAccessor>();
+            var optionsBuilder = new DbContextOptionsBuilder<FileshareDbContext>();
+            optionsBuilder.UseInMemoryDatabase(dbName);
+            optionsBuilder.UseCadenceStandaloneTenancy(accessor, isRelational: false);
+            optionsBuilder.AddInterceptors(Cadence.Database.Tenancy.StandaloneTenantSaveChangesInterceptor.Instance);
+            return new FileshareDbContext(optionsBuilder.Options);
+        });
+
+        var mockProcessor = Substitute.For<IMediaTranscoderProcessor>();
+        mockProcessor.TranscodeToHlsAsync(Arg.Any<FileRecord>(), Arg.Any<CancellationToken>())
+            .Returns("videos/tenant-42/master.m3u8");
+        services.AddScoped(_ => mockProcessor);
+
+        using var provider = services.BuildServiceProvider();
+
+        using (var seedScope = provider.CreateScope())
+        {
+            using var _ = seedScope.ServiceProvider.GetRequiredService<Cadence.Database.Tenancy.ITenantScope>().Bind(targetTenant);
+            var seedDb = seedScope.ServiceProvider.GetRequiredService<FileshareDbContext>();
+            seedDb.FileRecords.Add(new FileRecord("video-t42")
+            {
+                Filename = "tenant42.mp4",
+                ObjectKey = "videos/tenant-42",
+                UploadedAt = FixedTimestamp,
+                TranscodeStatus = "PENDING",
+            });
+            await seedDb.SaveChangesAsync(ct);
+        }
+
+        var worker = new MediaTranscoderWorker(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            Options.Create(new FileshareWorkerOptions { BatchSize = 10, MaxConcurrentJobs = 2 }),
+            NullLogger<MediaTranscoderWorker>.Instance);
+
+        await worker.ProcessPendingTranscodesAsync(ct);
+
+        await mockProcessor.Received(1).TranscodeToHlsAsync(
+            Arg.Is<FileRecord>(f => f.Id == "video-t42"),
+            Arg.Any<CancellationToken>());
     }
 }

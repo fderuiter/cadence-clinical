@@ -155,7 +155,7 @@ public static class SchemaDocGeneratorService
         var rendered = Directory.GetFiles(renderedDir, "*.md").Select(Path.GetFileName).ToHashSet(StringComparer.Ordinal);
         return Directory.GetFiles(committedDir)
             .Select(f => Path.GetFileName(f))
-            .Where(name => !rendered.Contains(name))
+            .Where(name => !string.Equals(name, "INDEX.md", StringComparison.OrdinalIgnoreCase) && !rendered.Contains(name))
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToList();
     }

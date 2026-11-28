@@ -161,19 +161,87 @@ public sealed class CollectionValidationService(
         IReadOnlySet<EnrollmentId>? unblindedEnrollments = null,
         CancellationToken cancellationToken = default)
     {
-        var item = await registry.FindLibraryItemAsync(tenant, rulePackId, cancellationToken).ConfigureAwait(false);
-        if (item is null || item.Kind != LibraryItemKind.RulePack)
-        {
-            return new CollectionRulePackPreviewResult(0, 0, []);
-        }
-
-        var (pack, problems) = RulePackJson.Read(item.Content);
-        if (pack is null || problems.Count > 0)
+        var loaded = await LoadPreviewRulePackAsync(tenant, rulePackId, cancellationToken).ConfigureAwait(false);
+        if (loaded is not var (item, pack))
         {
             return new CollectionRulePackPreviewResult(0, 0, []);
         }
 
         var allInstances = await collections.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+        return await PreviewLoadedRulePackAsync(
+            tenant,
+            studyId,
+            item,
+            pack,
+            allInstances,
+            asOf,
+            caller,
+            unblindedEnrollments,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<CollectionRulePackPreviewResult> PreviewRulePackAsync(
+        TenantId tenant,
+        StudyId studyId,
+        LibraryItemId rulePackId,
+        IReadOnlyList<CollectionInstanceRecord> studyForms,
+        DateOnly asOf,
+        Actor? caller,
+        IReadOnlySet<EnrollmentId>? unblindedEnrollments = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(studyForms);
+
+        var loaded = await LoadPreviewRulePackAsync(tenant, rulePackId, cancellationToken).ConfigureAwait(false);
+        if (loaded is not var (item, pack))
+        {
+            return new CollectionRulePackPreviewResult(0, 0, []);
+        }
+
+        return await PreviewLoadedRulePackAsync(
+            tenant,
+            studyId,
+            item,
+            pack,
+            studyForms,
+            asOf,
+            caller,
+            unblindedEnrollments,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<(LibraryItemView Item, RulePack Pack)?> LoadPreviewRulePackAsync(
+        TenantId tenant,
+        LibraryItemId rulePackId,
+        CancellationToken cancellationToken)
+    {
+        var item = await registry.FindLibraryItemAsync(tenant, rulePackId, cancellationToken).ConfigureAwait(false);
+        if (item is null || item.Kind != LibraryItemKind.RulePack)
+        {
+            return null;
+        }
+
+        var (pack, problems) = RulePackJson.Read(item.Content);
+        if (pack is null || problems.Count > 0)
+        {
+            return null;
+        }
+
+        return (item, pack);
+    }
+
+    private async Task<CollectionRulePackPreviewResult> PreviewLoadedRulePackAsync(
+        TenantId tenant,
+        StudyId studyId,
+        LibraryItemView item,
+        RulePack pack,
+        IReadOnlyList<CollectionInstanceRecord> allInstances,
+        DateOnly asOf,
+        Actor? caller,
+        IReadOnlySet<EnrollmentId>? unblindedEnrollments,
+        CancellationToken cancellationToken)
+    {
         if (allInstances.Count == 0)
         {
             return new CollectionRulePackPreviewResult(0, pack.Rules.Count, []);
@@ -204,6 +272,7 @@ public sealed class CollectionValidationService(
             conceptMap = await LoadConceptsAsync(tenant, instances.SelectMany(i => i.Items), designs, cancellationToken).ConfigureAwait(false);
         }
 
+        var structuralItemCache = new Dictionary<StructuralRuleItemKey, bool>();
         var indexedForms = IndexStudyForms(
             instances,
             (enrollmentId, enrollmentForms) => IsEnrollmentUnblinded(
@@ -213,10 +282,12 @@ public sealed class CollectionValidationService(
                 unblindedEnrollments,
                 masks,
                 designs,
-                conceptMap),
+                conceptMap,
+                structuralItemCache),
             designs,
             conceptMap,
-            masks);
+            masks,
+            structuralItemCache);
 
         var rulesById = BuildRulesById(pack);
         var context = new RuleEvaluationContext(ValidationStage.Collection, asOf);
@@ -530,7 +601,8 @@ public sealed class CollectionValidationService(
         Func<EnrollmentId, IReadOnlyList<CollectionInstanceRecord>, bool>? isEnrollmentUnblinded,
         IReadOnlyList<ProtocolDesign> designs,
         IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap,
-        IReadOnlyDictionary<NodeRef, MaskReason>? masks)
+        IReadOnlyDictionary<NodeRef, MaskReason>? masks,
+        Dictionary<StructuralRuleItemKey, bool>? structuralItemCache = null)
     {
         var byEnrollment = new Dictionary<EnrollmentId, List<CollectionInstanceRecord>>();
         for (var i = 0; i < instances.Count; i++)
@@ -545,6 +617,7 @@ public sealed class CollectionValidationService(
             group.Add(instance);
         }
 
+        var itemCache = structuralItemCache ?? new Dictionary<StructuralRuleItemKey, bool>();
         var ownValuesByFormId = new Dictionary<CollectionInstanceId, Dictionary<string, RuleValue>>(instances.Count);
         var siblingIndexByEnrollment = new Dictionary<EnrollmentId, EnrollmentSiblingIndex>(byEnrollment.Count);
         var unblindedByEnrollment = new Dictionary<EnrollmentId, bool>(byEnrollment.Count);
@@ -561,7 +634,7 @@ public sealed class CollectionValidationService(
                 {
                     ownValuesByFormId.Add(
                         form.CollectionInstanceId,
-                        BuildServiceOwnItemValues(form, draftOverlay: null, enrollmentUnblinded, designs, conceptMap, masks));
+                        BuildServiceOwnItemValues(form, draftOverlay: null, enrollmentUnblinded, designs, conceptMap, masks, itemCache));
                 }
             }
 
@@ -702,7 +775,8 @@ public sealed class CollectionValidationService(
         bool unblinded,
         IReadOnlyList<ProtocolDesign> designs,
         IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap,
-        IReadOnlyDictionary<NodeRef, MaskReason>? masks)
+        IReadOnlyDictionary<NodeRef, MaskReason>? masks,
+        Dictionary<StructuralRuleItemKey, bool>? structuralItemCache = null)
     {
         var recordedByItem = new Dictionary<string, (ObservationValue? Value, ObservationId? ObservationId)>(
             form.Values.Count + (draftOverlay?.Count ?? 0),
@@ -733,7 +807,7 @@ public sealed class CollectionValidationService(
 
             recordedByItem.TryGetValue(specItem.Id, out var entry);
             var itemBlindedIds = draftOverlay is not null && draftOverlay.ContainsKey(specItem.Id) ? null : form.BlindedItemIds;
-            var converted = !unblinded && IsBlindedItemFast(form.CollectionSpecId, form.CollectionTitle, specItem.Id, specItem, entry.Value, entry.ObservationId, designs, conceptMap, masks, itemBlindedIds)
+            var converted = !unblinded && IsBlindedItemFast(form.ProtocolVersionId, form.CollectionSpecId, form.CollectionTitle, specItem.Id, specItem, entry.Value, entry.ObservationId, designs, conceptMap, masks, itemBlindedIds, structuralItemCache)
                 ? RuleValue.Null
                 : ToRuleValue(entry.Value);
             ownValues.Add(specItem.Id, converted);
@@ -747,7 +821,7 @@ public sealed class CollectionValidationService(
             }
 
             var itemBlindedIds = draftOverlay is not null && draftOverlay.ContainsKey(itemId) ? null : form.BlindedItemIds;
-            var converted = !unblinded && IsBlindedItemFast(form.CollectionSpecId, form.CollectionTitle, itemId, specItem: null, entry.Value, entry.ObservationId, designs, conceptMap, masks, itemBlindedIds)
+            var converted = !unblinded && IsBlindedItemFast(form.ProtocolVersionId, form.CollectionSpecId, form.CollectionTitle, itemId, specItem: null, entry.Value, entry.ObservationId, designs, conceptMap, masks, itemBlindedIds, structuralItemCache)
                 ? RuleValue.Null
                 : ToRuleValue(entry.Value);
             ownValues.Add(itemId, converted);
@@ -790,7 +864,7 @@ public sealed class CollectionValidationService(
             }
 
             recordedByItem.TryGetValue(specItem.Id, out var raw);
-            var converted = !unblinded && IsBlindedItemFast(form.CollectionSpecId, form.CollectionTitle, specItem.Id, specItem, raw, observationId: null, designs, conceptMap, masks: null)
+            var converted = !unblinded && IsBlindedItemFast(form.ProtocolVersionId, form.CollectionSpecId, form.CollectionTitle, specItem.Id, specItem, raw, observationId: null, designs, conceptMap, masks: null)
                 ? RuleValue.Null
                 : ToRuleValue(raw);
             ownValues.Add(specItem.Id, converted);
@@ -803,7 +877,7 @@ public sealed class CollectionValidationService(
                 continue;
             }
 
-            var converted = !unblinded && IsBlindedItemFast(form.CollectionSpecId, form.CollectionTitle, itemId, specItem: null, raw, observationId: null, designs, conceptMap, masks: null)
+            var converted = !unblinded && IsBlindedItemFast(form.ProtocolVersionId, form.CollectionSpecId, form.CollectionTitle, itemId, specItem: null, raw, observationId: null, designs, conceptMap, masks: null)
                 ? RuleValue.Null
                 : ToRuleValue(raw);
             ownValues.Add(itemId, converted);
@@ -940,7 +1014,8 @@ public sealed class CollectionValidationService(
         IReadOnlySet<EnrollmentId>? unblindedEnrollments,
         IReadOnlyDictionary<NodeRef, MaskReason> masks,
         IReadOnlyList<ProtocolDesign> designs,
-        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap)
+        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap,
+        Dictionary<StructuralRuleItemKey, bool>? structuralItemCache = null)
     {
         if (caller is null)
         {
@@ -966,7 +1041,7 @@ public sealed class CollectionValidationService(
         }
 
         var hasRecordedBlindedObservation = enrollmentForms.Any(form =>
-            form.Values.Any(v => IsBlindedFormVariable(form, v.ItemId, v.Value, designs, conceptMap)));
+            form.Values.Any(v => IsBlindedFormVariable(form, v.ItemId, v.Value, designs, conceptMap, masks: null, structuralItemCache)));
         return hasRecordedBlindedObservation;
     }
 
@@ -976,7 +1051,8 @@ public sealed class CollectionValidationService(
         ObservationValue? rawValue,
         IReadOnlyList<ProtocolDesign> designs,
         IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap,
-        IReadOnlyDictionary<NodeRef, MaskReason>? masks = null)
+        IReadOnlyDictionary<NodeRef, MaskReason>? masks = null,
+        Dictionary<StructuralRuleItemKey, bool>? structuralItemCache = null)
     {
         if (ReferenceEquals(_blinding, BlindedTreatmentClassifier.Instance)
             && form.BlindedItemIds is not null
@@ -993,10 +1069,11 @@ public sealed class CollectionValidationService(
         }
 
         var specItem = form.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal));
-        return IsBlindedItemFast(form.CollectionSpecId, form.CollectionTitle, itemId, specItem, rawValue, observationId, designs, conceptMap, masks, form.BlindedItemIds);
+        return IsBlindedItemFast(form.ProtocolVersionId, form.CollectionSpecId, form.CollectionTitle, itemId, specItem, rawValue, observationId, designs, conceptMap, masks, form.BlindedItemIds, structuralItemCache);
     }
 
     private bool IsBlindedItemFast(
+        ProtocolVersionId protocolVersionId,
         string collectionSpecId,
         string? collectionTitle,
         string itemId,
@@ -1006,16 +1083,21 @@ public sealed class CollectionValidationService(
         IReadOnlyList<ProtocolDesign> designs,
         IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap,
         IReadOnlyDictionary<NodeRef, MaskReason>? masks,
-        IReadOnlySet<string>? blindedItemIds = null)
+        IReadOnlySet<string>? blindedItemIds = null,
+        Dictionary<StructuralRuleItemKey, bool>? structuralItemCache = null)
     {
         if (masks is not null && observationId is { } obsId && masks.ContainsKey(NodeRef.For(obsId)))
         {
             return true;
         }
 
-        if (ReferenceEquals(_blinding, BlindedTreatmentClassifier.Instance)
-            && blindedItemIds is not null
-            && blindedItemIds.Contains(itemId))
+        var isDefaultClassifier = ReferenceEquals(_blinding, BlindedTreatmentClassifier.Instance);
+        if (isDefaultClassifier && blindedItemIds is not null && blindedItemIds.Contains(itemId))
+        {
+            return true;
+        }
+
+        if (rawValue is MissingValue { Reason: NullFlavor.Masked } && isDefaultClassifier)
         {
             return true;
         }
@@ -1023,14 +1105,53 @@ public sealed class CollectionValidationService(
         BlindedConceptMetadata? conceptMeta = specItem is not null && conceptMap.TryGetValue(specItem.Concept.ConceptId, out var meta)
             ? meta
             : null;
-        if (_blinding.IsBlindedCollectionItem(collectionSpecId, collectionTitle, specItem, rawValue, conceptMeta, designs))
+        var canUseStructuralCache = structuralItemCache is not null
+            && (isDefaultClassifier || rawValue is null);
+        StructuralRuleItemKey cacheKey = default;
+        if (canUseStructuralCache)
         {
-            return true;
+            cacheKey = new StructuralRuleItemKey(
+                protocolVersionId,
+                collectionSpecId,
+                collectionTitle,
+                itemId,
+                specItem?.Concept.ConceptId ?? ConceptId.Empty,
+                specItem?.Prompt,
+                specItem?.Purpose?.OperationalNeed);
+            if (structuralItemCache!.TryGetValue(cacheKey, out var cached))
+            {
+                return cached;
+            }
         }
 
-        BlindedConceptMetadata? ResolveConcept(ConceptId id) => conceptMap.TryGetValue(id, out var m) ? m : null;
-        return _blinding.IsBlindedVariable(collectionSpecId, itemId, designs, ResolveConcept);
+        var classificationValue = canUseStructuralCache ? null : rawValue;
+        bool isBlinded;
+        if (_blinding.IsBlindedCollectionItem(collectionSpecId, collectionTitle, specItem, classificationValue, conceptMeta, designs))
+        {
+            isBlinded = true;
+        }
+        else
+        {
+            BlindedConceptMetadata? ResolveConcept(ConceptId id) => conceptMap.TryGetValue(id, out var m) ? m : null;
+            isBlinded = _blinding.IsBlindedVariable(collectionSpecId, itemId, designs, ResolveConcept);
+        }
+
+        if (canUseStructuralCache)
+        {
+            structuralItemCache![cacheKey] = isBlinded;
+        }
+
+        return isBlinded;
     }
+
+    private readonly record struct StructuralRuleItemKey(
+        ProtocolVersionId ProtocolVersionId,
+        string CollectionSpecId,
+        string? CollectionTitle,
+        string ItemId,
+        ConceptId ConceptId,
+        string? ItemPrompt,
+        string? ItemOperationalNeed);
 
     private bool IsBlindedViolation(
         string dataset,

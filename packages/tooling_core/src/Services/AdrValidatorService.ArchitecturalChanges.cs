@@ -12,7 +12,7 @@ namespace Cadence.ToolingCore.Services;
 
 public static partial class AdrValidatorService
 {
-    [GeneratedRegex(@"(?:database|schema|model|migration|\bdb\b)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?:database|schema|model|migration|\bdb\b)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex AppPersistencePathRegex();
 
     private static readonly HashSet<string> FrontendExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -42,15 +42,17 @@ public static partial class AdrValidatorService
         bool newAdrAdded = adrCandidateFiles.Any(f => IsExistingAdrFile(f, repoRoot, preCommit));
         if (!newAdrAdded)
         {
-            AnsiConsole.MarkupLine("[red]Error: Architectural changes detected, but no corresponding ADR found in docs/adr/.[/]");
+            AnsiConsole.MarkupLine("[red]Error: Architectural changes detected, but no corresponding ADR found in docs/adr/<domain>/.[/]");
             AnsiConsole.MarkupLine("Architectural files changed:");
             foreach (var f in architecturalChanges)
             {
                 AnsiConsole.MarkupLine($"  - {f}");
             }
-            AnsiConsole.MarkupLine("Please add a new ADR markdown file under docs/adr/ following the template.");
+
+            AnsiConsole.MarkupLine("Please scaffold a new ADR with 'pnpm cadence scaffold adr --domain <domain> \"<title>\"'.");
             return false;
         }
+
         return true;
     }
 
@@ -63,7 +65,7 @@ public static partial class AdrValidatorService
         }
 
         string fileName = Path.GetFileName(normalized);
-        if (!FilenamePattern.IsMatch(fileName))
+        if (!FilenameRegex().IsMatch(fileName))
         {
             return false;
         }
@@ -157,7 +159,7 @@ public static partial class AdrValidatorService
         return PackageJsonDependenciesChanged(before, after);
     }
 
-    private static (HashSet<string> ChangedFiles, HashSet<string> AdrCandidateFiles, string? CompareBase) ResolveChangedAndAdrFiles(
+    private static (List<string> ChangedFiles, List<string> AdrCandidateFiles, string? CompareBase) ResolveChangedAndAdrFiles(
         string repoRoot,
         bool preCommit,
         string? baseRef,
@@ -165,27 +167,8 @@ public static partial class AdrValidatorService
         string? eventName,
         string? gitRef)
     {
-        var changed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var adrCandidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        string changedFilesTxt = Path.Combine(repoRoot, "changed_files.txt");
-        if (File.Exists(changedFilesTxt))
-        {
-            foreach (var line in File.ReadAllLines(changedFilesTxt))
-            {
-                if (!string.IsNullOrWhiteSpace(line))
-                {
-                    string entry = line.Trim().Replace('\\', '/');
-                    changed.Add(entry);
-                    adrCandidates.Add(entry);
-                }
-            }
-        }
-
-        if (!GitRevisionScopeService.HasGitRepository(repoRoot))
-        {
-            return (changed, adrCandidates, null);
-        }
+        var changed = new List<string>();
+        var adrCandidates = new List<string>();
 
         string effectiveBaseRef = GitRevisionScopeService.NormalizeBaseRef(baseRef);
         string? headCommit = GitRevisionScopeService.TryResolveCommitSha(repoRoot, "HEAD");
@@ -229,8 +212,6 @@ public static partial class AdrValidatorService
                 headCommit,
                 includeDeletions: false);
 
-            // When comparing against a branch ref (for example after merging origin/main into a feature branch), exclude files
-            // whose content matches baseRef verbatim so upstream architectural commits do not require a second ADR on the branch.
             if (eventScope.Kind == GitEventScopeKind.BranchDiff)
             {
                 var differsFromBaseRef = GitRevisionScopeService.TryGetPathsDifferingFromRevision(repoRoot, effectiveBaseRef, cached: false);

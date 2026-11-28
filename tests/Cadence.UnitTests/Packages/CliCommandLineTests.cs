@@ -66,7 +66,8 @@ public class CliCommandLineTests
     [InlineData("check", "demo-manifest")]
     [InlineData("generate-rtm", "--validate", "--draft")]
     [InlineData("settings", "export", "--check")]
-    [InlineData("scaffold", "adr", "Adopt a thing")]
+    [InlineData("scaffold", "adr", "--domain", "kernel", "Adopt a thing")]
+    [InlineData("scaffold", "adr", "-d", "security", "Adopt a thing")]
     [InlineData("scaffold", "post", "Ship Kernel Phase 3")]
     [InlineData("scaffold", "post", "Ship Kernel Phase 3", "--author", "fderuiter,reviewer", "--tag", "kernel", "--tag", "architecture", "--summary", "Short excerpt", "--publish")]
     [InlineData("scaffold", "post", "Ship Kernel Phase 3", "--author=@fderuiter", "-t", "kernel")]
@@ -104,6 +105,7 @@ public class CliCommandLineTests
 
     [Theory]
     [InlineData("scaffold", "adr")]
+    [InlineData("scaffold", "adr", "Adopt a thing")]
     [InlineData("scaffold", "post")]
     [InlineData("check", "--no-such-option")]
     [InlineData("check", "--exclude", "--pre-commit")]

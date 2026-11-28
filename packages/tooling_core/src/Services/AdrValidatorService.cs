@@ -14,7 +14,39 @@ namespace Cadence.ToolingCore.Services;
 
 public static partial class AdrValidatorService
 {
-    private static readonly HashSet<string> IgnoreFiles = new(StringComparer.OrdinalIgnoreCase) { "TEMPLATE.md", "index.md" };
+    public record DomainDefinition(string Slug, string SectionTitle, string ShortTitle);
+
+    public record DomainAdrHeader(string Id, string Domain, string CompactDate, string Slug, string Title);
+
+    public static readonly IReadOnlyList<DomainDefinition> DomainDefinitions =
+    [
+        new("kernel", "0. Clinical Kernel (K001–K037)", "Clinical Kernel"),
+        new("platform", "1. Core Platform & Execution Engine", "Core Platform & Execution Engine"),
+        new("security", "2. API Gateway, Security & Identity", "API Gateway, Security & Identity"),
+        new("standards", "3. Clinical Data Interoperability & Standards", "Clinical Data Interoperability & Standards"),
+        new("operations", "4. Clinical Operations & Business Modules", "Clinical Operations & Business Modules"),
+        new("compliance", "5. Compliance, Audit & Governance", "Compliance, Audit & Governance"),
+        new("frontend", "6. Frontend & Design System", "Frontend & Design System"),
+        new("tooling", "7. DevOps, Tooling & CI/CD", "DevOps, Tooling & CI/CD"),
+    ];
+
+    public static readonly IReadOnlyList<string> DomainSlugs =
+        DomainDefinitions.Select(d => d.Slug).ToArray();
+
+    private static readonly Dictionary<string, DomainDefinition> DomainsBySlug =
+        DomainDefinitions.ToDictionary(d => d.Slug, StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> RootIgnoreFiles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "TEMPLATE.md",
+        "index.md",
+        "legacy-index.md",
+    };
+
+    private static readonly HashSet<string> ShardIgnoreFiles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "index.md",
+    };
 
     private static readonly HashSet<string> BaselineFiles = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -112,11 +144,31 @@ public static partial class AdrValidatorService
         "2026-07-27-api-driven-lock-sync-and-ast-validator.md",
     };
 
-    private static readonly Regex FilenamePattern = new(@"^\d{4}-\d{2}-\d{2}-.+\.md$", RegexOptions.Compiled);
-    // Line 1 of every ADR: "# ADR-NNNN: Title" (at least three digits, e.g. ADR-049 or ADR-2250).
-    private static readonly Regex AdrHeadingPattern = new(@"^# ADR-(\d{3,}): \S.*$", RegexOptions.Compiled);
-    private static readonly Regex IndexEntryPattern = new(@"^\s*[-*]\s+\[[^\]]*\]\(([^)\s]+)\)", RegexOptions.Compiled);
-    private static readonly Regex MarkdownLinkPattern = new(@"\]\(([^)\s]+)\)", RegexOptions.Compiled);
+    [GeneratedRegex(@"^\d{4}-\d{2}-\d{2}-.+\.md$", RegexOptions.CultureInvariant)]
+    private static partial Regex FilenameRegex();
+
+    // Legacy line 1: "# ADR-NNNN: Title" (at least three digits, e.g. ADR-049 or ADR-2250).
+    [GeneratedRegex(@"^# ADR-(\d{3,}): \S.*$", RegexOptions.CultureInvariant)]
+    private static partial Regex AdrHeadingRegex();
+
+    // Domain-sharded line 1: "# ADR-<DOMAIN>-YYYYMMDD-<slug>: Title".
+    [GeneratedRegex(@"^# (ADR-([A-Z]+)-(\d{8})-([a-z0-9-]+)): (\S.*)$", RegexOptions.CultureInvariant)]
+    private static partial Regex DomainAdrHeadingRegex();
+
+    [GeneratedRegex(@"\b(PRD-[A-Z0-9]+-\d+)\b", RegexOptions.CultureInvariant)]
+    private static partial Regex PrdDefinitionRegex();
+
+    [GeneratedRegex(@"\bTrace-(\d+)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex TraceDefinitionRegex();
+
+    [GeneratedRegex(@"\bprd-([a-z0-9]+)-([a-z0-9]+)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex PrdReferenceRegex();
+
+    [GeneratedRegex(@"\btrace\s*[-]?\s*(\d+)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex TraceReferenceRegex();
+
+    [GeneratedRegex(@"^(\d{4})-\d{2}-\d{2}", RegexOptions.CultureInvariant)]
+    private static partial Regex YearPrefixRegex();
 
     private static readonly string[] RequiredSectionsOld =
     [
@@ -124,7 +176,7 @@ public static partial class AdrValidatorService
         "## Context",
         "## Decision",
         "## Alternatives Considered",
-        "## Trade-offs"
+        "## Trade-offs",
     ];
 
     private static readonly string[] RequiredSectionsNew =
@@ -134,10 +186,18 @@ public static partial class AdrValidatorService
         "## 3. Options Considered",
         "## 4. Decision Outcome",
         "## 5. Consequences & Trade-offs",
-        "## 6. Implementation & Verification"
+        "## 6. Implementation & Verification",
     ];
 
     public static string FindRepoRoot() => WorkspacePrimitives.FindRepoRoot();
+
+    public static bool IsValidDomain(string? domain) =>
+        !string.IsNullOrWhiteSpace(domain) && DomainsBySlug.ContainsKey(domain.Trim());
+
+    public static DomainDefinition? TryGetDomainDefinition(string? domain) =>
+        !string.IsNullOrWhiteSpace(domain) && DomainsBySlug.TryGetValue(domain.Trim(), out var def)
+            ? def
+            : null;
 
     public static bool ValidateAdrs(
         bool checkGitDiff = true,
@@ -162,26 +222,31 @@ public static partial class AdrValidatorService
         var validReqs = GetValidRequirements(repoRoot);
         bool allPassed = true;
 
-        // 1. Directory-wide integrity: unique numbers, "# ADR-NNNN:" headings, index coverage and links.
+        // 1. Directory-wide integrity across root hub, legacy-index.md, and all 8 domain shards.
         foreach (var error in FindIntegrityErrors(adrDir))
         {
             AnsiConsole.MarkupLine($"[red]Error: {Markup.Escape(error)}[/]");
             allPassed = false;
         }
 
-        var filesToValidate = targets != null && targets.Length > 0
+        var filesToValidate = targets is { Length: > 0 }
             ? targets.Where(File.Exists).ToList()
-            : Directory.GetFiles(adrDir, "*.md", SearchOption.TopDirectoryOnly).ToList();
+            : EnumerateAllAdrMarkdownFiles(adrDir);
 
         foreach (var filepath in filesToValidate)
         {
             string filename = Path.GetFileName(filepath);
-            if (IgnoreFiles.Contains(filename)) continue;
+            string relToAdr = Path.GetRelativePath(adrDir, filepath).Replace('\\', '/');
+            bool isRootAdrFile = !relToAdr.Contains('/', StringComparison.Ordinal);
+            if (isRootAdrFile ? RootIgnoreFiles.Contains(filename) : ShardIgnoreFiles.Contains(filename))
+            {
+                continue;
+            }
 
             // 2. Check filename pattern
-            if (!FilenamePattern.IsMatch(filename))
+            if (!FilenameRegex().IsMatch(filename))
             {
-                AnsiConsole.MarkupLine($"[red]Error: File '{Markup.Escape(filename)}' does not follow the standard date pattern (YYYY-MM-DD-...).[/]");
+                AnsiConsole.MarkupLine($"[red]Error: File '{Markup.Escape(relToAdr)}' does not follow the standard date pattern (YYYY-MM-DD-...).[/]");
                 allPassed = false;
             }
 
@@ -198,14 +263,13 @@ public static partial class AdrValidatorService
                 continue;
             }
 
-            // Legacy ADRs use the "## Status / ## Context / ..." template; all others use the numbered template.
-            bool isLegacyTemplate = !content.Contains(RequiredSectionsNew[0]) &&
+            bool isLegacyTemplate = !content.Contains(RequiredSectionsNew[0], StringComparison.Ordinal) &&
                 content.Split('\n').Any(l => l.TrimEnd() == "## Status");
             var requiredSections = isLegacyTemplate ? RequiredSectionsOld : RequiredSectionsNew;
-            var missingSections = requiredSections.Where(s => !content.Contains(s)).ToList();
+            var missingSections = requiredSections.Where(s => !content.Contains(s, StringComparison.Ordinal)).ToList();
             if (missingSections.Count > 0)
             {
-                AnsiConsole.MarkupLine($"[red]Error: File '{Markup.Escape(filename)}' missing required sections: {Markup.Escape(string.Join(", ", missingSections))}[/]");
+                AnsiConsole.MarkupLine($"[red]Error: File '{Markup.Escape(relToAdr)}' missing required sections: {Markup.Escape(string.Join(", ", missingSections))}[/]");
                 allPassed = false;
             }
 
@@ -215,7 +279,7 @@ public static partial class AdrValidatorService
             {
                 if (refs.Count == 0)
                 {
-                    AnsiConsole.MarkupLine($"[red]Error: Post-2026 ADR file '{filename}' lacks a requirement reference.[/]");
+                    AnsiConsole.MarkupLine($"[red]Error: Post-2026 ADR file '{Markup.Escape(relToAdr)}' lacks a requirement reference.[/]");
                     allPassed = false;
                 }
                 else
@@ -223,7 +287,7 @@ public static partial class AdrValidatorService
                     var invalidRefs = refs.Where(r => !validReqs.Contains(r)).ToList();
                     if (invalidRefs.Count > 0)
                     {
-                        AnsiConsole.MarkupLine($"[red]Error: Post-2026 ADR '{filename}' references invalid requirement(s): {string.Join(", ", invalidRefs)}[/]");
+                        AnsiConsole.MarkupLine($"[red]Error: Post-2026 ADR '{Markup.Escape(relToAdr)}' references invalid requirement(s): {Markup.Escape(string.Join(", ", invalidRefs))}[/]");
                         allPassed = false;
                     }
                 }
@@ -243,78 +307,94 @@ public static partial class AdrValidatorService
         return allPassed;
     }
 
+    private static List<string> EnumerateAllAdrMarkdownFiles(string adrDir)
+    {
+        var files = new List<string>();
+        files.AddRange(
+            Directory.GetFiles(adrDir, "*.md", SearchOption.TopDirectoryOnly)
+                .Where(f => !RootIgnoreFiles.Contains(Path.GetFileName(f)))
+                .Order(StringComparer.Ordinal));
+
+        foreach (var domain in DomainDefinitions)
+        {
+            string domainDir = Path.Combine(adrDir, domain.Slug);
+            if (!Directory.Exists(domainDir))
+            {
+                continue;
+            }
+
+            files.AddRange(
+                Directory.GetFiles(domainDir, "*.md", SearchOption.TopDirectoryOnly)
+                    .Where(f => !ShardIgnoreFiles.Contains(Path.GetFileName(f)))
+                    .Order(StringComparer.Ordinal));
+        }
+
+        return files;
+    }
+
     /// <summary>
-    /// Appends any unlisted numbered ADR markdown files in <c>docs/adr/</c> to <c>docs/adr/index.md</c>.
+    /// Synchronizes any unlisted domain ADR files under <c>docs/adr/&lt;domain&gt;/</c> into
+    /// <c>docs/adr/&lt;domain&gt;/index.md</c> sorted alphabetically by filename without modifying
+    /// <c>docs/adr/index.md</c> or <c>docs/adr/legacy-index.md</c>.
     /// </summary>
     public static int SyncAdrIndex(string? repoRoot = null)
     {
         repoRoot ??= FindRepoRoot();
         string adrDir = Path.Combine(repoRoot, "docs", "adr");
-        string indexFile = Path.Combine(adrDir, "index.md");
-        if (!Directory.Exists(adrDir) || !File.Exists(indexFile))
+        if (!Directory.Exists(adrDir))
         {
             return 0;
         }
 
-        string[] indexLines = File.ReadAllLines(indexFile);
-        var listed = new HashSet<string>(StringComparer.Ordinal);
-        foreach (string line in indexLines)
+        int addedCount = 0;
+        foreach (var domain in DomainDefinitions)
         {
-            var entry = IndexEntryPattern.Match(line);
-            if (entry.Success)
-            {
-                listed.Add(entry.Groups[1].Value.Split('#')[0]);
-            }
-        }
-
-        var adrFiles = Directory.GetFiles(adrDir, "*.md", SearchOption.TopDirectoryOnly)
-            .Select(Path.GetFileName)
-            .OfType<string>()
-            .Where(name => !IgnoreFiles.Contains(name) && FilenamePattern.IsMatch(name) && !listed.Contains(name))
-            .Order(StringComparer.Ordinal)
-            .ToList();
-
-        if (adrFiles.Count == 0)
-        {
-            return 0;
-        }
-
-        string indexContent = File.ReadAllText(indexFile);
-        var additions = new List<string>();
-        foreach (string name in adrFiles)
-        {
-            string firstLine = File.ReadLines(Path.Combine(adrDir, name)).FirstOrDefault()?.TrimEnd('\r') ?? "";
-            int? number = ParseAdrNumber(firstLine);
-            if (number is null)
+            string domainDir = Path.Combine(adrDir, domain.Slug);
+            if (!Directory.Exists(domainDir))
             {
                 continue;
             }
 
-            int colonIdx = firstLine.IndexOf(':', StringComparison.Ordinal);
-            string title = colonIdx >= 0 ? firstLine[(colonIdx + 1)..].Trim() : name;
-            string datePart = name.Length >= 10 ? name[..10] : "";
-            additions.Add(string.IsNullOrEmpty(datePart)
-                ? $"- [ADR-{number.Value}: {title}]({name})"
-                : $"- [ADR-{number.Value}: {title}]({name}) ({datePart})");
+            string shardIndexPath = Path.Combine(domainDir, "index.md");
+            var domainAdrFiles = Directory.GetFiles(domainDir, "*.md", SearchOption.TopDirectoryOnly)
+                .Select(Path.GetFileName)
+                .OfType<string>()
+                .Where(name => !ShardIgnoreFiles.Contains(name) && FilenameRegex().IsMatch(name))
+                .Order(StringComparer.Ordinal)
+                .ToList();
+
+            foreach (string name in domainAdrFiles)
+            {
+                string firstLine = File.ReadLines(Path.Combine(domainDir, name)).FirstOrDefault()?.TrimEnd('\r') ?? "";
+                var header = ParseDomainAdrHeader(firstLine);
+                if (header is null)
+                {
+                    continue;
+                }
+
+                string datePart = name.Length >= 10 ? name[..10] : "";
+                if (InsertSortedDomainShardEntry(shardIndexPath, domain.Slug, name, header.Id, header.Title, datePart))
+                {
+                    addedCount++;
+                }
+            }
         }
 
-        if (additions.Count > 0)
+        if (addedCount > 0)
         {
-            string separator = indexContent.EndsWith('\n') ? "" : "\n";
-            File.AppendAllText(indexFile, $"{separator}{string.Join('\n', additions)}\n");
-            AnsiConsole.MarkupLine($"  [green][[OK]] Added {additions.Count} missing ADR entry(ies) to docs/adr/index.md.[/]");
+            AnsiConsole.MarkupLine($"  [green][[OK]] Added {addedCount} missing domain ADR entry(ies) to docs/adr/*/index.md.[/]");
         }
 
         return 0;
     }
 
     /// <summary>
-    /// Parses the ADR number from an ADR's first line (<c># ADR-NNNN: Title</c>).
+    /// Parses the ADR number from a legacy ADR's first line (<c># ADR-NNNN: Title</c>).
     /// Returns <c>null</c> when the line is not a numbered ADR heading.
     /// </summary>
     public static int? ParseAdrNumber(string headingLine)
     {
-        var match = AdrHeadingPattern.Match(headingLine.TrimEnd('\r'));
+        var match = AdrHeadingRegex().Match(headingLine.TrimEnd('\r'));
         if (!match.Success)
         {
             return null;
@@ -326,94 +406,28 @@ public static partial class AdrValidatorService
     }
 
     /// <summary>
-    /// Checks the ADR directory as a whole: every ADR opens with a <c># ADR-NNNN: Title</c> heading,
-    /// no two ADRs share a number, every ADR is listed exactly once in <c>index.md</c>, and every
-    /// relative link in <c>index.md</c> resolves to an existing file.
+    /// Parses a domain-sharded ADR heading (<c># ADR-&lt;DOMAIN&gt;-YYYYMMDD-&lt;slug&gt;: &lt;title&gt;</c>).
     /// </summary>
-    /// <returns>One message per problem found; empty when the directory is consistent.</returns>
-    public static IReadOnlyList<string> FindIntegrityErrors(string adrDir)
+    public static DomainAdrHeader? ParseDomainAdrHeader(string headingLine)
     {
-        var errors = new List<string>();
-        var adrFiles = Directory.GetFiles(adrDir, "*.md", SearchOption.TopDirectoryOnly)
-            .Select(Path.GetFileName)
-            .OfType<string>()
-            .Where(name => !IgnoreFiles.Contains(name))
-            .Order(StringComparer.Ordinal)
-            .ToList();
-
-        var filesByNumber = new SortedDictionary<int, List<string>>();
-        foreach (var name in adrFiles)
+        var match = DomainAdrHeadingRegex().Match(headingLine.TrimEnd('\r'));
+        if (!match.Success)
         {
-            string firstLine = File.ReadLines(Path.Combine(adrDir, name)).FirstOrDefault() ?? "";
-            int? number = ParseAdrNumber(firstLine);
-            if (number is null)
-            {
-                errors.Add($"File '{name}' has no '# ADR-NNNN: Title' heading on line 1 (found '{firstLine.TrimEnd('\r')}').");
-                continue;
-            }
-
-            if (!filesByNumber.TryGetValue(number.Value, out var holders))
-            {
-                holders = [];
-                filesByNumber[number.Value] = holders;
-            }
-            holders.Add(name);
+            return null;
         }
 
-        foreach (var (number, holders) in filesByNumber.Where(kv => kv.Value.Count > 1))
+        string id = match.Groups[1].Value;
+        string domain = match.Groups[2].Value;
+        string compactDate = match.Groups[3].Value;
+        string slug = match.Groups[4].Value;
+        string title = match.Groups[5].Value.Trim();
+
+        if (!DateOnly.TryParseExact(compactDate, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
         {
-            errors.Add($"ADR-{number:D3} is used by {holders.Count} files: {string.Join(", ", holders)}.");
+            return null;
         }
 
-        string indexFile = Path.Combine(adrDir, "index.md");
-        if (!File.Exists(indexFile))
-        {
-            errors.Add($"ADR index '{indexFile}' not found.");
-            return errors;
-        }
-
-        var listedCounts = new Dictionary<string, int>(StringComparer.Ordinal);
-        string[] indexLines = File.ReadAllLines(indexFile);
-        for (int i = 0; i < indexLines.Length; i++)
-        {
-            foreach (Match link in MarkdownLinkPattern.Matches(indexLines[i]))
-            {
-                string target = link.Groups[1].Value;
-                if (target.Contains("://", StringComparison.Ordinal) || target.StartsWith('#') ||
-                    target.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                string path = target.Split('#')[0];
-                if (!File.Exists(Path.GetFullPath(Path.Combine(adrDir, path))))
-                {
-                    errors.Add($"index.md line {i + 1} links to '{target}', which does not exist.");
-                }
-            }
-
-            var entry = IndexEntryPattern.Match(indexLines[i]);
-            if (entry.Success)
-            {
-                string listed = entry.Groups[1].Value.Split('#')[0];
-                listedCounts[listed] = listedCounts.GetValueOrDefault(listed) + 1;
-            }
-        }
-
-        foreach (var name in adrFiles)
-        {
-            int count = listedCounts.GetValueOrDefault(name);
-            if (count == 0)
-            {
-                errors.Add($"File '{name}' is missing from index.md.");
-            }
-            else if (count > 1)
-            {
-                errors.Add($"File '{name}' is listed {count} times in index.md; list each ADR exactly once.");
-            }
-        }
-
-        return errors;
+        return new DomainAdrHeader(id, domain, compactDate, slug, title);
     }
 
     private static HashSet<string> GetValidRequirements(string repoRoot)
@@ -424,8 +438,6 @@ public static partial class AdrValidatorService
         if (!Directory.Exists(docsDir)) return reqs;
 
         var files = Directory.GetFiles(docsDir, "*.md", SearchOption.AllDirectories);
-        var prdRegex = new Regex(@"\b(PRD-[A-Z0-9]+-\d+)\b", RegexOptions.Compiled);
-        var traceRegex = new Regex(@"\bTrace-(\d+)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         foreach (var file in files)
         {
@@ -438,8 +450,8 @@ public static partial class AdrValidatorService
             try
             {
                 string content = File.ReadAllText(file);
-                foreach (Match m in prdRegex.Matches(content).Cast<Match>()) reqs.Add(m.Value.ToUpperInvariant());
-                foreach (Match m in traceRegex.Matches(content).Cast<Match>()) reqs.Add($"Trace-{m.Groups[1].Value}");
+                foreach (Match m in PrdDefinitionRegex().Matches(content)) reqs.Add(m.Value.ToUpperInvariant());
+                foreach (Match m in TraceDefinitionRegex().Matches(content)) reqs.Add($"Trace-{m.Groups[1].Value}");
             }
             catch (Exception ex)
             {
@@ -452,15 +464,10 @@ public static partial class AdrValidatorService
 
     private static HashSet<string> ExtractRequirementReferences(string content)
     {
-        var prdRegex = new Regex(@"\bprd-([a-z0-9]+)-([a-z0-9]+)\b", RegexOptions.IgnoreCase);
-        var traceRegex = new Regex(@"\btrace\s*[-]?\s*(\d+)\b", RegexOptions.IgnoreCase);
-
-        var prdRefs = prdRegex.Matches(content)
-            .Cast<Match>()
+        var prdRefs = PrdReferenceRegex().Matches(content)
             .Select(m => $"PRD-{m.Groups[1].Value.ToUpperInvariant()}-{m.Groups[2].Value.ToUpperInvariant()}");
 
-        var traceRefs = traceRegex.Matches(content)
-            .Cast<Match>()
+        var traceRefs = TraceReferenceRegex().Matches(content)
             .Select(m => $"Trace-{m.Groups[1].Value}");
 
         return new HashSet<string>(prdRefs.Concat(traceRefs), StringComparer.OrdinalIgnoreCase);
@@ -468,9 +475,9 @@ public static partial class AdrValidatorService
 
     private static bool IsPost2026Adr(string filename)
     {
-        var match = Regex.Match(filename, @"^(\d{4})-\d{2}-\d{2}");
+        var match = YearPrefixRegex().Match(filename);
         if (!match.Success) return false;
-        int year = int.Parse(match.Groups[1].Value);
+        int year = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
         if (year < 2026) return false;
         return !(year == 2026 && BaselineFiles.Contains(filename));
     }
