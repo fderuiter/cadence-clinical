@@ -95,7 +95,7 @@ internal sealed class KernelObservationScenario(KernelPostgresFixture fixture)
 
     public async Task<EnrollmentId> ScreenAsync(TenantId tenant, StudySiteId studySite, CancellationToken ct)
     {
-        var participant = await Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented"), ct);
+        var participant = await Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Participant consented"), ct);
         SubjectCode.TryFrom($"S-{Guid.NewGuid():N}"[..12].ToUpperInvariant(), out var code);
         var enrollment = await Protocol.OkAsync(
             new ScreenParticipant(tenant, EnrollmentId.New(), participant, studySite, code, Tick().AddDays(-1), KernelProtocolScenario.Key(), "Screening visit"), ct);

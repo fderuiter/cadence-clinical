@@ -54,7 +54,7 @@ public sealed class KernelGrantVisibilityPostgresTests(KernelPostgresFixture fix
         var (otherParticipant, otherEnrollment) = await ScreenAsync(tenant, chicago, "VIS-002", ct);
         var usEffectivity = EffectivityId.New();
         await _scenario.OkAsync(
-            new DeclareEffectivity(tenant, usEffectivity, version.ProtocolVersionId, EffectivityScope.InCountry("US"), Tick(), KernelProtocolScenario.Key(), "Filing"), ct);
+            new DeclareEffectivity(tenant, usEffectivity, version.ProtocolVersionId, EffectivityScope.InCountry("US"), Tick(), KernelProtocolScenario.Key(), "Regulatory filing"), ct);
         OrganizationId sponsor;
         await using (var db = fixture.CreateContext(tenant))
         {
@@ -91,13 +91,13 @@ public sealed class KernelGrantVisibilityPostgresTests(KernelPostgresFixture fix
     {
         var grant = GrantId.New();
         await _scenario.OkAsync(
-            new IssueGrant(tenant, grant, grantee, "observation.record", null, scope, fixture.Clock.UtcNow, null, false, KernelProtocolScenario.Key(), "Appointed"), ct);
+            new IssueGrant(tenant, grant, grantee, "observation.record", null, scope, fixture.Clock.UtcNow, null, false, KernelProtocolScenario.Key(), "Appointed to role"), ct);
         return grant;
     }
 
     private async Task<(ParticipantId Participant, EnrollmentId Enrollment)> ScreenAsync(TenantId tenant, StudySiteId studySite, string code, CancellationToken ct)
     {
-        var participant = await _scenario.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented"), ct);
+        var participant = await _scenario.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Participant consented"), ct);
         SubjectCode.TryFrom(code, out var subjectCode);
         var enrollment = await _scenario.OkAsync(
             new ScreenParticipant(tenant, EnrollmentId.New(), participant, studySite, subjectCode, Tick(), KernelProtocolScenario.Key(), "Screening visit"), ct);

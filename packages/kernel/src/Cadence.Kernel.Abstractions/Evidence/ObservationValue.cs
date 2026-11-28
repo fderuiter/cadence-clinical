@@ -52,6 +52,34 @@ public abstract record ObservationValue
     public static string? ProblemOf(ObservationValue? value) =>
         value is null ? "A value is required: a quantity, coded, text, boolean, dateTime or missing value." : value.Problem();
 
+    /// <summary>
+    /// Whether <paramref name="reason"/> is a null flavor a caller may submit directly (excluding reserved internal
+    /// <see cref="NullFlavor.Masked"/> and <see cref="NullFlavor.NotAsked"/> flavors).
+    /// </summary>
+    public static bool IsCallerAdmissibleNullFlavor(NullFlavor reason) =>
+        Enum.IsDefined(reason) && reason is not (NullFlavor.Masked or NullFlavor.NotAsked);
+
+    /// <summary>
+    /// Why <paramref name="value"/> cannot be submitted by a caller command: checks <see cref="ProblemOf"/> and refuses
+    /// reserved <see cref="NullFlavor.Masked"/> and <see cref="NullFlavor.NotAsked"/> missing flavors.
+    /// </summary>
+    public static string? CallerProblemOf(ObservationValue? value)
+    {
+        if (ProblemOf(value) is { } problem)
+        {
+            return problem;
+        }
+
+        return value switch
+        {
+            MissingValue { Reason: NullFlavor.Masked } =>
+                "Missing reason 'Masked' is reserved for blinded read projections and cannot be submitted.",
+            MissingValue { Reason: NullFlavor.NotAsked } =>
+                "Missing reason 'NotAsked' is reserved for unasked item placeholders and cannot be submitted.",
+            _ => null,
+        };
+    }
+
     private protected static string? TextProblem(string? text, string what)
     {
         if (string.IsNullOrWhiteSpace(text))

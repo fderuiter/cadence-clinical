@@ -30,10 +30,10 @@ public static class ChangeReasonEndpointExtensions
 }
 
 /// <summary>
-/// Enforces the mandatory <c>X-Change-Reason</c> request header (21 CFR Part 11 change-justification string)
-/// ahead of mutating Execution routes. Short-circuits with HTTP <c>400</c> before handler execution when the
-/// header is absent, whitespace-only, shorter than <see cref="MinimumReasonLength"/> characters, or a malformed
-/// RFC 8187 value (ADR-2495).
+/// Enforces the mandatory <c>X-Change-Reason</c> request header (21 CFR Part 11 change-justification string,
+/// PRD-CRF-010) ahead of mutating Execution routes. Short-circuits with HTTP <c>400</c> before handler execution when
+/// the header is absent, whitespace-only, shorter than <see cref="MinimumReasonLength"/> trimmed characters, or a
+/// malformed RFC 8187 value (ADR-2495).
 /// </summary>
 public sealed class ChangeReasonHeaderFilter : IEndpointFilter
 {

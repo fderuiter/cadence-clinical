@@ -34,7 +34,7 @@ namespace Cadence.UnitTests.Kernel;
 [Trait("Category", "Unit")]
 public sealed partial class KernelCommandPipelineTests
 {
-    private const string Reason = "Unit test";
+    private const string Reason = "Unit test reason";
 
     /// <summary>
     /// Validates K-TX-5 at construction: generic or anonymous ids are refused, and service accounts and agents must
@@ -143,6 +143,8 @@ public sealed partial class KernelCommandPipelineTests
         (await sender.SendAsync(NewTenant() with { TenantId = default }, cancellationToken: ct)).Error.Should().Be(KernelErrors.TenantRequired);
         (await sender.SendAsync(NewTenant() with { IdempotencyKey = " " }, cancellationToken: ct)).Error.Should().Be(KernelErrors.IdempotencyKeyRequired);
         (await sender.SendAsync(NewTenant() with { ReasonForChange = "" }, cancellationToken: ct)).Error.Should().Be(KernelErrors.ReasonForChangeRequired);
+        (await sender.SendAsync(NewTenant() with { ReasonForChange = "TooShort9" }, cancellationToken: ct)).Error.Should().Be(KernelErrors.ReasonForChangeRequired);
+        (await sender.SendAsync(NewTenant() with { ReasonForChange = "   123456789   " }, cancellationToken: ct)).Error.Should().Be(KernelErrors.ReasonForChangeRequired);
         (await sender.SendAsync(new UnhandledCommand(TenantId.New(), "key", Reason), cancellationToken: ct)).Error!.Code
             .Should().Be(KernelErrors.HandlerMissing.Code);
 

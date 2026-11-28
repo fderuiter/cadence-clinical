@@ -32,7 +32,11 @@
             <template v-else>{{ observation.concept }}</template>
           </dd>
           <dt>Current value</dt>
-          <dd data-testid="observation-value" class="tabular-nums">
+          <dd
+            data-testid="observation-value"
+            class="tabular-nums"
+            :data-tabular-nums="isTabularObservation ? 'true' : undefined"
+          >
             {{ formatObservationValue(observation.value) }}
           </dd>
           <dt>Version</dt>
@@ -150,72 +154,23 @@
           verification to Needs re-verification and alerts the CRA.
         </div>
 
-        <form
+        <ObservationCorrectionForm
           v-if="!locked && canCorrect"
-          class="observation-correction"
-          @submit.prevent="askReason"
-        >
-          <label for="observation-new-value">Corrected value</label>
-          <select
-            v-if="observation.expected_codelist_options?.length"
-            id="observation-new-value"
-            v-model="newValue"
-            :disabled="saving"
-            :aria-invalid="parseError !== null"
-            :aria-describedby="correctionDescribedBy"
-          >
-            <option value="">Select…</option>
-            <option
-              v-if="
-                newValue &&
-                !observation.expected_codelist_options.some(
-                  (option) => option.code === newValue
-                )
-              "
-              :value="newValue"
-            >
-              {{ newValue }}
-            </option>
-            <option
-              v-for="option in observation.expected_codelist_options"
-              :key="option.code"
-              :value="option.code"
-            >
-              {{
-                option.display && option.display !== option.code
-                  ? `${option.display} (${option.code})`
-                  : option.code
-              }}
-            </option>
-          </select>
-          <input
-            v-else
-            id="observation-new-value"
-            v-model="newValue"
-            type="text"
-            autocomplete="off"
-            :data-tabular-nums="isTabularObservation ? 'true' : undefined"
-            :disabled="saving"
-            :aria-invalid="parseError !== null"
-            :aria-describedby="correctionDescribedBy"
-          />
-          <span v-if="unit" data-testid="observation-unit">{{ unit }}</span>
-          <button
-            id="observation-save"
-            class="btn btn-primary"
-            type="submit"
-            :disabled="saving || !canSave"
-          >
-            {{ saving ? "Saving…" : "Save correction" }}
-          </button>
-          <p
-            id="observation-new-value-hint"
-            class="observation-hint"
-            :role="parseError ? 'alert' : undefined"
-          >
-            {{ parseError ?? "" }}
-          </p>
-        </form>
+          :codelist-options="observation.expected_codelist_options"
+          :new-value="newValue"
+          :missing-reason="missingReason"
+          :missing-detail="missingDetail"
+          :saving="saving"
+          :can-save="canSave"
+          :parse-error="parseError"
+          :correction-described-by="correctionDescribedBy"
+          :is-tabular-observation="isTabularObservation"
+          :unit="unit"
+          @update:new-value="newValue = $event"
+          @update:missing-reason="setMissingReason"
+          @update:missing-detail="setMissingDetail"
+          @submit="askReason"
+        />
 
         <div
           v-if="outcome"
@@ -337,6 +292,7 @@ import type { RouteLocationRaw } from "vue-router";
 import ScopeLockControls from "../components/canvas/ScopeLockControls.vue";
 import NodeRefChip from "../components/canvas/NodeRefChip.vue";
 import SupportDetails from "../components/canvas/SupportDetails.vue";
+import ObservationCorrectionForm from "../components/observation/ObservationCorrectionForm.vue";
 import ObservationQueriesAndAssertions from "../components/observation/ObservationQueriesAndAssertions.vue";
 import ReasonForChangeModal from "../components/ReasonForChangeModal.vue";
 import { useObservationCorrection } from "../composables/useObservationCorrection";
@@ -391,6 +347,8 @@ const {
   hasRecordedValue,
   isDirty,
   isTabularObservation,
+  missingDetail,
+  missingReason,
   newValue,
   normalizedConceptRef,
   observationAssertions,
@@ -402,6 +360,8 @@ const {
   parsed,
   reasonModalDescription,
   reasonOpen,
+  setMissingDetail,
+  setMissingReason,
   supersededVerification,
   unit,
 } = useObservationViewModel({
@@ -439,7 +399,7 @@ async function onReason(reason: string) {
   reasonOpen.value = false;
   if (parsed.value?.ok !== true) return;
   await correct(parsed.value.value, reason);
-  if (outcome.value?.kind === "saved") newValue.value = "";
+  if (outcome.value?.kind === "saved") discardCorrection();
 }
 
 function handleDemoReset() {

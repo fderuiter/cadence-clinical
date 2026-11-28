@@ -41,7 +41,7 @@ public sealed class KernelCommandValidationTests
         await using var _ = services;
 
         var result = await services.GetRequiredService<IKernelCommandSender>()
-            .SendAsync(new RenameProbe(TenantId.New(), " ", "key-1", "Unit test"), cancellationToken: ct);
+            .SendAsync(new RenameProbe(TenantId.New(), " ", "key-1", "Unit test reason"), cancellationToken: ct);
 
         result.Error!.Code.Should().Be(KernelErrors.CommandInvalid.Code);
         result.Error.HttpStatus.Should().Be(422);
@@ -63,7 +63,7 @@ public sealed class KernelCommandValidationTests
         await using var _ = services;
 
         var act = () => services.GetRequiredService<IKernelCommandSender>()
-            .SendAsync(new RenameProbe(TenantId.New(), "Valid name", "key-1", "Unit test"), cancellationToken: ct);
+            .SendAsync(new RenameProbe(TenantId.New(), "Valid name", "key-1", "Unit test reason"), cancellationToken: ct);
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*unit of work*");
         unitOfWork.Begun.Should().BeTrue();
@@ -79,7 +79,7 @@ public sealed class KernelCommandValidationTests
         await using var __ = services;
 
         var result = await services.GetRequiredService<IKernelCommandSender>()
-            .SendAsync(new RenameProbe(TenantId.New(), " ", "key-1", "Unit test"), cancellationToken: ct);
+            .SendAsync(new RenameProbe(TenantId.New(), " ", "key-1", "Unit test reason"), cancellationToken: ct);
 
         result.Error.Should().Be(KernelErrors.ActorUnresolved);
     }

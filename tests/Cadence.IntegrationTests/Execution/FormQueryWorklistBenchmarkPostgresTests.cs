@@ -118,14 +118,14 @@ public sealed class FormQueryWorklistBenchmarkPostgresTests(ExecutionFormModuleP
         foreach (var capability in new[] { "collection.open", "collection.record", "execution.query.answer" })
         {
             await _scenario.Protocol.OkAsync(
-                new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), capability, null, AuthorityScope.Study(study), _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "CRC"),
+                new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), capability, null, AuthorityScope.Study(study), _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Appoint study CRC"),
                 ct);
         }
 
         foreach (var capability in new[] { "collection.record_unasked", "execution.query.raise", "execution.query.manage" })
         {
             await _scenario.Protocol.OkAsync(
-                new IssueGrant(tenant, GrantId.New(), Actor.Person(Monitor), capability, null, AuthorityScope.Study(study), _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Monitor"),
+                new IssueGrant(tenant, GrantId.New(), Actor.Person(Monitor), capability, null, AuthorityScope.Study(study), _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Appoint study monitor"),
                 ct);
         }
 
@@ -153,11 +153,11 @@ public sealed class FormQueryWorklistBenchmarkPostgresTests(ExecutionFormModuleP
         for (var s = 0; s < SiteCount; s++)
         {
             var participant = await _scenario.Protocol.OkAsync(
-                new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented"), ct);
+                new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Participant consented"), ct);
             var subjectCodeRaw = string.Create(CultureInfo.InvariantCulture, $"SUBJ-{s + 1:D2}-01");
             SubjectCode.TryFrom(subjectCodeRaw, out var subjectCode);
             var enrollment = (await _scenario.Protocol.OkAsync(
-                new ScreenParticipant(tenant, EnrollmentId.New(), participant, studySites[s].Id, subjectCode, _scenario.Tick(), KernelProtocolScenario.Key(), "Screened"),
+                new ScreenParticipant(tenant, EnrollmentId.New(), participant, studySites[s].Id, subjectCode, _scenario.Tick(), KernelProtocolScenario.Key(), "Participant screened"),
                 ct)).EnrollmentId;
             enrollments.Add(enrollment);
 

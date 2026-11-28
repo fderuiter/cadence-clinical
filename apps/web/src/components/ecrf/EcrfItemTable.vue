@@ -56,7 +56,13 @@
                 <select
                   v-if="item.codelist_options?.length"
                   :id="`ecrf-item-${item.item_id}`"
-                  class="ecrf-item-value-control"
+                  :class="[
+                    'ecrf-item-value-control',
+                    {
+                      'ecrf-control--incomplete':
+                        !formState.locked && formState.isIncompleteEdit(item),
+                    },
+                  ]"
                   :value="formState.entries[item.item_id]?.text ?? ''"
                   :disabled="
                     formState.locked ||
@@ -101,7 +107,13 @@
                 <input
                   v-else
                   :id="`ecrf-item-${item.item_id}`"
-                  class="ecrf-item-value-control"
+                  :class="[
+                    'ecrf-item-value-control',
+                    {
+                      'ecrf-control--incomplete':
+                        !formState.locked && formState.isIncompleteEdit(item),
+                    },
+                  ]"
                   :value="formState.entries[item.item_id]?.text ?? ''"
                   type="text"
                   autocomplete="off"
@@ -179,8 +191,18 @@
               </td>
               <td>
                 <select
+                  :id="`ecrf-missing-${item.item_id}`"
+                  :class="{
+                    'ecrf-control--incomplete':
+                      !formState.locked && formState.isIncompleteEdit(item),
+                  }"
                   :value="formState.entries[item.item_id]?.missing ?? ''"
                   :aria-label="`Why ${item.item_id} is missing`"
+                  :aria-describedby="
+                    !formState.locked && formState.isIncompleteEdit(item)
+                      ? `ecrf-item-${item.item_id}-guidance`
+                      : undefined
+                  "
                   :disabled="formState.locked || formState.saving"
                   @change="
                     emit(
@@ -199,6 +221,47 @@
                     {{ option.text }}
                   </option>
                 </select>
+                <p
+                  v-if="!formState.locked && formState.isIncompleteEdit(item)"
+                  :id="`ecrf-item-${item.item_id}-guidance`"
+                  :data-testid="`ecrf-incomplete-guidance-${item.item_id}`"
+                  class="ecrf-incomplete-guidance"
+                >
+                  <AlertCircle
+                    class="ecrf-inline-icon"
+                    :size="14"
+                    aria-hidden="true"
+                  />
+                  <span>{{ INCOMPLETE_CLEAR_GUIDANCE }}</span>
+                </p>
+                <div
+                  v-if="formState.entries[item.item_id]?.missing"
+                  class="ecrf-missing-detail-field"
+                >
+                  <label
+                    :for="`ecrf-missing-detail-${item.item_id}`"
+                    class="ecrf-missing-detail-label"
+                  >
+                    Missing detail (optional)
+                  </label>
+                  <input
+                    :id="`ecrf-missing-detail-${item.item_id}`"
+                    :data-testid="`ecrf-missing-detail-${item.item_id}`"
+                    class="ecrf-missing-detail-input"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="Specify detail (e.g. equipment failure)"
+                    :value="formState.entries[item.item_id]?.detail ?? ''"
+                    :disabled="formState.locked || formState.saving"
+                    @input="
+                      emit(
+                        'entry-detail',
+                        item.item_id,
+                        ($event.target as HTMLInputElement).value
+                      )
+                    "
+                  />
+                </div>
               </td>
               <td class="ecrf-item-revision">
                 <template v-if="item.value && !isUnrecordedValue(item.value)">
@@ -506,6 +569,25 @@
       </ul>
     </div>
 
+    <div
+      v-if="
+        !formState.locked && currentSignatures.length > 0 && formState.dirty
+      "
+      id="ecrf-signed-form-notice"
+      data-testid="ecrf-signed-form-notice"
+      class="ecrf-signed-notice tabular-nums"
+      role="status"
+      aria-live="polite"
+    >
+      <AlertTriangle class="ecrf-inline-icon" :size="16" aria-hidden="true" />
+      <div>
+        <strong>Signed form notice:</strong>
+        This form has a Current signature ({{ currentSignatureSummary }}).
+        Saving changes will supersede the Current attestation and require
+        re-signing.
+      </div>
+    </div>
+
     <div v-if="!formState.locked" class="ecrf-form-row">
       <label for="ecrf-save-reason">Reason for change</label>
       <input
@@ -514,12 +596,34 @@
         type="text"
         autocomplete="off"
         placeholder="Initial data entry"
+        aria-describedby="ecrf-save-reason-counter"
       />
+      <span
+        id="ecrf-save-reason-counter"
+        data-testid="ecrf-save-reason-counter"
+        :class="[
+          'ecrf-reason-counter',
+          'tabular-nums',
+          {
+            'ecrf-reason-counter--short':
+              trimmedReasonLength > 0 &&
+              trimmedReasonLength < MINIMUM_CHANGE_REASON_LENGTH,
+          },
+        ]"
+      >
+        {{ trimmedReasonLength }} / {{ MINIMUM_CHANGE_REASON_LENGTH }} min
+        characters
+      </span>
       <button
         id="ecrf-form-save"
         class="btn btn-primary"
         type="submit"
-        :disabled="formState.saving || !formState.dirty || !reason.trim()"
+        :disabled="
+          formState.saving ||
+          !formState.dirty ||
+          formState.hasIncompleteEdits ||
+          trimmedReasonLength < MINIMUM_CHANGE_REASON_LENGTH
+        "
       >
         {{
           formState.saving
@@ -592,6 +696,7 @@ import {
   watch,
   type UnwrapNestedRefs,
 } from "vue";
+import { AlertCircle, AlertTriangle } from "lucide-vue-next";
 import { handoffFocus } from "ui";
 import type { RouteLocationRaw } from "vue-router";
 import { isUnrecordedValue, MISSING_REASONS } from "../../api/observationValue";
@@ -602,6 +707,8 @@ import type {
   FormQueryResponse,
 } from "../../api/ecrfQueriesApi";
 import {
+  INCOMPLETE_CLEAR_GUIDANCE,
+  MINIMUM_CHANGE_REASON_LENGTH,
   formatUnsavedDraftEntry,
   type EcrfUnsavedItem,
   type useEcrfForm,
@@ -635,11 +742,13 @@ const props = defineProps<{
     observationId: string | null | undefined,
     itemId?: string | null
   ) => RouteLocationRaw | null;
+  confirmSupersede?: () => Promise<boolean>;
 }>();
 
 const emit = defineEmits<{
   (e: "entry-text", itemId: string, text: string): void;
   (e: "entry-missing", itemId: string, missing: string): void;
+  (e: "entry-detail", itemId: string, detail: string): void;
   (e: "close-form"): void;
 }>();
 
@@ -760,8 +869,30 @@ async function confirmRaise() {
   }
 }
 
+const trimmedReasonLength = computed(() => reason.value.trim().length);
+
+const currentSignatures = computed(() =>
+  (props.formState.form?.signatures ?? []).filter((sig) => !sig.superseded)
+);
+
+const currentSignatureSummary = computed(() =>
+  currentSignatures.value
+    .map((sig) => `${sig.meaning} by ${sig.signed_by}`)
+    .join(", ")
+);
+
 async function submit() {
-  await props.formState.save(reason.value.trim());
+  const trimmed = reason.value.trim();
+  if (
+    !props.formState.hasIncompleteEdits &&
+    trimmed.length >= MINIMUM_CHANGE_REASON_LENGTH &&
+    currentSignatures.value.length > 0 &&
+    props.confirmSupersede
+  ) {
+    const confirmed = await props.confirmSupersede();
+    if (!confirmed) return;
+  }
+  await props.formState.save(trimmed);
   if (props.formState.outcome?.kind === "saved") reason.value = "";
 }
 
@@ -771,6 +902,9 @@ const allPreviewWarnings = computed(() =>
 
 function itemDescribedBy(item: EcrfFormItem): string {
   const ids: string[] = [];
+  if (!props.formState.locked && props.formState.isIncompleteEdit(item)) {
+    ids.push(`ecrf-item-${item.item_id}-guidance`);
+  }
   if (props.formState.comparingBaseline && props.formState.isEdited(item)) {
     ids.push(`ecrf-committed-baseline-${item.item_id}`);
   }
@@ -987,6 +1121,62 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   background: var(--warning-bg);
   color: var(--warning);
   font-size: 0.85rem;
+}
+.ecrf-inline-icon {
+  flex-shrink: 0;
+}
+.ecrf-control--incomplete {
+  border: 1px solid var(--warning);
+  background-color: var(--warning-bg);
+}
+.ecrf-incomplete-guidance {
+  margin: 4px 0 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--warning);
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ecrf-missing-detail-field {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ecrf-missing-detail-label {
+  font-size: 0.75rem;
+  color: var(--semantic-color-text-secondary);
+}
+.ecrf-missing-detail-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font-size: 0.8rem;
+}
+.ecrf-signed-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 8px 0;
+  border-radius: 6px;
+  border: 1px solid var(--warning);
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-size: 0.85rem;
+}
+.ecrf-reason-counter {
+  font-size: 0.75rem;
+  color: var(--semantic-color-text-secondary);
+}
+.ecrf-reason-counter--short {
+  color: var(--warning);
+  font-weight: 600;
 }
 </style>
 

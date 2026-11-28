@@ -170,7 +170,7 @@ public sealed class IndicatorSetPostgresTests(KernelPostgresFixture fixture) : I
     /// <summary>Screens a new participant at the study site and, when <paramref name="to"/> is given, moves them there.</summary>
     private async Task<EnrollmentId> ScreenAsync(TenantId tenant, StudySiteId studySite, EnrollmentStatus? to, CancellationToken ct)
     {
-        var participant = (await SendAsync(new RegisterParticipant(tenant, ParticipantId.New(), Key(), "Consented"), ct)).Value;
+        var participant = (await SendAsync(new RegisterParticipant(tenant, ParticipantId.New(), Key(), "Participant consented"), ct)).Value;
         var screened = await SendAsync(new ScreenParticipant(
             tenant, EnrollmentId.New(), participant, studySite, SubjectCode.From($"SUBJ-{Guid.NewGuid():N}"[..13]), Tick(), Key(), "Screening visit"), ct);
         screened.Error.Should().BeNull();

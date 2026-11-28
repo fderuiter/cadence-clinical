@@ -57,6 +57,12 @@ function observationTargetId(target: string | null | undefined): string | null {
   return id.length > 0 ? id : null;
 }
 
+/**
+ * Returns true only when an eCRF item has a persisted observation whose current
+ * value is not an unrecorded `NullFlavor.NotAsked` (`not_asked`) placeholder.
+ * Active SDV queries (`activeVerification`, `needsReverification`, `unverifiedItems`)
+ * exclude `NotAsked` placeholders (`K-FACT-3`).
+ */
 export function hasRecordedValue(item: EcrfFormItem): boolean {
   return Boolean(item.observation_id) && !isUnrecordedValue(item.value);
 }

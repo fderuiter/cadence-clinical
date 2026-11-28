@@ -42,7 +42,7 @@ public sealed class KernelStudyRegistrationPostgresTests(KernelPostgresFixture f
         var study = await _scenario.OkAsync(new RegisterStudy(tenant, StudyId.New(), sponsor, "CARDIO-301", "Heart failure outcomes", "Phase 3", KernelProtocolScenario.Key(), "Study start-up"), ct);
         var site = await _scenario.OkAsync(new RegisterSite(tenant, SiteId.New(), institution, "SITE-101", "Memorial Hospital", "US", KernelProtocolScenario.Key(), "Site selection"), ct);
         var studySite = await _scenario.OkAsync(new LinkSiteToStudy(tenant, StudySiteId.New(), study, site, KernelProtocolScenario.Key(), "Site selection"), ct);
-        var participant = await _scenario.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented"), ct);
+        var participant = await _scenario.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Participant consented"), ct);
         SubjectCode.TryFrom("101-001", out var code);
         await _scenario.OkAsync(
             new ScreenParticipant(tenant, EnrollmentId.New(), participant, studySite, code, fixture.Clock.UtcNow, KernelProtocolScenario.Key(), "Screening visit"), ct);

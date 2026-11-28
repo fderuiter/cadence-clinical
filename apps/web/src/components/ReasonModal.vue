@@ -39,8 +39,15 @@
         v-model="customText"
         class="reason-control"
         :placeholder="placeholder"
+        :aria-describedby="idPrefix + 'reason-char-count'"
         @input="clearError"
       />
+      <div
+        :id="idPrefix + 'reason-char-count'"
+        class="reason-char-count tabular-nums"
+      >
+        {{ resolvedLength }} / {{ MINIMUM_REASON_LENGTH }} min characters
+      </div>
     </div>
 
     <!-- Accessible Validation Feedback -->
@@ -81,8 +88,10 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { ClinicalModal } from "ui";
+
+const MINIMUM_REASON_LENGTH = 10;
 
 const props = defineProps({
   show: {
@@ -137,6 +146,17 @@ const selectedOption = ref("");
 const customText = ref("");
 const validationError = ref("");
 
+const resolvedReason = computed(() => {
+  const sel = selectedOption.value;
+  const cust = customText.value.trim();
+  if (sel === "Other") {
+    return cust;
+  }
+  return `${sel}${cust ? ": " + cust : ""}`;
+});
+
+const resolvedLength = computed(() => resolvedReason.value.trim().length);
+
 // Watch show to reset state on open
 watch(
   () => props.show,
@@ -177,11 +197,15 @@ function onConfirm() {
   }
 
   // General check that we actually have a non-empty resolved reason
-  const finalReason =
-    sel === "Other" && cust ? cust : `${sel}${cust ? ": " + cust : ""}`;
-  if (!finalReason.trim()) {
+  const finalReason = resolvedReason.value;
+  const trimmed = finalReason.trim();
+  if (!trimmed) {
     validationError.value =
       "A non-empty reason for change is strictly required.";
+    return;
+  }
+  if (trimmed.length < MINIMUM_REASON_LENGTH) {
+    validationError.value = `Reason for change must be at least ${MINIMUM_REASON_LENGTH} characters (currently ${trimmed.length}).`;
     return;
   }
 
@@ -202,6 +226,12 @@ p {
 
 .form-group {
   min-width: 0;
+}
+
+.reason-char-count {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--semantic-color-text-secondary);
 }
 
 .reason-control {

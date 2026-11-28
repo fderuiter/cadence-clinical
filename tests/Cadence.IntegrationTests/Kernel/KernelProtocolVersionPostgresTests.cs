@@ -71,8 +71,8 @@ public sealed class KernelProtocolVersionPostgresTests(KernelPostgresFixture fix
             """;
 
         var draft = await _scenario.CreateDraftAsync(tenant, study, id, ct);
-        await _scenario.OkAsync(new ReviseProtocolDraft(tenant, id, revised, null, KernelProtocolScenario.Key(), "Add arm C"), ct);
-        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Ready"), ct);
+        await _scenario.OkAsync(new ReviseProtocolDraft(tenant, id, revised, null, KernelProtocolScenario.Key(), "Add treatment arm C"), ct);
+        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Ready for review"), ct);
         var attestation = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
         var approved = await _scenario.ApproveAsync(tenant, id, attestation, ct);
 
@@ -111,8 +111,8 @@ public sealed class KernelProtocolVersionPostgresTests(KernelPostgresFixture fix
         var reviewed = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Reviewed, KernelProtocolScenario.Target(first)), ct);
 
         await _scenario.OkAsync(new ReturnProtocolVersionToDraft(tenant, id, KernelProtocolScenario.Key(), "Changes requested"), ct);
-        await _scenario.OkAsync(new ReviseProtocolDraft(tenant, id, ProtocolDesignDocument.Write(ProtocolDesignSamples.MinimalDesign() with { Title = "CARDIO-1b" }), null, KernelProtocolScenario.Key(), "Rename"), ct);
-        var second = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Resubmit"), ct);
+        await _scenario.OkAsync(new ReviseProtocolDraft(tenant, id, ProtocolDesignDocument.Write(ProtocolDesignSamples.MinimalDesign() with { Title = "CARDIO-1b" }), null, KernelProtocolScenario.Key(), "Rename protocol title"), ct);
+        var second = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Resubmit for review"), ct);
         second.ContentHash.Should().NotBe(first.ContentHash);
 
         foreach (var offered in new[] { stale, reviewed, AttestationId.New() })
@@ -148,7 +148,7 @@ public sealed class KernelProtocolVersionPostgresTests(KernelPostgresFixture fix
         (await _scenario.AttestAsync(tenant, AttestationMeaning.Approved, draftTarget with { Kind = "Artifact" }, ct))
             .Error!.Code.Should().Be(TrustErrors.TargetKindUnsupported.Code);
 
-        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Ready"), ct);
+        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Ready for review"), ct);
         fixture.CurrentActor.Actor = Actor.ServiceAccount("importer");
         (await _scenario.AttestAsync(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview), ct))
             .Error.Should().Be(TrustErrors.PersonRequired);
@@ -202,7 +202,7 @@ public sealed class KernelProtocolVersionPostgresTests(KernelPostgresFixture fix
         withdrawn.Status.Should().Be(ProtocolVersionStatus.Withdrawn);
 
         (await fixture.Sender.SendAsync(
-                new ForkProtocolVersion(tenant, version.ProtocolVersionId, ProtocolVersionId.New(), KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), "Too late"),
+                new ForkProtocolVersion(tenant, version.ProtocolVersionId, ProtocolVersionId.New(), KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), "Attempted too late"),
                 cancellationToken: ct))
             .Error!.Code.Should().Be(ProtocolErrors.InvalidTransition.Code);
 
@@ -318,13 +318,13 @@ public sealed class KernelProtocolVersionPostgresTests(KernelPostgresFixture fix
 
         (await _scenario.CreateDraftAsync(tenant, StudyId.New(), ProtocolVersionId.New(), ct)).Error.Should().Be(ProtocolErrors.StudyUnknown);
         (await fixture.Sender.SendAsync(
-                new ForkProtocolVersion(tenant, ProtocolVersionId.New(), ProtocolVersionId.New(), KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), "Amendment"),
+                new ForkProtocolVersion(tenant, ProtocolVersionId.New(), ProtocolVersionId.New(), KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), "Protocol amendment"),
                 cancellationToken: ct))
             .Error!.Code.Should().Be(KernelErrors.NotFound.Code);
 
         (await _scenario.CreateDraftAsync(tenant, study, approved.ProtocolVersionId, ct)).Error.Should().Be(KernelErrors.AlreadyExists);
         (await fixture.Sender.SendAsync(
-                new ForkProtocolVersion(tenant, approved.ProtocolVersionId, approved.ProtocolVersionId, KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), "Amendment"),
+                new ForkProtocolVersion(tenant, approved.ProtocolVersionId, approved.ProtocolVersionId, KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), "Protocol amendment"),
                 cancellationToken: ct))
             .Error.Should().Be(KernelErrors.AlreadyExists);
         var reused = _scenario.AttestCommand(tenant, AttestationMeaning.Reviewed, KernelProtocolScenario.Target(approved)) with { AttestationId = approval };
@@ -353,7 +353,7 @@ public sealed class KernelProtocolVersionPostgresTests(KernelPostgresFixture fix
         var (otherTenant, otherStudy) = await _scenario.NewStudyAsync(ct);
         var draft = ProtocolVersionId.New();
         (await _scenario.CreateDraftAsync(otherTenant, otherStudy, draft, ct)).IsSuccess.Should().BeTrue();
-        (await fixture.Sender.SendAsync(new WithdrawProtocolVersion(otherTenant, draft, AttestationId.New(), KernelProtocolScenario.Key(), "Abandoned"), cancellationToken: ct))
+        (await fixture.Sender.SendAsync(new WithdrawProtocolVersion(otherTenant, draft, AttestationId.New(), KernelProtocolScenario.Key(), "Abandoned draft"), cancellationToken: ct))
             .Error!.Code.Should().Be(ProtocolErrors.InvalidTransition.Code);
     }
 
@@ -420,7 +420,7 @@ public sealed class KernelProtocolVersionPostgresTests(KernelPostgresFixture fix
             ["ep.treatment"],
             TransitionPolicy.RequiresReconsent);
 
-        await _scenario.OkAsync(new ForkProtocolVersion(tenant, parent.ProtocolVersionId, forkId, incompleteAmendment, KernelProtocolScenario.Key(), "Fork v2"), ct);
+        await _scenario.OkAsync(new ForkProtocolVersion(tenant, parent.ProtocolVersionId, forkId, incompleteAmendment, KernelProtocolScenario.Key(), "Fork protocol v2"), ct);
         await _scenario.OkAsync(new ReviseProtocolDraft(tenant, forkId, ProtocolDesignDocument.Write(amendedDesign), incompleteAmendment, KernelProtocolScenario.Key(), "Add Day 15"), ct);
 
         // 1. SubmitProtocolVersionForReview refuses undeclared SoA/eligibility elements.
@@ -436,7 +436,7 @@ public sealed class KernelProtocolVersionPostgresTests(KernelPostgresFixture fix
             ImpactedElements = ["ep.treatment", "visit.day15", "crit.inc1"],
         };
         await _scenario.OkAsync(new ReviseProtocolDraft(tenant, forkId, ProtocolDesignDocument.Write(amendedDesign), completeAmendment, KernelProtocolScenario.Key(), "Declare elements"), ct);
-        var frozenV2 = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, forkId, KernelProtocolScenario.Key(), "Submit v2"), ct);
+        var frozenV2 = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, forkId, KernelProtocolScenario.Key(), "Submit protocol v2"), ct);
         var approvedSigV2 = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(frozenV2)), ct);
 
         // 3. Approve without SimulationReport -> SimulationReviewRequired.

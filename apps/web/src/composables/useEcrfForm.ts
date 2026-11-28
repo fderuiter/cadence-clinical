@@ -45,6 +45,13 @@ export const OPEN_FORM_REASON = "Form opened for data entry";
 /** Segment naming backed eCRF form drafts under `cadence_user:<tenant>:<sub>:`. */
 export const ECRF_FORM_DRAFT_NAMESPACE = "ecrf_form_draft";
 
+/** Minimum trimmed length for a clinical reason for change (PRD-CRF-010). */
+export const MINIMUM_CHANGE_REASON_LENGTH = 10;
+
+/** Guidance shown when a committed item is cleared or reset without a replacement value or missing reason. */
+export const INCOMPLETE_CLEAR_GUIDANCE =
+  "Enter a corrected value or select why this item is missing.";
+
 const DRAFT_DEBOUNCE_MS = 500;
 const PREVIEW_DEBOUNCE_MS = 250;
 
@@ -53,6 +60,7 @@ export interface EcrfUnsavedItem {
   item_id: string;
   text: string;
   missing: string;
+  detail?: string;
   unit: string | null;
 }
 
@@ -103,14 +111,16 @@ export const FORM_CHANGED_MESSAGE =
 export const SIGN_DENIED_MESSAGE =
   "You are not authorised to sign this form; it was not signed.";
 
-/** One item's unsaved entry: typed text, or a reason the value is missing. */
+/** One item's unsaved entry: typed text, or a reason (and optional detail) the value is missing. */
 export interface EcrfEntry {
   text: string;
   missing: string;
+  detail: string;
 }
 
 /** One dirty item persisted in browser draft storage alongside the server revision it was edited from. */
-export interface EcrfDraftEntry extends EcrfEntry {
+export interface EcrfDraftEntry extends Omit<EcrfEntry, "detail"> {
+  detail?: string;
   revision: number;
 }
 
@@ -128,12 +138,14 @@ export interface EcrfStorageScope {
 /** Formats a draft or rejected-on-lock item entry for human-readable clinical review. */
 export function formatUnsavedDraftEntry(entry: EcrfUnsavedItem): string {
   if (entry.missing) {
+    const detail = typeof entry.detail === "string" ? entry.detail.trim() : "";
     return formatObservationValue({
       type: "missing",
       reason: entry.missing as Extract<
         KernelObservationValue,
         { type?: "missing" }
       >["reason"],
+      ...(detail ? { detail } : {}),
     });
   }
   const typed = entry.text.trim();
@@ -291,6 +303,10 @@ export function useEcrfForm(
         !unrecorded && item.value?.type === "missing"
           ? String(item.value.reason)
           : "",
+      detail:
+        !unrecorded && item.value?.type === "missing" && item.value.detail
+          ? String(item.value.detail)
+          : "",
     };
   }
 
@@ -321,7 +337,10 @@ export function useEcrfForm(
       return "No recorded value";
     }
     if (item.value.type === "missing") {
-      return `Missing (${missingReasonLabel(String(item.value.reason))})`;
+      const label = missingReasonLabel(String(item.value.reason));
+      const detail =
+        typeof item.value.detail === "string" ? item.value.detail.trim() : "";
+      return detail ? `Missing (${label}: ${detail})` : `Missing (${label})`;
     }
     return formatObservationValue(item.value);
   }
@@ -332,7 +351,10 @@ export function useEcrfForm(
   ): string {
     const missing = typeof saved.missing === "string" ? saved.missing : "";
     if (missing) {
-      return `Missing (${missingReasonLabel(missing)})`;
+      const label = missingReasonLabel(missing);
+      const detail =
+        typeof saved.detail === "string" ? saved.detail.trim() : "";
+      return detail ? `Missing (${label}: ${detail})` : `Missing (${label})`;
     }
     const text = typeof saved.text === "string" ? saved.text.trim() : "";
     if (!text) return "Blank";
@@ -362,11 +384,20 @@ export function useEcrfForm(
       return Boolean(entry.missing) || entry.text.trim().length > 0;
     }
     if (entry.missing) {
+      const committedDetail =
+        current?.type === "missing" && typeof current.detail === "string"
+          ? current.detail.trim()
+          : "";
       return !(
-        current?.type === "missing" && String(current.reason) === entry.missing
+        current?.type === "missing" &&
+        String(current.reason) === entry.missing &&
+        committedDetail === (entry.detail ?? "").trim()
       );
     }
-    if (current && current.type !== "missing") {
+    if (current?.type === "missing") {
+      return true;
+    }
+    if (current) {
       const initialText =
         initialTextByItemId.value.get(item.item_id) ??
         formatEntryText(current).trim();
@@ -375,7 +406,19 @@ export function useEcrfForm(
     return entry.text.trim().length > 0;
   }
 
+  /** True when a committed item was cleared or reset from Missing without entering a replacement value or missing reason. */
+  function isIncompleteEdit(item: EcrfFormItem): boolean {
+    const entry = entries[item.item_id];
+    if (!entry) return false;
+    return (
+      !isUnrecordedValue(item.value) &&
+      !entry.missing &&
+      entry.text.trim().length === 0
+    );
+  }
+
   const editedItems = computed(() => items.value.filter(isEdited));
+  const hasIncompleteEdits = computed(() => items.value.some(isIncompleteEdit));
   const dirty = computed(() => editedItems.value.length > 0);
   const draftRestored = computed(
     () => restoredDraftItemIds.value.length > 0 && dirty.value
@@ -434,9 +477,11 @@ export function useEcrfForm(
     for (const item of editedItems.value) {
       const entry = entries[item.item_id];
       if (!entry) continue;
+      const detail = entry.detail ?? "";
       draftItems[item.item_id] = {
         text: entry.text,
         missing: entry.missing,
+        ...(detail.trim() ? { detail } : {}),
         revision: Number(item.revision),
       };
     }
@@ -501,11 +546,15 @@ export function useEcrfForm(
         const savedText = typeof saved.text === "string" ? saved.text : "";
         const savedMissing =
           typeof saved.missing === "string" ? saved.missing : "";
+        const savedDetail =
+          typeof saved.detail === "string" ? saved.detail : "";
         const item = byId.get(itemId);
         const committedEntry = entries[itemId];
         const differs = item
           ? savedMissing !== (committedEntry?.missing ?? "") ||
-            savedText.trim() !== (committedEntry?.text ?? "").trim()
+            (savedMissing
+              ? savedDetail.trim() !== (committedEntry?.detail ?? "").trim()
+              : savedText.trim() !== (committedEntry?.text ?? "").trim())
           : Boolean(savedMissing || savedText.trim());
         if (!differs) continue;
         unapplied.push({
@@ -548,6 +597,7 @@ export function useEcrfForm(
       entries[itemId] = {
         text: typeof saved.text === "string" ? saved.text : "",
         missing: typeof saved.missing === "string" ? saved.missing : "",
+        detail: typeof saved.detail === "string" ? saved.detail : "",
       };
       if (isEdited(item)) {
         restoredIds.push(itemId);
@@ -876,7 +926,11 @@ export function useEcrfForm(
       if (!entry) continue;
       editedBeforeReload.push({
         itemId: item.item_id,
-        entry: { text: entry.text, missing: entry.missing },
+        entry: {
+          text: entry.text,
+          missing: entry.missing,
+          detail: entry.detail ?? "",
+        },
         revision: Number(item.revision),
         priorItem: item,
       });
@@ -898,7 +952,10 @@ export function useEcrfForm(
         const committedEntry = entries[saved.itemId];
         const differs = nextItem
           ? saved.entry.missing !== (committedEntry?.missing ?? "") ||
-            saved.entry.text.trim() !== (committedEntry?.text ?? "").trim()
+            (saved.entry.missing
+              ? (saved.entry.detail ?? "").trim() !==
+                (committedEntry?.detail ?? "").trim()
+              : saved.entry.text.trim() !== (committedEntry?.text ?? "").trim())
           : Boolean(saved.entry.missing || saved.entry.text.trim());
         if (!differs) continue;
         unapplied.push({
@@ -1001,13 +1058,18 @@ export function useEcrfForm(
   function valueOf(item: EcrfFormItem): KernelObservationValue | string {
     const entry = entries[item.item_id];
     if (entry.missing) {
+      const detail = (entry.detail ?? "").trim();
       return {
         type: "missing",
         reason: entry.missing as Extract<
           KernelObservationValue,
           { type?: "missing" }
         >["reason"],
+        ...(detail ? { detail } : {}),
       };
+    }
+    if (isIncompleteEdit(item)) {
+      return INCOMPLETE_CLEAR_GUIDANCE;
     }
     const parsed = parseFormEntry(entry.text, item);
     return parsed.ok ? parsed.value : parsed.message;
@@ -1016,6 +1078,7 @@ export function useEcrfForm(
   /** Saves every edited item in one command, with the reason in the audit trail. */
   async function save(reason: string): Promise<void> {
     const current = form.value;
+    const trimmedReason = reason.trim();
     if (!current || saving.value || !dirty.value) return;
     clearRecord(itemErrors);
     outcome.value = null;
@@ -1042,9 +1105,20 @@ export function useEcrfForm(
       };
       return;
     }
+    if (trimmedReason.length < MINIMUM_CHANGE_REASON_LENGTH) {
+      outcome.value = {
+        kind: "invalid",
+        message: `Reason for change must be at least ${MINIMUM_CHANGE_REASON_LENGTH} characters. Nothing was saved.`,
+      };
+      return;
+    }
 
     cancelPreview();
-    const sent = JSON.stringify({ form: current.form_id, values, reason });
+    const sent = JSON.stringify({
+      form: current.form_id,
+      values,
+      reason: trimmedReason,
+    });
     if (pendingSave?.request !== sent) {
       pendingSave = { request: sent, key: newKey() };
     }
@@ -1053,7 +1127,7 @@ export function useEcrfForm(
       const saved = await ecrfFormsApi.saveValues({
         formId: current.form_id,
         values,
-        reason,
+        reason: trimmedReason,
         idempotencyKey: pendingSave.key,
       });
       pendingSave = null;
@@ -1112,6 +1186,7 @@ export function useEcrfForm(
           item_id: item.item_id,
           text: entries[item.item_id]?.text ?? "",
           missing: entries[item.item_id]?.missing ?? "",
+          detail: entries[item.item_id]?.detail ?? "",
           unit: item.unit ?? null,
         }));
         clearDraft(current.form_id);
@@ -1271,6 +1346,8 @@ export function useEcrfForm(
     dirty,
     editedItems,
     isEdited,
+    isIncompleteEdit,
+    hasIncompleteEdits,
     draftRestored,
     restoredDraftItemIds,
     comparingBaseline,

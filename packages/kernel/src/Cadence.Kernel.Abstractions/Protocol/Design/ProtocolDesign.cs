@@ -256,7 +256,7 @@ public sealed record CollectionItem(
     /// </summary>
     public string? Admits(ObservationValue? value)
     {
-        if (ObservationValue.ProblemOf(value) is { } problem)
+        if (ObservationValue.CallerProblemOf(value) is { } problem)
         {
             return problem;
         }

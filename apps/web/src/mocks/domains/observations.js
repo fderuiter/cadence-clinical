@@ -212,6 +212,25 @@ export function createObservationsDomain(ctx) {
     getObservation,
 
     correctObservation(observationRef, body, reasonForChange) {
+      const valueReason =
+        body?.value?.type === "missing"
+          ? String(body.value.reason || "").toLowerCase()
+          : "";
+      if (
+        valueReason === "masked" ||
+        valueReason === "notasked" ||
+        valueReason === "not_asked"
+      ) {
+        return {
+          invalid: true,
+          problem: {
+            title: "Invalid observation value",
+            status: 422,
+            code: "K.Observation.ValueInvalid",
+            detail: `Null flavor '${body.value.reason}' is system-reserved and cannot be recorded by callers.`,
+          },
+        };
+      }
       const normalized = String(observationRef).startsWith("observation:")
         ? String(observationRef)
         : `observation:${observationRef}`;

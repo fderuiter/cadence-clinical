@@ -41,4 +41,22 @@ describe("ReasonForChangeModal.vue - Wrapper Component", () => {
       "Initial Entry: Adding custom verification details",
     ]);
   });
+
+  it("blocks confirm when Other is selected with fewer than 10 trimmed characters", async () => {
+    const wrapper = mount(ReasonForChangeModal, {
+      props: {
+        show: true,
+        idPrefix: "short-",
+      },
+    });
+
+    await wrapper.find("#short-change-reason-select").setValue("Other");
+    await wrapper.find("#short-change-reason-text").setValue("   typo   ");
+    await wrapper.find("#short-btn-save-change").trigger("click");
+
+    expect(wrapper.emitted("confirm")).toBeFalsy();
+    expect(wrapper.find("#short-reason-error").text()).toContain(
+      "Reason for change must be at least 10 characters"
+    );
+  });
 });

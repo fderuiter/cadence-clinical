@@ -67,7 +67,22 @@ export function useObservationViewModel(options: {
   } = options;
 
   const newValue = ref("");
+  const missingReason = ref("");
+  const missingDetail = ref("");
   const reasonOpen = ref(false);
+
+  function setMissingReason(reason: string) {
+    missingReason.value = reason;
+    if (reason) {
+      newValue.value = "";
+    } else {
+      missingDetail.value = "";
+    }
+  }
+
+  function setMissingDetail(detail: string) {
+    missingDetail.value = detail;
+  }
 
   const normalizedConceptRef = computed(() =>
     normalizeLookupNodeRef(observation.value?.concept)
@@ -102,6 +117,8 @@ export function useObservationViewModel(options: {
   );
   const observationAudit = computed(() => observation.value?.audit ?? []);
 
+  // Active SDV states (`activeVerification`, `supersededVerification`) exclude
+  // unrecorded `NullFlavor.NotAsked` (`not_asked`) placeholders (`K-FACT-3`).
   const hasRecordedValue = computed(() =>
     observation.value ? !isUnrecordedValue(observation.value.value) : false
   );
@@ -220,7 +237,22 @@ export function useObservationViewModel(options: {
 
   const parsed = computed(() => {
     const current = observation.value?.value;
-    if (!current || newValue.value.trim().length === 0) return null;
+    if (!current) return null;
+    if (missingReason.value) {
+      const detail = missingDetail.value.trim();
+      return {
+        ok: true as const,
+        value: {
+          type: "missing" as const,
+          reason: missingReason.value as Extract<
+            KernelObservation["value"],
+            { type?: "missing" }
+          >["reason"],
+          ...(detail ? { detail } : {}),
+        },
+      };
+    }
+    if (newValue.value.trim().length === 0) return null;
     return parseCorrection(newValue.value, current, expectedSpec.value);
   });
 
@@ -234,9 +266,14 @@ export function useObservationViewModel(options: {
       !sameObservationValue(parsed.value.value, observation.value?.value)
   );
 
-  const hasChangedText = computed(() => {
+  const hasChangedEntry = computed(() => {
     const current = observation.value?.value;
     if (!current || locked.value || !canCorrect.value) return false;
+    if (missingReason.value) {
+      return parsed.value?.ok
+        ? !sameObservationValue(parsed.value.value, current)
+        : false;
+    }
     if (newValue.value.trim().length === 0) return false;
     if (parsed.value?.ok) {
       return !sameObservationValue(parsed.value.value, current);
@@ -249,12 +286,14 @@ export function useObservationViewModel(options: {
       Boolean(observation.value?.value) &&
       !locked.value &&
       canCorrect.value &&
-      (hasChangedText.value || reasonOpen.value)
+      (hasChangedEntry.value || reasonOpen.value)
   );
 
   function discardCorrection() {
     reasonOpen.value = false;
     newValue.value = "";
+    missingReason.value = "";
+    missingDetail.value = "";
   }
 
   watch(locked, (isLocked) => {
@@ -298,6 +337,10 @@ export function useObservationViewModel(options: {
 
   return {
     newValue,
+    missingReason,
+    missingDetail,
+    setMissingReason,
+    setMissingDetail,
     reasonOpen,
     normalizedConceptRef,
     cleanObservationRef,

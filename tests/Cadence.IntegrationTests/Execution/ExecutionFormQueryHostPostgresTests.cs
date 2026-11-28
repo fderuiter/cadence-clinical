@@ -393,12 +393,12 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             siteB = linkB.Id;
         }
 
-        var partA = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented"), ct);
-        var partB = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented"), ct);
+        var partA = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Participant consented"), ct);
+        var partB = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Participant consented"), ct);
         SubjectCode.TryFrom("SUBJ-A1", out var codeA);
         SubjectCode.TryFrom("SUBJ-B1", out var codeB);
-        var enrA = (await _scenario.Protocol.OkAsync(new ScreenParticipant(tenant, EnrollmentId.New(), partA, siteA, codeA, _scenario.Tick(), KernelProtocolScenario.Key(), "Screened"), ct)).EnrollmentId;
-        var enrB = (await _scenario.Protocol.OkAsync(new ScreenParticipant(tenant, EnrollmentId.New(), partB, siteB, codeB, _scenario.Tick(), KernelProtocolScenario.Key(), "Screened"), ct)).EnrollmentId;
+        var enrA = (await _scenario.Protocol.OkAsync(new ScreenParticipant(tenant, EnrollmentId.New(), partA, siteA, codeA, _scenario.Tick(), KernelProtocolScenario.Key(), "Participant screened"), ct)).EnrollmentId;
+        var enrB = (await _scenario.Protocol.OkAsync(new ScreenParticipant(tenant, EnrollmentId.New(), partB, siteB, codeB, _scenario.Tick(), KernelProtocolScenario.Key(), "Participant screened"), ct)).EnrollmentId;
 
         // Grant CRC at Site A only, CrcSiteB at Site B only, and Monitor across the whole Study.
         foreach (var capability in new[] { "collection.record", "execution.query.answer" })
@@ -438,7 +438,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         }, HttpStatusCode.Created, ct);
 
         // Site A CRC answers and corrects Site A's value -> qA becomes status=answered, value_changed=true.
-        await SendAsync<FormQueryResponse>(crcA, HttpMethod.Post, $"/{formA.Value:D}/queries/{qA.QueryId:D}/answer", "Answered", new { text = "Updated to 132" }, HttpStatusCode.OK, ct);
+        await SendAsync<FormQueryResponse>(crcA, HttpMethod.Post, $"/{formA.Value:D}/queries/{qA.QueryId:D}/answer", "Answered query", new { text = "Updated to 132" }, HttpStatusCode.OK, ct);
         await SendAsync<JsonElement>(crcA, HttpMethod.Put, $"/{formA.Value:D}/values", SaveReason, new
         {
             values = new[] { new { item_id = Systolic, value = new { type = "quantity", value = 132m, unit = "mm[Hg]" }, expected_revision = 1 } },
@@ -769,7 +769,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
                 Content = JsonContent.Create(new { assignee = "crc.bob" }),
             })
             {
-                missingKeyReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Handoff"));
+                missingKeyReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Query handoff"));
                 using var missingKeyRes = await monitor.SendAsync(missingKeyReq, ct);
                 missingKeyRes.StatusCode.Should().Be((HttpStatusCode)422);
             }
@@ -1085,16 +1085,16 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             siteB = linkB.Id;
         }
 
-        var partA = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented"), ct);
-        var partB = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Consented"), ct);
+        var partA = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Participant consented"), ct);
+        var partB = await _scenario.Protocol.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), "Participant consented"), ct);
         SubjectCode.TryFrom("SUBJ-BA1", out var codeA);
         SubjectCode.TryFrom("SUBJ-BB1", out var codeB);
-        var enrA = (await _scenario.Protocol.OkAsync(new ScreenParticipant(tenant, EnrollmentId.New(), partA, siteA, codeA, _scenario.Tick(), KernelProtocolScenario.Key(), "Screened"), ct)).EnrollmentId;
-        var enrB = (await _scenario.Protocol.OkAsync(new ScreenParticipant(tenant, EnrollmentId.New(), partB, siteB, codeB, _scenario.Tick(), KernelProtocolScenario.Key(), "Screened"), ct)).EnrollmentId;
+        var enrA = (await _scenario.Protocol.OkAsync(new ScreenParticipant(tenant, EnrollmentId.New(), partA, siteA, codeA, _scenario.Tick(), KernelProtocolScenario.Key(), "Participant screened"), ct)).EnrollmentId;
+        var enrB = (await _scenario.Protocol.OkAsync(new ScreenParticipant(tenant, EnrollmentId.New(), partB, siteB, codeB, _scenario.Tick(), KernelProtocolScenario.Key(), "Participant screened"), ct)).EnrollmentId;
 
         foreach (var capability in new[] { "collection.record", "execution.query.answer" })
         {
-            await _scenario.Protocol.OkAsync(new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), capability, null, AuthorityScope.Study(study), _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Study CRC"), ct);
+            await _scenario.Protocol.OkAsync(new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), capability, null, AuthorityScope.Study(study), _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Appoint study CRC"), ct);
         }
 
         foreach (var capability in new[] { "collection.record_unasked", "execution.query.raise", "execution.query.manage" })
@@ -1215,14 +1215,14 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             answered.Status.Should().Be("answered");
 
             var reopened = await SendAsync<FormQueryResponse>(
-                monitor, HttpMethod.Post, $"/{firstFormA.FormId.Value:D}/queries/{firstFormA.Query.QueryId:D}/reopen", "Re-check", new { text = "Please double-check cuff log" }, HttpStatusCode.OK, ct);
+                monitor, HttpMethod.Post, $"/{firstFormA.FormId.Value:D}/queries/{firstFormA.Query.QueryId:D}/reopen", "Re-check cuff log", new { text = "Please double-check cuff log" }, HttpStatusCode.OK, ct);
             reopened.Status.Should().Be("open");
 
             await SendAsync<FormQueryResponse>(
                 crc, HttpMethod.Post, $"/{firstFormA.FormId.Value:D}/queries/{firstFormA.Query.QueryId:D}/answer", "Re-confirmed", new { text = "Verified cuff log" }, HttpStatusCode.OK, ct);
 
             var closed = await SendAsync<FormQueryResponse>(
-                monitor, HttpMethod.Post, $"/{firstFormA.FormId.Value:D}/queries/{firstFormA.Query.QueryId:D}/close", "Accepted", new { text = "Closed after SDV" }, HttpStatusCode.OK, ct);
+                monitor, HttpMethod.Post, $"/{firstFormA.FormId.Value:D}/queries/{firstFormA.Query.QueryId:D}/close", "Accepted answer", new { text = "Closed after SDV" }, HttpStatusCode.OK, ct);
             closed.Status.Should().Be("closed");
 
             var stepSql = _sql.Snapshot();
@@ -1276,7 +1276,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             {
                 await _scenario.Protocol.OkAsync(
                     new IssueGrant(tenant, GrantId.New(), Actor.Person(person), capability, null, AuthorityScope.StudySite(studySite), _scenario.Tick(), null, false,
-                        KernelProtocolScenario.Key(), "Appointed"),
+                        KernelProtocolScenario.Key(), "Appointed to role"),
                     ct);
             }
         }
@@ -1476,9 +1476,9 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
 
         var (_, study) = await _scenario.Protocol.NewStudyAsync(tenant, ct);
         var systolicConcept = await _scenario.Protocol.OkAsync(
-            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic BP.", KernelProtocolScenario.Key(), "Defined"), ct);
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic BP.", KernelProtocolScenario.Key(), "Define concept"), ct);
         var diastolicConcept = await _scenario.Protocol.OkAsync(
-            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Diastolic BP", "Diastolic BP.", KernelProtocolScenario.Key(), "Defined"), ct);
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Diastolic BP", "Diastolic BP.", KernelProtocolScenario.Key(), "Define concept"), ct);
         var treatmentConcept = await _scenario.Protocol.OkAsync(
             new DefineConcept(
                 tenant,
@@ -1489,7 +1489,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
                 "Randomized arm (randomization_treatment_assignment)",
                 "Randomized treatment allocation.",
                 KernelProtocolScenario.Key(),
-                "Defined"),
+                "Define concept"),
             ct);
 
         var design = ProtocolDesignSamples.MinimalDesign() with
@@ -1521,9 +1521,9 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         var versionId = ProtocolVersionId.New();
         var draft = await _scenario.Protocol.CreateDraftAsync(tenant, study, versionId, ct, ProtocolDesignDocument.Write(design));
         draft.IsSuccess.Should().BeTrue(draft.Error?.Message);
-        var inReview = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, versionId, KernelProtocolScenario.Key(), "Ready"), ct);
+        var inReview = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, versionId, KernelProtocolScenario.Key(), "Ready for review"), ct);
         var signature = await _scenario.Protocol.OkAsync(_scenario.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
-        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, versionId, signature, KernelProtocolScenario.Key(), "Approved"), ct);
+        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, versionId, signature, KernelProtocolScenario.Key(), "Approved protocol"), ct);
 
         var effectivity = EffectivityId.New();
         await _scenario.Protocol.OkAsync(
@@ -1532,9 +1532,9 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         var ethicsVersion = ArtifactVersionId.New();
         var ethicsContent = new ArtifactContent(ContentHash.OfBytes(ethicsBytes), ethicsBytes.Length, "application/pdf", "blob://evidence/ethics.pdf");
         await _scenario.Protocol.OkAsync(
-            new RegisterArtifact(tenant, ArtifactId.New(), ethicsVersion, ArtifactKind.EthicsApproval, study, "Ethics approval", ethicsContent, KernelProtocolScenario.Key(), "Filed"), ct);
+            new RegisterArtifact(tenant, ArtifactId.New(), ethicsVersion, ArtifactKind.EthicsApproval, study, "Ethics approval", ethicsContent, KernelProtocolScenario.Key(), "Artifact filed"), ct);
         await _scenario.Protocol.OkAsync(
-            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, _scenario.Tick(), [ethicsVersion], KernelProtocolScenario.Key(), "Effective"), ct);
+            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, _scenario.Tick(), [ethicsVersion], KernelProtocolScenario.Key(), "Made effective"), ct);
 
         StudySiteId siteA;
         StudySiteId siteB;

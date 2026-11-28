@@ -36,6 +36,13 @@ internal sealed class AlertMonitorOnVerifiedObservationCorrected(
         }
 
         var correctingRevision = observation.Revisions.FirstOrDefault(r => r.Number == payload.Revision);
+        if (observation.Value is MissingValue { Reason: NullFlavor.NotAsked }
+            || correctingRevision?.Value is MissingValue { Reason: NullFlavor.NotAsked }
+            || payload.Value is MissingValue { Reason: NullFlavor.NotAsked })
+        {
+            return;
+        }
+
         var cutoff = correctingRevision?.RecordedAt ?? delivery.Envelope.Recorded;
         var verified = observation.Assertions
             .Where(a => a.Kind == AssertionKind.Verified

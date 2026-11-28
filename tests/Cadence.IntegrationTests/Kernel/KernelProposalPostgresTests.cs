@@ -483,7 +483,7 @@ public sealed class KernelProposalPostgresTests : IClassFixture<KernelPostgresFi
     private async Task GrantAsync(TenantId tenant, Actor grantee, string capability, AuthorityScope scope, CancellationToken ct)
     {
         await _scenario.OkAsync(
-            new IssueGrant(tenant, GrantId.New(), grantee, capability, null, scope, _fixture.Clock.UtcNow, null, false, KernelProtocolScenario.Key(), "Appointed"),
+            new IssueGrant(tenant, GrantId.New(), grantee, capability, null, scope, _fixture.Clock.UtcNow, null, false, KernelProtocolScenario.Key(), "Appointed to role"),
             ct);
         Tick();
     }

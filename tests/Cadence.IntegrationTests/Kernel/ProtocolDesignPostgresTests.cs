@@ -48,7 +48,7 @@ public sealed class ProtocolDesignPostgresTests(KernelPostgresFixture fixture) :
         var id = ProtocolVersionId.New();
 
         (await _scenario.CreateDraftAsync(tenant, study, id, ct, ProtocolDesignDocument.Write(design))).IsSuccess.Should().BeTrue();
-        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Ready"), ct);
+        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Ready for review"), ct);
 
         inReview.Status.Should().Be(ProtocolVersionStatus.InReview);
         await using var db = fixture.CreateContext(tenant);

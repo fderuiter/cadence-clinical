@@ -881,9 +881,9 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
         var (_, study) = await _scenario.Protocol.NewStudyAsync(tenant, ct);
 
         var systolicConcept = await _scenario.Protocol.OkAsync(
-            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic BP.", KernelProtocolScenario.Key(), "Defined"), ct);
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic BP.", KernelProtocolScenario.Key(), "Define concept"), ct);
         var diastolicConcept = await _scenario.Protocol.OkAsync(
-            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Diastolic BP", "Diastolic BP.", KernelProtocolScenario.Key(), "Defined"), ct);
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Diastolic BP", "Diastolic BP.", KernelProtocolScenario.Key(), "Define concept"), ct);
         var treatmentConcept = await _scenario.Protocol.OkAsync(
             new DefineConcept(
                 tenant,
@@ -894,7 +894,7 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
                 "Randomized arm (randomization_treatment_assignment)",
                 "Randomized arm allocation.",
                 KernelProtocolScenario.Key(),
-                "Defined"),
+                "Define concept"),
             ct);
 
         var design = ProtocolDesignSamples.MinimalDesign() with
@@ -926,9 +926,9 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
         var versionId = ProtocolVersionId.New();
         var draft = await _scenario.Protocol.CreateDraftAsync(tenant, study, versionId, ct, ProtocolDesignDocument.Write(design));
         draft.IsSuccess.Should().BeTrue(draft.Error?.Message);
-        var inReview = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, versionId, KernelProtocolScenario.Key(), "Ready"), ct);
+        var inReview = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, versionId, KernelProtocolScenario.Key(), "Ready for review"), ct);
         var signature = await _scenario.Protocol.OkAsync(_scenario.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
-        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, versionId, signature, KernelProtocolScenario.Key(), "Approved"), ct);
+        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, versionId, signature, KernelProtocolScenario.Key(), "Approved protocol"), ct);
 
         var effectivity = EffectivityId.New();
         await _scenario.Protocol.OkAsync(
@@ -937,9 +937,9 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
         var ethicsVersion = ArtifactVersionId.New();
         var ethicsContent = new ArtifactContent(ContentHash.OfBytes(ethicsBytes), ethicsBytes.Length, "application/pdf", "blob://evidence/ethics.pdf");
         await _scenario.Protocol.OkAsync(
-            new RegisterArtifact(tenant, ArtifactId.New(), ethicsVersion, ArtifactKind.EthicsApproval, study, "Ethics approval", ethicsContent, KernelProtocolScenario.Key(), "Filed"), ct);
+            new RegisterArtifact(tenant, ArtifactId.New(), ethicsVersion, ArtifactKind.EthicsApproval, study, "Ethics approval", ethicsContent, KernelProtocolScenario.Key(), "Artifact filed"), ct);
         await _scenario.Protocol.OkAsync(
-            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, Tick(), [ethicsVersion], KernelProtocolScenario.Key(), "Effective"), ct);
+            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, Tick(), [ethicsVersion], KernelProtocolScenario.Key(), "Made effective"), ct);
 
         StudySiteId siteA;
         StudySiteId siteB;

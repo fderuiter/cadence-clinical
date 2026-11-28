@@ -101,10 +101,10 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
         var (tenant, study) = await _scenario.Protocol.NewStudyAsync(ct);
 
         var sbpConcept = await _scenario.Protocol.OkAsync(
-            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic BP.", KernelProtocolScenario.Key(), "Concept"),
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic BP.", KernelProtocolScenario.Key(), "Define concept"),
             ct);
         var armConcept = await _scenario.Protocol.OkAsync(
-            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Randomization Arm", "Blinded treatment arm.", KernelProtocolScenario.Key(), "Concept"),
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Randomization Arm", "Blinded treatment arm.", KernelProtocolScenario.Key(), "Define concept"),
             ct);
 
         var design = ProtocolDesignSamples.MinimalDesign() with
@@ -123,9 +123,9 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
 
         var version = ProtocolVersionId.New();
         (await _scenario.Protocol.CreateDraftAsync(tenant, study, version, ct, ProtocolDesignDocument.Write(design))).IsSuccess.Should().BeTrue();
-        var inReview = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready"), ct);
+        var inReview = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready for review"), ct);
         var sig = await _scenario.Protocol.OkAsync(_scenario.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
-        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, sig, KernelProtocolScenario.Key(), "Approved"), ct);
+        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, sig, KernelProtocolScenario.Key(), "Approved protocol"), ct);
         var eff = EffectivityId.New();
         await _scenario.Protocol.OkAsync(new DeclareEffectivity(tenant, eff, version, EffectivityScope.Study(), _scenario.Tick(), KernelProtocolScenario.Key(), "Study-wide"), ct);
         var ethicsBytes = Encoding.UTF8.GetBytes($"ethics-{Guid.CreateVersion7():N}");
@@ -142,7 +142,7 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
                 KernelProtocolScenario.Key(),
                 "Filed approval"),
             ct);
-        await _scenario.Protocol.OkAsync(new ChangeEffectivityStatus(tenant, eff, EffectivityStatus.Effective, _scenario.Tick(), [ethics], KernelProtocolScenario.Key(), "Effective"), ct);
+        await _scenario.Protocol.OkAsync(new ChangeEffectivityStatus(tenant, eff, EffectivityStatus.Effective, _scenario.Tick(), [ethics], KernelProtocolScenario.Key(), "Made effective"), ct);
 
         var site = await _scenario.Observations.AddStudySiteAsync(tenant, study, ct);
         var subject = new KernelObservationScenario.Subject(tenant, study, site, await _scenario.Observations.ScreenAsync(tenant, site, ct));
@@ -438,7 +438,7 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
                 monitor,
                 HttpMethod.Post,
                 $"/{formId.Value:D}/queries",
-                "Batch SDV",
+                "Batch SDV query",
                 new { observation_id = obsId.Value, revision = 1, text = $"Confirm vitals #{i}" },
                 HttpStatusCode.Created,
                 ct);
@@ -684,16 +684,16 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
         var tenantCode = await adminForCode.Tenants.AsNoTracking().Where(t => t.Id == tenant).Select(t => t.Code).SingleAsync(ct);
 
         var sbpConcept = await _scenario.Protocol.OkAsync(
-            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic BP.", KernelProtocolScenario.Key(), "Concept"),
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic BP.", KernelProtocolScenario.Key(), "Define concept"),
             ct);
         var dbpConcept = await _scenario.Protocol.OkAsync(
-            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Diastolic BP", "Diastolic BP.", KernelProtocolScenario.Key(), "Concept"),
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Diastolic BP", "Diastolic BP.", KernelProtocolScenario.Key(), "Define concept"),
             ct);
         var hrConcept = await _scenario.Protocol.OkAsync(
-            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Heart Rate", "Heart Rate.", KernelProtocolScenario.Key(), "Concept"),
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Heart Rate", "Heart Rate.", KernelProtocolScenario.Key(), "Define concept"),
             ct);
         var armConcept = await _scenario.Protocol.OkAsync(
-            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Randomization Arm", "Blinded treatment arm.", KernelProtocolScenario.Key(), "Concept"),
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Randomization Arm", "Blinded treatment arm.", KernelProtocolScenario.Key(), "Define concept"),
             ct);
 
         var activities = new List<PlannedActivity>(20);
@@ -766,9 +766,9 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
 
         var version = ProtocolVersionId.New();
         (await _scenario.Protocol.CreateDraftAsync(tenant, study, version, ct, ProtocolDesignDocument.Write(design))).IsSuccess.Should().BeTrue();
-        var inReview = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready"), ct);
+        var inReview = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready for review"), ct);
         var sig = await _scenario.Protocol.OkAsync(_scenario.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
-        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, sig, KernelProtocolScenario.Key(), "Approved"), ct);
+        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, sig, KernelProtocolScenario.Key(), "Approved protocol"), ct);
         var eff = EffectivityId.New();
         await _scenario.Protocol.OkAsync(new DeclareEffectivity(tenant, eff, version, EffectivityScope.Study(), _scenario.Tick(), KernelProtocolScenario.Key(), "Study-wide"), ct);
         var ethicsBytes = Encoding.UTF8.GetBytes($"ethics-{Guid.CreateVersion7():N}");
@@ -785,7 +785,7 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
                 KernelProtocolScenario.Key(),
                 "Filed approval"),
             ct);
-        await _scenario.Protocol.OkAsync(new ChangeEffectivityStatus(tenant, eff, EffectivityStatus.Effective, _scenario.Tick(), [ethics], KernelProtocolScenario.Key(), "Effective"), ct);
+        await _scenario.Protocol.OkAsync(new ChangeEffectivityStatus(tenant, eff, EffectivityStatus.Effective, _scenario.Tick(), [ethics], KernelProtocolScenario.Key(), "Made effective"), ct);
 
         // Pin a collection-stage Error rule pack and create a draft candidate rule pack for PreviewStudyRulePackAsync.
         var collectionPack = new RulePack(

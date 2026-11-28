@@ -169,8 +169,10 @@
         :can-verify-source="canVerifySource"
         :can-manage-queries="canManageQueries"
         :item-observation-link="itemObservationLink"
+        :confirm-supersede="confirmSupersedeSignatures"
         @entry-text="setEntryText"
         @entry-missing="setEntryMissing"
+        @entry-detail="setEntryDetail"
         @close-form="closeForm"
       />
 
@@ -308,7 +310,36 @@ function setEntryText(itemId: string, text: string) {
   if (formState.entries[itemId]) formState.entries[itemId].text = text;
 }
 function setEntryMissing(itemId: string, missing: string) {
-  if (formState.entries[itemId]) formState.entries[itemId].missing = missing;
+  const entry = formState.entries[itemId];
+  if (!entry) return;
+  entry.missing = missing;
+  if (missing) {
+    entry.text = "";
+    delete formState.itemErrors[itemId];
+  } else {
+    entry.detail = "";
+  }
+}
+function setEntryDetail(itemId: string, detail: string) {
+  if (formState.entries[itemId]) formState.entries[itemId].detail = detail;
+}
+
+const currentSignatures = computed(() =>
+  (form.value?.signatures ?? []).filter((sig) => !sig.superseded)
+);
+
+async function confirmSupersedeSignatures(): Promise<boolean> {
+  if (currentSignatures.value.length === 0) return true;
+  const summary = currentSignatures.value
+    .map((sig) => `${sig.meaning} by ${sig.signed_by}`)
+    .join(", ");
+  return confirmDialog({
+    title: "Supersede Current Signature?",
+    message: `This form carries a Current signature (${summary}). Saving these changes will mark the Current attestation as Superseded by a later correction and require re-signing. Continue?`,
+    confirmLabel: "Supersede & Save",
+    cancelLabel: "Cancel",
+    variant: "warning",
+  });
 }
 
 function onDiscardDraft() {

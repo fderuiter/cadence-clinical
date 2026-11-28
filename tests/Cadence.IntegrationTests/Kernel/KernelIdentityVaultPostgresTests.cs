@@ -115,7 +115,7 @@ public sealed class KernelIdentityVaultPostgresTests(KernelPostgresFixture fixtu
         UseProductionAuthorization();
 
         fixture.CurrentActor.Actor = Coordinator;
-        var denied = await fixture.IdentityVault.RevealAsync(new RevealPersonIdentity(tenant, person, Key(), "Curious"), ct);
+        var denied = await fixture.IdentityVault.RevealAsync(new RevealPersonIdentity(tenant, person, Key(), "Unauthorized curiosity"), ct);
         denied.Error!.Code.Should().Be(KernelErrors.AuthorizationDenied.Code);
         denied.Value.Should().BeNull();
         (await EventActorsAsync(tenant, "DecisionDenied", ct)).Should().Equal(Coordinator.Id);
@@ -339,7 +339,7 @@ public sealed class KernelIdentityVaultPostgresTests(KernelPostgresFixture fixtu
     {
         fixture.CurrentActor.Actor = Platform;
         await _scenario.OkAsync(
-            new IssueGrant(tenant, GrantId.New(), grantee, capability, null, AuthorityScope.Tenant(), fixture.Clock.UtcNow, null, false, Key(), "Appointed"), ct);
+            new IssueGrant(tenant, GrantId.New(), grantee, capability, null, AuthorityScope.Tenant(), fixture.Clock.UtcNow, null, false, Key(), "Appointed to role"), ct);
         fixture.Clock.Advance(TimeSpan.FromSeconds(1));
     }
 
