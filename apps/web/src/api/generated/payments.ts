@@ -1495,12 +1495,14 @@ export interface operations {
       };
     };
     responses: {
-      /** @description OK */
-      200: {
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1517,12 +1519,14 @@ export interface operations {
       };
     };
     responses: {
-      /** @description OK */
-      200: {
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
