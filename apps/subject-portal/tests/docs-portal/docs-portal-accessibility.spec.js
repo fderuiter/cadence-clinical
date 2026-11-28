@@ -193,10 +193,57 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
       docIndexHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
       (m) => m[1]
     );
-    const dataRowCount = tbodyBlocks.reduce(
-      (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
-      0
-    );
+    expect(tbodyBlocks.length).toBe(2);
+
+    const topLevelShardHrefs = [];
+    for (const tbody of tbodyBlocks) {
+      for (const trMatch of tbody.matchAll(
+        /<tr(?:\s[^>]*)?>([\s\S]*?)<\/tr>/gi
+      )) {
+        const firstTd =
+          trMatch[1].match(/<td(?:\s[^>]*)?>([\s\S]*?)<\/td>/i)?.[1] || "";
+        const href = firstTd.match(/href="([^"]+)"/i)?.[1];
+        if (href) {
+          topLevelShardHrefs.push(href);
+        }
+      }
+    }
+    expect(topLevelShardHrefs.length).toBeGreaterThanOrEqual(28);
+
+    let dataRowCount = 0;
+    for (const href of topLevelShardHrefs) {
+      const shardRelPath = href
+        .split("#")[0]
+        .replace(/^\.\//, "")
+        .replace(/\/$/, "/index.html");
+      const shardFullPath = path.join(docsDistDir, shardRelPath);
+      expect(
+        fs.existsSync(shardFullPath),
+        `Missing compiled documentation index shard: ${shardRelPath}`
+      ).toBe(true);
+      if (shardRelPath === "adr/TEMPLATE.html") {
+        continue;
+      }
+
+      const shardHtml = fs.readFileSync(shardFullPath, "utf8");
+      const vpDocHtml =
+        shardHtml.match(/class="vp-doc[^"]*"[^>]*>([\s\S]*?)<\/main>/i)?.[1] ||
+        shardHtml;
+      const shardTbodyBlocks = Array.from(
+        vpDocHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
+        (m) => m[1]
+      );
+      dataRowCount += shardTbodyBlocks.reduce(
+        (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
+        0
+      );
+      if (
+        shardRelPath.startsWith("adr/") &&
+        shardRelPath !== "adr/index.html"
+      ) {
+        dataRowCount += (vpDocHtml.match(/<li>\s*<a\s/gi) || []).length;
+      }
+    }
     expect(dataRowCount).toBeGreaterThanOrEqual(715);
   });
 

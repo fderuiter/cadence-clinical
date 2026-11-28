@@ -546,6 +546,6 @@ button:focus-visible {
 }
 
 :deep(.signature-capture-backdrop) {
-  z-index: 10010;
+  z-index: calc(9999 + 11);
 }
 </style>

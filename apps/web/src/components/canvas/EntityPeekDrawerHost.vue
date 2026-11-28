@@ -153,7 +153,7 @@ function openFullView() {
 
 <style scoped>
 :deep(.entity-peek-drawer-overlay) {
-  z-index: 10005;
+  z-index: calc(9999 + 6);
 }
 
 .entity-peek-host {
