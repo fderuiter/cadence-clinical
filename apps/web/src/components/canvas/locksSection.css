@@ -1,7 +1,7 @@
 .study-locks {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   min-width: 0;
   max-width: 100%;
 }
@@ -51,7 +51,7 @@
 }
 
 .apply-card {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border: 1px solid var(--semantic-color-border-muted);
   border-radius: 8px;
   background: var(--semantic-color-surface-muted);
@@ -61,14 +61,14 @@
 }
 
 .apply-card h3 {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   font-size: 0.95rem;
 }
 
 .apply-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -140,6 +140,10 @@
   display: flex;
   align-items: center;
   min-height: 32px;
+}
+
+.study-locks-governance-banner {
+  margin-top: 10px;
 }
 
 .readiness-panel {
