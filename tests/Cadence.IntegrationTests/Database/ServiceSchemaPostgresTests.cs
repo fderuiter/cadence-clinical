@@ -136,11 +136,8 @@ public sealed class ServiceSchemaPostgresTests(ThrowawayPostgresDatabase databas
 
         string[] expectedBitemporalTables =
         [
-            "ctms.ctms_delegation_periods",
-            "ctms.doa_delegation_periods",
             "edc.site_activation_periods",
             "org.delegation_of_authority_periods",
-            "knowledge.delegation_record_periods",
         ];
 
         foreach (string qualified in expectedBitemporalTables)

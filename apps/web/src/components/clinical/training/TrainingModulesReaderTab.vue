@@ -298,7 +298,8 @@ const readingGuidanceLabel = computed(() => {
 });
 
 const answeredCount = computed(
-  () => props.quizQuestions.filter((q) => Boolean(props.quizAnswers[q.id])).length
+  () =>
+    props.quizQuestions.filter((q) => Boolean(props.quizAnswers[q.id])).length
 );
 
 const passingThresholdPercent = computed(

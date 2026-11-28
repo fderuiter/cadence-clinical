@@ -185,19 +185,66 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
     expect(orphanedPipeFindings).toEqual([]);
     expect(codeAnchorFindings).toEqual([]);
 
+    const countTbodyRows = (markup) =>
+      Array.from(
+        markup.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
+        (m) => m[1]
+      ).reduce(
+        (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
+        0
+      );
+
     const docIndexHtml = fs.readFileSync(
       path.join(docsDistDir, "DOCUMENTATION_INDEX.html"),
       "utf8"
     );
-    const tbodyBlocks = Array.from(
+    const hubShardRowCount = countTbodyRows(docIndexHtml);
+    expect(hubShardRowCount).toBeGreaterThanOrEqual(28);
+
+    const shardHrefs = Array.from(
       docIndexHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
       (m) => m[1]
+    ).flatMap((tbody) =>
+      Array.from(tbody.matchAll(/href="([^"]+)"/gi), (h) => h[1])
     );
-    const dataRowCount = tbodyBlocks.reduce(
-      (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
-      0
-    );
-    expect(dataRowCount).toBeGreaterThanOrEqual(715);
+
+    const visitedShards = new Set();
+    let indexedEntryCount = 0;
+    for (const rawHref of shardHrefs) {
+      const cleanRel = rawHref
+        .replace(/^\/cadence-clinical\//, "")
+        .replace(/^\.\//, "")
+        .replace(/^\//, "")
+        .split("#")[0]
+        .split("?")[0];
+      if (!cleanRel || cleanRel === "adr/TEMPLATE.html") continue;
+
+      let shardPath = path.join(docsDistDir, cleanRel);
+      if (fs.existsSync(shardPath) && fs.statSync(shardPath).isDirectory()) {
+        shardPath = path.join(shardPath, "index.html");
+      } else if (
+        !fs.existsSync(shardPath) &&
+        fs.existsSync(`${shardPath}.html`)
+      ) {
+        shardPath = `${shardPath}.html`;
+      }
+      if (!fs.existsSync(shardPath) || visitedShards.has(shardPath)) continue;
+      visitedShards.add(shardPath);
+
+      const shardHtml = fs.readFileSync(shardPath, "utf8");
+      if (
+        cleanRel === "adr/legacy-index.html" ||
+        /^adr\/[^/]+\/(?:index\.html)?$/.test(cleanRel)
+      ) {
+        const adrItems =
+          shardHtml.match(/<li(?:\s[^>]*)?>\s*<a\b[^>]*>ADR-/gi) || [];
+        indexedEntryCount += adrItems.length;
+      } else {
+        indexedEntryCount += countTbodyRows(shardHtml);
+      }
+    }
+
+    expect(indexedEntryCount).toBeGreaterThanOrEqual(715);
   });
 
   test("navbar items and portal layout render without clipping, overlap, or horizontal scroll across 375px–1920px viewports", async ({

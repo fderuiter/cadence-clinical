@@ -26,7 +26,8 @@ public sealed class KernelWireTypesOpenApiTransformer : IOpenApiSchemaTransforme
 
         if (!type.IsEnum
             && type.IsValueType
-            && type.Namespace?.StartsWith("Cadence.Kernel", StringComparison.Ordinal) == true
+            && type.Namespace is not null
+            && type.Namespace.StartsWith("Cadence.Kernel", StringComparison.Ordinal)
             && Attribute.IsDefined(type, typeof(JsonConverterAttribute), inherit: false))
         {
             bool isNullable = nullableUnderlying is not null

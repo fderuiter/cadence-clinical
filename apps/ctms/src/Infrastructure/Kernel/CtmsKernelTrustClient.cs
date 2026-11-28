@@ -340,7 +340,9 @@ public sealed class HttpCtmsKernelTrustClient(
 
         if (!string.IsNullOrWhiteSpace(capability))
         {
-            return delegable.FirstOrDefault(g => g.Capabilities?.Contains(capability, StringComparer.Ordinal) == true);
+            return delegable.FirstOrDefault(g =>
+                g.Capabilities is not null
+                && g.Capabilities.Contains(capability, StringComparer.Ordinal));
         }
 
         if (!string.IsNullOrWhiteSpace(roleCode))

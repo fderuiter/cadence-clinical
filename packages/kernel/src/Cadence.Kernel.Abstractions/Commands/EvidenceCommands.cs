@@ -38,7 +38,7 @@ public sealed record RegisterArtifact(
 /// <summary>Adds a new immutable version to an artifact, numbered after its latest one.</summary>
 [KernelCapability("artifact.add_version", VerbClass.Execute, Resource = nameof(AddArtifactVersion.ArtifactId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.AlreadyExists))]
-[RaisesKernelErrors(typeof(EvidenceErrors), nameof(EvidenceErrors.ContentInvalid))]
+[RaisesKernelErrors(typeof(EvidenceErrors), nameof(EvidenceErrors.ContentInvalid), nameof(EvidenceErrors.ContentUnchanged))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record AddArtifactVersion(
     TenantId TenantId,

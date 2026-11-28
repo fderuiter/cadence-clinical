@@ -263,7 +263,8 @@ public sealed class KernelTrustAndTrainingConsolidationTests
 
         // 1. GxP audit record preserves unredacted target/decision.
         uow.RecordedDenials.Should().ContainSingle();
-        uow.RecordedDenials[0].Explanation.Subject.Should().Be(unauthorizedEnrollmentRef);
+        uow.RecordedDenials[0].Permitted.Should().BeFalse();
+        uow.RecordedDenials[0].Explain(nameof(RecordObservation), unauthorizedEnrollmentRef).Subject.Should().Be(unauthorizedEnrollmentRef);
         uow.RecordedExecutionTargets.Should().ContainSingle().Which.Should().Contain(unauthorizedEnrollment.Value.ToString());
         outcome.Error.Explanation!.Subject.Should().Be(unauthorizedEnrollmentRef);
 
@@ -303,21 +304,19 @@ public sealed class KernelTrustAndTrainingConsolidationTests
 
     private sealed class StubNodeVisibility : INodeVisibility
     {
-        public Task<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
+        public ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
             TenantId tenant,
-            Actor? actor,
+            Actor reader,
             IReadOnlyCollection<NodeRef> nodes,
-            DateTimeOffset at,
-            DateTimeOffset knownAt,
             CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyDictionary<NodeRef, MaskReason>>(new Dictionary<NodeRef, MaskReason>());
+            ValueTask.FromResult<IReadOnlyDictionary<NodeRef, MaskReason>>(new Dictionary<NodeRef, MaskReason>());
     }
 
     private sealed class StubCommandSender : IKernelCommandSender
     {
         public Task<CommandResult<TResult>> SendAsync<TResult>(
-            IKernelCommand<TResult> command,
-            NodeRef? proposal = null,
+            ICommand<TResult> command,
+            CommandMetadata? metadata = null,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }

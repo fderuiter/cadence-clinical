@@ -59,7 +59,10 @@ function buildDemoCurriculum(id = "curr-demo-01") {
           "Within what timeframe must suspected Hy's Law laboratory elevations be escalated?",
         options: [
           { id: "opt-a", label: "Within 24 hours of laboratory notification" },
-          { id: "opt-b", label: "At the next routine interim monitoring visit" },
+          {
+            id: "opt-b",
+            label: "At the next routine interim monitoring visit",
+          },
           { id: "opt-c", label: "At end-of-study database lock" },
         ],
         correct_option_id: "opt-a",

@@ -12,9 +12,7 @@
           {{ isGated ? "Qualification Pending" : "Qualification Completed" }}
         </span>
       </div>
-      <h2 class="console-title">
-        Study Training &amp; Qualification Hub
-      </h2>
+      <h2 class="console-title">Study Training &amp; Qualification Hub</h2>
       <p class="console-subtitle">
         Procedural delta curricula, Kernel site-grant batch assignment, quiz
         verification, and 21 CFR Part 11 TMF 05.02.04 qualification filing.
@@ -26,7 +24,7 @@
         v-if="canAssignCurriculum"
         id="btn-open-author-curriculum"
         type="button"
-        class="btn btn-secondary"
+        class="btn btn-primary"
         :disabled="loading"
         @click="emit('openAuthorModal')"
       >

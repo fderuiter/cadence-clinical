@@ -133,9 +133,7 @@
       </p>
 
       <div v-if="showExportPrompt" id="doa-export-card" class="mutation-card">
-        <h4>
-          21 CFR Part 11 signed DoA PDF export ({{ siteInput.trim() }})
-        </h4>
+        <h4>21 CFR Part 11 signed DoA PDF export ({{ siteInput.trim() }})</h4>
         <div class="form-row">
           <ClinicalInput
             id="doa-export-credential"

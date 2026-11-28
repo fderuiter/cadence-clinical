@@ -3708,7 +3708,7 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
       ).toContain("VS_SYSBP_HIGH");
       expect(assertionReads).toBe(0);
       expect(selectedIncludesCalls).toBe(0);
-      } finally {
+    } finally {
       Array.prototype.includes = origIncludes;
       if (origPreviewValues === undefined) {
         delete apiWithPreview.previewValues;
@@ -3757,7 +3757,11 @@ describe("EcrfFormPanel Kernel qualification gating (PRD-TRN-002)", () => {
       history: createMemoryHistory(),
       routes: [
         { path: "/", component: { template: "<div />" } },
-        { path: "/training", name: "training", component: { template: "<div />" } },
+        {
+          path: "/training",
+          name: "training",
+          component: { template: "<div />" },
+        },
         {
           path: "/observations/:observationRef",
           name: "observation",

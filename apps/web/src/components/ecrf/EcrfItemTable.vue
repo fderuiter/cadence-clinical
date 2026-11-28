@@ -184,9 +184,7 @@
                   :value="formState.entries[item.item_id]?.missing ?? ''"
                   :aria-label="`Why ${item.item_id} is missing`"
                   :disabled="
-                    formState.locked ||
-                    !formState.canRecord ||
-                    formState.saving
+                    formState.locked || !formState.canRecord || formState.saving
                   "
                   @change="
                     emit(

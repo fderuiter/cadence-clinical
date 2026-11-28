@@ -437,7 +437,7 @@ public sealed class HttpEtmfTrainingIngestClient(
         var doc = await response.Content.ReadFromJsonAsync<WireEtmfDocument>(cancellationToken: ct).ConfigureAwait(false);
         return !string.IsNullOrWhiteSpace(doc?.Id)
             ? doc.Id!
-            : $"DOC-05-02-04-{assignmentId}";
+            : $"DOC-050204-{assignmentId}";
     }
 
     private sealed record WireEtmfDocument(string? Id);

@@ -64,7 +64,11 @@ describe("ProtocolTrainingConsole.vue - Kernel Site-Grant Batch Assignment & Par
     return createRouter({
       history: createMemoryHistory(),
       routes: [
-        { path: "/studies/:studyCode?", name: "study", component: { template: "<div />" } },
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: { template: "<div />" },
+        },
       ],
     });
   }
@@ -347,9 +351,7 @@ describe("ProtocolTrainingConsole.vue - Kernel Site-Grant Batch Assignment & Par
       .find("#training-attestation-credential")
       .setValue("SecurePassword123!"); // pragma: allowlist secret
     expect(
-      wrapper
-        .find("#btn-complete-training-assignment")
-        .attributes("disabled")
+      wrapper.find("#btn-complete-training-assignment").attributes("disabled")
     ).toBeUndefined();
     await wrapper.find("#training-attestation-form").trigger("submit");
     await flushPromises();
@@ -372,14 +374,18 @@ describe("ProtocolTrainingConsole.vue - Kernel Site-Grant Batch Assignment & Par
       "step-up-trn-token"
     );
 
-    const manifest = wrapper.find("[data-testid='training-completion-manifest']");
+    const manifest = wrapper.find(
+      "[data-testid='training-completion-manifest']"
+    );
     expect(manifest.exists()).toBe(true);
     expect(manifest.text()).toContain("05.02.04");
     expect(manifest.text()).toContain("Document version");
     expect(manifest.text()).toContain("Qualification");
     const chipRefs = manifest
       .findAllComponents({ name: "NodeRefChip" })
-      .map((chip: { props: (key: string) => unknown }) => chip.props("nodeRef"));
+      .map((chip: { props: (key: string) => unknown }) =>
+        chip.props("nodeRef")
+      );
     expect(chipRefs).toEqual(
       expect.arrayContaining([
         "artifact_version:00000000-0000-0000-0000-000000009501", // deid-ignore

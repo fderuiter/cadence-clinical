@@ -1165,9 +1165,7 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
     await wrapper
       .find("#doa-signoff-reason")
       .setValue("Verified training and CV qualifications");
-    await wrapper
-      .find("#doa-signoff-credential")
-      .setValue("StepUpCred123!"); // pragma: allowlist secret
+    await wrapper.find("#doa-signoff-credential").setValue("StepUpCred123!"); // pragma: allowlist secret
     await wrapper.find("#btn-confirm-doa-signoff").trigger("click");
     await settleFocus();
     expect(document.activeElement?.id).toBe("btn-doa-revoke-rec-1");

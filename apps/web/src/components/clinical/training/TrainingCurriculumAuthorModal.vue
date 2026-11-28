@@ -9,8 +9,7 @@
   >
     <p class="modal-description">
       Publish a protocol procedural delta curriculum with verification quiz
-      threshold for study <strong>{{ studyId || "Active Study" }}</strong
-      >.
+      threshold for study <strong>{{ studyId || "Active Study" }}</strong>.
     </p>
     <p v-if="errorMessage" class="badge badge-error" role="alert">
       {{ errorMessage }}

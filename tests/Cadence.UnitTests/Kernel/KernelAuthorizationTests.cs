@@ -126,18 +126,19 @@ public sealed class KernelAuthorizationTests
         var command = new ReviseConcept(Tenant, ConceptId.New(), "Systolic blood pressure", "Pressure at systole.", "k-1", Reason);
         var entry = KernelCommandCatalog.Kernel.Find(typeof(ReviseConcept))!;
 
+        var resource = NodeRef.For(command.ConceptId);
         var sent = await harness.Sender.SendAsync(command, cancellationToken: TestContext.Current.CancellationToken);
-        var dryRun = await harness.Probe.CanIAsync(Tenant, entry.Capability, NodeRef.For(command.ConceptId), TestContext.Current.CancellationToken);
+        var dryRun = await harness.Probe.CanIAsync(Tenant, entry.Capability, resource, TestContext.Current.CancellationToken);
 
         harness.Evaluator.Requests.Should().HaveCount(2);
         harness.Evaluator.Requests[1].Should().Be(harness.Evaluator.Requests[0]);
         harness.Evaluator.Requests[0].Should().Be(new AuthorizationRequest(
-            Monitor, Tenant, new Capability("concept.revise", VerbClass.Execute), NodeRef.For(command.ConceptId),
+            Monitor, Tenant, new Capability("concept.revise", VerbClass.Execute), resource,
             harness.Clock.UtcNow, harness.Clock.UtcNow));
         sent.Error!.Code.Should().Be(KernelErrors.AuthorizationDenied.Code);
-        sent.Error.Explanation.Should().Be(dryRun.Explain(nameof(ReviseConcept)));
+        sent.Error.Explanation.Should().Be(dryRun.Explain(nameof(ReviseConcept), resource));
         harness.Transactions.Begun.Should().Be(1);
-        harness.Transactions.Denials.Should().ContainSingle().Which.Explain(nameof(ReviseConcept)).Should().Be(dryRun.Explain(nameof(ReviseConcept)));
+        harness.Transactions.Denials.Should().ContainSingle().Which.Explain(nameof(ReviseConcept), resource).Should().Be(dryRun.Explain(nameof(ReviseConcept), resource));
     }
 
     /// <summary>

@@ -263,8 +263,7 @@ export function createCtmsAndFinancialsHandlers(store) {
         const created = {
           record_id: `doa-${step}`,
           site_id: siteId,
-          staff_user_id:
-            body?.staff_user_id || body?.staff_id || "usr-crc-03",
+          staff_user_id: body?.staff_user_id || body?.staff_id || "usr-crc-03",
           staff_name: body?.staff_name || "Delegated Site Coordinator",
           role: body?.role || "CRC",
           task_codes: body?.task_codes || body?.tasks || ["CRF_DATA_ENTRY"],

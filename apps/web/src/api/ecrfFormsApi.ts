@@ -15,7 +15,10 @@ type Schemas = components["schemas"];
 
 export type EcrfFormState = Schemas["ExecutionForms_FormStateResponse"];
 export type EcrfFormSummary = Schemas["ExecutionForms_FormSummaryResponse"];
-export type EcrfForm = Omit<Schemas["ExecutionForms_FormResponse"], "can_record"> & {
+export type EcrfForm = Omit<
+  Schemas["ExecutionForms_FormResponse"],
+  "can_record"
+> & {
   can_record?: boolean;
 };
 export type EcrfFormItem = Schemas["ExecutionForms_FormItemResponse"];

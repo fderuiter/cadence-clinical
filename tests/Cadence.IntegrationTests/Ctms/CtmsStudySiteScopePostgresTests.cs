@@ -372,7 +372,7 @@ public sealed class CtmsStudySiteScopePostgresTests(CtmsPostgresApiFactory facto
             await cmd.ExecuteNonQueryAsync(Ct);
         }
 
-        await migrator.MigrateAsync("20261123170408_AddConsumedSignatureTokens", Ct);
+        await migrator.MigrateAsync("20261123170408_AddConsumedSignatureTokens", Ct); // pragma: allowlist secret
 
         await using var verifyConn = new NpgsqlConnection(adminConn);
         await verifyConn.OpenAsync(Ct);
