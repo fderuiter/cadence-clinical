@@ -79,346 +79,379 @@
       </div>
 
       <!-- Tab 1: Rules Designer -->
-      <div v-if="activeTab === 'rules'" class="grid-2-responsive">
-        <!-- Active Ruleset List -->
-        <div
-          class="card"
-          style="display: flex; flex-direction: column; height: fit-content"
-        >
+      <ClinicalSplitWorkspace
+        v-if="activeTab === 'rules'"
+        ref="rulesSplitRef"
+        v-model="showEditor"
+        :inline-open="showEditor"
+        :has-selection="true"
+        keep-mounted
+        :teleport="false"
+        master-width="minmax(0, 1fr)"
+        detail-width="minmax(0, 1fr)"
+        gap="var(--spacing-lg, 24px)"
+        :drawer-title="
+          editingRuleId ? 'Edit Clinical Rule' : 'Compose Clinical Rule'
+        "
+        drawer-size="xl"
+      >
+        <template #master>
+          <!-- Active Ruleset List -->
           <div
-            class="card-title"
-            style="
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              margin-bottom: 16px;
-            "
-          >
-            <span>Study Active Ruleset</span>
-            <span
-              v-if="loadingRules"
-              style="
-                font-size: 0.85rem;
-                color: var(--semantic-color-text-secondary);
-                font-weight: normal;
-              "
-              >Loading...</span
-            >
-          </div>
-
-          <!-- Connection Error Banner if any -->
-          <div
-            v-if="connectionError"
-            style="
-              background-color: var(--warning-bg);
-              border: 1px solid var(--warning);
-              color: var(--warning);
-              padding: 10px;
-              border-radius: 6px;
-              margin-bottom: 12px;
-              font-size: 0.85rem;
-            "
-          >
-            <strong>API Mode Degraded:</strong> Running in Local Sandbox VM.
-            Sync with GxP Server offline.
-          </div>
-
-          <div
-            style="
-              flex: 1;
-              max-height: 600px;
-              overflow-y: auto;
-              margin-bottom: 16px;
-              padding-right: 4px;
-            "
+            class="card"
+            style="display: flex; flex-direction: column; height: fit-content"
           >
             <div
-              v-if="activeRules.length === 0"
+              class="card-title"
               style="
-                color: var(--semantic-color-text-secondary);
-                font-style: italic;
-                padding: 12px 0;
-                text-align: center;
-              "
-            >
-              No active rules configured. Click "Create New Rule" to get
-              started.
-            </div>
-            <div v-else>
-              <div
-                v-for="rule in activeRules"
-                :key="rule.id"
-                class="rule-card rule-card-item"
-              >
-                <div class="rule-card-header">
-                  <strong
-                    style="
-                      color: var(--accent);
-                      font-size: 0.95rem;
-                      font-family: var(--semantic-font-mono);
-                    "
-                    >{{ rule.id }}</strong
-                  >
-                  <div style="display: flex; gap: 6px">
-                    <button
-                      class="btn"
-                      style="
-                        padding: 4px 10px;
-                        font-size: 0.75rem;
-                        cursor: pointer;
-                        border: 1px solid var(--border);
-                        border-radius: 4px;
-                        background: var(--semantic-color-surface);
-                        color: var(--text-main);
-                      "
-                      @click="openRuleEditor(rule)"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      class="btn"
-                      style="
-                        padding: 4px 10px;
-                        font-size: 0.75rem;
-                        background-color: var(
-                          --semantic-color-error-interactive
-                        );
-                        color: var(--semantic-color-text-on-solid);
-                        border: none;
-                        border-radius: 4px;
-                        cursor: pointer;
-                      "
-                      @click="promptDeleteRule(rule.id)"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-                <div
-                  style="
-                    font-size: 0.85rem;
-                    color: var(--neutral-dark);
-                    margin-bottom: 8px;
-                    line-height: 1.4;
-                  "
-                >
-                  <div style="margin-bottom: 4px">
-                    <strong>Type:</strong>
-                    <span
-                      class="badge"
-                      style="
-                        background-color: var(--semantic-badge-draft-bg);
-                        color: var(--semantic-badge-draft-text);
-                        border: 1px solid var(--semantic-badge-draft-border);
-                        font-size: var(--font-size-2xs);
-                        padding: 2px 6px;
-                      "
-                      >{{ rule.type }}</span
-                    >
-                  </div>
-                  <div v-if="rule.type === 'skip_logic'">
-                    <strong>Action:</strong> {{ rule.action }} field
-                    <code>{{ rule.target_field }}</code>
-                  </div>
-                  <div v-else-if="rule.type === 'constraint'">
-                    <strong>Target Field:</strong>
-                    <code>{{ rule.target_field }}</code> <br />
-                    <strong>Discrepancy Message:</strong>
-                    <span style="font-style: italic; color: var(--text-main)"
-                      >"{{ rule.query_message }}"</span
-                    >
-                  </div>
-                  <div v-else-if="rule.type === 'cross_form_check'">
-                    <strong>Discrepancy Message:</strong>
-                    <span style="font-style: italic; color: var(--text-main)"
-                      >"{{ rule.query_message }}"</span
-                    >
-                  </div>
-                </div>
-                <div
-                  style="
-                    font-family: var(--semantic-font-mono);
-                    font-size: 0.75rem;
-                    color: var(--text-main);
-                    background-color: var(--semantic-color-info-bg);
-                    padding: 6px 10px;
-                    border-radius: 4px;
-                    border: 1px solid var(--semantic-color-info-border);
-                    word-break: break-all;
-                  "
-                >
-                  <strong>XPath:</strong>
-                  {{ rule.compiled_xpath || rule.xpath || "(Not compiled)" }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div style="display: flex; gap: 8px">
-            <button
-              class="btn btn-primary"
-              style="
-                width: 100%;
                 display: flex;
+                justify-content: space-between;
                 align-items: center;
-                justify-content: center;
-                gap: 8px;
-              "
-              @click="openRuleEditor(null)"
-            >
-              <span><ClinicalIcon name="plus" :size="16" /></span> Create New
-              Rule
-            </button>
-          </div>
-        </div>
-
-        <!-- Rules Editor Workspace -->
-        <div
-          v-if="showEditor"
-          class="card"
-          style="display: flex; flex-direction: column"
-        >
-          <div class="card-title" style="margin-bottom: 16px">
-            {{ editingRuleId ? "Edit Clinical Rule" : "Compose Clinical Rule" }}
-          </div>
-
-          <div
-            style="
-              display: flex;
-              flex-direction: column;
-              gap: 16px;
-              overflow-y: auto;
-              max-height: 700px;
-              padding-right: 4px;
-            "
-          >
-            <!-- Reusable Rule Editor Widget -->
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <div
-              class="rule-editor-wrapper"
-              @click="handleEditorClick"
-              @change="handleEditorChange"
-              @input="handleEditorInput"
-              v-html="ruleEditorHtml"
-            />
-
-            <!-- Live Compilation & GxP Verification Preview -->
-            <fieldset
-              style="
-                border: 1px solid var(--border);
-                border-radius: 8px;
-                padding: 16px;
+                margin-bottom: 16px;
               "
             >
-              <legend
-                style="padding: 0 8px; font-weight: bold; color: var(--accent)"
-              >
-                Live Compilation &amp; GxP Verification Preview
-              </legend>
-              <div
+              <span>Study Active Ruleset</span>
+              <span
+                v-if="loadingRules"
                 style="
-                  background-color: var(--semantic-color-surface-header);
-                  padding: 12px;
-                  border-radius: 8px;
-                  font-family: var(--semantic-font-mono);
-                  font-size: 0.8rem;
-                  border: 1px solid var(--border);
-                  line-height: 1.5;
+                  font-size: 0.85rem;
+                  color: var(--semantic-color-text-secondary);
+                  font-weight: normal;
+                "
+                >Loading...</span
+              >
+            </div>
+
+            <!-- Connection Error Banner if any -->
+            <div
+              v-if="connectionError"
+              style="
+                background-color: var(--warning-bg);
+                border: 1px solid var(--warning);
+                color: var(--warning);
+                padding: 10px;
+                border-radius: 6px;
+                margin-bottom: 12px;
+                font-size: 0.85rem;
+              "
+            >
+              <strong>API Mode Degraded:</strong> Running in Local Sandbox VM.
+              Sync with GxP Server offline.
+            </div>
+
+            <div
+              style="
+                flex: 1;
+                max-height: 600px;
+                overflow-y: auto;
+                margin-bottom: 16px;
+                padding-right: 4px;
+              "
+            >
+              <div
+                v-if="activeRules.length === 0"
+                style="
+                  color: var(--semantic-color-text-secondary);
+                  font-style: italic;
+                  padding: 12px 0;
+                  text-align: center;
                 "
               >
+                No active rules configured. Click "Create New Rule" to get
+                started.
+              </div>
+              <div v-else>
                 <div
-                  style="
-                    font-weight: 700;
-                    color: var(--text-main);
-                    margin-bottom: 4px;
-                  "
+                  v-for="rule in activeRules"
+                  :key="rule.id"
+                  class="rule-card rule-card-item"
                 >
-                  Compiled XPath Expression:
-                </div>
-                <div
-                  style="
-                    color: var(--text-main);
-                    margin-bottom: 12px;
-                    word-break: break-all;
-                    min-height: 1.5em;
-                  "
-                >
-                  {{ previewXpath || "(No conditions added)" }}
-                </div>
-
-                <div
-                  style="
-                    font-weight: 700;
-                    color: var(--text-main);
-                    margin-bottom: 4px;
-                  "
-                >
-                  Validation Feedback:
-                </div>
-                <div
-                  v-if="previewFailures.length > 0"
-                  style="
-                    color: var(--error);
-                    font-weight: 600;
-                    margin-bottom: 8px;
-                  "
-                >
-                  <div v-for="(f, i) in previewFailures" :key="i">
-                    {{ f }}
+                  <div class="rule-card-header">
+                    <strong
+                      style="
+                        color: var(--accent);
+                        font-size: 0.95rem;
+                        font-family: var(--semantic-font-mono);
+                      "
+                      >{{ rule.id }}</strong
+                    >
+                    <div style="display: flex; gap: 6px">
+                      <button
+                        type="button"
+                        class="btn btn-edit-rule"
+                        :aria-current="
+                          showEditor && editingRuleId === rule.id
+                            ? 'true'
+                            : undefined
+                        "
+                        style="
+                          padding: 4px 10px;
+                          font-size: 0.75rem;
+                          cursor: pointer;
+                          border: 1px solid var(--border);
+                          border-radius: 4px;
+                          background: var(--semantic-color-surface);
+                          color: var(--text-main);
+                        "
+                        @click="openRuleEditor(rule, $event)"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        class="btn"
+                        style="
+                          padding: 4px 10px;
+                          font-size: 0.75rem;
+                          background-color: var(
+                            --semantic-color-error-interactive
+                          );
+                          color: var(--semantic-color-text-on-solid);
+                          border: none;
+                          border-radius: 4px;
+                          cursor: pointer;
+                        "
+                        @click="promptDeleteRule(rule.id)"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div
-                  v-else
-                  style="
-                    color: var(--success);
-                    font-weight: 600;
-                    margin-bottom: 8px;
-                  "
-                >
-                  CDASH Field &amp; Pydantic Schema Aligned.
-                </div>
-
-                <div
-                  v-if="previewCircularCycles.length > 0"
-                  style="color: var(--error); font-weight: 600"
-                >
-                  <div v-for="(c, i) in previewCircularCycles" :key="i">
-                    {{ c }}
+                  <div
+                    style="
+                      font-size: 0.85rem;
+                      color: var(--neutral-dark);
+                      margin-bottom: 8px;
+                      line-height: 1.4;
+                    "
+                  >
+                    <div style="margin-bottom: 4px">
+                      <strong>Type:</strong>
+                      <span
+                        class="badge"
+                        style="
+                          background-color: var(--semantic-badge-draft-bg);
+                          color: var(--semantic-badge-draft-text);
+                          border: 1px solid var(--semantic-badge-draft-border);
+                          font-size: var(--font-size-2xs);
+                          padding: 2px 6px;
+                        "
+                        >{{ rule.type }}</span
+                      >
+                    </div>
+                    <div v-if="rule.type === 'skip_logic'">
+                      <strong>Action:</strong> {{ rule.action }} field
+                      <code>{{ rule.target_field }}</code>
+                    </div>
+                    <div v-else-if="rule.type === 'constraint'">
+                      <strong>Target Field:</strong>
+                      <code>{{ rule.target_field }}</code> <br />
+                      <strong>Discrepancy Message:</strong>
+                      <span style="font-style: italic; color: var(--text-main)"
+                        >"{{ rule.query_message }}"</span
+                      >
+                    </div>
+                    <div v-else-if="rule.type === 'cross_form_check'">
+                      <strong>Discrepancy Message:</strong>
+                      <span style="font-style: italic; color: var(--text-main)"
+                        >"{{ rule.query_message }}"</span
+                      >
+                    </div>
+                  </div>
+                  <div
+                    style="
+                      font-family: var(--semantic-font-mono);
+                      font-size: 0.75rem;
+                      color: var(--text-main);
+                      background-color: var(--semantic-color-info-bg);
+                      padding: 6px 10px;
+                      border-radius: 4px;
+                      border: 1px solid var(--semantic-color-info-border);
+                      word-break: break-all;
+                    "
+                  >
+                    <strong>XPath:</strong>
+                    {{ rule.compiled_xpath || rule.xpath || "(Not compiled)" }}
                   </div>
                 </div>
               </div>
-            </fieldset>
-          </div>
+            </div>
 
-          <!-- Editor Actions -->
-          <div
-            style="
-              margin-top: 20px;
-              display: flex;
-              justify-content: flex-end;
-              gap: 8px;
-              border-top: 1px solid var(--border);
-              padding-top: 16px;
-            "
-          >
-            <button
-              class="btn"
-              style="padding: 8px 16px; cursor: pointer"
-              @click="showEditor = false"
-            >
-              Cancel
-            </button>
-            <button
-              class="btn btn-primary"
-              style="padding: 8px 16px; cursor: pointer"
-              @click="promptSaveRule"
-            >
-              Save Signed Rule
-            </button>
+            <div style="display: flex; gap: 8px">
+              <button
+                type="button"
+                class="btn btn-primary btn-create-rule"
+                style="
+                  width: 100%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  gap: 8px;
+                "
+                @click="openRuleEditor(null, $event)"
+              >
+                <span><ClinicalIcon name="plus" :size="16" /></span> Create New
+                Rule
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+        </template>
+
+        <template #detail>
+          <!-- Rules Editor Workspace -->
+          <div
+            id="rules-editor-pane"
+            class="card"
+            style="display: flex; flex-direction: column"
+          >
+            <div class="card-title" style="margin-bottom: 16px">
+              {{
+                editingRuleId ? "Edit Clinical Rule" : "Compose Clinical Rule"
+              }}
+            </div>
+
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+                overflow-y: auto;
+                max-height: 700px;
+                padding-right: 4px;
+              "
+            >
+              <!-- Reusable Rule Editor Widget -->
+              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+              <div
+                class="rule-editor-wrapper"
+                @click="handleEditorClick"
+                @change="handleEditorChange"
+                @input="handleEditorInput"
+                v-html="ruleEditorHtml"
+              />
+
+              <!-- Live Compilation & GxP Verification Preview -->
+              <fieldset
+                style="
+                  border: 1px solid var(--border);
+                  border-radius: 8px;
+                  padding: 16px;
+                "
+              >
+                <legend
+                  style="
+                    padding: 0 8px;
+                    font-weight: bold;
+                    color: var(--accent);
+                  "
+                >
+                  Live Compilation &amp; GxP Verification Preview
+                </legend>
+                <div
+                  style="
+                    background-color: var(--semantic-color-surface-header);
+                    padding: 12px;
+                    border-radius: 8px;
+                    font-family: var(--semantic-font-mono);
+                    font-size: 0.8rem;
+                    border: 1px solid var(--border);
+                    line-height: 1.5;
+                  "
+                >
+                  <div
+                    style="
+                      font-weight: 700;
+                      color: var(--text-main);
+                      margin-bottom: 4px;
+                    "
+                  >
+                    Compiled XPath Expression:
+                  </div>
+                  <div
+                    style="
+                      color: var(--text-main);
+                      margin-bottom: 12px;
+                      word-break: break-all;
+                      min-height: 1.5em;
+                    "
+                  >
+                    {{ previewXpath || "(No conditions added)" }}
+                  </div>
+
+                  <div
+                    style="
+                      font-weight: 700;
+                      color: var(--text-main);
+                      margin-bottom: 4px;
+                    "
+                  >
+                    Validation Feedback:
+                  </div>
+                  <div
+                    v-if="previewFailures.length > 0"
+                    style="
+                      color: var(--error);
+                      font-weight: 600;
+                      margin-bottom: 8px;
+                    "
+                  >
+                    <div v-for="(f, i) in previewFailures" :key="i">
+                      {{ f }}
+                    </div>
+                  </div>
+                  <div
+                    v-else
+                    style="
+                      color: var(--success);
+                      font-weight: 600;
+                      margin-bottom: 8px;
+                    "
+                  >
+                    CDASH Field &amp; Pydantic Schema Aligned.
+                  </div>
+
+                  <div
+                    v-if="previewCircularCycles.length > 0"
+                    style="color: var(--error); font-weight: 600"
+                  >
+                    <div v-for="(c, i) in previewCircularCycles" :key="i">
+                      {{ c }}
+                    </div>
+                  </div>
+                </div>
+              </fieldset>
+            </div>
+
+            <!-- Editor Actions -->
+            <div
+              style="
+                margin-top: 20px;
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+                border-top: 1px solid var(--border);
+                padding-top: 16px;
+              "
+            >
+              <button
+                class="btn"
+                style="padding: 8px 16px; cursor: pointer"
+                @click="showEditor = false"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                style="padding: 8px 16px; cursor: pointer"
+                @click="promptSaveRule"
+              >
+                Save Signed Rule
+              </button>
+            </div>
+          </div>
+        </template>
+      </ClinicalSplitWorkspace>
 
       <!-- Tab 2: Query Life-Cycle Dashboard & History Viewer (Sub-Issue 11) -->
       <div v-else-if="activeTab === 'queries'" class="card">
@@ -806,6 +839,7 @@ import {
   canonicalSerialize,
   sha256,
   ClinicalIcon,
+  ClinicalSplitWorkspace,
 } from "ui";
 
 const rulesReasonOptions = [
@@ -1050,6 +1084,7 @@ const activeRules = ref([]);
 const loadingRules = ref(false);
 const connectionError = ref(false);
 const showEditor = ref(false);
+const rulesSplitRef = ref(null);
 
 // Editor Form state
 const editingRuleId = ref(null);
@@ -1309,7 +1344,7 @@ function traverseRefs(node) {
   return refs;
 }
 
-function openRuleEditor(rule = null) {
+function openRuleEditor(rule = null, event = null) {
   if (rule) {
     editingRuleId.value = rule.id;
     ruleType.value = rule.type;
@@ -1337,6 +1372,7 @@ function openRuleEditor(rule = null) {
     addConditionRow();
   }
   showEditor.value = true;
+  rulesSplitRef.value?.openDetail(event?.currentTarget ?? null);
   triggerPreview();
 }
 

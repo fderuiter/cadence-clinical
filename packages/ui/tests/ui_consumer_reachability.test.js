@@ -428,6 +428,10 @@ describe("Shared UI Consumer Reachability Guard (ADR-2677)", () => {
       liveReport.staleStagedPrimitives,
       "Adopted primitives must be removed from STAGED_UI_PRIMITIVES"
     ).toEqual([]);
+    expect(STAGED_UI_PRIMITIVES.has("ClinicalSplitWorkspace")).toBe(false);
+    expect(STAGED_UI_PRIMITIVES.has("useResponsiveSplitWorkspace")).toBe(false);
+    expect(rootUi.ClinicalSplitWorkspace).toBeDefined();
+    expect(rootUi.useResponsiveSplitWorkspace).toBeTypeOf("function");
   });
 
   it("keeps retired ADR-2677 UI components, composables, builders, and signing helpers absent from root exports", () => {

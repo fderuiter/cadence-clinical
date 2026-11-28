@@ -241,513 +241,571 @@
         </div>
       </aside>
 
-      <!-- Column 2: Article Directory & Search List -->
-      <section id="knowledge-article-list-panel" class="article-list-panel">
-        <!-- Search and Tag Bar -->
-        <div class="list-search-bar">
-          <div class="search-input-wrapper">
-            <span class="search-symbol" aria-hidden="true"
-              ><ClinicalIcon name="search" :size="16"
-            /></span>
-            <label for="knowledge-search-input" class="sr-only"
-              >Search SOPs by title, tag, or content</label
-            >
-            <input
-              id="knowledge-search-input"
-              v-model="searchQuery"
-              type="text"
-              class="knowledge-search-input"
-              placeholder="Search SOPs by title, tag, or content..."
-              @input="onSearchInput"
-            />
-            <ClinicalIconButton
-              v-if="searchQuery"
-              class="btn-clear-search"
-              title="Clear search"
-              label="Clear search"
-              @click="clearSearch"
-            >
-              ✕
-            </ClinicalIconButton>
-          </div>
-
-          <!-- Quick Tag Filter Chips -->
-          <div
-            v-if="availableTags.length > 0"
-            class="tag-chips-scroll"
-            tabindex="0"
-            role="region"
-            aria-label="Filter SOPs by tag"
-          >
-            <button
-              v-for="tag in availableTags"
-              :key="tag"
-              type="button"
-              class="tag-chip"
-              :class="{ 'tag-chip-active': selectedTag === tag }"
-              :aria-pressed="selectedTag === tag"
-              @click="toggleTag(tag)"
-            >
-              #{{ tag }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Articles Stream -->
-        <div v-if="loading" class="articles-loading-state">
-          <div class="spinner" />
-          <p>Loading clinical SOP repository...</p>
-        </div>
-
-        <div
-          v-else-if="displayArticles.length === 0"
-          class="articles-empty-state"
-        >
-          <div class="empty-icon">
-            <ClinicalIcon name="file-text" :size="20" />
-          </div>
-          <h4>No SOPs Found</h4>
-          <p v-if="searchQuery || selectedTag || activeStatusFilter !== 'ALL'">
-            No articles match your current search or status filters.
-          </p>
-          <p v-else>No SOPs are currently visible for the active persona.</p>
-          <button
-            v-if="searchQuery || selectedTag || activeStatusFilter !== 'ALL'"
-            type="button"
-            class="btn btn-secondary btn-sm"
-            @click="resetFilters"
-          >
-            Reset Filters
-          </button>
-        </div>
-
-        <div
-          v-else
-          class="articles-stream focus-ring-inset"
-          role="region"
-          aria-label="SOP articles list"
-          tabindex="0"
-        >
-          <button
-            v-for="art in displayArticles"
-            :key="art.id"
-            type="button"
-            class="article-card"
-            :class="{ 'article-card-selected': selectedArticle?.id === art.id }"
-            :aria-pressed="selectedArticle?.id === art.id"
-            :aria-current="selectedArticle?.id === art.id ? 'true' : undefined"
-            @click="selectArticle(art)"
-            @keydown.enter.prevent="selectArticle(art)"
-            @keydown.space.prevent="selectArticle(art)"
-          >
-            <span class="article-card-header">
-              <span class="status-pill" :class="getStatusPillClass(art.status)">
-                {{ art.status }}
-              </span>
-              <span v-if="art.version_label" class="badge badge-version">
-                v{{ art.version_label }}
-              </span>
-            </span>
-
-            <span class="article-card-title">
-              {{ art.title }}
-            </span>
-
-            <span class="article-card-meta">
-              <span class="meta-category">
-                {{ art.category_name || "General" }}</span
-              >
-              <span v-if="art.updated_at" class="meta-date">
-                {{ formatDate(art.updated_at) }}</span
-              >
-            </span>
-
-            <span
-              v-if="art.tags && art.tags.length > 0"
-              class="article-card-tags"
-            >
-              <span v-for="t in getTagList(art.tags)" :key="t" class="mini-tag">
-                #{{ t }}
-              </span>
-            </span>
-          </button>
-        </div>
-      </section>
-
-      <!-- Column 3: Article Reader & GxP Inspection Pane -->
-      <main id="knowledge-reader-pane" class="article-reader-pane">
-        <div v-if="!selectedArticle" class="reader-empty-state">
-          <div class="empty-icon">
-            <ClinicalIcon name="book-open" :size="20" />
-          </div>
-          <h3>Select an SOP or Guideline</h3>
-          <p>
-            Choose an article from the directory on the left to read guidance,
-            inspect historical version snapshots, or review the 21 CFR Part 11
-            audit trail.
-          </p>
-        </div>
-
-        <div v-else class="reader-content-wrap">
-          <!-- Article Top Title & Metadata Bar -->
-          <div class="reader-header-card">
-            <div class="reader-meta-top">
-              <div class="breadcrumbs">
-                <span class="crumb-category">
-                  {{ selectedArticle.category_name || "General SOPs" }}</span
+      <!-- Columns 2 & 3: Responsive SOP Directory + Article Reader Split Workspace -->
+      <ClinicalSplitWorkspace
+        ref="knowledgeSplitRef"
+        master-width="360px"
+        drawer-size="lg"
+        :has-selection="Boolean(selectedArticle)"
+        :drawer-title="selectedArticle?.title || 'SOP Document'"
+        :drawer-subtitle="
+          selectedArticle
+            ? `${selectedArticle.category_name || 'General SOPs'} / ${selectedArticle.slug}`
+            : ''
+        "
+        close-label="Close SOP reader"
+        :teleport="false"
+      >
+        <template #master>
+          <!-- Column 2: Article Directory & Search List -->
+          <section id="knowledge-article-list-panel" class="article-list-panel">
+            <!-- Search and Tag Bar -->
+            <div class="list-search-bar">
+              <div class="search-input-wrapper">
+                <span class="search-symbol" aria-hidden="true"
+                  ><ClinicalIcon name="search" :size="16"
+                /></span>
+                <label for="knowledge-search-input" class="sr-only"
+                  >Search SOPs by title, tag, or content</label
                 >
-                <span class="crumb-separator">/</span>
-                <span class="crumb-slug">{{ selectedArticle.slug }}</span>
+                <input
+                  id="knowledge-search-input"
+                  v-model="searchQuery"
+                  type="text"
+                  class="knowledge-search-input"
+                  placeholder="Search SOPs by title, tag, or content..."
+                  @input="onSearchInput"
+                />
+                <ClinicalIconButton
+                  v-if="searchQuery"
+                  class="btn-clear-search"
+                  title="Clear search"
+                  label="Clear search"
+                  @click="clearSearch"
+                >
+                  ✕
+                </ClinicalIconButton>
               </div>
-              <div class="reader-badges">
-                <span
-                  class="status-pill status-pill-lg"
-                  :class="getStatusPillClass(selectedArticle.status)"
+
+              <!-- Quick Tag Filter Chips -->
+              <div
+                v-if="availableTags.length > 0"
+                class="tag-chips-scroll"
+                tabindex="0"
+                role="region"
+                aria-label="Filter SOPs by tag"
+              >
+                <button
+                  v-for="tag in availableTags"
+                  :key="tag"
+                  type="button"
+                  class="tag-chip"
+                  :class="{ 'tag-chip-active': selectedTag === tag }"
+                  :aria-pressed="selectedTag === tag"
+                  @click="toggleTag(tag)"
                 >
-                  {{ selectedArticle.status }}
-                </span>
-                <span
-                  v-if="selectedArticle.version_label"
-                  class="badge badge-version-lg"
-                >
-                  v{{ selectedArticle.version_label }}
-                </span>
+                  #{{ tag }}
+                </button>
               </div>
             </div>
 
-            <h2 class="reader-article-title">
-              {{ selectedArticle.title }}
-            </h2>
-
-            <div class="reader-author-row">
-              <div class="author-item">
-                <span class="author-label">Author:</span>
-                <span class="author-value">{{
-                  selectedArticle.author_user_id || "system"
-                }}</span>
-              </div>
-              <div v-if="selectedArticle.last_edited_by" class="author-item">
-                <span class="author-label">Last Edited By:</span>
-                <span class="author-value">{{
-                  selectedArticle.last_edited_by
-                }}</span>
-              </div>
-              <div v-if="selectedArticle.approved_by" class="author-item">
-                <span class="author-label">Approved By:</span>
-                <span class="author-value text-success"
-                  >✓ {{ selectedArticle.approved_by }}</span
-                >
-              </div>
-              <div v-if="selectedArticle.updated_at" class="author-item">
-                <span class="author-label">Last Revised:</span>
-                <span class="author-value">{{
-                  formatDate(selectedArticle.updated_at)
-                }}</span>
-              </div>
+            <!-- Articles Stream -->
+            <div v-if="loading" class="articles-loading-state">
+              <div class="spinner" />
+              <p>Loading clinical SOP repository...</p>
             </div>
 
-            <!-- Tags Row -->
             <div
-              v-if="selectedArticle.tags && selectedArticle.tags.length > 0"
-              class="reader-tags-row"
+              v-else-if="displayArticles.length === 0"
+              class="articles-empty-state"
             >
-              <span
-                v-for="tag in getTagList(selectedArticle.tags)"
-                :key="tag"
-                class="tag-badge"
-              >
-                #{{ tag }}
-              </span>
-            </div>
-
-            <!-- Admin Authoring & Lifecycle Controls (demo builds + super_admin only; seven-state authoring out of live scope) -->
-            <div
-              v-if="demoBuild && isSuperAdmin"
-              id="admin-authoring-toolbar"
-              class="admin-lifecycle-toolbar"
-            >
-              <span class="toolbar-label"> Admin Controls:</span>
-
-              <!-- Draft & Rejected State Actions -->
-              <template
+              <div class="empty-icon">
+                <ClinicalIcon name="file-text" :size="20" />
+              </div>
+              <h4>No SOPs Found</h4>
+              <p
                 v-if="
-                  selectedArticle.status === 'DRAFT' ||
-                  selectedArticle.status === 'REJECTED'
+                  searchQuery || selectedTag || activeStatusFilter !== 'ALL'
                 "
               >
-                <button
-                  id="btn-edit-draft"
-                  class="btn btn-secondary btn-sm"
-                  title="Edit Working Markdown Draft"
-                  @click="openEditDraftModal"
-                >
-                  Edit Draft
-                </button>
-                <button
-                  id="btn-submit-review"
-                  class="btn btn-primary btn-sm"
-                  title="Submit Draft for Peer Review (DRAFT -> IN_REVIEW)"
-                  @click="promptSubmitReview"
-                >
-                  Submit for Review
-                </button>
-              </template>
-
-              <!-- In Review State Actions -->
-              <template v-else-if="selectedArticle.status === 'IN_REVIEW'">
-                <button
-                  id="btn-approve-article"
-                  class="btn btn-success btn-sm"
-                  title="Approve Article (Enforces Four-Eyes Principle)"
-                  @click="promptApproveArticle"
-                >
-                  ✓ Approve Article
-                </button>
-                <button
-                  id="btn-reject-article"
-                  class="btn btn-danger btn-sm"
-                  title="Reject Article Back to Author"
-                  @click="promptRejectArticle"
-                >
-                  ✕ Reject Draft
-                </button>
-                <button
-                  class="btn btn-secondary btn-sm"
-                  title="Edit Working Draft"
-                  @click="openEditDraftModal"
-                >
-                  Edit Draft
-                </button>
-              </template>
-
-              <!-- Approved State Actions -->
-              <template v-else-if="selectedArticle.status === 'APPROVED'">
-                <button
-                  id="btn-publish-article"
-                  class="btn btn-primary btn-sm"
-                  title="Publish Article (Auto-supersedes prior version)"
-                  @click="promptPublishArticle"
-                >
-                  Publish Live
-                </button>
-                <button
-                  class="btn btn-secondary btn-sm"
-                  title="Create New Revision Draft"
-                  @click="openEditDraftModal"
-                >
-                  New Revision Draft
-                </button>
-              </template>
-
-              <!-- Published State Actions -->
-              <template v-else-if="selectedArticle.status === 'PUBLISHED'">
-                <button
-                  id="btn-new-revision"
-                  class="btn btn-secondary btn-sm"
-                  title="Start New Draft Revision"
-                  @click="openEditDraftModal"
-                >
-                  Create Amendment Draft
-                </button>
-                <button
-                  id="btn-archive-article"
-                  class="btn btn-danger btn-sm"
-                  title="Archive SOP Document"
-                  @click="promptArchiveArticle"
-                >
-                  Archive
-                </button>
-              </template>
+                No articles match your current search or status filters.
+              </p>
+              <p v-else>
+                No SOPs are currently visible for the active persona.
+              </p>
+              <button
+                v-if="
+                  searchQuery || selectedTag || activeStatusFilter !== 'ALL'
+                "
+                type="button"
+                class="btn btn-secondary btn-sm"
+                @click="resetFilters"
+              >
+                Reset Filters
+              </button>
             </div>
-          </div>
 
-          <!-- Reader Tabs (SOP Prose / Version History / Audit Ledger) -->
-          <ClinicalTabs
-            :model-value="activeReaderTab"
-            :tabs="readerTabs"
-            variant="underline"
-            aria-label="SOP document inspection tabs"
-            id-prefix="knowledge-reader"
-            tab-class="reader-tab-btn"
-            @update:model-value="handleReaderTabChange"
-          />
-
-          <!-- Tab Content 1: SOP Markdown Prose -->
-          <div
-            v-if="activeReaderTab === 'content'"
-            id="sop-prose-viewer"
-            role="tabpanel"
-            aria-labelledby="knowledge-reader-tab-content"
-            class="reader-body-card focus-ring-inset"
-            tabindex="0"
-          >
             <div
-              v-if="selectedArticleRenderedHtml"
-              class="prose-content"
-              v-html="selectedArticleRenderedHtml"
-            />
-            <div v-else class="prose-empty">
-              <p>No content has been authored for this SOP draft.</p>
-            </div>
-          </div>
+              v-else
+              class="articles-stream focus-ring-inset"
+              role="region"
+              aria-label="SOP articles list"
+              tabindex="0"
+            >
+              <button
+                v-for="art in displayArticles"
+                :key="art.id"
+                type="button"
+                class="article-card"
+                :class="{
+                  'article-card-selected': selectedArticle?.id === art.id,
+                }"
+                :aria-pressed="selectedArticle?.id === art.id"
+                :aria-current="
+                  selectedArticle?.id === art.id ? 'true' : undefined
+                "
+                @click="selectArticle(art, $event)"
+                @keydown.enter.prevent="selectArticle(art, $event)"
+                @keydown.space.prevent="selectArticle(art, $event)"
+              >
+                <span class="article-card-header">
+                  <span
+                    class="status-pill"
+                    :class="getStatusPillClass(art.status)"
+                  >
+                    {{ art.status }}
+                  </span>
+                  <span v-if="art.version_label" class="badge badge-version">
+                    v{{ art.version_label }}
+                  </span>
+                </span>
 
-          <!-- Tab Content 2: Immutable Version History -->
-          <div
-            v-else-if="activeReaderTab === 'versions'"
-            id="sop-versions-viewer"
-            role="tabpanel"
-            aria-labelledby="knowledge-reader-tab-versions"
-            class="reader-body-card focus-ring-inset"
-            tabindex="0"
+                <span class="article-card-title">
+                  {{ art.title }}
+                </span>
+
+                <span class="article-card-meta">
+                  <span class="meta-category">
+                    {{ art.category_name || "General" }}</span
+                  >
+                  <span v-if="art.updated_at" class="meta-date">
+                    {{ formatDate(art.updated_at) }}</span
+                  >
+                </span>
+
+                <span
+                  v-if="art.tags && art.tags.length > 0"
+                  class="article-card-tags"
+                >
+                  <span
+                    v-for="t in getTagList(art.tags)"
+                    :key="t"
+                    class="mini-tag"
+                  >
+                    #{{ t }}
+                  </span>
+                </span>
+              </button>
+            </div>
+          </section>
+        </template>
+
+        <template #detail="{ isCompact }">
+          <!-- Column 3: Article Reader & GxP Inspection Pane -->
+          <component
+            :is="isCompact ? 'div' : 'main'"
+            id="knowledge-reader-pane"
+            class="article-reader-pane"
           >
-            <div class="tab-section-header">
-              <h4>Immutable Snapshot Versions</h4>
-              <p class="section-desc">
-                Controlled snapshot archive of all historical versions under 21
-                CFR Part 11.
+            <div v-if="!selectedArticle" class="reader-empty-state">
+              <div class="empty-icon">
+                <ClinicalIcon name="book-open" :size="20" />
+              </div>
+              <h3>Select an SOP or Guideline</h3>
+              <p>
+                Choose an article from the directory on the left to read
+                guidance, inspect historical version snapshots, or review the 21
+                CFR Part 11 audit trail.
               </p>
             </div>
 
-            <div v-if="versionsLoading" class="loading-box">
-              <div class="spinner" />
-              <p>Loading version snapshots...</p>
-            </div>
+            <div v-else class="reader-content-wrap">
+              <!-- Article Top Title & Metadata Bar -->
+              <div class="reader-header-card">
+                <div class="reader-meta-top">
+                  <div class="breadcrumbs">
+                    <span class="crumb-category">
+                      {{
+                        selectedArticle.category_name || "General SOPs"
+                      }}</span
+                    >
+                    <span class="crumb-separator">/</span>
+                    <span class="crumb-slug">{{ selectedArticle.slug }}</span>
+                  </div>
+                  <div class="reader-badges">
+                    <span
+                      class="status-pill status-pill-lg"
+                      :class="getStatusPillClass(selectedArticle.status)"
+                    >
+                      {{ selectedArticle.status }}
+                    </span>
+                    <span
+                      v-if="selectedArticle.version_label"
+                      class="badge badge-version-lg"
+                    >
+                      v{{ selectedArticle.version_label }}
+                    </span>
+                  </div>
+                </div>
 
-            <div v-else-if="versionsList.length === 0" class="empty-box">
-              <p>No snapshot versions recorded for this document.</p>
-            </div>
+                <h2 class="reader-article-title">
+                  {{ selectedArticle.title }}
+                </h2>
 
-            <div v-else class="versions-table-wrap">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Version</th>
-                    <th>Index</th>
-                    <th>Status at Snapshot</th>
-                    <th>Author / Editor</th>
-                    <th>Reason for Change</th>
-                    <th>Timestamp</th>
-                    <th>Locked</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="ver in versionsList" :key="ver.id">
-                    <td>
-                      <span class="badge badge-version"
-                        >v{{ ver.version_label }}</span
-                      >
-                    </td>
-                    <td>#{{ ver.version_index }}</td>
-                    <td>
-                      <span
-                        class="status-pill"
-                        :class="getStatusPillClass(ver.status_at_snapshot)"
-                      >
-                        {{ ver.status_at_snapshot }}
-                      </span>
-                    </td>
-                    <td>{{ ver.created_by || "system" }}</td>
-                    <td>
-                      {{ ver.reason_for_change || "Baseline initial version" }}
-                    </td>
-                    <td>{{ formatDate(ver.created_at) }}</td>
-                    <td>
-                      <span
-                        class="badge"
-                        :class="
-                          ver.is_locked ? 'badge-success' : 'badge-neutral'
-                        "
-                      >
-                        {{ ver.is_locked ? "Locked" : "Draft" }}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+                <div class="reader-author-row">
+                  <div class="author-item">
+                    <span class="author-label">Author:</span>
+                    <span class="author-value">{{
+                      selectedArticle.author_user_id || "system"
+                    }}</span>
+                  </div>
+                  <div
+                    v-if="selectedArticle.last_edited_by"
+                    class="author-item"
+                  >
+                    <span class="author-label">Last Edited By:</span>
+                    <span class="author-value">{{
+                      selectedArticle.last_edited_by
+                    }}</span>
+                  </div>
+                  <div v-if="selectedArticle.approved_by" class="author-item">
+                    <span class="author-label">Approved By:</span>
+                    <span class="author-value text-success"
+                      >✓ {{ selectedArticle.approved_by }}</span
+                    >
+                  </div>
+                  <div v-if="selectedArticle.updated_at" class="author-item">
+                    <span class="author-label">Last Revised:</span>
+                    <span class="author-value">{{
+                      formatDate(selectedArticle.updated_at)
+                    }}</span>
+                  </div>
+                </div>
 
-          <!-- Tab Content 3: Part 11 Audit Trail -->
-          <div
-            v-else-if="activeReaderTab === 'audit'"
-            id="sop-audit-viewer"
-            role="tabpanel"
-            aria-labelledby="knowledge-reader-tab-audit"
-            class="reader-body-card focus-ring-inset"
-            tabindex="0"
-          >
-            <div class="tab-section-header">
-              <h4>21 CFR Part 11 Electronic Audit Ledger</h4>
-              <p class="section-desc">
-                Append-only tamper-evident transaction log with SHA-256
-                cryptographic hashes.
-              </p>
-            </div>
+                <!-- Tags Row -->
+                <div
+                  v-if="selectedArticle.tags && selectedArticle.tags.length > 0"
+                  class="reader-tags-row"
+                >
+                  <span
+                    v-for="tag in getTagList(selectedArticle.tags)"
+                    :key="tag"
+                    class="tag-badge"
+                  >
+                    #{{ tag }}
+                  </span>
+                </div>
 
-            <div v-if="auditLoading" class="loading-box">
-              <div class="spinner" />
-              <p>Fetching immutable audit trail...</p>
-            </div>
+                <!-- Admin Authoring & Lifecycle Controls (demo builds + super_admin only; seven-state authoring out of live scope) -->
+                <div
+                  v-if="demoBuild && isSuperAdmin"
+                  id="admin-authoring-toolbar"
+                  class="admin-lifecycle-toolbar"
+                >
+                  <span class="toolbar-label"> Admin Controls:</span>
 
-            <div v-else-if="auditLogList.length === 0" class="empty-box">
-              <p>No audit trail logs recorded yet.</p>
-            </div>
+                  <!-- Draft & Rejected State Actions -->
+                  <template
+                    v-if="
+                      selectedArticle.status === 'DRAFT' ||
+                      selectedArticle.status === 'REJECTED'
+                    "
+                  >
+                    <button
+                      id="btn-edit-draft"
+                      class="btn btn-secondary btn-sm"
+                      title="Edit Working Markdown Draft"
+                      @click="openEditDraftModal"
+                    >
+                      Edit Draft
+                    </button>
+                    <button
+                      id="btn-submit-review"
+                      class="btn btn-primary btn-sm"
+                      title="Submit Draft for Peer Review (DRAFT -> IN_REVIEW)"
+                      @click="promptSubmitReview"
+                    >
+                      Submit for Review
+                    </button>
+                  </template>
 
-            <div v-else class="audit-table-wrap">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Event Type</th>
-                    <th>Actor</th>
-                    <th>Target Status</th>
-                    <th>Version</th>
-                    <th>Reason for Change</th>
-                    <th>SHA-256 Digest</th>
-                    <th>Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="log in auditLogList" :key="log.id">
-                    <td>
-                      <span class="badge badge-standard">{{
-                        log.event_type
-                      }}</span>
-                    </td>
-                    <td>
-                      <strong>{{ log.actor_user_id }}</strong>
-                    </td>
-                    <td>
-                      <span
-                        v-if="log.target_status"
-                        class="status-pill"
-                        :class="getStatusPillClass(log.target_status)"
-                      >
-                        {{ log.target_status }}
-                      </span>
-                      <span v-else>—</span>
-                    </td>
-                    <td>v{{ log.version_label || "1.0" }}</td>
-                    <td>
-                      {{ log.reason_for_change || "Document lifecycle update" }}
-                    </td>
-                    <td>
-                      <code class="hash-code" :title="log.sha256_hash">
-                        {{
-                          (log.sha256_hash || "sha256:e3b0c442").substring(
-                            0,
-                            12
-                          )
-                        }}...
-                      </code>
-                    </td>
-                    <td>{{ formatDate(log.created_at) }}</td>
-                  </tr>
-                </tbody>
-              </table>
+                  <!-- In Review State Actions -->
+                  <template v-else-if="selectedArticle.status === 'IN_REVIEW'">
+                    <button
+                      id="btn-approve-article"
+                      class="btn btn-success btn-sm"
+                      title="Approve Article (Enforces Four-Eyes Principle)"
+                      @click="promptApproveArticle"
+                    >
+                      ✓ Approve Article
+                    </button>
+                    <button
+                      id="btn-reject-article"
+                      class="btn btn-danger btn-sm"
+                      title="Reject Article Back to Author"
+                      @click="promptRejectArticle"
+                    >
+                      ✕ Reject Draft
+                    </button>
+                    <button
+                      class="btn btn-secondary btn-sm"
+                      title="Edit Working Draft"
+                      @click="openEditDraftModal"
+                    >
+                      Edit Draft
+                    </button>
+                  </template>
+
+                  <!-- Approved State Actions -->
+                  <template v-else-if="selectedArticle.status === 'APPROVED'">
+                    <button
+                      id="btn-publish-article"
+                      class="btn btn-primary btn-sm"
+                      title="Publish Article (Auto-supersedes prior version)"
+                      @click="promptPublishArticle"
+                    >
+                      Publish Live
+                    </button>
+                    <button
+                      class="btn btn-secondary btn-sm"
+                      title="Create New Revision Draft"
+                      @click="openEditDraftModal"
+                    >
+                      New Revision Draft
+                    </button>
+                  </template>
+
+                  <!-- Published State Actions -->
+                  <template v-else-if="selectedArticle.status === 'PUBLISHED'">
+                    <button
+                      id="btn-new-revision"
+                      class="btn btn-secondary btn-sm"
+                      title="Start New Draft Revision"
+                      @click="openEditDraftModal"
+                    >
+                      Create Amendment Draft
+                    </button>
+                    <button
+                      id="btn-archive-article"
+                      class="btn btn-danger btn-sm"
+                      title="Archive SOP Document"
+                      @click="promptArchiveArticle"
+                    >
+                      Archive
+                    </button>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Reader Tabs (SOP Prose / Version History / Audit Ledger) -->
+              <ClinicalTabs
+                :model-value="activeReaderTab"
+                :tabs="readerTabs"
+                variant="underline"
+                aria-label="SOP document inspection tabs"
+                id-prefix="knowledge-reader"
+                tab-class="reader-tab-btn"
+                @update:model-value="handleReaderTabChange"
+              />
+
+              <!-- Tab Content 1: SOP Markdown Prose -->
+              <div
+                v-if="activeReaderTab === 'content'"
+                id="sop-prose-viewer"
+                role="tabpanel"
+                aria-labelledby="knowledge-reader-tab-content"
+                class="reader-body-card focus-ring-inset"
+                tabindex="0"
+              >
+                <div
+                  v-if="selectedArticleRenderedHtml"
+                  class="prose-content"
+                  v-html="selectedArticleRenderedHtml"
+                />
+                <div v-else class="prose-empty">
+                  <p>No content has been authored for this SOP draft.</p>
+                </div>
+              </div>
+
+              <!-- Tab Content 2: Immutable Version History -->
+              <div
+                v-else-if="activeReaderTab === 'versions'"
+                id="sop-versions-viewer"
+                role="tabpanel"
+                aria-labelledby="knowledge-reader-tab-versions"
+                class="reader-body-card focus-ring-inset"
+                tabindex="0"
+              >
+                <div class="tab-section-header">
+                  <h4>Immutable Snapshot Versions</h4>
+                  <p class="section-desc">
+                    Controlled snapshot archive of all historical versions under
+                    21 CFR Part 11.
+                  </p>
+                </div>
+
+                <div v-if="versionsLoading" class="loading-box">
+                  <div class="spinner" />
+                  <p>Loading version snapshots...</p>
+                </div>
+
+                <div v-else-if="versionsList.length === 0" class="empty-box">
+                  <p>No snapshot versions recorded for this document.</p>
+                </div>
+
+                <div v-else class="versions-table-wrap">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Version</th>
+                        <th>Index</th>
+                        <th>Status at Snapshot</th>
+                        <th>Author / Editor</th>
+                        <th>Reason for Change</th>
+                        <th>Timestamp</th>
+                        <th>Locked</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="ver in versionsList" :key="ver.id">
+                        <td>
+                          <span class="badge badge-version"
+                            >v{{ ver.version_label }}</span
+                          >
+                        </td>
+                        <td>#{{ ver.version_index }}</td>
+                        <td>
+                          <span
+                            class="status-pill"
+                            :class="getStatusPillClass(ver.status_at_snapshot)"
+                          >
+                            {{ ver.status_at_snapshot }}
+                          </span>
+                        </td>
+                        <td>{{ ver.created_by || "system" }}</td>
+                        <td>
+                          {{
+                            ver.reason_for_change || "Baseline initial version"
+                          }}
+                        </td>
+                        <td>{{ formatDate(ver.created_at) }}</td>
+                        <td>
+                          <span
+                            class="badge"
+                            :class="
+                              ver.is_locked ? 'badge-success' : 'badge-neutral'
+                            "
+                          >
+                            {{ ver.is_locked ? "Locked" : "Draft" }}
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Tab Content 3: Part 11 Audit Trail -->
+              <div
+                v-else-if="activeReaderTab === 'audit'"
+                id="sop-audit-viewer"
+                role="tabpanel"
+                aria-labelledby="knowledge-reader-tab-audit"
+                class="reader-body-card focus-ring-inset"
+                tabindex="0"
+              >
+                <div class="tab-section-header">
+                  <h4>21 CFR Part 11 Electronic Audit Ledger</h4>
+                  <p class="section-desc">
+                    Append-only tamper-evident transaction log with SHA-256
+                    cryptographic hashes.
+                  </p>
+                </div>
+
+                <div v-if="auditLoading" class="loading-box">
+                  <div class="spinner" />
+                  <p>Fetching immutable audit trail...</p>
+                </div>
+
+                <div v-else-if="auditLogList.length === 0" class="empty-box">
+                  <p>No audit trail logs recorded yet.</p>
+                </div>
+
+                <div v-else class="audit-table-wrap">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Event Type</th>
+                        <th>Actor</th>
+                        <th>Target Status</th>
+                        <th>Version</th>
+                        <th>Reason for Change</th>
+                        <th>SHA-256 Digest</th>
+                        <th>Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="log in auditLogList" :key="log.id">
+                        <td>
+                          <span class="badge badge-standard">{{
+                            log.event_type
+                          }}</span>
+                        </td>
+                        <td>
+                          <strong>{{ log.actor_user_id }}</strong>
+                        </td>
+                        <td>
+                          <span
+                            v-if="log.target_status"
+                            class="status-pill"
+                            :class="getStatusPillClass(log.target_status)"
+                          >
+                            {{ log.target_status }}
+                          </span>
+                          <span v-else>—</span>
+                        </td>
+                        <td>v{{ log.version_label || "1.0" }}</td>
+                        <td>
+                          {{
+                            log.reason_for_change || "Document lifecycle update"
+                          }}
+                        </td>
+                        <td>
+                          <code class="hash-code" :title="log.sha256_hash">
+                            {{
+                              (log.sha256_hash || "sha256:e3b0c442").substring(
+                                0,
+                                12
+                              )
+                            }}...
+                          </code>
+                        </td>
+                        <td>{{ formatDate(log.created_at) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </main>
+          </component>
+        </template>
+
+        <template #drawer-footer="{ close }">
+          <button type="button" class="btn btn-secondary" @click="close">
+            Back to SOP List
+          </button>
+        </template>
+      </ClinicalSplitWorkspace>
     </div>
 
     <!-- Modal 1: Create New Article Modal -->
@@ -1127,6 +1185,7 @@ import {
   ClinicalIcon,
   ClinicalIconButton,
   ClinicalModal,
+  ClinicalSplitWorkspace,
   ClinicalTabs,
 } from "ui";
 import {
@@ -1151,9 +1210,11 @@ export default {
     ClinicalIcon,
     ClinicalIconButton,
     ClinicalModal,
+    ClinicalSplitWorkspace,
     ClinicalTabs,
   },
   setup() {
+    const knowledgeSplitRef = ref(null);
     const authStore = useAuthStore();
     const scopeStore = useClinicalScopeStore();
     const toastStore = useToastStore();
@@ -1614,11 +1675,14 @@ export default {
       }
     }
 
-    function selectArticle(article) {
+    function selectArticle(article, event = null) {
       applySelectedArticle(article);
       activeReaderTab.value = "content";
       versionsList.value = [];
       auditLogList.value = [];
+      if (knowledgeSplitRef.value) {
+        knowledgeSplitRef.value.openDetail(event);
+      }
     }
 
     function setStatusFilter(status) {
@@ -2083,6 +2147,7 @@ export default {
 
     return {
       // State
+      knowledgeSplitRef,
       demoBuild,
       categories,
       articles,
@@ -2335,7 +2400,7 @@ export default {
 /* 3-Column Knowledge Workspace */
 .knowledge-layout {
   display: grid;
-  grid-template-columns: 260px 360px 1fr;
+  grid-template-columns: 260px minmax(0, 1fr);
   gap: 16px;
   min-height: 700px;
   align-items: stretch;
@@ -3319,10 +3384,7 @@ export default {
 /* Responsive adjustments */
 @media (max-width: 1100px) {
   .knowledge-layout {
-    grid-template-columns: 220px 1fr;
-  }
-  .knowledge-sidebar {
-    grid-column: 1 / -1;
+    grid-template-columns: 220px minmax(0, 1fr);
   }
 }
 

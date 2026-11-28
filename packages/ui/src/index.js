@@ -17,6 +17,7 @@ import ClinicalPopover from "./components/clinical/ClinicalPopover.vue";
 import ClinicalQueryFlag from "./components/clinical/ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./components/clinical/ClinicalQueryPanel.vue";
 import ClinicalRadioGroup from "./components/clinical/ClinicalRadioGroup.vue";
+import ClinicalSplitWorkspace from "./components/clinical/ClinicalSplitWorkspace.vue";
 import ClinicalTabs from "./components/clinical/ClinicalTabs.vue";
 import ClinicalThemeToggle from "./components/clinical/ClinicalThemeToggle.vue";
 import ClinicalToastHost from "./components/clinical/ClinicalToastHost.vue";
@@ -48,6 +49,11 @@ import {
   useInlineFocusHandoff,
   useRetryFocusHandoff,
 } from "./composables/useInlineFocusHandoff.js";
+import {
+  SPLIT_WORKSPACE_COMPACT_BREAKPOINT,
+  SPLIT_WORKSPACE_SHEET_BREAKPOINT,
+  useResponsiveSplitWorkspace,
+} from "./composables/useResponsiveSplitWorkspace.js";
 import {
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
@@ -93,6 +99,7 @@ export {
   ClinicalQueryFlag,
   ClinicalQueryPanel,
   ClinicalRadioGroup,
+  ClinicalSplitWorkspace,
   ClinicalTabs,
   ClinicalThemeToggle,
   ClinicalToastHost,
@@ -101,6 +108,8 @@ export {
   MediaPlayer,
   ModalErrorAlert,
   PREFERS_DARK_MEDIA_QUERY,
+  SPLIT_WORKSPACE_COMPACT_BREAKPOINT,
+  SPLIT_WORKSPACE_SHEET_BREAKPOINT,
   SignOutConfirmModal,
   THEME_CHANGE_EVENT,
   THEME_MODES,
@@ -131,6 +140,7 @@ export {
   useFloatingPosition,
   useFocusTrap,
   useInlineFocusHandoff,
+  useResponsiveSplitWorkspace,
   useRetryFocusHandoff,
   useSignOutGuard,
   useTheme,

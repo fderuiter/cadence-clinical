@@ -110,171 +110,203 @@
 
     <!-- TAB 1: Lay Summary Reader & Library -->
     <div v-if="activeTab === 'reader'" class="tab-content">
-      <div class="reader-layout-grid">
-        <!-- Sidebar summary selector -->
-        <div class="panel-box summary-selector-panel">
-          <div class="panel-header">
-            <h3 class="panel-title">Available Trial Results</h3>
+      <ClinicalSplitWorkspace
+        ref="summarySplitRef"
+        v-model="isReaderDrawerOpen"
+        class="reader-layout-grid grid-stretch-items"
+        master-width="360px"
+        detail-width="minmax(0, 1fr)"
+        gap="20px"
+        :has-selection="Boolean(selectedSummary)"
+        drawer-size="lg"
+        :drawer-title="selectedSummary?.title || 'Trial Results Summary'"
+        :drawer-subtitle="
+          selectedSummary ? `Study ${selectedSummary.study_id}` : ''
+        "
+        close-label="Close lay summary reader"
+      >
+        <template #master>
+          <!-- Sidebar summary selector -->
+          <div class="panel-box summary-selector-panel">
+            <div class="panel-header">
+              <h3 class="panel-title">Available Trial Results</h3>
+            </div>
+            <div class="panel-body compact-body">
+              <div class="summary-list">
+                <button
+                  v-for="s in summaries"
+                  :key="s.id"
+                  type="button"
+                  class="summary-item-card"
+                  :class="{ selected: selectedSummary?.id === s.id }"
+                  :aria-current="
+                    selectedSummary?.id === s.id ? 'true' : undefined
+                  "
+                  @click="selectSummary(s, $event)"
+                >
+                  <div class="item-badge-row">
+                    <span class="badge badge-gxp">{{ s.trial_phase }}</span>
+                    <span class="badge badge-regulatory">{{
+                      s.language.toUpperCase()
+                    }}</span>
+                  </div>
+                  <h4 class="item-title">
+                    {{ s.title }}
+                  </h4>
+                  <p class="item-meta">
+                    Study: <strong>{{ s.study_id }}</strong> | Sponsor:
+                    {{ s.sponsor_name }}
+                  </p>
+                  <div class="item-irb">
+                    IRB Approval: {{ s.irb_approval_number }}
+                  </div>
+                </button>
+              </div>
+            </div>
           </div>
-          <div class="panel-body compact-body">
-            <div class="summary-list">
-              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-              <div
-                v-for="s in summaries"
-                :key="s.id"
-                class="summary-item-card"
-                :class="{ selected: selectedSummary?.id === s.id }"
-                @click="selectedSummary = s"
+        </template>
+
+        <template #detail>
+          <!-- Full Plain Language Interactive Reader -->
+          <div
+            v-if="selectedSummary"
+            class="panel-box summary-reader-panel"
+            :class="{ 'summary-reader-panel--compact': isCompact }"
+          >
+            <div class="panel-header">
+              <div>
+                <div class="header-badge-row">
+                  <span class="badge badge-gxp"
+                    >IRB Approved:
+                    {{ selectedSummary.irb_approval_number }}</span
+                  >
+                  <span class="badge badge-standard"
+                    >Date: {{ selectedSummary.irb_approval_date }}</span
+                  >
+                </div>
+                <h3 class="panel-title">
+                  {{ selectedSummary.title }}
+                </h3>
+              </div>
+              <button
+                type="button"
+                class="btn btn-sm btn-primary"
+                @click="prepareConfirmation(selectedSummary)"
               >
-                <div class="item-badge-row">
-                  <span class="badge badge-gxp">{{ s.trial_phase }}</span>
-                  <span class="badge badge-regulatory">{{
-                    s.language.toUpperCase()
-                  }}</span>
-                </div>
-                <h4 class="item-title">
-                  {{ s.title }}
-                </h4>
-                <p class="item-meta">
-                  Study: <strong>{{ s.study_id }}</strong> | Sponsor:
-                  {{ s.sponsor_name }}
+                Acknowledge &amp; Confirm Receipt
+              </button>
+            </div>
+            <div class="panel-body">
+              <!-- Narrative Overview -->
+              <div class="lay-overview-box">
+                <h4 class="section-heading">Overview for Trial Participants</h4>
+                <p class="overview-text">
+                  {{ selectedSummary.summary_text }}
                 </p>
-                <div class="item-irb">
-                  IRB Approval: {{ s.irb_approval_number }}
+              </div>
+
+              <!-- Structured Plain Language Sections per EU CTR Guidelines -->
+              <div class="plain-sections-grid">
+                <div class="section-card">
+                  <div class="card-icon">
+                    <ClinicalIcon name="trending-up" :size="16" />
+                  </div>
+                  <div class="card-content">
+                    <h5>1. What was the goal of this study?</h5>
+                    <p>
+                      {{
+                        selectedSummary.plain_language_sections?.objective ||
+                        "To evaluate whether the study medicine improves clinical outcomes compared to standard care."
+                      }}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="section-card">
+                  <div class="card-icon">
+                    <ClinicalIcon name="users" :size="16" />
+                  </div>
+                  <div class="card-content">
+                    <h5>2. Who participated in this trial?</h5>
+                    <p>
+                      {{
+                        selectedSummary.plain_language_sections?.participants ||
+                        "Adult patients with confirmed diagnosis who met protocol criteria and voluntarily gave informed consent."
+                      }}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="section-card">
+                  <div class="card-icon">
+                    <ClinicalIcon name="flask-conical" :size="16" />
+                  </div>
+                  <div class="card-content">
+                    <h5>3. What treatments were studied?</h5>
+                    <p>
+                      {{
+                        selectedSummary.plain_language_sections?.treatments ||
+                        "Investigational therapy administered in combination with standard of care vs. placebo control."
+                      }}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="section-card">
+                  <div class="card-icon">
+                    <ClinicalIcon name="trending-up" :size="16" />
+                  </div>
+                  <div class="card-content">
+                    <h5>4. What were the key results?</h5>
+                    <p>
+                      {{
+                        selectedSummary.plain_language_sections?.results ||
+                        "The primary efficacy endpoint was achieved with statistically significant benefits and improved quality of life."
+                      }}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="section-card">
+                  <div class="card-icon">
+                    <ClinicalIcon name="shield-check" :size="16" />
+                  </div>
+                  <div class="card-content">
+                    <h5>5. What side effects were observed?</h5>
+                    <p>
+                      {{
+                        selectedSummary.plain_language_sections?.side_effects ||
+                        "Adverse events were generally mild-to-moderate, manageable, and resolved without treatment discontinuation."
+                      }}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="section-card">
+                  <div class="card-icon">
+                    <ClinicalIcon name="file-text" :size="16" />
+                  </div>
+                  <div class="card-content">
+                    <h5>6. What are the next steps?</h5>
+                    <p>
+                      {{
+                        selectedSummary.plain_language_sections?.future_plans ||
+                        "Long-term extension monitoring is continuing, and regulatory submission dossiers have been submitted."
+                      }}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </template>
 
-        <!-- Full Plain Language Interactive Reader -->
-        <div v-if="selectedSummary" class="panel-box summary-reader-panel">
-          <div class="panel-header">
-            <div>
-              <div class="header-badge-row">
-                <span class="badge badge-gxp"
-                  >IRB Approved: {{ selectedSummary.irb_approval_number }}</span
-                >
-                <span class="badge badge-standard"
-                  >Date: {{ selectedSummary.irb_approval_date }}</span
-                >
-              </div>
-              <h3 class="panel-title">
-                {{ selectedSummary.title }}
-              </h3>
-            </div>
-            <button
-              class="btn btn-sm btn-primary"
-              @click="prepareConfirmation(selectedSummary)"
-            >
-              Acknowledge &amp; Confirm Receipt
-            </button>
-          </div>
-          <div class="panel-body">
-            <!-- Narrative Overview -->
-            <div class="lay-overview-box">
-              <h4 class="section-heading">Overview for Trial Participants</h4>
-              <p class="overview-text">
-                {{ selectedSummary.summary_text }}
-              </p>
-            </div>
-
-            <!-- Structured Plain Language Sections per EU CTR Guidelines -->
-            <div class="plain-sections-grid">
-              <div class="section-card">
-                <div class="card-icon">
-                  <ClinicalIcon name="trending-up" :size="16" />
-                </div>
-                <div class="card-content">
-                  <h5>1. What was the goal of this study?</h5>
-                  <p>
-                    {{
-                      selectedSummary.plain_language_sections?.objective ||
-                      "To evaluate whether the study medicine improves clinical outcomes compared to standard care."
-                    }}
-                  </p>
-                </div>
-              </div>
-
-              <div class="section-card">
-                <div class="card-icon">
-                  <ClinicalIcon name="users" :size="16" />
-                </div>
-                <div class="card-content">
-                  <h5>2. Who participated in this trial?</h5>
-                  <p>
-                    {{
-                      selectedSummary.plain_language_sections?.participants ||
-                      "Adult patients with confirmed diagnosis who met protocol criteria and voluntarily gave informed consent."
-                    }}
-                  </p>
-                </div>
-              </div>
-
-              <div class="section-card">
-                <div class="card-icon">
-                  <ClinicalIcon name="flask-conical" :size="16" />
-                </div>
-                <div class="card-content">
-                  <h5>3. What treatments were studied?</h5>
-                  <p>
-                    {{
-                      selectedSummary.plain_language_sections?.treatments ||
-                      "Investigational therapy administered in combination with standard of care vs. placebo control."
-                    }}
-                  </p>
-                </div>
-              </div>
-
-              <div class="section-card">
-                <div class="card-icon">
-                  <ClinicalIcon name="trending-up" :size="16" />
-                </div>
-                <div class="card-content">
-                  <h5>4. What were the key results?</h5>
-                  <p>
-                    {{
-                      selectedSummary.plain_language_sections?.results ||
-                      "The primary efficacy endpoint was achieved with statistically significant benefits and improved quality of life."
-                    }}
-                  </p>
-                </div>
-              </div>
-
-              <div class="section-card">
-                <div class="card-icon">
-                  <ClinicalIcon name="shield-check" :size="16" />
-                </div>
-                <div class="card-content">
-                  <h5>5. What side effects were observed?</h5>
-                  <p>
-                    {{
-                      selectedSummary.plain_language_sections?.side_effects ||
-                      "Adverse events were generally mild-to-moderate, manageable, and resolved without treatment discontinuation."
-                    }}
-                  </p>
-                </div>
-              </div>
-
-              <div class="section-card">
-                <div class="card-icon">
-                  <ClinicalIcon name="file-text" :size="16" />
-                </div>
-                <div class="card-content">
-                  <h5>6. What are the next steps?</h5>
-                  <p>
-                    {{
-                      selectedSummary.plain_language_sections?.future_plans ||
-                      "Long-term extension monitoring is continuing, and regulatory submission dossiers have been submitted."
-                    }}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        <template #drawer-footer="{ close }">
+          <button type="button" class="btn btn-secondary" @click="close">
+            Back to Trial Results
+          </button>
+        </template>
+      </ClinicalSplitWorkspace>
     </div>
 
     <!-- TAB 2: Patient Comprehension & Confirmation Acknowledgment -->
@@ -659,7 +691,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { ClinicalIconButton, ClinicalIcon } from "ui";
+import {
+  ClinicalIconButton,
+  ClinicalIcon,
+  ClinicalSplitWorkspace,
+  useResponsiveSplitWorkspace,
+} from "ui";
 import { useToastStore } from "../stores/toasts.js";
 import { ensureOk } from "../utils/apiErrors.js";
 import { isDemoBuild } from "../utils/demoMode.js";
@@ -671,6 +708,9 @@ const publishSuccess = ref("");
 
 const summaries = ref<any[]>([]);
 const selectedSummary = ref<any>(null);
+const summarySplitRef = ref<any>(null);
+const isReaderDrawerOpen = ref(false);
+const { isCompact } = useResponsiveSplitWorkspace();
 const auditReceipts = ref<any[]>([]);
 const lastReceipt = ref<any>(null);
 
@@ -742,7 +782,15 @@ function onConfirmSummarySelect() {
   }
 }
 
+function selectSummary(summary: any, event?: MouseEvent) {
+  selectedSummary.value = summary;
+  summarySplitRef.value?.openDetail(
+    (event?.currentTarget as HTMLElement) ?? null
+  );
+}
+
 function prepareConfirmation(summary: any) {
+  isReaderDrawerOpen.value = false;
   confirmForm.value.summary_id = summary.id;
   confirmForm.value.study_id = summary.study_id;
   activeTab.value = "confirm";
@@ -903,8 +951,10 @@ onMounted(() => {
 <style scoped>
 .dashboard-section {
   padding: 24px;
+  width: 100%;
   max-width: 1600px;
   margin: 0 auto;
+  box-sizing: border-box;
   font-family: var(--semantic-font-family);
   color: var(--semantic-color-text-dark);
 }
@@ -913,6 +963,8 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
   margin-bottom: 24px;
   border-bottom: 1px solid var(--semantic-color-border);
   padding-bottom: 16px;
@@ -920,6 +972,7 @@ onMounted(() => {
 
 .header-badge-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -969,7 +1022,7 @@ onMounted(() => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -982,9 +1035,11 @@ onMounted(() => {
 
 .view-tabs-bar {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   border-bottom: 2px solid var(--semantic-color-border);
   margin-bottom: 20px;
+  max-width: 100%;
 }
 
 .tab-btn {
@@ -997,6 +1052,8 @@ onMounted(() => {
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   margin-bottom: -2px;
+  text-align: left;
+  max-width: 100%;
   transition:
     color 0.15s ease,
     border-color 0.15s ease;
@@ -1012,15 +1069,8 @@ onMounted(() => {
 }
 
 .reader-layout-grid {
-  display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 20px;
-}
-
-@media (max-width: 1024px) {
-  .reader-layout-grid {
-    grid-template-columns: 1fr;
-  }
+  min-width: 0;
+  align-items: stretch;
 }
 
 .panel-box {
@@ -1029,12 +1079,22 @@ onMounted(() => {
   border-radius: 8px;
   box-shadow: var(--shadow-sm);
   margin-bottom: 20px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.summary-reader-panel--compact {
+  margin-bottom: 0;
+  border: none;
+  box-shadow: none;
 }
 
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   padding: 14px 18px;
   border-bottom: 1px solid var(--semantic-color-border);
   background-color: var(--semantic-color-surface-muted);
@@ -1064,6 +1124,12 @@ onMounted(() => {
 }
 
 .summary-item-card {
+  width: 100%;
+  min-height: 44px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  box-sizing: border-box;
   padding: 12px;
   border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
@@ -1134,13 +1200,13 @@ onMounted(() => {
 
 .plain-sections-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
 @media (max-width: 768px) {
   .plain-sections-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1175,18 +1241,19 @@ onMounted(() => {
 
 .grid-2-col {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
 
 @media (max-width: 1024px) {
   .grid-2-col {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 .star-rating-box {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   margin: 8px 0 12px 0;
@@ -1247,6 +1314,8 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   border-bottom: 1px solid var(--semantic-color-info-border);
   padding-bottom: 10px;
   margin-bottom: 12px;
@@ -1282,6 +1351,8 @@ onMounted(() => {
 .cert-meta-row {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
   font-size: 0.82rem;
   color: var(--semantic-color-text-secondary);
   margin-bottom: 12px;
@@ -1428,8 +1499,40 @@ onMounted(() => {
 
 .form-row-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .dashboard-section {
+    padding: 12px;
+  }
+
+  .view-title {
+    font-size: 1.2rem;
+  }
+
+  .tab-btn {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    min-height: 44px;
+  }
+
+  .panel-header,
+  .panel-body {
+    padding: 12px;
+  }
+
+  .form-row-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .form-input,
+  .form-select,
+  .form-textarea {
+    font-size: 1rem;
+    min-height: 44px;
+  }
 }
 
 .alert-success-box {

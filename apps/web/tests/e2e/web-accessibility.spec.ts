@@ -2793,6 +2793,13 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await gotoHashRoute(page, "/tickets");
     await expect(page.locator("#section-tickets-hub")).toBeVisible();
 
+    const investigationStageTab = page.locator(
+      "#tickets-kanban-stage-tab-progress"
+    );
+    if (await investigationStageTab.isVisible().catch(() => false)) {
+      await investigationStageTab.click();
+    }
+
     const inProgressCard = page
       .locator(".ticket-card")
       .filter({ hasText: "Missed Scheduled Blood Draw at Cycle 2 Day 1" })

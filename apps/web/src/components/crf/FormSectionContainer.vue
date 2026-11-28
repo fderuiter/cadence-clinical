@@ -355,6 +355,8 @@ function moveFieldDown(index) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
   user-select: none;
   cursor: pointer;
 }
@@ -362,7 +364,9 @@ function moveFieldDown(index) {
 .section-header-left {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
 }
 
 .section-drag-handle {
@@ -398,7 +402,9 @@ function moveFieldDown(index) {
 .section-header-right {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
 }
 
 .section-reorder-controls {
@@ -504,6 +510,25 @@ function moveFieldDown(index) {
 }
 .col-span-12 {
   grid-column: span 12 / span 12;
+}
+
+@media (max-width: 640px) {
+  .section-header-card {
+    padding: 10px 12px;
+  }
+
+  .section-body {
+    padding: 10px;
+  }
+
+  .crf-grid-container {
+    gap: 10px;
+  }
+
+  .field-item-wrapper {
+    grid-column: span 12 / span 12;
+    min-width: 0;
+  }
 }
 </style>
 

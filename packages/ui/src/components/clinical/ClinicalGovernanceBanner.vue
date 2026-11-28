@@ -19,6 +19,7 @@ import {
   Snowflake,
 } from "lucide-vue-next";
 import ClinicalDrawer from "./ClinicalDrawer.vue";
+import { clinicalDrawerHostProps } from "./sharedProps.js";
 
 const props = defineProps({
   id: {
@@ -141,22 +142,7 @@ const props = defineProps({
     type: String,
     default: undefined,
   },
-  drawerId: {
-    type: String,
-    default: undefined,
-  },
-  drawerOverlayId: {
-    type: String,
-    default: undefined,
-  },
-  drawerTitle: {
-    type: String,
-    default: "",
-  },
-  drawerSubtitle: {
-    type: String,
-    default: "",
-  },
+  ...clinicalDrawerHostProps,
   drawerSize: {
     type: String,
     default: "md",
@@ -172,10 +158,6 @@ const props = defineProps({
   teleport: {
     type: [Boolean, String],
     default: "body",
-  },
-  mobileBottomSheet: {
-    type: Boolean,
-    default: true,
   },
   ariaLabel: {
     type: String,

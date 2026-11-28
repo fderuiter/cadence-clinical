@@ -774,6 +774,219 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
         findingElapsedMs.Should().BeLessThan(300.0, "200 findings must classify in under 300 ms");
     }
 
+    /// <summary>
+    /// Regression test for multi-tenant <c>pg_stats</c> skew under PostgreSQL Row-Level Security: when <c>ANALYZE</c>
+    /// runs while a single tenant dominates table statistics (<c>most_common_freqs = 1.0</c>), subsequent batch
+    /// visibility and evidence-classification queries on a newly created tenant must continue using primary/unique
+    /// index probes in one query per kind rather than collapsing into unparameterized outer-join nested loops.
+    /// </summary>
+    [Fact(DisplayName = "ResolveVisibilityAndInspectEvidence_AfterSingleTenantAnalyze_MaintainsLinearIndexPlansOnNewTenant")]
+    [KernelRule("K-ID-2")]
+    [KernelRule("K-AUTH-4")]
+    public async Task ResolveVisibilityAndInspectEvidenceAfterSingleTenantAnalyzeMaintainsLinearIndexPlansOnNewTenant()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+
+        // 1. Seed a baseline tenant and run ANALYZE so pg_stats records tenantA in most_common_vals before tenantB exists.
+        _ = await SeedMultiTenantSkewStudyAsync(formCount: 80, ct);
+        await using (var adminConn = new NpgsqlConnection(fixture.ConnectionString!))
+        {
+            await adminConn.OpenAsync(ct);
+            await using var analyzeCmd = new NpgsqlCommand(
+                """
+                ANALYZE
+                    kernel.studies,
+                    kernel.sites,
+                    kernel.study_sites,
+                    kernel.enrollments,
+                    kernel.concepts,
+                    kernel.observations,
+                    kernel.collection_instances,
+                    kernel.collection_instance_members;
+                """,
+                adminConn);
+            await analyzeCmd.ExecuteNonQueryAsync(ct);
+        }
+
+        // 2. Seed a fresh second tenant with 400 forms (760 observations) without re-running ANALYZE.
+        var fresh = await SeedMultiTenantSkewStudyAsync(formCount: 400, ct);
+
+        await using var harness = CreateInstrumentedStore();
+
+        // Warm up EF Core / Npgsql parameter caches on 4 items.
+        _ = await harness.AuthorityStore.ResolveVisibilityPathsAsync(fresh.Tenant, fresh.ObservationNodes[..4], ct);
+        _ = await harness.AuthorityStore.InspectEvidenceNodesAsync(fresh.Tenant, fresh.ObservationNodes[..4], ct);
+
+        NodeRef[] pathBatch = [.. fresh.FormNodes, .. fresh.ObservationNodes];
+        harness.Recorder.Reset();
+        var swPaths = Stopwatch.StartNew();
+        var (paths, _) = await harness.AuthorityStore.ResolveVisibilityPathsAsync(fresh.Tenant, pathBatch, ct);
+        swPaths.Stop();
+
+        paths.Should().HaveCount(pathBatch.Length);
+        harness.Recorder.ConnectionsOpened.Should().Be(1);
+        harness.Recorder.SetConfigStatements.Should().Be(2);
+        harness.Recorder.SelectStatements.Should().Be(2, "1 SELECT for collection_instance + 1 SELECT for observation");
+        swPaths.Elapsed.TotalMilliseconds.Should().BeLessThan(
+            500.0,
+            "ResolveVisibilityPathsAsync on an unanalyzed tenant must stay linear via index probes");
+
+        harness.Recorder.Reset();
+        var swInspect = Stopwatch.StartNew();
+        var classified = await harness.AuthorityStore.InspectEvidenceNodesAsync(fresh.Tenant, fresh.ObservationNodes, ct);
+        swInspect.Stop();
+
+        classified.Should().HaveCount(fresh.ObservationNodes.Count);
+        classified.Values.Count(c => c.IsBlinded).Should().Be(fresh.ExpectedBlindedObservations);
+        harness.Recorder.ConnectionsOpened.Should().Be(1);
+        harness.Recorder.SetConfigStatements.Should().Be(2);
+        swInspect.Elapsed.TotalMilliseconds.Should().BeLessThan(
+            500.0,
+            "InspectEvidenceNodesAsync on an unanalyzed tenant must not degrade into cartesian outer-join nested loops");
+    }
+
+    private async Task<(TenantId Tenant, List<NodeRef> FormNodes, List<NodeRef> ObservationNodes, int ExpectedBlindedObservations)> SeedMultiTenantSkewStudyAsync(
+        int formCount,
+        CancellationToken ct)
+    {
+        var forms = new KernelCollectionScenario(fixture);
+        var (tenant, study) = await forms.Protocol.NewStudyAsync(ct);
+        var sbpConcept = await forms.Protocol.OkAsync(
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Arterial systolic pressure.", KernelProtocolScenario.Key(), "Define SBP"),
+            ct);
+        var hrConcept = await forms.Protocol.OkAsync(
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Heart Rate", "Ventricular heart rate.", KernelProtocolScenario.Key(), "Define HR"),
+            ct);
+        var armConcept = await forms.Protocol.OkAsync(
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Randomization Arm", "Blinded treatment arm.", KernelProtocolScenario.Key(), "Define Arm"),
+            ct);
+
+        var design = ProtocolDesignSamples.MinimalDesign() with
+        {
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    "cs_vitals",
+                    "Vital Signs",
+                    [
+                        new CollectionItem("sbp", sbpConcept, "mm[Hg]", Required: true),
+                        new CollectionItem("hr", hrConcept, "/min", Required: true),
+                    ]),
+                new CollectionSpec(
+                    "cs_dispense",
+                    "Treatment Dispensation",
+                    [
+                        new CollectionItem("arm", armConcept, ValueKind: ObservationValueKind.Text, Required: true),
+                    ]),
+            ],
+        };
+        var version = ProtocolVersionId.New();
+        (await forms.Protocol.CreateDraftAsync(tenant, study, version, ct, ProtocolDesignDocument.Write(design))).IsSuccess.Should().BeTrue();
+        var (siteA, _) = await AddStudySiteAsync(tenant, study, "US", ct);
+        var (siteB, _) = await AddStudySiteAsync(tenant, study, "DE", ct);
+
+        var enrollmentIds = new List<EnrollmentId>(8);
+        for (var e = 0; e < 8; e++)
+        {
+            var site = e % 2 == 0 ? siteA : siteB;
+            var (_, enrollmentId) = await ScreenAsync(tenant, site, $"SKEW-{e + 1:D3}", ct);
+            enrollmentIds.Add(enrollmentId);
+        }
+
+        Enrollment[] enrollments;
+        await using (var readDb = fixture.CreateContext(tenant))
+        {
+            enrollments = await readDb.Enrollments.AsNoTracking()
+                .Where(e => e.TenantId == tenant && enrollmentIds.Contains(e.Id))
+                .ToArrayAsync(ct);
+        }
+
+        var baseInstant = KernelTimestamps.ToStoredPrecision(Tick());
+        var entities = new List<object>(formCount * 3);
+        var formNodes = new List<NodeRef>(formCount);
+        var obsNodes = new List<NodeRef>(formCount * 2);
+        var expectedBlinded = 0;
+
+        for (var i = 0; i < formCount; i++)
+        {
+            var enrollment = enrollments[i % enrollments.Length];
+            var isDispense = i % 10 == 0;
+            var collectedAt = baseInstant.AddSeconds(i);
+            var openedAt = collectedAt.AddSeconds(1);
+            var form = CollectionInstance.Open(
+                CollectionInstanceId.New(),
+                enrollment,
+                version,
+                isDispense ? "cs_dispense" : "cs_vitals",
+                $"visit.{i % 10:D2}",
+                collectedAt,
+                KernelPostgresFixture.ActorId,
+                openedAt);
+
+            if (isDispense)
+            {
+                var armObs = Observation.Record(
+                    ObservationId.New(),
+                    tenant,
+                    enrollment.Id,
+                    enrollment.ParticipantId,
+                    study,
+                    armConcept,
+                    new TextValue("Arm A Active"),
+                    collectedAt,
+                    "Dispensed",
+                    KernelPostgresFixture.ActorId,
+                    openedAt).Value!;
+                form.Join("arm", armObs.Id, openedAt);
+                form.Saved(openedAt);
+                entities.Add(armObs);
+                obsNodes.Add(NodeRef.For(armObs.Id));
+                expectedBlinded++;
+            }
+            else
+            {
+                var sbpObs = Observation.Record(
+                    ObservationId.New(),
+                    tenant,
+                    enrollment.Id,
+                    enrollment.ParticipantId,
+                    study,
+                    sbpConcept,
+                    new QuantityValue(118 + (i % 20), "mm[Hg]"),
+                    collectedAt,
+                    "Vitals",
+                    KernelPostgresFixture.ActorId,
+                    openedAt).Value!;
+                var hrObs = Observation.Record(
+                    ObservationId.New(),
+                    tenant,
+                    enrollment.Id,
+                    enrollment.ParticipantId,
+                    study,
+                    hrConcept,
+                    new QuantityValue(64 + (i % 15), "/min"),
+                    collectedAt,
+                    "Vitals",
+                    KernelPostgresFixture.ActorId,
+                    openedAt).Value!;
+                form.Join("sbp", sbpObs.Id, openedAt);
+                form.Join("hr", hrObs.Id, openedAt);
+                form.Saved(openedAt);
+                entities.Add(sbpObs);
+                entities.Add(hrObs);
+                obsNodes.Add(NodeRef.For(sbpObs.Id));
+                obsNodes.Add(NodeRef.For(hrObs.Id));
+            }
+
+            entities.Add(form);
+            formNodes.Add(NodeRef.For(form.Id));
+        }
+
+        await fixture.SeedAsync([.. entities]);
+        return (tenant, formNodes, obsNodes, expectedBlinded);
+    }
+
     private InstrumentedHarness CreateInstrumentedStore(IBlindedTreatmentClassifier? blindingClassifier = null)
     {
         var recorder = new SqlWireRecorder();

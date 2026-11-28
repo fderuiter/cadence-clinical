@@ -268,41 +268,187 @@ internal sealed class KernelAuthorityStore(
         """;
 
     private const string CollectionInstancePathsSql = """
+        WITH requested_ci AS MATERIALIZED (
+            SELECT
+                c.id,
+                c.study_id,
+                c.study_site_id
+            FROM kernel.collection_instances AS c
+            WHERE c.tenant_id = @tenant AND c.id = ANY(@ids)
+        ),
+        study_rows AS MATERIALIZED (
+            SELECT
+                st.id AS study_id,
+                st.sponsor_id
+            FROM kernel.studies AS st
+            WHERE st.tenant_id = @tenant
+              AND st.id = ANY(ARRAY(SELECT DISTINCT rci.study_id FROM requested_ci AS rci))
+        ),
+        study_site_rows AS MATERIALIZED (
+            SELECT
+                ss.id AS study_site_id,
+                ss.site_id
+            FROM kernel.study_sites AS ss
+            WHERE ss.tenant_id = @tenant
+              AND ss.id = ANY(ARRAY(SELECT DISTINCT rci.study_site_id FROM requested_ci AS rci))
+        ),
+        site_rows AS MATERIALIZED (
+            SELECT
+                site.id AS site_id,
+                site.country
+            FROM kernel.sites AS site
+            WHERE site.tenant_id = @tenant
+              AND site.id = ANY(ARRAY(SELECT DISTINCT ssr.site_id FROM study_site_rows AS ssr))
+        ),
+        study_site_scopes AS (
+            SELECT
+                ssr.study_site_id,
+                sr.site_id AS matched_site_id,
+                sr.country
+            FROM study_site_rows AS ssr
+            FULL JOIN site_rows AS sr
+                ON sr.site_id = ssr.site_id
+            OFFSET 0
+        ),
+        ci_with_study AS (
+            SELECT
+                ci.id,
+                s.sponsor_id,
+                s.study_id,
+                ci.study_site_id
+            FROM requested_ci AS ci
+            FULL JOIN study_rows AS s
+                ON s.study_id = ci.study_id
+            OFFSET 0
+        ),
+        ci_full AS (
+            SELECT
+                cws.id,
+                cws.sponsor_id,
+                cws.study_id,
+                sss.country,
+                sss.study_site_id,
+                sss.matched_site_id
+            FROM ci_with_study AS cws
+            FULL JOIN study_site_scopes AS sss
+                ON sss.study_site_id = cws.study_site_id
+            OFFSET 0
+        )
         SELECT
-            ci.id AS "Id",
-            s.sponsor_id AS "OrganizationId",
-            ci.study_id AS "StudyId",
-            ss_site.country AS "Country",
-            ss.id AS "StudySiteId",
+            f.id AS "Id",
+            f.sponsor_id AS "OrganizationId",
+            f.study_id AS "StudyId",
+            f.country AS "Country",
+            f.study_site_id AS "StudySiteId",
             FALSE AS "MayBeBlinded"
-        FROM kernel.collection_instances AS ci
-        JOIN kernel.studies AS s
-            ON s.tenant_id = ci.tenant_id AND s.id = ci.study_id
-        JOIN kernel.study_sites AS ss
-            ON ss.tenant_id = ci.tenant_id AND ss.id = ci.study_site_id
-        JOIN kernel.sites AS ss_site
-            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
-        WHERE ci.tenant_id = @tenant AND ci.id = ANY(@ids)
+        FROM ci_full AS f
+        WHERE f.id IS NOT NULL
+          AND f.study_id IS NOT NULL
+          AND f.study_site_id IS NOT NULL
+          AND f.matched_site_id IS NOT NULL
         """;
 
     private static readonly string ObservationPathsSql = $"""
+        WITH requested_obs AS MATERIALIZED (
+            SELECT
+                obs.id,
+                obs.study_id,
+                obs.enrollment_id
+            FROM kernel.observations AS obs
+            WHERE obs.tenant_id = @tenant AND obs.id = ANY(@ids)
+        ),
+        study_scopes AS MATERIALIZED (
+            SELECT
+                st.id AS study_id,
+                st.sponsor_id,
+                {StudyMayHaveBlindedEvidenceSql("st.id")} AS may_be_blinded
+            FROM kernel.studies AS st
+            WHERE st.tenant_id = @tenant
+              AND st.id = ANY(ARRAY(SELECT DISTINCT ro.study_id FROM requested_obs AS ro))
+        ),
+        enrollment_rows AS MATERIALIZED (
+            SELECT
+                e.id AS enrollment_id,
+                e.study_site_id
+            FROM kernel.enrollments AS e
+            WHERE e.tenant_id = @tenant
+              AND e.id = ANY(ARRAY(SELECT DISTINCT ro.enrollment_id FROM requested_obs AS ro WHERE ro.enrollment_id IS NOT NULL))
+        ),
+        study_site_rows AS MATERIALIZED (
+            SELECT
+                ss.id AS study_site_id,
+                ss.site_id
+            FROM kernel.study_sites AS ss
+            WHERE ss.tenant_id = @tenant
+              AND ss.id = ANY(ARRAY(SELECT DISTINCT er.study_site_id FROM enrollment_rows AS er WHERE er.study_site_id IS NOT NULL))
+        ),
+        site_rows AS MATERIALIZED (
+            SELECT
+                site.id AS site_id,
+                site.country
+            FROM kernel.sites AS site
+            WHERE site.tenant_id = @tenant
+              AND site.id = ANY(ARRAY(SELECT DISTINCT ssr.site_id FROM study_site_rows AS ssr WHERE ssr.site_id IS NOT NULL))
+        ),
+        enrollment_with_site AS (
+            SELECT
+                er.enrollment_id,
+                ssr.study_site_id,
+                ssr.site_id
+            FROM enrollment_rows AS er
+            FULL JOIN study_site_rows AS ssr
+                ON ssr.study_site_id = er.study_site_id
+            OFFSET 0
+        ),
+        enrollment_scopes AS (
+            SELECT
+                ews.enrollment_id,
+                ews.study_site_id,
+                sr.site_id AS matched_site_id,
+                sr.country
+            FROM enrollment_with_site AS ews
+            FULL JOIN site_rows AS sr
+                ON sr.site_id = ews.site_id
+            OFFSET 0
+        ),
+        obs_with_study AS (
+            SELECT
+                o.id,
+                s.sponsor_id,
+                s.study_id,
+                s.may_be_blinded,
+                o.enrollment_id
+            FROM requested_obs AS o
+            FULL JOIN study_scopes AS s
+                ON s.study_id = o.study_id
+            OFFSET 0
+        ),
+        obs_full AS (
+            SELECT
+                ows.id,
+                ows.sponsor_id,
+                ows.study_id,
+                enr.country,
+                enr.study_site_id,
+                enr.matched_site_id,
+                ows.may_be_blinded
+            FROM obs_with_study AS ows
+            FULL JOIN enrollment_scopes AS enr
+                ON enr.enrollment_id = ows.enrollment_id
+            OFFSET 0
+        )
         SELECT
-            o.id AS "Id",
-            s.sponsor_id AS "OrganizationId",
-            o.study_id AS "StudyId",
-            ss_site.country AS "Country",
-            ss.id AS "StudySiteId",
-            {StudyMayHaveBlindedEvidenceSql("o.study_id")} AS "MayBeBlinded"
-        FROM kernel.observations AS o
-        JOIN kernel.enrollments AS e
-            ON e.tenant_id = o.tenant_id AND e.id = o.enrollment_id
-        JOIN kernel.studies AS s
-            ON s.tenant_id = o.tenant_id AND s.id = o.study_id
-        JOIN kernel.study_sites AS ss
-            ON ss.tenant_id = e.tenant_id AND ss.id = e.study_site_id
-        JOIN kernel.sites AS ss_site
-            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
-        WHERE o.tenant_id = @tenant AND o.id = ANY(@ids)
+            f.id AS "Id",
+            f.sponsor_id AS "OrganizationId",
+            f.study_id AS "StudyId",
+            f.country AS "Country",
+            f.study_site_id AS "StudySiteId",
+            f.may_be_blinded AS "MayBeBlinded"
+        FROM obs_full AS f
+        WHERE f.id IS NOT NULL
+          AND f.study_id IS NOT NULL
+          AND f.study_site_id IS NOT NULL
+          AND f.matched_site_id IS NOT NULL
         """;
 
     private static readonly string AssertionPathsSql = $"""
@@ -373,51 +519,229 @@ internal sealed class KernelAuthorityStore(
         """;
 
     private const string ObservationClassificationSql = """
+        WITH requested_obs AS MATERIALIZED (
+            SELECT
+                obs.id,
+                obs.study_id,
+                obs.enrollment_id,
+                obs.concept_id,
+                CASE WHEN @includeAllValues OR obs.value ->> 'type' = 'missing' THEN obs.value::text END AS value_json
+            FROM kernel.observations AS obs
+            WHERE obs.tenant_id = @tenant AND obs.id = ANY(@ids)
+        ),
+        obs_members AS MATERIALIZED (
+            SELECT
+                m.observation_id,
+                m.collection_instance_id,
+                m.item_id
+            FROM kernel.collection_instance_members AS m
+            WHERE m.tenant_id = @tenant AND m.observation_id = ANY(@ids)
+        ),
+        form_specs AS MATERIALIZED (
+            SELECT
+                inst.id AS collection_instance_id,
+                inst.collection_spec_id
+            FROM kernel.collection_instances AS inst
+            WHERE inst.tenant_id = @tenant
+              AND inst.id = ANY(ARRAY(SELECT DISTINCT om.collection_instance_id FROM obs_members AS om))
+        ),
+        study_scopes AS MATERIALIZED (
+            SELECT
+                st.id AS study_id,
+                st.sponsor_id
+            FROM kernel.studies AS st
+            WHERE st.tenant_id = @tenant
+              AND st.id = ANY(ARRAY(SELECT DISTINCT ro.study_id FROM requested_obs AS ro))
+        ),
+        enrollment_rows AS MATERIALIZED (
+            SELECT
+                e.id AS enrollment_id,
+                e.study_site_id
+            FROM kernel.enrollments AS e
+            WHERE e.tenant_id = @tenant
+              AND e.id = ANY(ARRAY(SELECT DISTINCT ro.enrollment_id FROM requested_obs AS ro WHERE ro.enrollment_id IS NOT NULL))
+        ),
+        study_site_rows AS MATERIALIZED (
+            SELECT
+                ss.id AS study_site_id,
+                ss.site_id
+            FROM kernel.study_sites AS ss
+            WHERE ss.tenant_id = @tenant
+              AND ss.id = ANY(ARRAY(SELECT DISTINCT er.study_site_id FROM enrollment_rows AS er WHERE er.study_site_id IS NOT NULL))
+        ),
+        site_rows AS MATERIALIZED (
+            SELECT
+                site.id AS site_id,
+                site.country
+            FROM kernel.sites AS site
+            WHERE site.tenant_id = @tenant
+              AND site.id = ANY(ARRAY(SELECT DISTINCT ssr.site_id FROM study_site_rows AS ssr WHERE ssr.site_id IS NOT NULL))
+        ),
+        concept_meta AS MATERIALIZED (
+            SELECT
+                con.id AS concept_id,
+                con.external_code,
+                con.preferred_label,
+                con.definition
+            FROM kernel.concepts AS con
+            WHERE con.tenant_id = @tenant
+              AND con.id = ANY(ARRAY(SELECT DISTINCT ro.concept_id FROM requested_obs AS ro))
+        ),
+        enrollment_with_site AS (
+            SELECT
+                er.enrollment_id,
+                ssr.study_site_id,
+                ssr.site_id
+            FROM enrollment_rows AS er
+            FULL JOIN study_site_rows AS ssr
+                ON ssr.study_site_id = er.study_site_id
+            OFFSET 0
+        ),
+        enrollment_scopes AS (
+            SELECT
+                ews.enrollment_id,
+                ews.study_site_id,
+                sr.country
+            FROM enrollment_with_site AS ews
+            FULL JOIN site_rows AS sr
+                ON sr.site_id = ews.site_id
+            OFFSET 0
+        ),
+        obs_with_member AS (
+            SELECT
+                ro.id,
+                ro.study_id,
+                ro.enrollment_id,
+                ro.concept_id,
+                ro.value_json,
+                om.collection_instance_id,
+                om.item_id
+            FROM requested_obs AS ro
+            FULL JOIN obs_members AS om
+                ON om.observation_id = ro.id
+            OFFSET 0
+        ),
+        obs_with_form AS (
+            SELECT
+                owm.id,
+                owm.study_id,
+                owm.enrollment_id,
+                owm.concept_id,
+                owm.value_json,
+                fs.collection_spec_id,
+                owm.item_id
+            FROM obs_with_member AS owm
+            FULL JOIN form_specs AS fs
+                ON fs.collection_instance_id = owm.collection_instance_id
+            OFFSET 0
+        ),
+        obs_with_study AS (
+            SELECT
+                owf.id,
+                s.sponsor_id,
+                s.study_id,
+                owf.enrollment_id,
+                owf.concept_id,
+                owf.value_json,
+                owf.collection_spec_id,
+                owf.item_id
+            FROM obs_with_form AS owf
+            FULL JOIN study_scopes AS s
+                ON s.study_id = owf.study_id
+            OFFSET 0
+        ),
+        obs_with_enr AS (
+            SELECT
+                ows.id,
+                ows.sponsor_id,
+                ows.study_id,
+                enr.country,
+                enr.study_site_id,
+                ows.concept_id,
+                ows.value_json,
+                ows.collection_spec_id,
+                ows.item_id
+            FROM obs_with_study AS ows
+            FULL JOIN enrollment_scopes AS enr
+                ON enr.enrollment_id = ows.enrollment_id
+            OFFSET 0
+        ),
+        obs_full AS (
+            SELECT
+                owe.id,
+                owe.sponsor_id,
+                owe.study_id,
+                owe.country,
+                owe.study_site_id,
+                owe.concept_id,
+                owe.value_json,
+                c.external_code,
+                c.preferred_label,
+                c.definition,
+                owe.collection_spec_id,
+                owe.item_id
+            FROM obs_with_enr AS owe
+            FULL JOIN concept_meta AS c
+                ON c.concept_id = owe.concept_id
+            OFFSET 0
+        )
         SELECT
-            o.id AS "Id",
-            s.sponsor_id AS "OrganizationId",
-            o.study_id AS "StudyId",
-            ss_site.country AS "Country",
-            ss.id AS "StudySiteId",
-            o.concept_id AS "ConceptId",
-            CASE WHEN @includeAllValues OR o.value ->> 'type' = 'missing' THEN o.value::text END AS "ValueJson",
-            c.external_code AS "ConceptExternalCode",
-            c.preferred_label AS "ConceptPreferredLabel",
-            c.definition AS "ConceptDefinition",
-            ci.collection_spec_id AS "CollectionSpecId",
-            cim.item_id AS "ItemId"
-        FROM kernel.observations AS o
-        JOIN kernel.studies AS s
-            ON s.tenant_id = o.tenant_id AND s.id = o.study_id
-        LEFT JOIN kernel.enrollments AS e
-            ON e.tenant_id = o.tenant_id AND e.id = o.enrollment_id
-        LEFT JOIN kernel.study_sites AS ss
-            ON ss.tenant_id = e.tenant_id AND ss.id = e.study_site_id
-        LEFT JOIN kernel.sites AS ss_site
-            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
-        LEFT JOIN kernel.concepts AS c
-            ON c.tenant_id = o.tenant_id AND c.id = o.concept_id
-        LEFT JOIN kernel.collection_instance_members AS cim
-            ON cim.tenant_id = o.tenant_id AND cim.observation_id = o.id
-        LEFT JOIN kernel.collection_instances AS ci
-            ON ci.tenant_id = cim.tenant_id AND ci.id = cim.collection_instance_id
-        WHERE o.tenant_id = @tenant AND o.id = ANY(@ids)
+            f.id AS "Id",
+            f.sponsor_id AS "OrganizationId",
+            f.study_id AS "StudyId",
+            f.country AS "Country",
+            f.study_site_id AS "StudySiteId",
+            f.concept_id AS "ConceptId",
+            f.value_json AS "ValueJson",
+            f.external_code AS "ConceptExternalCode",
+            f.preferred_label AS "ConceptPreferredLabel",
+            f.definition AS "ConceptDefinition",
+            f.collection_spec_id AS "CollectionSpecId",
+            f.item_id AS "ItemId"
+        FROM obs_full AS f
+        WHERE f.id IS NOT NULL
+          AND f.study_id IS NOT NULL
         """;
 
     private const string FindingTargetSiteJoinsSql = """
-        LEFT JOIN kernel.collection_instances AS vf_ci
-            ON d.collection_instance_id IS NOT NULL
-           AND vf_ci.tenant_id = d.tenant_id AND vf_ci.id = d.collection_instance_id AND vf_ci.study_id = d.study_id
-        LEFT JOIN kernel.observations AS vf_obs
-            ON d.observation_id IS NOT NULL
-           AND vf_obs.tenant_id = d.tenant_id AND vf_obs.id = d.observation_id AND vf_obs.study_id = d.study_id
-        LEFT JOIN kernel.enrollments AS vf_enr
-            ON vf_ci.id IS NULL
-           AND COALESCE(vf_obs.enrollment_id, d.enrollment_id) IS NOT NULL
-           AND vf_enr.tenant_id = d.tenant_id AND vf_enr.id = COALESCE(vf_obs.enrollment_id, d.enrollment_id) AND vf_enr.study_id = d.study_id
-        LEFT JOIN kernel.enrollments AS vf_subj_enr
-            ON vf_ci.id IS NULL AND vf_enr.id IS NULL AND d.subject_code_candidate IS NOT NULL
-           AND vf_subj_enr.tenant_id = d.tenant_id AND vf_subj_enr.study_id = d.study_id AND vf_subj_enr.subject_code = d.subject_code_candidate
+        LEFT JOIN LATERAL (
+            SELECT
+                ci.id,
+                ci.study_site_id,
+                ci.collection_spec_id,
+                ci.enrollment_id
+            FROM kernel.collection_instances AS ci
+            WHERE ci.tenant_id = d.tenant_id AND ci.id = d.collection_instance_id AND ci.study_id = d.study_id
+            LIMIT 1
+        ) AS vf_ci ON d.collection_instance_id IS NOT NULL
+        LEFT JOIN LATERAL (
+            SELECT
+                o.id,
+                o.enrollment_id,
+                o.concept_id,
+                o.value
+            FROM kernel.observations AS o
+            WHERE o.tenant_id = d.tenant_id AND o.id = d.observation_id AND o.study_id = d.study_id
+            LIMIT 1
+        ) AS vf_obs ON d.observation_id IS NOT NULL
+        LEFT JOIN LATERAL (
+            SELECT
+                e.id,
+                e.study_site_id
+            FROM kernel.enrollments AS e
+            WHERE e.tenant_id = d.tenant_id
+              AND e.id = COALESCE(vf_obs.enrollment_id, d.enrollment_id)
+              AND e.study_id = d.study_id
+            LIMIT 1
+        ) AS vf_enr ON vf_ci.id IS NULL AND COALESCE(vf_obs.enrollment_id, d.enrollment_id) IS NOT NULL
+        LEFT JOIN LATERAL (
+            SELECT e.study_site_id
+            FROM kernel.enrollments AS e
+            WHERE e.tenant_id = d.tenant_id
+              AND e.study_id = d.study_id
+              AND e.subject_code = d.subject_code_candidate
+            LIMIT 1
+        ) AS vf_subj_enr ON vf_ci.id IS NULL AND vf_enr.id IS NULL AND d.subject_code_candidate IS NOT NULL
         """;
 
     private static readonly string ValidationFindingPathsSql = $"""
@@ -431,7 +755,7 @@ internal sealed class KernelAuthorityStore(
             WHERE d.tenant_id = @tenant AND d.finding_id = ANY(@ids)
             ORDER BY d.finding_id, d.run_id DESC
         ),
-        finding_base AS (
+        finding_base AS MATERIALIZED (
             SELECT * FROM detected
             UNION ALL
             SELECT
@@ -447,6 +771,19 @@ internal sealed class KernelAuthorityStore(
             WHERE vf.tenant_id = @tenant
               AND vf.id = ANY(@ids)
               AND NOT EXISTS (SELECT 1 FROM detected AS d WHERE d.finding_id = vf.id)
+        ),
+        study_scopes AS MATERIALIZED (
+            SELECT
+                ds.study_id AS id,
+                s.sponsor_id,
+                {StudyMayHaveBlindedEvidenceSql("ds.study_id")} AS study_may_be_blinded
+            FROM (SELECT DISTINCT study_id FROM finding_base) AS ds
+            CROSS JOIN LATERAL (
+                SELECT st.sponsor_id
+                FROM kernel.studies AS st
+                WHERE st.tenant_id = @tenant AND st.id = ds.study_id
+                LIMIT 1
+            ) AS s
         )
         SELECT
             d.finding_id AS "Id",
@@ -455,7 +792,7 @@ internal sealed class KernelAuthorityStore(
             ss_site.country AS "Country",
             ss.id AS "StudySiteId",
             (
-                {StudyMayHaveBlindedEvidenceSql("s.id")}
+                s.study_may_be_blinded
                 OR EXISTS (
                     SELECT 1
                     FROM kernel.validation_detections AS vd_blind
@@ -469,19 +806,29 @@ internal sealed class KernelAuthorityStore(
                 )
             ) AS "MayBeBlinded"
         FROM finding_base AS d
-        JOIN kernel.studies AS s
-            ON s.tenant_id = d.tenant_id AND s.id = d.study_id
+        JOIN study_scopes AS s
+            ON s.id = d.study_id
         {FindingTargetSiteJoinsSql}
-        LEFT JOIN kernel.study_sites AS ss
-            ON ss.tenant_id = d.tenant_id
-           AND ss.study_id = d.study_id
-           AND ss.id = COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, vf_subj_enr.study_site_id, d.direct_study_site_id)
-        LEFT JOIN kernel.sites AS ss_site
-            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
+        LEFT JOIN LATERAL (
+            SELECT
+                st_site.id,
+                st_site.site_id
+            FROM kernel.study_sites AS st_site
+            WHERE st_site.tenant_id = d.tenant_id
+              AND st_site.study_id = d.study_id
+              AND st_site.id = COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, vf_subj_enr.study_site_id, d.direct_study_site_id)
+            LIMIT 1
+        ) AS ss ON COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, vf_subj_enr.study_site_id, d.direct_study_site_id) IS NOT NULL
+        LEFT JOIN LATERAL (
+            SELECT site.country
+            FROM kernel.sites AS site
+            WHERE site.tenant_id = d.tenant_id AND site.id = ss.site_id
+            LIMIT 1
+        ) AS ss_site ON ss.site_id IS NOT NULL
         """;
 
     private const string ValidationFindingClassificationSql = $"""
-        WITH detected AS (
+        WITH detected AS MATERIALIZED (
             SELECT DISTINCT ON (d.finding_id)
                 d.tenant_id,
                 d.finding_id,
@@ -492,10 +839,31 @@ internal sealed class KernelAuthorityStore(
                 d.variable,
                 d.observed::text AS observed_json,
         {FindingTargetParseColumnsSql}
-            FROM kernel.validation_detections AS d
-            JOIN kernel.validation_runs AS r
-                ON r.tenant_id = d.tenant_id AND r.id = d.run_id
-            WHERE d.tenant_id = @tenant AND d.finding_id = ANY(@ids)
+            FROM unnest(@ids) AS req(id)
+            CROSS JOIN LATERAL (
+                SELECT
+                    det.tenant_id,
+                    det.finding_id,
+                    det.study_id,
+                    det.run_id,
+                    det.target_kind,
+                    det.dataset,
+                    det.target_key,
+                    det.variable,
+                    det.observed
+                FROM kernel.validation_detections AS det
+                WHERE det.tenant_id = @tenant AND det.finding_id = req.id
+                OFFSET 0
+            ) AS d
+            CROSS JOIN LATERAL (
+                SELECT
+                    vr.id,
+                    vr.completed_at,
+                    vr.created_at
+                FROM kernel.validation_runs AS vr
+                WHERE vr.tenant_id = d.tenant_id AND vr.id = d.run_id
+                LIMIT 1
+            ) AS r
             ORDER BY d.finding_id, r.completed_at DESC, r.created_at DESC, r.id DESC
         )
         SELECT
@@ -521,44 +889,156 @@ internal sealed class KernelAuthorityStore(
             vf_obs_ci.collection_spec_id AS "TargetObsSpecId",
             vf_obs_cim.item_id AS "TargetObsItemId"
         FROM detected AS d
-        JOIN kernel.studies AS s
-            ON s.tenant_id = d.tenant_id AND s.id = d.study_id
+        CROSS JOIN LATERAL (
+            SELECT
+                st.id,
+                st.sponsor_id
+            FROM kernel.studies AS st
+            WHERE st.tenant_id = d.tenant_id AND st.id = d.study_id
+            LIMIT 1
+        ) AS s
         {FindingTargetSiteJoinsSql}
-        LEFT JOIN kernel.study_sites AS ss
-            ON ss.tenant_id = d.tenant_id
-           AND ss.study_id = d.study_id
-           AND ss.id = COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, vf_subj_enr.study_site_id, d.direct_study_site_id)
-        LEFT JOIN kernel.sites AS ss_site
-            ON ss_site.tenant_id = ss.tenant_id AND ss_site.id = ss.site_id
-        LEFT JOIN kernel.concepts AS vf_obs_c
-            ON vf_obs.id IS NOT NULL AND vf_obs_c.tenant_id = vf_obs.tenant_id AND vf_obs_c.id = vf_obs.concept_id
-        LEFT JOIN kernel.collection_instance_members AS vf_obs_cim
-            ON vf_obs.id IS NOT NULL AND vf_obs_cim.tenant_id = vf_obs.tenant_id AND vf_obs_cim.observation_id = vf_obs.id
-        LEFT JOIN kernel.collection_instances AS vf_obs_ci
-            ON vf_obs_cim.id IS NOT NULL AND vf_obs_ci.tenant_id = vf_obs_cim.tenant_id AND vf_obs_ci.id = vf_obs_cim.collection_instance_id
+        LEFT JOIN LATERAL (
+            SELECT
+                st_site.id,
+                st_site.site_id
+            FROM kernel.study_sites AS st_site
+            WHERE st_site.tenant_id = d.tenant_id
+              AND st_site.study_id = d.study_id
+              AND st_site.id = COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, vf_subj_enr.study_site_id, d.direct_study_site_id)
+            LIMIT 1
+        ) AS ss ON COALESCE(vf_ci.study_site_id, vf_enr.study_site_id, vf_subj_enr.study_site_id, d.direct_study_site_id) IS NOT NULL
+        LEFT JOIN LATERAL (
+            SELECT site.country
+            FROM kernel.sites AS site
+            WHERE site.tenant_id = d.tenant_id AND site.id = ss.site_id
+            LIMIT 1
+        ) AS ss_site ON ss.site_id IS NOT NULL
+        LEFT JOIN LATERAL (
+            SELECT
+                con.external_code,
+                con.preferred_label,
+                con.definition
+            FROM kernel.concepts AS con
+            WHERE con.tenant_id = d.tenant_id AND con.id = vf_obs.concept_id
+            LIMIT 1
+        ) AS vf_obs_c ON vf_obs.id IS NOT NULL
+        LEFT JOIN LATERAL (
+            SELECT
+                m.collection_instance_id,
+                m.item_id
+            FROM kernel.collection_instance_members AS m
+            WHERE m.tenant_id = d.tenant_id AND m.observation_id = vf_obs.id
+            LIMIT 1
+        ) AS vf_obs_cim ON vf_obs.id IS NOT NULL
+        LEFT JOIN LATERAL (
+            SELECT inst.collection_spec_id
+            FROM kernel.collection_instances AS inst
+            WHERE inst.tenant_id = d.tenant_id AND inst.id = vf_obs_cim.collection_instance_id
+            LIMIT 1
+        ) AS vf_obs_ci ON vf_obs_cim.collection_instance_id IS NOT NULL
         """;
 
     private const string EnrollmentSiblingMembersSql = """
+        WITH sib_forms AS MATERIALIZED (
+            SELECT
+                ci.id AS form_id,
+                ci.enrollment_id,
+                ci.study_id,
+                ci.collection_spec_id
+            FROM kernel.collection_instances AS ci
+            WHERE ci.tenant_id = @tenant AND ci.enrollment_id = ANY(@enrollmentIds)
+        ),
+        sib_members AS MATERIALIZED (
+            SELECT
+                m.collection_instance_id AS form_id,
+                m.item_id,
+                m.observation_id
+            FROM kernel.collection_instance_members AS m
+            WHERE m.tenant_id = @tenant
+              AND m.collection_instance_id = ANY(ARRAY(SELECT sf.form_id FROM sib_forms AS sf))
+        ),
+        sib_obs AS MATERIALIZED (
+            SELECT
+                o.id AS observation_id,
+                o.concept_id,
+                CASE WHEN @includeAllValues OR o.value ->> 'type' = 'missing' THEN o.value::text END AS value_json
+            FROM kernel.observations AS o
+            WHERE o.tenant_id = @tenant
+              AND o.id = ANY(ARRAY(SELECT DISTINCT sm.observation_id FROM sib_members AS sm))
+        ),
+        sib_concepts AS MATERIALIZED (
+            SELECT
+                con.id AS concept_id,
+                con.external_code,
+                con.preferred_label,
+                con.definition
+            FROM kernel.concepts AS con
+            WHERE con.tenant_id = @tenant
+              AND con.id = ANY(ARRAY(SELECT DISTINCT so.concept_id FROM sib_obs AS so))
+        ),
+        forms_with_members AS (
+            SELECT
+                sf.enrollment_id,
+                sf.study_id,
+                sf.form_id,
+                sf.collection_spec_id,
+                sm.item_id,
+                sm.observation_id
+            FROM sib_forms AS sf
+            FULL JOIN sib_members AS sm
+                ON sm.form_id = sf.form_id
+            OFFSET 0
+        ),
+        members_with_obs AS (
+            SELECT
+                fwm.enrollment_id,
+                fwm.study_id,
+                fwm.form_id,
+                fwm.collection_spec_id,
+                fwm.item_id,
+                so.observation_id,
+                so.concept_id,
+                so.value_json
+            FROM forms_with_members AS fwm
+            FULL JOIN sib_obs AS so
+                ON so.observation_id = fwm.observation_id
+            OFFSET 0
+        ),
+        sib_full AS (
+            SELECT
+                mwo.enrollment_id,
+                mwo.study_id,
+                mwo.form_id,
+                mwo.collection_spec_id,
+                mwo.item_id,
+                mwo.observation_id,
+                mwo.concept_id,
+                mwo.value_json,
+                sc.external_code,
+                sc.preferred_label,
+                sc.definition
+            FROM members_with_obs AS mwo
+            FULL JOIN sib_concepts AS sc
+                ON sc.concept_id = mwo.concept_id
+            OFFSET 0
+        )
         SELECT
-            sib.enrollment_id AS "EnrollmentId",
-            sib.study_id AS "StudyId",
-            sib.id AS "FormId",
-            sib.collection_spec_id AS "CollectionSpecId",
-            cim.item_id AS "ItemId",
-            obs.id AS "ObservationId",
-            obs.concept_id AS "ConceptId",
-            obs.value::text AS "ValueJson",
-            c.external_code AS "ConceptExternalCode",
-            c.preferred_label AS "ConceptPreferredLabel",
-            c.definition AS "ConceptDefinition"
-        FROM kernel.collection_instances AS sib
-        JOIN kernel.collection_instance_members AS cim
-            ON cim.tenant_id = sib.tenant_id AND cim.collection_instance_id = sib.id
-        JOIN kernel.observations AS obs
-            ON obs.tenant_id = cim.tenant_id AND obs.id = cim.observation_id
-        LEFT JOIN kernel.concepts AS c
-            ON c.tenant_id = obs.tenant_id AND c.id = obs.concept_id
-        WHERE sib.tenant_id = @tenant AND sib.enrollment_id = ANY(@enrollmentIds)
+            f.enrollment_id AS "EnrollmentId",
+            f.study_id AS "StudyId",
+            f.form_id AS "FormId",
+            f.collection_spec_id AS "CollectionSpecId",
+            f.item_id AS "ItemId",
+            f.observation_id AS "ObservationId",
+            f.concept_id AS "ConceptId",
+            f.value_json AS "ValueJson",
+            f.external_code AS "ConceptExternalCode",
+            f.preferred_label AS "ConceptPreferredLabel",
+            f.definition AS "ConceptDefinition"
+        FROM sib_full AS f
+        WHERE f.form_id IS NOT NULL
+          AND f.item_id IS NOT NULL
+          AND f.observation_id IS NOT NULL
         """;
 
     private const string AttestationPathsSql = $"""
@@ -1478,16 +1958,20 @@ internal sealed class KernelAuthorityStore(
         Dictionary<(string Kind, Guid Id), EvidenceNodeClassification> resolvedEvidence,
         CancellationToken ct)
     {
+        var includeAllValues = !ReferenceEquals(_blinding, BlindedTreatmentClassifier.Instance);
         object[] parameters =
         [
             new NpgsqlParameter<Guid>("tenant", tenant.Value),
             new NpgsqlParameter<Guid[]>("enrollmentIds", enrollmentIds),
+            new NpgsqlParameter<bool>("includeAllValues", includeAllValues),
         ];
         var rows = await db.Database
             .SqlQueryRaw<SiblingMemberRow>(EnrollmentSiblingMembersSql, parameters)
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
+        Dictionary<(Guid StudyId, Guid ConceptId, string SpecId, string ItemId), bool>? batchMemo =
+            includeAllValues ? null : new();
         var byEnrollment = new Dictionary<Guid, List<ClassifiedSiblingMember>>(enrollmentIds.Length);
         foreach (var m in rows)
         {
@@ -1504,20 +1988,44 @@ internal sealed class KernelAuthorityStore(
             }
             else
             {
-                IReadOnlyList<ProtocolDesign> designs = designsByStudy.TryGetValue(m.StudyId, out var studyDesigns)
-                    ? studyDesigns
-                    : [];
                 var value = DeserializeValueForClassifier(m.ValueJson);
-                BlindedConceptMetadata? concept = m.ConceptPreferredLabel is not null
-                    ? new BlindedConceptMetadata(m.ConceptExternalCode, m.ConceptPreferredLabel, m.ConceptDefinition)
-                    : null;
-                isBlinded = _blinding.IsBlindedObservation(
-                    ConceptId.FromGuid(m.ConceptId),
-                    value,
-                    concept,
-                    m.CollectionSpecId,
-                    m.ItemId,
-                    designs);
+                if (batchMemo is not null && value is null)
+                {
+                    var key = (m.StudyId, m.ConceptId, m.CollectionSpecId, m.ItemId);
+                    if (!batchMemo.TryGetValue(key, out isBlinded))
+                    {
+                        IReadOnlyList<ProtocolDesign> memoDesigns = designsByStudy.TryGetValue(m.StudyId, out var memoStudyDesigns)
+                            ? memoStudyDesigns
+                            : [];
+                        BlindedConceptMetadata? memoConcept = m.ConceptPreferredLabel is not null
+                            ? new BlindedConceptMetadata(m.ConceptExternalCode, m.ConceptPreferredLabel, m.ConceptDefinition)
+                            : null;
+                        isBlinded = _blinding.IsBlindedObservation(
+                            ConceptId.FromGuid(m.ConceptId),
+                            value,
+                            memoConcept,
+                            m.CollectionSpecId,
+                            m.ItemId,
+                            memoDesigns);
+                        batchMemo[key] = isBlinded;
+                    }
+                }
+                else
+                {
+                    IReadOnlyList<ProtocolDesign> designs = designsByStudy.TryGetValue(m.StudyId, out var studyDesigns)
+                        ? studyDesigns
+                        : [];
+                    BlindedConceptMetadata? concept = m.ConceptPreferredLabel is not null
+                        ? new BlindedConceptMetadata(m.ConceptExternalCode, m.ConceptPreferredLabel, m.ConceptDefinition)
+                        : null;
+                    isBlinded = _blinding.IsBlindedObservation(
+                        ConceptId.FromGuid(m.ConceptId),
+                        value,
+                        concept,
+                        m.CollectionSpecId,
+                        m.ItemId,
+                        designs);
+                }
             }
 
             members.Add(new ClassifiedSiblingMember(m.FormId, m.CollectionSpecId, m.ItemId, isBlinded));
@@ -2087,7 +2595,7 @@ internal sealed class KernelAuthorityStore(
         string ItemId,
         Guid ObservationId,
         Guid ConceptId,
-        string ValueJson,
+        string? ValueJson,
         string? ConceptExternalCode,
         string? ConceptPreferredLabel,
         string? ConceptDefinition);

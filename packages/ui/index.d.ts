@@ -452,6 +452,125 @@ export const ClinicalDrawer: DefineSlotsComponent<
   }
 >;
 
+export type SplitWorkspacePresentationMode = "inline" | "drawer" | "sheet";
+
+export const SPLIT_WORKSPACE_COMPACT_BREAKPOINT: 1280;
+export const SPLIT_WORKSPACE_SHEET_BREAKPOINT: 640;
+
+export function useResponsiveSplitWorkspace(options?: {
+  compactBreakpoint?: number;
+  sheetBreakpoint?: number;
+  initialOpen?: boolean;
+  onModeChange?: (mode: SplitWorkspacePresentationMode) => void;
+}): {
+  isCompact: import("vue").Ref<boolean>;
+  isMobileSheet: import("vue").Ref<boolean>;
+  presentationMode: import("vue").ComputedRef<SplitWorkspacePresentationMode>;
+  isDetailOpen: import("vue").Ref<boolean>;
+  activeTriggerEl: import("vue").ShallowRef<HTMLElement | null>;
+  captureTrigger: (
+    eventOrEl?: Event | HTMLElement | null
+  ) => HTMLElement | null;
+  openDetail: (eventOrEl?: Event | HTMLElement | null) => void;
+  closeDetail: () => void;
+  toggleDetail: (
+    next?: boolean,
+    eventOrEl?: Event | HTMLElement | null
+  ) => void;
+  syncViewport: () => void;
+  stop: () => void;
+};
+
+export const ClinicalSplitWorkspace: DefineSlotsComponent<
+  {
+    modelValue?: boolean;
+    isOpen?: boolean;
+    hasSelection?: boolean;
+    inlineOpen?: boolean;
+    keepMounted?: boolean;
+    layoutVariant?: "master-detail" | "main-inspector" | string;
+    masterWidth?: string;
+    detailWidth?: string;
+    compactBreakpoint?: number;
+    sheetBreakpoint?: number;
+    drawerId?: string;
+    drawerOverlayId?: string;
+    drawerTitle?: string;
+    drawerSubtitle?: string;
+    drawerSize?: "sm" | "md" | "lg" | "xl" | string;
+    drawerPosition?: "right" | "left" | "bottom" | string;
+    mobileBottomSheet?: boolean;
+    dismissible?: boolean;
+    closeOnBackdrop?: boolean;
+    showDrawerHeader?: boolean;
+    closeLabel?: string;
+    teleport?: boolean | string;
+    initialFocus?:
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string
+      | null;
+    restoreFocus?:
+      | boolean
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string;
+    fallbackFocus?:
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string
+      | null;
+    ariaLabel?: string;
+    ariaLabelledby?: string;
+    masterClass?: string | any[] | Record<string, boolean>;
+    detailClass?: string | any[] | Record<string, boolean>;
+    overlayClass?: string | any[] | Record<string, boolean>;
+    panelClass?: string | any[] | Record<string, boolean>;
+    bodyClass?: string | any[] | Record<string, boolean>;
+    "onUpdate:modelValue"?: (open: boolean) => void;
+    "onUpdate:isOpen"?: (open: boolean) => void;
+    onClose?: () => void;
+    onModeChange?: (mode: SplitWorkspacePresentationMode) => void;
+  },
+  {
+    master?: (props: {
+      isCompact: boolean;
+      isMobileSheet: boolean;
+      presentationMode: SplitWorkspacePresentationMode;
+      openDetail: (eventOrEl?: Event | HTMLElement | null) => void;
+      closeDetail: () => void;
+      captureTrigger: (
+        eventOrEl?: Event | HTMLElement | null
+      ) => HTMLElement | null;
+    }) => any;
+    "compact-after"?: (props: {
+      openDetail: (eventOrEl?: Event | HTMLElement | null) => void;
+      closeDetail: () => void;
+    }) => any;
+    detail?: (props: {
+      isCompact: boolean;
+      isMobileSheet: boolean;
+      presentationMode: SplitWorkspacePresentationMode;
+      close: () => void;
+    }) => any;
+    "drawer-header"?: (props: { titleId: string; close: () => void }) => any;
+    "drawer-footer"?: (props: { close: () => void }) => any;
+  },
+  {
+    isCompact: import("vue").Ref<boolean>;
+    isMobileSheet: import("vue").Ref<boolean>;
+    presentationMode: import("vue").ComputedRef<SplitWorkspacePresentationMode>;
+    isDetailOpen: import("vue").ComputedRef<boolean>;
+    activeTriggerEl: import("vue").ShallowRef<HTMLElement | null>;
+    captureTrigger: (
+      eventOrEl?: Event | HTMLElement | null
+    ) => HTMLElement | null;
+    openDetail: (eventOrEl?: Event | HTMLElement | null) => void;
+    closeDetail: () => void;
+    syncViewport: () => void;
+  }
+>;
+
 export interface ClinicalDataTableColumn {
   key: string;
   label: string;
