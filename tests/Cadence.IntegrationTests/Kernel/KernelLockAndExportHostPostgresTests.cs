@@ -2922,13 +2922,26 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         releasedFinalLock.Certificate.RevokedBy.Should().Be(SponsorAdmin);
 
         var hostRelay = _host!.Services.GetRequiredService<Cadence.Kernel.Persistence.Outbox.KernelOutboxRelay>();
-        while ((await hostRelay.RelayBatchAsync(500, ct)).MoreDue)
-        {
-            // Drain all queued outbox messages in the shared fixture.
-        }
         var sink = _host.Services.GetRequiredService<Cadence.Kernel.Host.InMemoryScopeLockEventSink>();
-        sink.Applied.Should().Contain(e => e.LockId == rawLockId && e.Certificate != null && e.Certificate.CertificateId == finalStudyLock.Certificate.CertificateId);
-        sink.Released.Should().Contain(e => e.LockId == rawLockId && e.RevokedCertificateId == finalStudyLock.Certificate.CertificateId && e.ReleasedBy == SponsorAdmin);
+        var expectedCertId = finalStudyLock.Certificate.CertificateId;
+        for (var attempt = 0; attempt < 200; attempt++)
+        {
+            while ((await hostRelay.RelayBatchAsync(500, ct)).MoreDue)
+            {
+                // Drain all queued outbox messages in the shared fixture.
+            }
+
+            if (sink.Applied.Any(e => e.LockId == rawLockId && e.Certificate != null && e.Certificate.CertificateId == expectedCertId)
+                && sink.Released.Any(e => e.LockId == rawLockId && e.RevokedCertificateId == expectedCertId && e.ReleasedBy == SponsorAdmin))
+            {
+                break;
+            }
+
+            await Task.Delay(25, ct);
+        }
+
+        sink.Applied.Should().Contain(e => e.LockId == rawLockId && e.Certificate != null && e.Certificate.CertificateId == expectedCertId);
+        sink.Released.Should().Contain(e => e.LockId == rawLockId && e.RevokedCertificateId == expectedCertId && e.ReleasedBy == SponsorAdmin);
     }
 
     private static HttpRequestMessage BuildRequest(

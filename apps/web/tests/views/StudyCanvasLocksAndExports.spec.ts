@@ -549,17 +549,28 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
       )
     ).toBe(true);
 
-    // Readiness panel displays blocker counts, owner, target ref, next action, and masked blocker
+    // Readiness strip displays blocker counts inline and opens itemized blockers in ClinicalDrawer
     const readinessPanel = wrapper.find(
       "[data-testid='study-locks-readiness']"
     );
     expect(readinessPanel.exists()).toBe(true);
     expect(readinessPanel.text()).toContain("1 open query");
     expect(readinessPanel.text()).toContain("1 missing required item");
-    expect(readinessPanel.text()).toContain(
+    await wrapper
+      .find("[data-testid='study-locks-review-blockers']")
+      .trigger("click");
+    await flushPromises();
+    const drawerBlockers = wrapper.find(
+      "[data-testid='study-locks-readiness-blockers']"
+    );
+    expect(drawerBlockers.text()).toContain(
       "Site SITE-01 investigator or coordinator"
     );
-    expect(readinessPanel.text()).toContain("Masked (NotPermitted)");
+    expect(drawerBlockers.text()).toContain("Masked (NotPermitted)");
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+    );
+    await flushPromises();
 
     await wrapper
       .find("#lock-apply-reason")
@@ -718,6 +729,10 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     expect(
       wrapper.find("[data-testid='participant-lock-controls']").exists()
     ).toBe(true);
+    const openExportDrawerBtn = wrapper.find("#btn-open-casebook-drawer");
+    expect(openExportDrawerBtn.exists()).toBe(true);
+    await openExportDrawerBtn.trigger("click");
+    await flushPromises();
     await wrapper.find("#participant-casebook-format").setValue("pdf");
     await wrapper.find("#btn-export-casebook").trigger("click");
     await flushPromises();
@@ -738,6 +753,11 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     expect(
       wrapper.find("[data-testid='participant-casebook-sha256']").text()
     ).toContain(sha);
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+    );
+    await flushPromises();
+    expect(document.activeElement).toBe(openExportDrawerBtn.element);
     wrapper.unmount();
   });
 
@@ -798,6 +818,8 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     expect(
       obsWrapper.find("[data-testid='observation-lock-controls']").exists()
     ).toBe(true);
+    await obsWrapper.find("#observation-lock-manage").trigger("click");
+    await flushPromises();
     await obsWrapper
       .find("#observation-lock-reason")
       .setValue("Release observation freeze");
@@ -848,6 +870,11 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
       attachTo: document.body,
     });
     await flushPromises();
+    expect(
+      formLockWrapper.find("[data-testid='ecrf-lock-readiness']").text()
+    ).toContain("2 missing required items");
+    await formLockWrapper.find("#ecrf-lock-manage").trigger("click");
+    await flushPromises();
     await formLockWrapper
       .find("#ecrf-lock-reason")
       .setValue("Freeze form pending missing HR entry");
@@ -859,9 +886,6 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
       (formLockWrapper.find("#ecrf-lock-lock").element as HTMLButtonElement)
         .disabled
     ).toBe(true);
-    expect(
-      formLockWrapper.find("[data-testid='ecrf-lock-readiness']").text()
-    ).toContain("2 missing required items");
     formLockWrapper.unmount();
   });
 
@@ -997,6 +1021,8 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     });
     await flushPromises();
 
+    await controlsWrapper.find("#participant-lock-manage").trigger("click");
+    await flushPromises();
     await controlsWrapper
       .find("#participant-lock-reason")
       .setValue("Verify inline signer binding");
@@ -1300,7 +1326,9 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
       wrapper.find("[data-testid='participant-lock-scope-note']").text()
     ).toContain("also blocked while a Locked assertion is in force");
 
-    // Covered Freeze and Lock buttons are hidden because parent site has Locked, while direct Unlock (Frozen) remains visible and enabled!
+    // Covered Freeze and Lock buttons are hidden inside the lock drawer because parent site has Locked, while direct Unlock (Frozen) remains visible and enabled!
+    await wrapper.find("#participant-lock-manage").trigger("click");
+    await flushPromises();
     expect(wrapper.find("#participant-lock-freeze").exists()).toBe(false);
     expect(wrapper.find("#participant-lock-lock").exists()).toBe(false);
     await wrapper
@@ -1371,6 +1399,8 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     expect(frozenBanner.exists()).toBe(true);
     expect(frozenBanner.find("strong").text()).toBe("Frozen.");
     expect(frozenBanner.text()).toContain("Study interim freeze");
+    await frozenWrapper.find("#participant-lock-manage").trigger("click");
+    await flushPromises();
     expect(frozenWrapper.find("#participant-lock-freeze").exists()).toBe(false);
     expect(frozenWrapper.find("#participant-lock-lock").exists()).toBe(true);
     frozenWrapper.unmount();
@@ -1630,6 +1660,8 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     });
     await flushPromises();
 
+    await recordWrapper.find("#btn-open-casebook-drawer").trigger("click");
+    await flushPromises();
     await recordWrapper
       .find("#participant-casebook-format")
       .setValue("odm_xml");
@@ -1886,7 +1918,18 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
       wrapper.find("[data-testid='readiness-gate-error_findings']").text()
     ).toContain("1 error finding");
 
-    // Category badges, deep-links, details, and masked placeholder
+    // Itemized blockers remain collapsed until Review blockers opens ClinicalDrawer
+    expect(
+      wrapper.find("[data-testid='study-locks-readiness-blockers']").exists()
+    ).toBe(false);
+    const reviewBlockersTrigger = wrapper.find(
+      "[data-testid='study-locks-review-blockers']"
+    );
+    expect(reviewBlockersTrigger.exists()).toBe(true);
+    await reviewBlockersTrigger.trigger("click");
+    await flushPromises();
+
+    // Category badges, deep-links, details, and masked placeholder inside drawer
     const blockersList = wrapper.find(
       "[data-testid='study-locks-readiness-blockers']"
     );
@@ -1903,6 +1946,12 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     expect(blockersList.text()).toContain("Masked (Blinded)");
     expect(blockersList.html()).toContain(QUERY_REF);
     expect(blockersList.html()).toContain(FINDING_REF);
+
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+    );
+    await flushPromises();
+    expect(document.activeElement).toBe(reviewBlockersTrigger.element);
 
     // Quick Freeze stays enabled while Quick Lock is disabled; Sign & apply Locked disabled while Frozen enabled
     expect(
@@ -2138,7 +2187,7 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
       wrapper.find("[data-testid='study-lock-covered-badge']").text()
     ).toContain("Covered by parent lock");
 
-    // Switch milestone target to FinalDatabaseLock -> grouped Cohort & Schedule + Data, Queries & Review gates render
+    // Switch milestone target to FinalDatabaseLock -> inline milestone gate chips update and grouped Cohort & Schedule + Data, Queries & Review gates render in ClinicalDrawer
     await wrapper.find("[data-testid='lock-milestone-final']").trigger("click");
     await flushPromises();
 
@@ -2147,6 +2196,22 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
       STUDY_REF,
       "FinalDatabaseLock"
     );
+    expect(
+      wrapper
+        .find("[data-testid='readiness-gate-screening_enrollments']")
+        .text()
+    ).toContain("1 screening enrollment");
+    expect(
+      wrapper.find("[data-testid='readiness-gate-unreviewed_values']").text()
+    ).toContain("1 unreviewed value");
+
+    const reviewFinalBlockersTrigger = wrapper.find(
+      "[data-testid='study-locks-review-blockers']"
+    );
+    expect(reviewFinalBlockersTrigger.exists()).toBe(true);
+    await reviewFinalBlockersTrigger.trigger("click");
+    await flushPromises();
+
     const cohortGroup = wrapper.find(
       "[data-testid='readiness-group-cohort-schedule']"
     );
@@ -2162,6 +2227,12 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
       "0 open queries · synchronous kernel projection"
     );
     expect(dataGroup.text()).toContain("Unreviewed value (SDR)");
+
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+    );
+    await flushPromises();
+    expect(document.activeElement).toBe(reviewFinalBlockersTrigger.element);
 
     // Step-up modal receives locked OIDC role
     await wrapper.find("#lock-apply-kind").setValue("Frozen");

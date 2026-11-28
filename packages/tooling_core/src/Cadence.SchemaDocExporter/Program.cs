@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text;
 
 using Cadence.Database;
+using Cadence.ToolingCore.Primitives;
 using Cadence.ToolingCore.Services;
 
 using Microsoft.EntityFrameworkCore;
@@ -28,7 +29,7 @@ public static class Program
 
     public static int Main(string[] args)
     {
-        string repoRoot = FindRepoRoot();
+        string repoRoot = WorkspacePrimitives.FindRepoRoot();
         bool verifyOnly = args.Any(a => string.Equals(a, "--verify-only", StringComparison.Ordinal));
         string? moduleFilter = ReadOptionValue(args, "--module", "-m");
         string outputDir = ReadOptionValue(args, "--output-dir", "-o")
@@ -183,22 +184,6 @@ public static class Program
             ? string.Empty
             : SchemaDocumentation.Render(context, $"`{catalogEntry.Module}` database schema", GeneratorCommand);
         return new ModuleDocument(catalogEntry.Module, contextName, markdown);
-    }
-
-    private static string FindRepoRoot()
-    {
-        string? current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln")))
-            {
-                return current;
-            }
-
-            current = Directory.GetParent(current)?.FullName;
-        }
-
-        return Directory.GetCurrentDirectory();
     }
 
     /// <summary>Rendered documentation metadata for one persistence module.</summary>

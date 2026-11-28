@@ -6,14 +6,13 @@
     @submit.prevent="emit('submit')"
   >
     <header class="apply-card-header">
-      <div>
+      <div class="apply-card-title-row">
         <h3>Milestone lock &amp; readiness</h3>
-        <p class="apply-card-subtitle">
-          Enforce protocol gates before asserting immutable study closeout
-          status
-        </p>
+        <span class="milestone-pill">Study Milestone</span>
       </div>
-      <span class="milestone-pill">Study Milestone</span>
+      <p class="apply-card-subtitle">
+        Enforce protocol gates before asserting immutable study closeout status
+      </p>
     </header>
 
     <div class="milestone-switch-group">
@@ -254,11 +253,30 @@
       />
     </div>
 
-    <LocksReadinessChecklist
-      :readiness="readiness"
-      :readiness-loading="readinessLoading"
-      :readiness-gates="readinessGates"
-    />
+    <ClinicalGovernanceBanner
+      v-if="readinessLoading || readiness"
+      data-testid="study-locks-readiness"
+      class="study-locks-governance-banner"
+      :status="readinessBannerStatus"
+      :status-label="readinessBannerStatusLabel"
+      status-test-id="study-locks-readiness-status"
+      :gates="mappedReadinessGates"
+      gates-test-id="study-locks-readiness-counts"
+      :blocker-count="readiness?.blockers.length ?? 0"
+      blocker-action-id="btn-review-study-lock-blockers"
+      blocker-action-test-id="study-locks-review-blockers"
+      blocker-drawer-title="Study lock readiness blockers"
+      :blocker-drawer-subtitle="studyCode"
+      :teleport="false"
+      aria-label="Study lock readiness"
+    >
+      <template #blockers>
+        <LocksReadinessChecklist
+          v-if="readiness && readiness.blockers.length > 0"
+          :readiness="readiness"
+        />
+      </template>
+    </ClinicalGovernanceBanner>
 
     <div class="apply-actions">
       <div class="apply-actions-buttons">
@@ -295,7 +313,8 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalInput } from "ui";
+import { computed } from "vue";
+import { ClinicalGovernanceBanner, ClinicalInput } from "ui";
 import type {
   KernelLockKind,
   KernelLockMilestone,
@@ -306,7 +325,7 @@ import LocksReadinessChecklist from "./LocksReadinessChecklist.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 import type { PickerOption } from "./useLockHierarchyPickers";
 
-defineProps<{
+const props = defineProps<{
   studyCode: string;
   studyRef: string;
   applyScopeKind: string;
@@ -357,6 +376,27 @@ const emit = defineEmits<{
   (e: "submit"): void;
   (e: "quickApply", kind: KernelLockKind): void;
 }>();
+const readinessBannerStatus = computed(() => {
+  if (props.readinessLoading) return "loading";
+  return props.readiness?.ready_for_lock ? "ready" : "blocked";
+});
+
+const readinessBannerStatusLabel = computed(() => {
+  if (props.readinessLoading) return "Checking lock readiness…";
+  return props.readiness?.ready_for_lock
+    ? "Ready for Locked"
+    : "Blocked for Locked · Frozen available";
+});
+
+const mappedReadinessGates = computed(() => {
+  if (props.readinessLoading || !props.readiness) return [];
+  return props.readinessGates.map((gate) => ({
+    key: gate.key,
+    label: gate.label,
+    count: gate.count,
+    testId: `readiness-gate-${gate.key}`,
+  }));
+});
 </script>
 
 <style scoped src="./locksSection.css"></style>

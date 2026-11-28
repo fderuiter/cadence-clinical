@@ -7,6 +7,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
+using Cadence.ToolingCore.Primitives;
+
 namespace Cadence.ToolingCore.Services;
 
 public static partial class SecretsBaselineCleanerService
@@ -472,5 +474,5 @@ public static partial class SecretsBaselineCleanerService
         }
     }
 
-    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    public static string FindRepoRoot() => WorkspacePrimitives.FindRepoRoot();
 }

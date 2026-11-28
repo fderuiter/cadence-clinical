@@ -2,8 +2,9 @@
   <ClinicalDrawer
     :open="state.open"
     :model-value="state.open"
-    :docked="state.docked"
+    :docked="effectiveDocked"
     mobile-bottom-sheet
+    overlay-class="entity-peek-drawer-overlay"
     :title="drawerTitle"
     @close="closePeek"
     @update:model-value="(val) => !val && closePeek()"
@@ -29,6 +30,7 @@
           <span>Previous ({{ state.history.length }})</span>
         </button>
         <button
+          v-if="!state.openedOverModal"
           type="button"
           class="entity-peek-host__btn"
           :aria-pressed="state.docked"
@@ -92,6 +94,9 @@ const activeCanvasStore = computed(() => {
   return pinia ? useStudyCanvasStore(pinia) : null;
 });
 const { state, closePeek, stepBack, toggleDocked } = useEntityPeekDrawer();
+const effectiveDocked = computed(
+  () => Boolean(state.docked) && !state.openedOverModal
+);
 
 const workspaceScope = computed(() =>
   resolveWorkspaceNavigationScope(
@@ -137,6 +142,9 @@ const preservedScopeLabel = computed(() => {
 });
 function openFullView() {
   if (resolved.value?.fullViewLocation) {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("cadence:close-governance-drawers"));
+    }
     router.push(resolved.value.fullViewLocation);
     closePeek();
   }
@@ -144,6 +152,10 @@ function openFullView() {
 </script>
 
 <style scoped>
+:deep(.entity-peek-drawer-overlay) {
+  z-index: 10005;
+}
+
 .entity-peek-host {
   display: flex;
   flex-direction: column;

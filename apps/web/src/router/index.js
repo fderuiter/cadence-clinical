@@ -10,6 +10,10 @@ import { getRegisteredI18nApp } from "../i18n/runtime.js";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
 import { readPassiveOnboardingBypassOverview } from "../stores/onboardingSummary.js";
 import { isDemoBuild } from "../utils/demoMode.js";
+import {
+  FOCUS_RING_CLEARANCE_PX,
+  getActiveStickyChromeHeightPx,
+} from "../utils/stickyChromeOffset";
 import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
 /**
@@ -667,10 +671,55 @@ export function createAppHistory(
   return createWebHistory(base);
 }
 
+const CANVAS_SURFACE_QUERY_KEYS = [
+  "stage",
+  "section",
+  "site",
+  "participant",
+  "form",
+  "spec",
+  "visit",
+  "observation",
+];
+
+function normalizeRouteQueryValue(val) {
+  if (Array.isArray(val)) {
+    return typeof val[0] === "string" ? val[0].trim() : "";
+  }
+  return typeof val === "string" ? val.trim() : "";
+}
+
+export function appScrollBehavior(to, from, savedPosition) {
+  if (savedPosition) {
+    return savedPosition;
+  }
+  if (to?.hash) {
+    return {
+      el: to.hash,
+      top: getActiveStickyChromeHeightPx() + FOCUS_RING_CLEARANCE_PX,
+    };
+  }
+  if (!from || (!from.name && (!from.matched || from.matched.length === 0))) {
+    return { top: 0, left: 0 };
+  }
+  if (to.path === from.path && to.name === "study") {
+    const surfaceChanged = CANVAS_SURFACE_QUERY_KEYS.some(
+      (key) =>
+        normalizeRouteQueryValue(to.query?.[key]) !==
+        normalizeRouteQueryValue(from.query?.[key])
+    );
+    if (!surfaceChanged) {
+      return false;
+    }
+  }
+  return { top: 0, left: 0 };
+}
+
 export const router = createRouter({
   // Use hash history for static subpath demo builds and web history for Keycloak OIDC deployments
   history: createAppHistory(),
   routes,
+  scrollBehavior: appScrollBehavior,
 });
 
 // OIDC & RBAC navigation guard. Sessions come only from Keycloak: an
