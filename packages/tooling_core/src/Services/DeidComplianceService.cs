@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 
 using Cadence.Deid;
+using Cadence.ToolingCore.Primitives;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -20,51 +21,6 @@ public sealed record DeidFinding(string File, int Line, int Column, string Categ
 /// </summary>
 public static partial class DeidComplianceService
 {
-    private static readonly HashSet<string> TextExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        // Source, configuration, documentation, and asset text extensions across the .NET, Vue, and VitePress code base.
-        ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".json", ".md", ".log", ".txt", ".yaml", ".yml", ".csv",
-        ".toml", ".xml", ".html", ".css", ".cs", ".vue", ".sql", ".svg",
-    };
-
-    private static readonly HashSet<string> AlwaysScannedNames = new(StringComparer.Ordinal)
-    {
-        "Dockerfile", "LICENSE", "Makefile", "Pipfile", "pyproject.toml", "package.json", "pnpm-workspace.yaml",
-        "pnpm-lock.yaml", "uv.lock",
-    };
-
-    private static readonly HashSet<string> ExcludedDirectories = new(StringComparer.Ordinal)
-    {
-        "tests", "test", "testing", "node_modules", ".git", ".venv", "env", "build", "dist", ".github", ".ruff_cache",
-        ".pytest_cache", "scripts", "docker", "verification", "alembic", "deid", "coverage", ".agents", ".jules",
-        ".cadence", "bin", "obj",
-    };
-
-    private static readonly string[] ExcludedPathPrefixes =
-    [
-        "baselines/",
-        "docs/cdisc/",
-        "docs/nci/",
-        "docs/sdlc/runs/",
-        "docs/openapi/",
-        "docs/schema/",
-        "docs/.vitepress/.temp/",
-        "docs/.vitepress/cache/",
-        "docs/.vitepress/dist/",
-    ];
-
-    private static readonly HashSet<string> ExcludedRelativePaths = new(StringComparer.Ordinal)
-    {
-        "docs/sdlc/requirements_traceability_matrix.md",
-        "docs/sdlc/iq_oq_pq_execution_report.md",
-    };
-
-    private static readonly HashSet<string> ExcludedFileNames = new(StringComparer.Ordinal)
-    {
-        "package.json", "pyproject.toml", "pnpm-workspace.yaml", "pnpm-lock.yaml", "uv.lock", ".secrets.baseline",
-        ".deid-baseline.txt", ".duplication-baseline.txt", "eslint.config.mjs",
-    };
-
     private static readonly string[] ApprovedSyntheticEmailDomains =
     [
         "cadence.clinical",
@@ -123,21 +79,6 @@ public static partial class DeidComplianceService
 
     private static readonly string[] DateContextWords =
         ["version", "package", "href", "release", "sas", "epoch", "format", "test", "example", "default"];
-
-    /// <summary>Directory containing per-unit ratchet baseline shards, relative to the repository root.</summary>
-    public const string BaselineDirectory = "baselines/deid";
-
-    private const string ShardSuffix = ".baseline.txt";
-
-    private static readonly string[] BaselineShardHeader =
-    [
-        "# DEID scan ratchet baseline shard (pnpm cadence check deid). Findings that predate the full detector and are not PHI.",
-        "# One per line: path|category|first 16 hex digits of SHA-256(trimmed matched value). Sorted ordinally. Shards may only shrink.",
-        "# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid [files...] (docs/cli.md).",
-    ];
-
-    public static string GetShardRelativePath(string filePath) =>
-        $"{BaselineDirectory}/{BaselineUnitPath.ResolveUnit(filePath)}{ShardSuffix}";
 
     /// <summary>
     /// Scans <paramref name="files"/>, or the resolved <see cref="GitRevisionScopeService"/> candidate files when none are
@@ -286,200 +227,6 @@ public static partial class DeidComplianceService
     }
 
     /// <summary>
-    /// Splits findings into those not covered by the baseline and baseline entries no finding uses. Entries are
-    /// counted, so a matched token that appears twice in the same file needs two entries.
-    /// </summary>
-    public static (IReadOnlyList<DeidFinding> NewFindings, IReadOnlyList<string> StaleEntries) CompareWithBaseline(
-        IReadOnlyList<(DeidFinding Finding, string Key)> findings,
-        IReadOnlyList<string> baseline)
-    {
-        ArgumentNullException.ThrowIfNull(findings);
-        ArgumentNullException.ThrowIfNull(baseline);
-        var remaining = baseline.GroupBy(k => k, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
-        var newFindings = new List<DeidFinding>();
-        foreach (var (finding, key) in findings)
-        {
-            if (remaining.TryGetValue(key, out int count) && count > 0)
-            {
-                remaining[key] = count - 1;
-            }
-            else
-            {
-                newFindings.Add(finding);
-            }
-        }
-
-        var stale = remaining.Where(kv => kv.Value > 0).SelectMany(kv => Enumerable.Repeat(kv.Key, kv.Value)).Order(StringComparer.Ordinal).ToList();
-        return (newFindings, stale);
-    }
-
-    /// <summary>
-    /// A finding's baseline entry: <c>path|category|hash</c>, where the hash is the first 16 lowercase hex digits of the
-    /// SHA-256 of the trimmed matched substring. Non-PHI edits elsewhere on the line leave the digest unchanged, and no raw
-    /// PHI is stored or printed.
-    /// </summary>
-    public static string BaselineKey(DeidFinding finding, string matchedValue)
-    {
-        ArgumentNullException.ThrowIfNull(finding);
-        ArgumentNullException.ThrowIfNull(matchedValue);
-        byte[] hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(matchedValue.Trim()));
-        return $"{finding.File}|{finding.Category}|{Convert.ToHexStringLower(hash)[..16]}";
-    }
-
-    /// <summary>Writes per-unit DEID baseline shards under <see cref="BaselineDirectory"/> and deletes empty shards.</summary>
-    public static void WriteBaselineShards(string repoRoot, IEnumerable<string> keys)
-    {
-        string deidRootFull = Path.Combine(repoRoot, BaselineDirectory);
-        var grouped = keys
-            .GroupBy(key => GetShardRelativePath(ExtractFileFromBaselineEntry(key)), StringComparer.Ordinal)
-            .ToDictionary(
-                g => g.Key,
-                g => g.Order(StringComparer.Ordinal).ToList(),
-                StringComparer.Ordinal);
-
-        if (Directory.Exists(deidRootFull))
-        {
-            foreach (string existingFull in Directory.GetFiles(deidRootFull, "*" + ShardSuffix, SearchOption.AllDirectories))
-            {
-                string rel = Path.GetRelativePath(repoRoot, existingFull).Replace('\\', '/');
-                if (!grouped.TryGetValue(rel, out var shardKeys) || shardKeys.Count == 0)
-                {
-                    File.Delete(existingFull);
-                    BaselineUnitPath.DeleteEmptyParentDirectories(existingFull, deidRootFull);
-                }
-            }
-        }
-
-        foreach (var (shardRel, shardKeys) in grouped.OrderBy(kv => kv.Key, StringComparer.Ordinal))
-        {
-            if (shardKeys.Count == 0)
-            {
-                continue;
-            }
-
-            string fullPath = Path.Combine(repoRoot, shardRel);
-            WriteShardFile(fullPath, shardKeys);
-        }
-    }
-
-    private static Dictionary<string, List<string>> ReadBaselineShards(string repoRoot, GitIndexReader? reader)
-    {
-        var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
-        if (reader is { HasAuthoritativeIndex: true })
-        {
-            foreach (string relPath in reader.Paths
-                .Where(p => p.StartsWith(BaselineDirectory + "/", StringComparison.Ordinal) &&
-                            p.EndsWith(ShardSuffix, StringComparison.Ordinal))
-                .Order(StringComparer.Ordinal))
-            {
-                if (reader.TryReadLines(relPath, out string[] indexedLines))
-                {
-                    result[relPath] = [.. indexedLines.Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))];
-                }
-            }
-
-            return result;
-        }
-
-        string deidRootFull = Path.Combine(repoRoot, BaselineDirectory);
-        if (!Directory.Exists(deidRootFull))
-        {
-            return result;
-        }
-
-        foreach (string fullPath in Directory.EnumerateFiles(deidRootFull, "*" + ShardSuffix, SearchOption.AllDirectories))
-        {
-            string relPath = Path.GetRelativePath(repoRoot, fullPath).Replace('\\', '/');
-            result[relPath] = [.. File.ReadAllLines(fullPath).Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))];
-        }
-
-        return result;
-    }
-
-    private static int SubtractStaleEntriesFromShards(
-        string repoRoot,
-        Dictionary<string, List<string>> entriesByShard,
-        IReadOnlyList<string> staleEntries)
-    {
-        string deidRootFull = Path.Combine(repoRoot, BaselineDirectory);
-        var staleCountsByShard = new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal);
-        foreach (string staleKey in staleEntries)
-        {
-            string shardRel = GetShardRelativePath(ExtractFileFromBaselineEntry(staleKey));
-            if (!staleCountsByShard.TryGetValue(shardRel, out var counts))
-            {
-                counts = new Dictionary<string, int>(StringComparer.Ordinal);
-                staleCountsByShard[shardRel] = counts;
-            }
-
-            counts[staleKey] = counts.GetValueOrDefault(staleKey) + 1;
-        }
-
-        int totalPruned = 0;
-        foreach (var (shardRel, existingEntries) in entriesByShard)
-        {
-            string shardFullPath = Path.Combine(repoRoot, shardRel);
-            if (existingEntries.Count == 0)
-            {
-                if (File.Exists(shardFullPath))
-                {
-                    File.Delete(shardFullPath);
-                    BaselineUnitPath.DeleteEmptyParentDirectories(shardFullPath, deidRootFull);
-                }
-
-                continue;
-            }
-
-            if (!staleCountsByShard.TryGetValue(shardRel, out var toSubtract) || toSubtract.Count == 0)
-            {
-                continue;
-            }
-
-            var kept = new List<string>(existingEntries.Count);
-            foreach (string entry in existingEntries)
-            {
-                if (toSubtract.TryGetValue(entry, out int remainingToDrop) && remainingToDrop > 0)
-                {
-                    toSubtract[entry] = remainingToDrop - 1;
-                    totalPruned++;
-                }
-                else
-                {
-                    kept.Add(entry);
-                }
-            }
-
-            kept.Sort(StringComparer.Ordinal);
-            if (kept.Count == 0)
-            {
-                if (File.Exists(shardFullPath))
-                {
-                    File.Delete(shardFullPath);
-                    BaselineUnitPath.DeleteEmptyParentDirectories(shardFullPath, deidRootFull);
-                }
-            }
-            else if (!existingEntries.SequenceEqual(kept, StringComparer.Ordinal))
-            {
-                WriteShardFile(shardFullPath, kept);
-            }
-        }
-
-        return totalPruned;
-    }
-
-    private static string ExtractFileFromBaselineEntry(string entry)
-    {
-        int pipeIdx = entry.IndexOf('|', StringComparison.Ordinal);
-        return pipeIdx > 0 ? entry[..pipeIdx] : entry;
-    }
-
-    private static void WriteShardFile(string fullPath, IReadOnlyList<string> sortedKeys)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        File.WriteAllText(fullPath, string.Join('\n', BaselineShardHeader.Concat(sortedKeys)) + "\n");
-    }
-
-    /// <summary>
     /// The findings in one file's text after applying inline pragma and development-value allowlists.
     /// </summary>
     public static IReadOnlyList<DeidFinding> ScanText(
@@ -562,61 +309,6 @@ public static partial class DeidComplianceService
         }
 
         return false;
-    }
-
-    /// <summary>Whether a repository-relative path is outside the scan: tests, vendored standards, GxP runs, tooling and generated folders.</summary>
-    public static bool IsExcludedPath(string relativePath)
-    {
-        ArgumentNullException.ThrowIfNull(relativePath);
-        string normalized = relativePath.Replace('\\', '/').TrimStart('/');
-        string lower = normalized.ToLowerInvariant();
-        if (ExcludedRelativePaths.Contains(lower) ||
-            ExcludedPathPrefixes.Any(prefix => lower.StartsWith(prefix, StringComparison.Ordinal)))
-        {
-            return true;
-        }
-
-        string[] parts = lower.Split('/');
-        if (parts.Any(ExcludedDirectories.Contains))
-        {
-            return true;
-        }
-
-        string name = parts[^1];
-        return name.StartsWith("test_", StringComparison.Ordinal)
-            || name.EndsWith(".test.js", StringComparison.Ordinal)
-            || name.EndsWith(".test.ts", StringComparison.Ordinal)
-            || name.EndsWith(".test.jsx", StringComparison.Ordinal)
-            || name.EndsWith(".test.tsx", StringComparison.Ordinal)
-            || name.EndsWith(".css", StringComparison.Ordinal)
-            || ExcludedFileNames.Contains(name);
-    }
-
-    /// <summary>Whether a file is text worth scanning: a known text extension or name, or no extension and no NUL byte.</summary>
-    public static bool ShouldScanFile(string path)
-    {
-        if (AlwaysScannedNames.Contains(Path.GetFileName(path)))
-        {
-            return true;
-        }
-
-        string extension = Path.GetExtension(path);
-        if (extension.Length > 0)
-        {
-            return TextExtensions.Contains(extension);
-        }
-
-        try
-        {
-            using var stream = File.OpenRead(path);
-            var buffer = new byte[1024];
-            int read = stream.Read(buffer, 0, buffer.Length);
-            return Array.IndexOf(buffer, (byte)0, 0, read) < 0;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            return false;
-        }
     }
 
     private static bool IsAllowedDevelopmentValue(string category, string value, string lineContent, string relativePath)
@@ -705,81 +397,8 @@ public static partial class DeidComplianceService
         return (line, offset - lineStart + 1);
     }
 
-    // Explicit files, GitRevisionScopeService diff scope, or every file git tracks (git ls-files -z), filtered through
-    // IsExcludedPath and ShouldScanFile (TextExtensions, AlwaysScannedNames, and extensionless NUL-byte sniffing).
-    public static IReadOnlyList<string> CandidateFiles(
-        string repoRoot,
-        string[]? files = null,
-        bool preCommit = false,
-        string? baseRef = null,
-        string? pushBefore = null,
-        bool forceTrackedScan = false,
-        GitIndexReader? reader = null,
-        string? eventName = null,
-        string? gitRef = null)
-    {
-        IEnumerable<string> relative;
-        if (files is not null)
-        {
-            relative = files.Select(f => Path.GetRelativePath(repoRoot, Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)));
-        }
-        else if (forceTrackedScan)
-        {
-            relative = TrackedFiles(repoRoot);
-        }
-        else
-        {
-            var scope = GitRevisionScopeService.ResolveFileScanScope(
-                repoRoot,
-                explicitFiles: null,
-                preCommit: preCommit,
-                baseRef: baseRef,
-                pushBefore: pushBefore,
-                eventName: eventName,
-                gitRef: gitRef);
-            relative = scope.Kind == GitScopeKind.NonGitDirectory
-                ? TrackedFiles(repoRoot)
-                : scope.Files;
-        }
-
-        return [.. relative
-            .Select(p => p.Replace('\\', '/'))
-            .Where(p => !p.StartsWith("../", StringComparison.Ordinal) && p != ".." && !IsExcludedPath(p))
-            .Where(p => reader is not null
-                ? reader.FileExists(p) && ShouldScanStagedFile(p, reader)
-                : File.Exists(Path.Combine(repoRoot, p)) && ShouldScanFile(Path.Combine(repoRoot, p)))
-            .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal)];
-    }
-
-    private static bool ShouldScanStagedFile(string relativePath, GitIndexReader reader)
-    {
-        if (AlwaysScannedNames.Contains(Path.GetFileName(relativePath)))
-        {
-            return true;
-        }
-
-        string extension = Path.GetExtension(relativePath);
-        if (extension.Length > 0)
-        {
-            return TextExtensions.Contains(extension);
-        }
-
-        if (!reader.TryReadBytes(relativePath, out byte[] bytes))
-        {
-            return false;
-        }
-
-        int probeLen = Math.Min(bytes.Length, 1024);
-        return Array.IndexOf(bytes, (byte)0, 0, probeLen) < 0;
-    }
-
-    private static IEnumerable<string> TrackedFiles(string repoRoot) =>
-        GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-files", "-z")
-        ?? throw new InvalidOperationException($"git ls-files failed in {repoRoot}; the DEID scan needs git to list files.");
-
     /// <summary>Resolves the repository root directory from the current working directory or binary path.</summary>
-    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    public static string FindRepoRoot() => WorkspacePrimitives.FindRepoRoot();
 
     [GeneratedRegex(@"\d+\.\d+")]
     private static partial Regex DecimalNumberRegex();

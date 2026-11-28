@@ -1,13 +1,15 @@
 using System;
 using System.IO;
 
+using Cadence.ToolingCore.Primitives;
+
 namespace Cadence.ToolingCore.Services;
 
 public static class CreateAdrService
 {
     public static int CreateAdr(string title, DateOnly date, string? repoRoot = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         Console.WriteLine($"Scaffolding new Architectural Decision Record (ADR) for '{title}'...");
 
         string adrDir = Path.Combine(repoRoot, "docs", "adr");
@@ -51,18 +53,5 @@ Chosen option: Option 1
         Console.WriteLine($"✔ Scaffolded new ADR at {filePath}");
 
         return 0;
-    }
-
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
     }
 }

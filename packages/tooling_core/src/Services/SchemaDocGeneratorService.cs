@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
+using Cadence.ToolingCore.Primitives;
+
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
@@ -24,7 +26,7 @@ public static class SchemaDocGeneratorService
         bool preCommit = false,
         GitIndexReader? indexReader = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         string docsDir = Path.Combine(repoRoot, "docs", "schema");
 
         GitIndexReader? ownedReader = null;
@@ -164,17 +166,4 @@ public static class SchemaDocGeneratorService
             ExporterProject,
             ["--output-dir", exportDir],
             "schema documentation exporter");
-
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
 }
