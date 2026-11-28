@@ -359,7 +359,9 @@ describe("Accessibility Composables & Query Panel Integration", () => {
       });
       await nextTick();
 
-      const drawer = wrapper.find(".readability-drawer");
+      const drawer = wrapper.find('[role="dialog"].readability-drawer');
+      expect(drawer.exists()).toBe(true);
+      expect(drawer.element.tagName).toBe("DIV");
       expect(drawer.attributes("inert")).toBeDefined();
       expect(drawer.attributes("aria-hidden")).toBe("true");
       expect(drawer.attributes("aria-modal")).toBeUndefined();

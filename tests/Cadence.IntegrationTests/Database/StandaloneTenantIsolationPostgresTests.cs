@@ -1240,7 +1240,13 @@ public sealed class StandaloneTenantIsolationPostgresTests(ThrowawayPostgresData
             SiteIds: siteIds,
             TenantId: "tenant-alpha",
             StudyIds: [batchStudyId],
-            ProductFamilies: TestSecurityContext.AllProductFamilies));
+            ProductFamilies: TestSecurityContext.AllProductFamilies,
+            SigToken: TestSecurityContext.CreateSigToken(
+                userId: "fin-batch-officer",
+                action: "/api/v1/payments/invoices/batch-compile",
+                semanticAction: "payments.invoice.approve",
+                roles: ["finance_officer", "sysadmin"],
+                issuedAt: paymentsClock.UtcNow)));
 
         using var batchReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/payments/invoices/batch-compile")
         {
@@ -1256,7 +1262,7 @@ public sealed class StandaloneTenantIsolationPostgresTests(ThrowawayPostgresData
         batchResp.StatusCode.Should().Be(HttpStatusCode.Created, await batchResp.Content.ReadAsStringAsync(Ct));
 
         using var batchDoc = JsonDocument.Parse(await batchResp.Content.ReadAsStringAsync(Ct));
-        string batchExecutionId = batchDoc.RootElement.GetProperty("batch_execution_id").GetString()!;
+        string? batchExecutionId = batchDoc.RootElement.GetProperty("batch_execution_id").GetString();
         batchExecutionId.Should().NotBeNullOrWhiteSpace();
         batchDoc.RootElement.GetProperty("total_sites_processed").GetInt32().Should().Be(40);
         batchDoc.RootElement.GetProperty("successful_sites_count").GetInt32().Should().Be(40);
@@ -1270,16 +1276,11 @@ public sealed class StandaloneTenantIsolationPostgresTests(ThrowawayPostgresData
         await using var verifyPaymentsScope = paymentsHost.Services.CreateAsyncScope();
         var tenantScope = verifyPaymentsScope.ServiceProvider.GetRequiredService<ITenantScope>();
         var verifyDb = verifyPaymentsScope.ServiceProvider.GetRequiredService<PaymentsDbContext>();
-        List<string> invoiceIds;
         using (tenantScope.Bind("tenant-alpha"))
         {
-            invoiceIds = await verifyDb.SelfBillingInvoices.AsNoTracking()
-                .Where(i => i.StudyId == batchStudyId)
-                .Select(i => i.Id)
-                .ToListAsync(Ct);
-            invoiceIds.Should().HaveCount(40);
+            (await verifyDb.SelfBillingInvoices.AsNoTracking().CountAsync(i => i.StudyId == batchStudyId, Ct)).Should().Be(40);
             (await verifyDb.PaymentAuditLogs.AsNoTracking()
-                .CountAsync(l => l.EntityId == batchExecutionId || invoiceIds.Contains(l.EntityId), Ct))
+                .CountAsync(a => a.EntityId == batchExecutionId || (a.Details != null && a.Details.Contains(batchExecutionId)), Ct))
                 .Should().Be(41);
         }
 
@@ -1287,7 +1288,7 @@ public sealed class StandaloneTenantIsolationPostgresTests(ThrowawayPostgresData
         {
             (await verifyDb.SelfBillingInvoices.AsNoTracking().CountAsync(i => i.StudyId == batchStudyId, Ct)).Should().Be(0);
             (await verifyDb.PaymentAuditLogs.AsNoTracking()
-                .CountAsync(l => l.EntityId == batchExecutionId || invoiceIds.Contains(l.EntityId), Ct))
+                .CountAsync(a => a.EntityId == batchExecutionId || (a.Details != null && a.Details.Contains(batchExecutionId)), Ct))
                 .Should().Be(0);
         }
     }
