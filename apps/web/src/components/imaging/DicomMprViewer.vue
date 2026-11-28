@@ -928,6 +928,7 @@ onUnmounted(() => {
   gap: 12px;
   padding: 12px;
   flex: 1;
+  position: relative;
   overflow: auto;
 }
 

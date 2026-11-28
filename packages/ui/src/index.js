@@ -17,6 +17,7 @@ import ClinicalPopover from "./components/clinical/ClinicalPopover.vue";
 import ClinicalQueryFlag from "./components/clinical/ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./components/clinical/ClinicalQueryPanel.vue";
 import ClinicalRadioGroup from "./components/clinical/ClinicalRadioGroup.vue";
+import ClinicalRecordCard from "./components/clinical/ClinicalRecordCard.vue";
 import ClinicalTabs from "./components/clinical/ClinicalTabs.vue";
 import ClinicalThemeToggle from "./components/clinical/ClinicalThemeToggle.vue";
 import ClinicalToastHost from "./components/clinical/ClinicalToastHost.vue";
@@ -25,6 +26,7 @@ import SignOutConfirmModal from "./components/clinical/SignOutConfirmModal.vue";
 import EmptyState from "./components/common/EmptyState.vue";
 import MediaPlayer from "./components/MediaPlayer.vue";
 import ModalErrorAlert from "./components/ModalErrorAlert.vue";
+import { use2DGrid } from "./composables/use2DGrid.js";
 import { useEscapeClose } from "./composables/useEscapeClose.js";
 import {
   useFloatingPosition,
@@ -93,6 +95,7 @@ export {
   ClinicalQueryFlag,
   ClinicalQueryPanel,
   ClinicalRadioGroup,
+  ClinicalRecordCard,
   ClinicalTabs,
   ClinicalThemeToggle,
   ClinicalToastHost,
@@ -127,6 +130,7 @@ export {
   resolveEffectiveTheme,
   subscribeThemeSync,
   trapTabFocus,
+  use2DGrid,
   useEscapeClose,
   useFloatingPosition,
   useFocusTrap,

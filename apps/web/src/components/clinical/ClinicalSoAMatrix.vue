@@ -5,92 +5,103 @@
   <div v-else-if="cols.length === 0" class="clinical-visit-matrix-error">
     No encounters defined for SoA matrix.
   </div>
-  <table v-else class="clinical-visit-matrix clinical-soa-matrix">
-    <thead>
-      <!-- Arm Row (only if arms are defined) -->
-      <tr v-if="hasArms">
-        <th scope="col" :rowspan="totalHeaderRows" class="corner-header">
-          Form / Procedure
-        </th>
-        <th
-          v-for="g in armGroups"
-          :key="g.id"
-          scope="col"
-          :colspan="g.colspan"
-          class="grouped-header arm-header"
-        >
-          {{ g.name }}
-        </th>
-      </tr>
+  <div v-else ref="matrixContainerRef" class="clinical-soa-matrix-scroll">
+    <table class="clinical-visit-matrix clinical-soa-matrix">
+      <thead>
+        <!-- Arm Row (only if arms are defined) -->
+        <tr v-if="hasArms">
+          <th scope="col" :rowspan="totalHeaderRows" class="corner-header">
+            Form / Procedure
+          </th>
+          <th
+            v-for="g in armGroups"
+            :key="g.id"
+            scope="col"
+            :colspan="g.colspan"
+            class="grouped-header arm-header"
+          >
+            {{ g.name }}
+          </th>
+        </tr>
 
-      <!-- Epoch Row -->
-      <tr v-if="hasArms">
-        <th
-          v-for="g in epochGroups"
-          :key="g.key"
-          scope="col"
-          :colspan="g.colspan"
-          class="grouped-header epoch-header"
-        >
-          {{ g.name }}
-        </th>
-      </tr>
-      <tr v-else>
-        <th scope="col" :rowspan="totalHeaderRows" class="corner-header">
-          Form / Procedure
-        </th>
-        <th
-          v-for="g in epochGroups"
-          :key="g.key"
-          scope="col"
-          :colspan="g.colspan"
-          class="grouped-header epoch-header"
-        >
-          {{ g.name }}
-        </th>
-      </tr>
+        <!-- Epoch Row -->
+        <tr v-if="hasArms">
+          <th
+            v-for="g in epochGroups"
+            :key="g.key"
+            scope="col"
+            :colspan="g.colspan"
+            class="grouped-header epoch-header"
+          >
+            {{ g.name }}
+          </th>
+        </tr>
+        <tr v-else>
+          <th scope="col" :rowspan="totalHeaderRows" class="corner-header">
+            Form / Procedure
+          </th>
+          <th
+            v-for="g in epochGroups"
+            :key="g.key"
+            scope="col"
+            :colspan="g.colspan"
+            class="grouped-header epoch-header"
+          >
+            {{ g.name }}
+          </th>
+        </tr>
 
-      <!-- Encounter/Visit Row -->
-      <tr>
-        <th v-if="!hasArms" style="display: none" />
-        <th
-          v-for="c in cols"
-          :key="c.encounter.encounter_id"
-          scope="col"
-          class="encounter-header"
-        >
-          {{ c.encounter.encounter_name }}
-        </th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="row in rows" :key="row.activity_id">
-        <th scope="row">
-          {{ row.activity_name }}
-        </th>
-        <td
-          v-for="col in cols"
-          :key="col.encounter.encounter_id"
-          :class="getCellClass(row, col.encounter.encounter_id)"
-        >
-          <template v-if="isApplicable(row, col.encounter.encounter_id)">
-            ✓
-            <span
-              v-if="getCellDetails(row, col.encounter.encounter_id)"
-              class="cell-details"
-            >
-              {{ getCellDetails(row, col.encounter.encounter_id) }}
-            </span>
-          </template>
-          <template v-else> - </template>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+        <!-- Encounter/Visit Row -->
+        <tr>
+          <th v-if="!hasArms" style="display: none" />
+          <th
+            v-for="c in cols"
+            :key="c.encounter.encounter_id"
+            scope="col"
+            class="encounter-header"
+          >
+            {{ c.encounter.encounter_name }}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(row, rIdx) in rows" :key="row.activity_id">
+          <th scope="row">
+            {{ row.activity_name }}
+          </th>
+          <td
+            v-for="(col, cIdx) in cols"
+            :key="col.encounter.encounter_id"
+            :data-row="rIdx"
+            :data-col="cIdx"
+            :tabindex="getCellTabindex(rIdx, cIdx)"
+            :class="[
+              getCellClass(row, col.encounter.encounter_id),
+              'focus-ring-inset',
+            ]"
+            @click="selectCell(rIdx, cIdx, false)"
+            @keydown="handleCellKeyDown($event, rIdx, cIdx)"
+          >
+            <template v-if="isApplicable(row, col.encounter.encounter_id)">
+              ✓
+              <span
+                v-if="getCellDetails(row, col.encounter.encounter_id)"
+                class="cell-details"
+              >
+                {{ getCellDetails(row, col.encounter.encounter_id) }}
+              </span>
+            </template>
+            <template v-else> - </template>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
+import { use2DGrid } from "ui";
 import { normalizeUsdm } from "../../stores/normalization";
 
 const props = defineProps({
@@ -147,6 +158,13 @@ const cols = computed(() => {
     };
   });
 });
+
+const matrixContainerRef = ref(null);
+const { getCellTabindex, selectCell, handleCellKeyDown } = use2DGrid(
+  () => rows.value.length,
+  () => cols.value.length,
+  { containerRef: matrixContainerRef }
+);
 
 const hasArms = computed(() => {
   return cols.value.some((c) => c.arm !== null);

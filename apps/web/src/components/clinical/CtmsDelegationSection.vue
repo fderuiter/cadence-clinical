@@ -308,11 +308,18 @@ const {
 const canManage = computed(() => canManageDoa(authStore));
 const canSignOff = computed(() => canSignOffDoa(authStore));
 const doaColumns = [
-  { key: "staff_user_id", label: "Staff", rowHeader: true },
-  { key: "task_codes", label: "Delegated tasks" },
-  { key: "start_date", label: "Start date" },
-  { key: "status", label: "Status" },
-  { key: "actions", label: "Actions" },
+  {
+    key: "staff_user_id",
+    label: "Staff",
+    rowHeader: true,
+    sticky: "left",
+    cardRole: "identifier",
+    sortable: true,
+  },
+  { key: "task_codes", label: "Delegated tasks", cardRole: "title" },
+  { key: "start_date", label: "Start date", sortable: true },
+  { key: "status", label: "Status", cardRole: "status", sortable: true },
+  { key: "actions", label: "Actions", sticky: "right", cardRole: "actions" },
 ];
 const exporting = ref(false);
 const doaLog = ref<DoaLog | null>(null);
@@ -455,7 +462,7 @@ async function confirmSignOff() {
       `[id="btn-doa-revoke-${rec.record_id}"]`,
       () =>
         document.querySelector<HTMLElement>(
-          "#doa-staff-table button:not([disabled])"
+          "#doa-staff-table tbody button:not([disabled]), #doa-staff-table .clinical-record-card button:not([disabled])"
         ),
       "#ctms-delegation-title",
     ]);
@@ -512,7 +519,7 @@ async function confirmRevoke() {
     void revokeHandoff.handoff([
       () =>
         document.querySelector<HTMLElement>(
-          "#doa-staff-table button:not([disabled])"
+          "#doa-staff-table tbody button:not([disabled]), #doa-staff-table .clinical-record-card button:not([disabled])"
         ),
       "#ctms-delegation-title",
     ]);

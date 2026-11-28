@@ -3771,6 +3771,7 @@ onUnmounted(() => {
 
   .zoom-path ol {
     flex-wrap: nowrap;
+    position: relative;
     overflow-x: auto;
     font-size: 0.85rem;
   }
@@ -3784,6 +3785,7 @@ onUnmounted(() => {
 
   .zoom-path ol {
     flex-wrap: nowrap;
+    position: relative;
     overflow-x: auto;
     font-size: 0.84rem;
   }

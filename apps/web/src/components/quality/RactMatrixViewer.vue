@@ -248,56 +248,74 @@
         </button>
       </div>
 
-      <div v-else class="table-container">
+      <div v-else ref="matrixContainerRef" class="table-container">
         <table class="ract-table">
           <thead>
             <tr>
-              <th>Category</th>
-              <th>Risk Topic &amp; Description</th>
+              <th scope="col" class="sticky-col-left">Category</th>
+              <th scope="col">Risk Topic &amp; Description</th>
               <th
+                scope="col"
                 class="text-center"
                 title="Likelihood of risk occurring (1=Low, 2=Medium, 3=High)"
               >
                 Prob (P)
               </th>
               <th
+                scope="col"
                 class="text-center"
                 title="Severity of impact on safety or data (1=Low, 2=Medium, 3=High)"
               >
                 Impact (I)
               </th>
               <th
+                scope="col"
                 class="text-center"
                 title="Ease of detection (1=High/Easy, 2=Medium, 3=Low/Difficult)"
               >
                 Det (D)
               </th>
               <th
+                scope="col"
                 class="text-center"
                 title="Composite Risk Score = P x I x D (1 - 27)"
               >
                 Total Score
               </th>
-              <th class="text-center">Risk Tier</th>
-              <th>Mitigation Controls</th>
-              <th>Linked KRI</th>
-              <th class="text-right">Actions</th>
+              <th scope="col" class="text-center">Risk Tier</th>
+              <th scope="col">Mitigation Controls</th>
+              <th scope="col">Linked KRI</th>
+              <th scope="col" class="text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr
-              v-for="factor in filteredFactors"
+              v-for="(factor, rIdx) in filteredFactors"
               :key="factor.id"
               :class="`row-tier-${factor.risk_tier.toLowerCase()}`"
             >
-              <td>
+              <td
+                class="sticky-col-left focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="0"
+                :tabindex="getCellTabindex(rIdx, 0)"
+                @click="selectCell(rIdx, 0, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 0)"
+              >
                 <span
                   :class="`category-badge cat-${factor.category.toLowerCase()}`"
                 >
                   {{ formatCategory(factor.category) }}
                 </span>
               </td>
-              <td>
+              <td
+                class="focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="1"
+                :tabindex="getCellTabindex(rIdx, 1)"
+                @click="selectCell(rIdx, 1, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 1)"
+              >
                 <div class="topic-title">
                   {{ factor.risk_topic }}
                 </div>
@@ -305,41 +323,101 @@
                   {{ factor.risk_description }}
                 </div>
               </td>
-              <td class="text-center">
-                <span class="score-badge">{{ factor.probability_score }}</span>
+              <td
+                class="text-center focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="2"
+                :tabindex="getCellTabindex(rIdx, 2)"
+                @click="selectCell(rIdx, 2, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 2)"
+              >
+                <span class="score-badge tabular-nums">{{
+                  factor.probability_score
+                }}</span>
               </td>
-              <td class="text-center">
-                <span class="score-badge">{{ factor.impact_score }}</span>
+              <td
+                class="text-center focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="3"
+                :tabindex="getCellTabindex(rIdx, 3)"
+                @click="selectCell(rIdx, 3, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 3)"
+              >
+                <span class="score-badge tabular-nums">{{
+                  factor.impact_score
+                }}</span>
               </td>
-              <td class="text-center">
-                <span class="score-badge">{{
+              <td
+                class="text-center focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="4"
+                :tabindex="getCellTabindex(rIdx, 4)"
+                @click="selectCell(rIdx, 4, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 4)"
+              >
+                <span class="score-badge tabular-nums">{{
                   factor.detectability_score
                 }}</span>
               </td>
-              <td class="text-center">
-                <div class="total-score-badge">
+              <td
+                class="text-center focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="5"
+                :tabindex="getCellTabindex(rIdx, 5)"
+                @click="selectCell(rIdx, 5, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 5)"
+              >
+                <div class="total-score-badge tabular-nums">
                   {{ factor.total_risk_score }}
                 </div>
               </td>
-              <td class="text-center">
+              <td
+                class="text-center focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="6"
+                :tabindex="getCellTabindex(rIdx, 6)"
+                @click="selectCell(rIdx, 6, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 6)"
+              >
                 <span
                   :class="`tier-pill tier-${factor.risk_tier.toLowerCase()}`"
                 >
                   {{ factor.risk_tier }}
                 </span>
               </td>
-              <td>
+              <td
+                class="focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="7"
+                :tabindex="getCellTabindex(rIdx, 7)"
+                @click="selectCell(rIdx, 7, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 7)"
+              >
                 <div class="mitigation-text">
                   {{ factor.mitigation_strategy }}
                 </div>
               </td>
-              <td>
+              <td
+                class="focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="8"
+                :tabindex="getCellTabindex(rIdx, 8)"
+                @click="selectCell(rIdx, 8, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 8)"
+              >
                 <div v-if="factor.linked_kri_code" class="kri-link-pill">
                   <span class="kri-code">{{ factor.linked_kri_code }}</span>
                 </div>
                 <span v-else class="text-muted">— Unlinked —</span>
               </td>
-              <td class="text-right table-actions">
+              <td
+                class="text-right table-actions focus-ring-inset"
+                :data-row="rIdx"
+                :data-col="9"
+                :tabindex="getCellTabindex(rIdx, 9)"
+                @click="selectCell(rIdx, 9, false)"
+                @keydown="handleCellKeyDown($event, rIdx, 9)"
+              >
                 <ClinicalIconButton
                   class="action-btn"
                   title="Edit risk factor"
@@ -400,42 +478,72 @@
           </button>
         </div>
 
-        <div v-else class="table-container">
+        <div v-else ref="matrixContainerRef" class="table-container">
           <table class="ract-table">
             <thead>
               <tr>
-                <th class="text-center">Rank</th>
-                <th>Investigational Site</th>
-                <th class="text-center">Composite SRI Score</th>
-                <th>Cohort Percentile Rank</th>
-                <th class="text-center">Risk Classification</th>
-                <th class="text-center">High-Risk KRI Breaches</th>
-                <th class="text-center">Active Deviations</th>
-                <th>Last Evaluated</th>
+                <th scope="col" class="text-center sticky-col-left">Rank</th>
+                <th scope="col">Investigational Site</th>
+                <th scope="col" class="text-center">Composite SRI Score</th>
+                <th scope="col">Cohort Percentile Rank</th>
+                <th scope="col" class="text-center">Risk Classification</th>
+                <th scope="col" class="text-center">High-Risk KRI Breaches</th>
+                <th scope="col" class="text-center">Active Deviations</th>
+                <th scope="col">Last Evaluated</th>
               </tr>
             </thead>
             <tbody>
               <tr
-                v-for="site in siteProfiles"
+                v-for="(site, sIdx) in siteProfiles"
                 :key="site.id"
                 :class="`row-tier-${(site.risk_tier || 'LOW').toLowerCase()}`"
               >
-                <td class="text-center">
-                  <span class="rank-badge">#{{ site.risk_rank }}</span>
+                <td
+                  class="text-center sticky-col-left focus-ring-inset"
+                  :data-row="sIdx"
+                  :data-col="0"
+                  :tabindex="getCellTabindex(sIdx, 0)"
+                  @click="selectCell(sIdx, 0, false)"
+                  @keydown="handleCellKeyDown($event, sIdx, 0)"
+                >
+                  <span class="rank-badge tabular-nums"
+                    >#{{ site.risk_rank }}</span
+                  >
                 </td>
-                <td>
+                <td
+                  class="focus-ring-inset"
+                  :data-row="sIdx"
+                  :data-col="1"
+                  :tabindex="getCellTabindex(sIdx, 1)"
+                  @click="selectCell(sIdx, 1, false)"
+                  @keydown="handleCellKeyDown($event, sIdx, 1)"
+                >
                   <div class="site-name">
                     {{ site.site_id }}
                   </div>
                 </td>
-                <td class="text-center">
-                  <div class="sri-score-val">
+                <td
+                  class="text-center focus-ring-inset"
+                  :data-row="sIdx"
+                  :data-col="2"
+                  :tabindex="getCellTabindex(sIdx, 2)"
+                  @click="selectCell(sIdx, 2, false)"
+                  @keydown="handleCellKeyDown($event, sIdx, 2)"
+                >
+                  <div class="sri-score-val tabular-nums">
                     {{ site.composite_risk_score.toFixed(2) }}
                   </div>
                 </td>
-                <td>
+                <td
+                  class="focus-ring-inset"
+                  :data-row="sIdx"
+                  :data-col="3"
+                  :tabindex="getCellTabindex(sIdx, 3)"
+                  @click="selectCell(sIdx, 3, false)"
+                  @keydown="handleCellKeyDown($event, sIdx, 3)"
+                >
                   <div class="percentile-bar-wrapper">
-                    <div class="percentile-label">
+                    <div class="percentile-label tabular-nums">
                       {{ site.percentile_rank.toFixed(1) }}th Percentile
                     </div>
                     <div class="progress-track">
@@ -449,15 +557,30 @@
                     </div>
                   </div>
                 </td>
-                <td class="text-center">
+                <td
+                  class="text-center focus-ring-inset"
+                  :data-row="sIdx"
+                  :data-col="4"
+                  :tabindex="getCellTabindex(sIdx, 4)"
+                  @click="selectCell(sIdx, 4, false)"
+                  @keydown="handleCellKeyDown($event, sIdx, 4)"
+                >
                   <span
                     :class="`tier-pill tier-${(site.risk_tier || 'LOW').toLowerCase()}`"
                   >
                     {{ site.risk_tier || "LOW" }}
                   </span>
                 </td>
-                <td class="text-center">
+                <td
+                  class="text-center focus-ring-inset"
+                  :data-row="sIdx"
+                  :data-col="5"
+                  :tabindex="getCellTabindex(sIdx, 5)"
+                  @click="selectCell(sIdx, 5, false)"
+                  @keydown="handleCellKeyDown($event, sIdx, 5)"
+                >
                   <span
+                    class="tabular-nums"
                     :class="
                       site.high_risk_kri_count > 0
                         ? 'badge-alert-count'
@@ -467,8 +590,16 @@
                     {{ site.high_risk_kri_count }}
                   </span>
                 </td>
-                <td class="text-center">
+                <td
+                  class="text-center focus-ring-inset"
+                  :data-row="sIdx"
+                  :data-col="6"
+                  :tabindex="getCellTabindex(sIdx, 6)"
+                  @click="selectCell(sIdx, 6, false)"
+                  @keydown="handleCellKeyDown($event, sIdx, 6)"
+                >
                   <span
+                    class="tabular-nums"
                     :class="
                       site.active_deviations_count > 0
                         ? 'badge-alert-count'
@@ -478,7 +609,14 @@
                     {{ site.active_deviations_count }}
                   </span>
                 </td>
-                <td>
+                <td
+                  class="focus-ring-inset"
+                  :data-row="sIdx"
+                  :data-col="7"
+                  :tabindex="getCellTabindex(sIdx, 7)"
+                  @click="selectCell(sIdx, 7, false)"
+                  @keydown="handleCellKeyDown($event, sIdx, 7)"
+                >
                   <span class="timestamp-val">{{
                     formatDateTime(site.evaluation_date)
                   }}</span>
@@ -937,7 +1075,7 @@
 <script setup lang="ts">
 import { encodeChangeReason } from "../../api/changeReason";
 import { ref, computed, onMounted } from "vue";
-import { ClinicalIconButton, ClinicalModal, ClinicalIcon } from "ui";
+import { ClinicalIconButton, ClinicalModal, ClinicalIcon, use2DGrid } from "ui";
 import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
 
 interface RACTFactor {
@@ -1004,6 +1142,15 @@ const { confirmDialog } = useConfirmDialog();
 const riskFactors = ref<RACTFactor[]>([]);
 const siteProfiles = ref<SiteProfile[]>([]);
 const kriDefinitions = ref<KRIDefinition[]>([]);
+const matrixContainerRef = ref<HTMLElement | null>(null);
+const { getCellTabindex, selectCell, handleCellKeyDown } = use2DGrid(
+  () =>
+    activeViewMode.value === "sri"
+      ? siteProfiles.value.length
+      : filteredFactors.value.length,
+  () => (activeViewMode.value === "sri" ? 8 : 10),
+  { containerRef: matrixContainerRef }
+);
 
 // Modals
 const isRiskModalOpen = ref<boolean>(false);
@@ -1622,6 +1769,7 @@ onMounted(() => {
 
 /* Category Tabs Bar */
 .category-tabs-bar {
+  position: relative;
   display: flex;
   gap: var(--spacing-xs);
   overflow-x: auto;
@@ -1695,11 +1843,40 @@ onMounted(() => {
 
 /* Table Container & Matrix */
 .table-container {
+  position: relative;
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 10px;
   overflow-x: auto;
   box-shadow: var(--shadow-sm);
+}
+
+.ract-table th.sticky-col-left {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--semantic-color-surface-muted);
+}
+
+.ract-table td.sticky-col-left {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--semantic-color-surface);
+}
+
+.row-tier-high td.sticky-col-left {
+  background: var(--semantic-color-error-bg-soft);
+}
+
+.row-tier-medium td.sticky-col-left {
+  background: var(--semantic-color-warning-bg-soft);
+}
+
+.ract-table td.focus-ring-inset:focus-visible {
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--semantic-color-accent));
+  outline-offset: -3px;
 }
 
 .ract-table {

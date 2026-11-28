@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { ref, nextTick } from "vue";
-import { use2DGrid } from "../../src/composables/use2DGrid.js";
+import { use2DGrid } from "ui";
 import CodingQueueTable from "../../src/components/CodingQueueTable.vue";
 import DocumentGrid from "../../src/components/etmf/DocumentGrid.vue";
 import { useCodingStore } from "../../src/stores/coding.js";

@@ -578,6 +578,7 @@ function getStatusClass(status) {
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text);
   border-radius: var(--radius-xs);
+  position: relative;
   overflow-x: auto;
   word-break: break-all;
 }
@@ -679,6 +680,7 @@ function getStatusClass(status) {
 .text-stream-sheet {
   flex: 1;
   padding: 28px;
+  position: relative;
   overflow: auto;
   z-index: 10;
 }
@@ -779,6 +781,7 @@ function getStatusClass(status) {
   color: var(--semantic-color-info);
   padding: 6px;
   border-radius: 4px;
+  position: relative;
   overflow-x: auto;
   word-break: break-all;
 }

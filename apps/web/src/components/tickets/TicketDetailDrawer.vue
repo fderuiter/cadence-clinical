@@ -1939,6 +1939,7 @@ const onTicketSigned = (sigPayload) => {
   border-radius: 6px;
   font-size: 0.78rem;
   font-family: var(--semantic-font-mono);
+  position: relative;
   overflow-x: auto;
   max-width: 100%;
 }

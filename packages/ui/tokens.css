@@ -1411,6 +1411,9 @@ textarea[aria-invalid="true"]:focus-visible {
 }
 
 .clinical-visit-matrix th[scope="row"] {
+  position: sticky;
+  left: 0;
+  z-index: 1;
   font-weight: 600;
   background-color: var(--semantic-color-surface);
 }
@@ -1441,6 +1444,14 @@ textarea[aria-invalid="true"]:focus-visible {
 .status-n-a {
   color: var(--semantic-color-text-secondary);
   background-color: var(--semantic-color-surface-header);
+}
+
+.clinical-soa-matrix-scroll {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
 }
 
 .clinical-soa-matrix {
@@ -1479,6 +1490,9 @@ textarea[aria-invalid="true"]:focus-visible {
 }
 
 .clinical-soa-matrix th.corner-header {
+  position: sticky;
+  left: 0;
+  z-index: 2;
   font-weight: 700;
   background-color: var(--neutral-light);
   border-right: 2px solid var(--border);
@@ -1488,6 +1502,12 @@ textarea[aria-invalid="true"]:focus-visible {
 .clinical-soa-matrix td {
   text-align: center;
   vertical-align: middle;
+}
+
+.clinical-soa-matrix td.focus-ring-inset:focus-visible {
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--semantic-color-accent));
+  outline-offset: -3px;
 }
 
 .status-applicable {

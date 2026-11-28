@@ -2681,6 +2681,7 @@ onMounted(() => {
 
 /* Tables */
 .table-responsive {
+  position: relative;
   overflow-x: auto;
 }
 

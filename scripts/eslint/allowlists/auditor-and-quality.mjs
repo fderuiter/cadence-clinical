@@ -13,7 +13,6 @@ export const AUDITOR_AND_QUALITY_EXEMPT_2D_MATRICES = [
 export const AUDITOR_AND_QUALITY_RAW_TABLE_ALLOWLIST = [
   "components/auditor/AuditTrailViewer.vue",
   "components/quality/StatisticalForensicsViewer.vue",
-  "views/AuditView.vue",
   "views/QualityCockpitView.vue",
   "views/RulesView.vue",
 ];

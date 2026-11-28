@@ -248,74 +248,56 @@
         />
 
         <h3>Revisions</h3>
-        <div
-          class="observation-table-scroll"
-          data-testid="observation-revisions-scroll"
-          role="region"
+        <ClinicalDataTable
+          plain
+          hide-header
+          density="compact"
+          :interactive-rows="false"
+          :page-size="Math.max(observationRevisions.length, 25)"
+          title="Observation revisions"
           aria-label="Observation revisions"
-          tabindex="0"
+          wrapper-class="observation-table-scroll"
+          wrapper-test-id="observation-revisions-scroll"
+          table-class="observation-revisions"
+          table-test-id="observation-revisions"
+          :columns="revisionColumns"
+          :data="observationRevisions"
+          row-key="number"
         >
-          <table
-            class="observation-revisions"
-            data-testid="observation-revisions"
-          >
-            <thead>
-              <tr>
-                <th scope="col">Revision</th>
-                <th scope="col">Value</th>
-                <th scope="col">Reason</th>
-                <th scope="col">Recorded by</th>
-                <th scope="col">Recorded</th>
-                <th scope="col">Superseded</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="revision in observationRevisions"
-                :key="revision.number"
-              >
-                <td>{{ revision.number }}</td>
-                <td>{{ formatObservationValue(revision.value) }}</td>
-                <td>{{ revision.reason_for_change }}</td>
-                <td>{{ revision.recorded_by }}</td>
-                <td>{{ revision.recorded_at }}</td>
-                <td>{{ revision.recorded_until ?? "Current" }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+          <template #cell-value="{ row: revision }">
+            <span class="tabular-nums">{{
+              formatObservationValue(revision.value)
+            }}</span>
+          </template>
+          <template #cell-recorded_until="{ row: revision }">
+            {{ revision.recorded_until ?? "Current" }}
+          </template>
+        </ClinicalDataTable>
 
         <h3>Audit trail</h3>
-        <div
-          class="observation-table-scroll"
-          data-testid="observation-audit-scroll"
-          role="region"
+        <ClinicalDataTable
+          plain
+          hide-header
+          density="compact"
+          :interactive-rows="false"
+          :page-size="Math.max(observationAudit.length, 25)"
+          title="Observation audit trail"
           aria-label="Observation audit trail"
-          tabindex="0"
+          wrapper-class="observation-table-scroll"
+          wrapper-test-id="observation-audit-scroll"
+          table-class="observation-audit"
+          table-test-id="observation-audit"
+          :columns="auditColumns"
+          :data="observationAudit"
+          row-key="sequence"
         >
-          <table class="observation-audit" data-testid="observation-audit">
-            <thead>
-              <tr>
-                <th scope="col">Sequence</th>
-                <th scope="col">When</th>
-                <th scope="col">Who</th>
-                <th scope="col">Action</th>
-                <th scope="col">Version</th>
-                <th scope="col">Reason</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="entry in observationAudit" :key="entry.sequence">
-                <td>{{ entry.sequence }}</td>
-                <td>{{ entry.recorded_at }}</td>
-                <td>{{ entry.actor_id }}</td>
-                <td>{{ entry.action }} {{ entry.subject }}</td>
-                <td>{{ entry.version ?? "" }}</td>
-                <td>{{ entry.reason_for_change }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+          <template #cell-action="{ row: entry }">
+            {{ entry.action }} {{ entry.subject }}
+          </template>
+          <template #cell-version="{ row: entry }">
+            {{ entry.version ?? "" }}
+          </template>
+        </ClinicalDataTable>
       </template>
     </div>
 
@@ -333,6 +315,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch } from "vue";
+import { ClinicalDataTable } from "ui";
 import type { RouteLocationRaw } from "vue-router";
 import ScopeLockControls from "../components/canvas/ScopeLockControls.vue";
 import NodeRefChip from "../components/canvas/NodeRefChip.vue";
@@ -367,6 +350,36 @@ const emit = defineEmits<{
 
 const authStore = useAuthStore();
 const canCorrect = computed(() => canCorrectObservations(authStore));
+
+const revisionColumns = [
+  {
+    key: "number",
+    label: "Revision",
+    sticky: "left" as const,
+    cardRole: "identifier" as const,
+    mono: true,
+  },
+  { key: "value", label: "Value", mono: true },
+  { key: "reason_for_change", label: "Reason" },
+  { key: "recorded_by", label: "Recorded by" },
+  { key: "recorded_at", label: "Recorded", mono: true },
+  { key: "recorded_until", label: "Superseded", mono: true },
+];
+
+const auditColumns = [
+  {
+    key: "sequence",
+    label: "Sequence",
+    sticky: "left" as const,
+    cardRole: "identifier" as const,
+    mono: true,
+  },
+  { key: "recorded_at", label: "When", mono: true },
+  { key: "actor_id", label: "Who" },
+  { key: "action", label: "Action" },
+  { key: "version", label: "Version", mono: true },
+  { key: "reason_for_change", label: "Reason" },
+];
 
 const {
   observation,

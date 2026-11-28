@@ -2944,6 +2944,7 @@ export default {
   color: var(--semantic-color-text-inverse);
   padding: 14px;
   border-radius: 6px;
+  position: relative;
   overflow-x: auto;
   font-size: 0.85rem;
   margin-bottom: 1em;
@@ -3347,6 +3348,7 @@ export default {
   .reader-body-card {
     padding: 16px;
     min-width: 0;
+    position: relative;
     overflow-x: auto;
   }
 }

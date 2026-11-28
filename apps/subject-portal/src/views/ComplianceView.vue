@@ -91,6 +91,7 @@
           labelled-by="compliance-history-heading"
           hide-header
           plain
+          density="touch"
           wrapper-class="table-responsive"
           table-class="compliance-history-table"
           tbody-id="compliance-history-tbody"
@@ -108,8 +109,9 @@
           empty-message="No history found."
           @row-click="onHistoryRowClick"
         >
-          <template #cell-instName="{ row, index }">
-            <div class="compliance-row-title">
+          <template #cell-instName="{ row, index, isCardView }">
+            <strong v-if="isCardView">{{ row.instName }}</strong>
+            <div v-else class="compliance-row-title">
               <strong>{{ row.instName }}</strong>
               <button
                 :id="`btn-peek-compliance-${index}`"
@@ -126,6 +128,17 @@
             <span :class="['status-pill', row.pillClass]">{{
               row.statusLabel
             }}</span>
+          </template>
+          <template #card-footer="{ row, index }">
+            <button
+              :id="`btn-peek-compliance-${index}`"
+              type="button"
+              class="btn btn-secondary btn-peek-compliance"
+              :data-id="String(index)"
+              @click.stop="openPeek(row, index, $event.currentTarget)"
+            >
+              View Details<span class="sr-only"> for {{ row.instName }}</span>
+            </button>
           </template>
         </ClinicalDataTable>
       </div>
@@ -148,18 +161,31 @@ const session = useSessionStore();
 const complianceStore = useComplianceStore();
 
 const historyColumns = [
-  { key: "instName", label: "Questionnaire" },
+  {
+    key: "instName",
+    label: "Questionnaire",
+    rowHeader: true,
+    sticky: "left",
+    cardRole: "title",
+    sortable: true,
+  },
   {
     key: "scheduledText",
     label: "Scheduled Date",
     cellClass: "tabular-nums",
+    sortable: true,
   },
   {
     key: "submittedText",
     label: "Submitted Date",
     cellClass: "tabular-nums",
   },
-  { key: "statusLabel", label: "Status" },
+  {
+    key: "statusLabel",
+    label: "Status",
+    cardRole: "status",
+    sortable: true,
+  },
 ];
 
 function openPeek(row, index, triggerEl) {

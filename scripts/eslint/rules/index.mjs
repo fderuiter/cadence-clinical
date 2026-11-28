@@ -13,8 +13,10 @@ import { noUnguardedButtonStateRule } from "./no-unguarded-button-state.mjs";
 import { enhancedNoUnlabeledGlyphButtonRule } from "./no-unlabeled-glyph-button.mjs";
 import { noUnscopedClinicalTabsCssRule } from "./no-unscoped-clinical-tabs-css.mjs";
 import { noUnscopedNavigationRule } from "./no-unscoped-navigation.mjs";
+import { noUnicodeSortGlyphsRule } from "./no-unicode-sort-glyphs.mjs";
 import { noVuejsA11ySuppressionRule } from "./no-vuejs-a11y-suppression.mjs";
 import { requireInlineFocusHandoffRule } from "./require-inline-focus-handoff.mjs";
+import { requireScrollWrapperRelativeRule } from "./require-scroll-wrapper-relative.mjs";
 import { requireTabularNumsRule } from "./require-tabular-nums.mjs";
 
 export const customVuePlugin = {
@@ -27,8 +29,10 @@ export const customVuePlugin = {
     "no-transition-all": noTransitionAllRule,
     "no-unlabeled-glyph-button": enhancedNoUnlabeledGlyphButtonRule,
     "no-emoji-glyphs": noEmojiGlyphsRule,
+    "no-unicode-sort-glyphs": noUnicodeSortGlyphsRule,
     "no-aria-label-mismatch": noAriaLabelMismatchRule,
     "require-tabular-nums": requireTabularNumsRule,
+    "require-scroll-wrapper-relative": requireScrollWrapperRelativeRule,
     "no-sub12px-font-size": noSub12pxFontSizeRule,
     "no-custom-font-stack": noCustomFontStackRule,
     "no-vuejs-a11y-suppression": noVuejsA11ySuppressionRule,

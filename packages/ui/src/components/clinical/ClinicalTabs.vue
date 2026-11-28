@@ -507,6 +507,7 @@ defineExpose({
 
 .clinical-tabs-list.orientation-horizontal.overflow-scroll {
   flex-wrap: nowrap;
+  position: relative;
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;

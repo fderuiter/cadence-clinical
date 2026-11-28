@@ -2153,6 +2153,7 @@ onMounted(() => {
 }
 
 .table-container {
+  position: relative;
   overflow-x: auto;
 }
 

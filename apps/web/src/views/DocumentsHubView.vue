@@ -169,6 +169,7 @@
         title="Documents Hub"
         hide-header
         plain
+        sticky-header
         external-pagination
         external-sort
         :initial-sort-key="sortField"
@@ -538,12 +539,16 @@ const documentColumns = [
   {
     key: "select",
     label: "",
+    cardRole: "select",
     headerClass: "checkbox-col",
     cellClass: "checkbox-col",
   },
   {
     key: "filename",
     label: "Name",
+    rowHeader: true,
+    sticky: "left",
+    cardRole: "title",
     sortable: true,
     headerClass: "sortable-th",
     cellClass: "filename-col",
@@ -551,10 +556,18 @@ const documentColumns = [
   {
     key: "study_id",
     label: "Study",
+    cardRole: "identifier",
+    mono: true,
     sortable: true,
     headerClass: "sortable-th",
   },
-  { key: "site_id", label: "Site", sortable: true, headerClass: "sortable-th" },
+  {
+    key: "site_id",
+    label: "Site",
+    mono: true,
+    sortable: true,
+    headerClass: "sortable-th",
+  },
   {
     key: "uploaded_by",
     label: "Uploaded By",
@@ -571,6 +584,7 @@ const documentColumns = [
   {
     key: "status",
     label: "Status",
+    cardRole: "status",
     sortable: true,
     headerClass: "sortable-th",
   },
@@ -578,6 +592,8 @@ const documentColumns = [
   {
     key: "actions",
     label: "Actions",
+    sticky: "right",
+    cardRole: "actions",
     headerClass: "actions-th",
     cellClass: "actions-cell",
     align: "right",
@@ -924,60 +940,20 @@ async function handleDeleteFile(file) {
   overflow-y: auto;
 }
 
-.documents-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.84rem;
-}
-
-.documents-table th {
-  background-color: var(--semantic-color-surface);
-  color: var(--semantic-color-text-secondary);
-  font-weight: 600;
-  font-size: 0.78rem;
-  padding: 10px 14px;
-  border-bottom: 2px solid var(--semantic-color-border);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  user-select: none;
-}
-
-.sortable-th {
-  cursor: pointer;
-}
-.sortable-th:hover {
-  color: var(--primary);
-}
-
-.sort-indicator {
-  font-size: var(--font-size-2xs);
-  margin-left: 4px;
-  color: var(--semantic-color-text-secondary);
-}
-
-.documents-table td {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--semantic-color-surface-header);
-  color: var(--semantic-color-text-dark);
-  vertical-align: middle;
-}
-
-.document-row:hover {
+:deep(.document-row:hover) {
   background-color: var(--semantic-color-surface-muted);
 }
 
-.document-row.row-selected {
+:deep(.document-row.row-selected) {
   background-color: var(--semantic-color-info-bg-soft);
 }
 
-.checkbox-col {
+:deep(.checkbox-col) {
   width: 36px;
   text-align: center;
 }
 
-.filename-col {
+:deep(.filename-col) {
   cursor: pointer;
 }
 

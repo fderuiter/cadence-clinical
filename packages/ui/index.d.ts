@@ -415,6 +415,7 @@ export const ClinicalDrawer: DefineSlotsComponent<
     overlayId?: string;
     overlayClass?: string | any[] | Record<string, boolean>;
     panelClass?: string | any[] | Record<string, boolean>;
+    panelTag?: "div" | "aside" | string;
     bodyClass?: string | any[] | Record<string, boolean>;
     position?: "right" | "left" | "bottom" | string;
     mobileBottomSheet?: boolean;
@@ -457,10 +458,69 @@ export interface ClinicalDataTableColumn {
   label: string;
   sortable?: boolean;
   rowHeader?: boolean;
+  sticky?: "left" | "right" | (string & {});
+  cardRole?:
+    | "select"
+    | "identifier"
+    | "title"
+    | "status"
+    | "actions"
+    | "field"
+    | "hidden"
+    | (string & {});
+  mono?: boolean;
+  fullWidth?: boolean;
   align?: "left" | "right" | "center" | string;
   headerClass?: string | any[] | Record<string, boolean>;
   cellClass?: string | any[] | Record<string, boolean>;
 }
+
+export interface ClinicalRecordCardField {
+  key: string;
+  label: string;
+  value?: any;
+  mono?: boolean;
+  numeric?: boolean;
+  align?: "left" | "right" | "center" | string;
+  fullWidth?: boolean;
+}
+
+export const ClinicalRecordCard: DefineSlotsComponent<
+  {
+    density?: "compact" | "comfortable" | "touch" | string;
+    identifier?: string;
+    nodeRef?: string | EntityLinkNodeRef | null;
+    title?: string;
+    subtitle?: string;
+    status?: string;
+    fields?: ClinicalRecordCardField[];
+    masked?: boolean;
+    maskedMessage?: string;
+    selected?: boolean;
+    interactive?: boolean;
+    cardId?: string;
+    cardClass?: string | any[] | Record<string, boolean>;
+    cardAttrs?: Record<string, any> | null;
+    onSelect?: (event: Event) => void;
+    "onCard-click"?: (event: Event) => void;
+  },
+  {
+    default?: (props: Record<string, never>) => any;
+    select?: (props: Record<string, never>) => any;
+    identifier?: (props: Record<string, never>) => any;
+    title?: (props: Record<string, never>) => any;
+    subtitle?: (props: Record<string, never>) => any;
+    status?: (props: Record<string, never>) => any;
+    masked?: (props: Record<string, never>) => any;
+    "after-body"?: (props: Record<string, never>) => any;
+    footer?: (props: Record<string, never>) => any;
+    actions?: (props: Record<string, never>) => any;
+    [fieldSlot: `field-${string}`]: (props: {
+      field: ClinicalRecordCardField;
+      value: any;
+    }) => any;
+  }
+>;
 
 export const ClinicalDataTable: DefineSlotsComponent<
   {
@@ -469,10 +529,17 @@ export const ClinicalDataTable: DefineSlotsComponent<
     pageSize?: number;
     selectable?: boolean;
     title?: string;
+    caption?: string;
     hideHeader?: boolean;
+    captionVisible?: boolean;
     labelledBy?: string;
     ariaLabel?: string;
     plain?: boolean;
+    density?: "compact" | "comfortable" | "touch" | string;
+    mobileMode?: "auto" | "cards" | "scroll" | "table" | string;
+    mobileBreakpoint?: number;
+    stickyHeader?: boolean;
+    interactiveRows?: boolean;
     containerClass?: string | any[] | Record<string, boolean>;
     wrapperClass?: string | any[] | Record<string, boolean>;
     wrapperTestId?: string;
@@ -519,10 +586,18 @@ export const ClinicalDataTable: DefineSlotsComponent<
       row: any;
       value: any;
       index: number;
+      isCardView?: boolean;
     }) => any;
     "header-actions"?: (props: Record<string, never>) => any;
     "header-select"?: (props: Record<string, never>) => any;
     "masked-row"?: (props: { row: any; index: number; colSpan: number }) => any;
+    "after-row"?: (props: {
+      row: any;
+      index: number;
+      colSpan: number;
+      isCardView: boolean;
+    }) => any;
+    "card-footer"?: (props: { row: any; index: number }) => any;
     empty?: (props: Record<string, never>) => any;
     pagination?: (props: {
       currentPage: number;
@@ -918,6 +993,55 @@ export interface RetryFocusHandoffControls {
 export function useRetryFocusHandoff(
   defaultOptions?: HandoffRetryFocusOptions
 ): RetryFocusHandoffControls;
+
+export interface Use2DGridOptions {
+  containerRef?: import("vue").Ref<HTMLElement | null>;
+  initialRow?: number;
+  initialCol?: number;
+  onSelectCell?: (rowIndex: number, colIndex: number) => void;
+  onEditCell?: (rowIndex: number, colIndex: number) => void;
+  onCopyCell?: (rowIndex: number, colIndex: number, extraData?: any) => void;
+  onCellAction?: (
+    rowIndex: number,
+    colIndex: number,
+    extraData?: any,
+    event?: KeyboardEvent
+  ) => boolean | void;
+}
+
+export interface Use2DGridReturn {
+  containerRef: import("vue").Ref<HTMLElement | null>;
+  activeRowIndex: import("vue").Ref<number>;
+  activeColIndex: import("vue").Ref<number>;
+  isEditing: import("vue").Ref<boolean>;
+  isCellActive: (rowIndex: number, colIndex: number) => boolean;
+  getCellTabindex: (rowIndex: number, colIndex: number) => 0 | -1;
+  selectCell: (rowIndex: number, colIndex: number, focus?: boolean) => void;
+  focusActiveCell: () => Promise<void>;
+  startEditing: (rowIndex?: number, colIndex?: number) => Promise<void>;
+  exitEditing: () => Promise<void>;
+  handleCellKeyDown: (
+    event: KeyboardEvent,
+    rowIndex?: number,
+    colIndex?: number,
+    extraData?: any
+  ) => void;
+  clampCoordinates: () => void;
+}
+
+export function use2DGrid(
+  rowCount:
+    | import("vue").Ref<number>
+    | import("vue").ComputedRef<number>
+    | (() => number)
+    | number,
+  colCount:
+    | import("vue").Ref<number>
+    | import("vue").ComputedRef<number>
+    | (() => number)
+    | number,
+  options?: Use2DGridOptions
+): Use2DGridReturn;
 
 export function useEscapeClose(
   onCloseCallback: (event: KeyboardEvent) => void,
@@ -1361,6 +1485,9 @@ export type ClinicalShellIconName =
 export type ClinicalRouteIconName =
   | "alert-circle"
   | "alert-triangle"
+  | "arrow-down"
+  | "arrow-up"
+  | "arrow-up-down"
   | "book-open"
   | "calendar"
   | "camera"

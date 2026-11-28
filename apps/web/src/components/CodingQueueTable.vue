@@ -968,9 +968,8 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { EmptyState, useFocusTrap } from "ui";
+import { EmptyState, use2DGrid, useFocusTrap } from "ui";
 import { useCodingStore } from "../stores/coding";
-import { use2DGrid } from "../composables/use2DGrid";
 import SkeletonLoader from "./common/SkeletonLoader.vue";
 
 const codingStore = useCodingStore();

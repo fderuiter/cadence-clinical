@@ -633,13 +633,25 @@ useFocusTrap(inspectModalRef, {
 const queueItems = computed(() => etmfStore.qcQueue || []);
 
 const qcColumns = [
-  { key: "select", label: "" },
-  { key: "filename", label: "Document File" },
+  { key: "select", label: "", cardRole: "select" },
+  {
+    key: "filename",
+    label: "Document File",
+    rowHeader: true,
+    sticky: "left",
+    cardRole: "title",
+  },
   { key: "staged_at", label: "Staged At / By" },
   { key: "taxonomy", label: "Predicted DIA Taxonomy" },
   { key: "confidence", label: "AI Confidence" },
-  { key: "discrepancies", label: "Discrepancy Notes" },
-  { key: "adjudication", label: "Adjudication", align: "right" },
+  { key: "discrepancies", label: "Discrepancy Notes", fullWidth: true },
+  {
+    key: "adjudication",
+    label: "Adjudication",
+    sticky: "right",
+    cardRole: "actions",
+    align: "right",
+  },
 ];
 
 const filteredItems = computed(() => {
@@ -820,6 +832,7 @@ onMounted(() => {
 }
 
 .qc-table-wrapper {
+  position: relative;
   overflow-x: auto;
   max-height: 500px;
 }

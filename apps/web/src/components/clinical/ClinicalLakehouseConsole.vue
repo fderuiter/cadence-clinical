@@ -1282,6 +1282,7 @@ onMounted(() => {
 }
 
 .table-container {
+  position: relative;
   overflow-x: auto;
 }
 
@@ -1558,6 +1559,7 @@ onMounted(() => {
   padding: 4px 6px;
   border-radius: 4px;
   max-width: 320px;
+  position: relative;
   overflow-x: auto;
 }
 

@@ -2673,7 +2673,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
 
     // 3. ParticipantRecord.vue (64-char casebookOutcome.sha256 wrapping)
     const firstParticipantBtn = page
-      .locator(".participants-table tbody button.row-select")
+      .locator(".participants-table button.row-select")
       .first();
     await expect(firstParticipantBtn).toBeVisible();
     await firstParticipantBtn.click();

@@ -1,5 +1,5 @@
-import path from "node:path";
 import {
+  createCssAndVueStyleVisitors,
   offsetToLoc,
   splitTopLevelCommas,
   walkCssRuleBlocks,
@@ -48,78 +48,25 @@ export const noSuppressedFocusOutlineRule = {
     },
   },
   create(context) {
-    const filename = (context.filename || context.getFilename() || "")
-      .split(path.sep)
-      .join("/");
-
-    const sourceText = context.sourceCode.getText();
-
-    if (filename.endsWith(".css")) {
-      return {
-        Program() {
-          for (const v of findUnscopedSuppressedOutlinesInCss(sourceText)) {
-            context.report({
-              loc: offsetToLoc(sourceText, v.offset),
-              messageId: "noSuppressedOutline",
-              data: { declaration: v.declaration },
-            });
-          }
-        },
-      };
-    }
-
-    if (!filename.endsWith(".vue")) {
-      return {};
-    }
-
-    const styleBlockCheck = {
-      "Program:exit"() {
-        for (const styleMatch of sourceText.matchAll(
-          /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
-        )) {
-          const contentStart = styleMatch.index + styleMatch[1].length;
-          for (const v of findUnscopedSuppressedOutlinesInCss(styleMatch[2])) {
-            context.report({
-              loc: offsetToLoc(sourceText, contentStart + v.offset),
-              messageId: "noSuppressedOutline",
-              data: { declaration: v.declaration },
-            });
-          }
+    return createCssAndVueStyleVisitors(context, {
+      onCssText(cssText, contentStart, fullSourceText) {
+        for (const v of findUnscopedSuppressedOutlinesInCss(cssText)) {
+          context.report({
+            loc: offsetToLoc(fullSourceText, contentStart + v.offset),
+            messageId: "noSuppressedOutline",
+            data: { declaration: v.declaration },
+          });
         }
       },
-    };
-
-    const parserServices =
-      context.sourceCode?.parserServices || context.parserServices;
-    if (!parserServices?.defineTemplateBodyVisitor) {
-      return styleBlockCheck;
-    }
-
-    return parserServices.defineTemplateBodyVisitor(
-      {
-        VAttribute(node) {
-          const isStaticStyle =
-            !node.directive &&
-            node.key?.type === "VIdentifier" &&
-            node.key.name === "style";
-          const isDynamicStyle =
-            node.directive &&
-            node.key?.type === "VDirectiveKey" &&
-            node.key.name?.name === "bind" &&
-            node.key.argument?.name === "style";
-          if ((isStaticStyle || isDynamicStyle) && node.value) {
-            const rawVal = context.sourceCode.getText(node.value);
-            for (const match of rawVal.matchAll(suppressedOutlineDeclRegex)) {
-              context.report({
-                node: node.value,
-                messageId: "noSuppressedOutline",
-                data: { declaration: match[0].trim() },
-              });
-            }
-          }
-        },
+      onStyleAttr(valueNode, rawVal) {
+        for (const match of rawVal.matchAll(suppressedOutlineDeclRegex)) {
+          context.report({
+            node: valueNode,
+            messageId: "noSuppressedOutline",
+            data: { declaration: match[0].trim() },
+          });
+        }
       },
-      styleBlockCheck
-    );
+    });
   },
 };

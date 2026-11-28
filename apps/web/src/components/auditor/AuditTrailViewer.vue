@@ -142,7 +142,7 @@
     </div>
 
     <!-- Events Table -->
-    <div class="card" style="padding: 0; overflow-x: auto">
+    <div class="card" style="position: relative; padding: 0; overflow-x: auto">
       <table
         class="clinical-table"
         style="width: 100%; border-collapse: collapse; font-size: 13px"

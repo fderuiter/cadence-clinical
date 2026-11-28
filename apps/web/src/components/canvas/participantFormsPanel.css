@@ -94,6 +94,9 @@
 }
 
 .matrix-corner {
+  position: sticky;
+  left: 0;
+  z-index: 3;
   background: var(--semantic-color-surface-subtle);
   font-weight: 700;
   color: var(--semantic-color-text-dark);
@@ -171,8 +174,17 @@
 }
 
 .matrix-row-header {
+  position: sticky;
+  left: 0;
+  z-index: 1;
   background: var(--semantic-color-surface);
   min-width: 10rem;
+}
+
+.casebook-matrix td.focus-ring-inset:focus-visible {
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--semantic-color-accent));
+  outline-offset: -3px;
 }
 
 .row-spec-title {

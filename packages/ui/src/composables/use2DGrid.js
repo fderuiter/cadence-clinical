@@ -1,14 +1,14 @@
-import { ref, watch, unref, nextTick } from "vue";
+import { nextTick, ref, unref, watch } from "vue";
 
 /**
- * use2DGrid - Reusable 2D Grid Keyboard Navigation & ARIA Focus Manager.
- * Manages 2D roving tabindex, arrow key matrix transitions, clamping,
- * and focus retention across state transitions.
+ * use2DGrid - Shared 2D Grid Keyboard Navigation & ARIA Roving Tabindex Manager.
+ * Manages 2D roving tabindex (`0` active, `-1` inactive), arrow key matrix transitions,
+ * Home/End/PageUp/PageDown traversal, coordinate clamping, and inline edit focus handoff.
  *
- * @param {Ref<number>|Function|number} rowCount - Total rows in grid or getter
- * @param {Ref<number>|Function|number} colCount - Total columns in grid or getter
- * @param {Object} options - Configuration options
- * @param {Ref<HTMLElement>} [options.containerRef] - Container element reference
+ * @param {import("vue").Ref<number>|Function|number} rowCount - Total rows in grid or getter
+ * @param {import("vue").Ref<number>|Function|number} colCount - Total columns in grid or getter
+ * @param {Object} [options] - Configuration options
+ * @param {import("vue").Ref<HTMLElement|null>} [options.containerRef] - Container element reference
  * @param {number} [options.initialRow=0] - Starting row coordinate
  * @param {number} [options.initialCol=0] - Starting column coordinate
  * @param {Function} [options.onSelectCell] - Callback (r, c) when a cell is selected
@@ -26,7 +26,7 @@ export function use2DGrid(rowCount, colCount, options = {}) {
   const getRowCount = () => {
     try {
       const val = typeof rowCount === "function" ? rowCount() : unref(rowCount);
-      return typeof val === "number" && !isNaN(val) ? val : 0;
+      return typeof val === "number" && !Number.isNaN(val) ? val : 0;
     } catch {
       return 0;
     }
@@ -35,14 +35,14 @@ export function use2DGrid(rowCount, colCount, options = {}) {
   const getColCount = () => {
     try {
       const val = typeof colCount === "function" ? colCount() : unref(colCount);
-      return typeof val === "number" && !isNaN(val) ? val : 0;
+      return typeof val === "number" && !Number.isNaN(val) ? val : 0;
     } catch {
       return 0;
     }
   };
 
   /**
-   * Clamp coordinate values to ensure they remain within current matrix bounds.
+   * Clamp coordinate values so they remain within current matrix bounds.
    */
   const clampCoordinates = () => {
     const rows = getRowCount();
@@ -65,55 +65,8 @@ export function use2DGrid(rowCount, colCount, options = {}) {
     }
   };
 
-  // Synchronize active coordinates when data row/col counts change
-  watch(
-    [() => getRowCount(), () => getColCount()],
-    () => {
-      const isFocusInGrid =
-        containerRef.value &&
-        containerRef.value.contains(document.activeElement);
-      clampCoordinates();
-      if (isFocusInGrid) {
-        focusActiveCell();
-      }
-    },
-    { immediate: true }
-  );
-
   /**
-   * Check if given coordinates match the active focus position.
-   */
-  const isCellActive = (rIndex, cIndex) => {
-    return activeRowIndex.value === rIndex && activeColIndex.value === cIndex;
-  };
-
-  /**
-   * Calculate 2D roving tabindex value for a cell.
-   * Returns 0 for active cell, -1 for all other cells.
-   */
-  const getCellTabindex = (rIndex, cIndex) => {
-    return isCellActive(rIndex, cIndex) ? 0 : -1;
-  };
-
-  /**
-   * Select cell coordinates and optionally set DOM focus.
-   */
-  const selectCell = (rIndex, cIndex, focus = true) => {
-    activeRowIndex.value = rIndex;
-    activeColIndex.value = cIndex;
-    clampCoordinates();
-
-    if (options.onSelectCell) {
-      options.onSelectCell(activeRowIndex.value, activeColIndex.value);
-    }
-
-    if (focus) {
-      focusActiveCell();
-    }
-  };
-
-  /**
-   * Focus active cell DOM element in container.
+   * Focus active cell DOM element (`[data-row][data-col]`) inside containerRef.
    */
   const focusActiveCell = async () => {
     await nextTick();
@@ -131,8 +84,58 @@ export function use2DGrid(rowCount, colCount, options = {}) {
     }
   };
 
+  watch(
+    [() => getRowCount(), () => getColCount()],
+    () => {
+      const activeEl =
+        typeof document !== "undefined" ? document.activeElement : null;
+      const isFocusInGrid = Boolean(
+        containerRef.value &&
+        activeEl &&
+        typeof containerRef.value.contains === "function" &&
+        containerRef.value.contains(activeEl)
+      );
+      clampCoordinates();
+      if (isFocusInGrid) {
+        void focusActiveCell();
+      }
+    },
+    { immediate: true }
+  );
+
   /**
-   * Enter inline editing or action mode for a cell.
+   * Check if given coordinates match the active focus position.
+   */
+  const isCellActive = (rIndex, cIndex) => {
+    return activeRowIndex.value === rIndex && activeColIndex.value === cIndex;
+  };
+
+  /**
+   * Calculate 2D roving tabindex value for a cell (`0` active, `-1` inactive).
+   */
+  const getCellTabindex = (rIndex, cIndex) => {
+    return isCellActive(rIndex, cIndex) ? 0 : -1;
+  };
+
+  /**
+   * Select cell coordinates and optionally move DOM focus.
+   */
+  const selectCell = (rIndex, cIndex, focus = true) => {
+    activeRowIndex.value = rIndex;
+    activeColIndex.value = cIndex;
+    clampCoordinates();
+
+    if (options.onSelectCell) {
+      options.onSelectCell(activeRowIndex.value, activeColIndex.value);
+    }
+
+    if (focus) {
+      void focusActiveCell();
+    }
+  };
+
+  /**
+   * Enter inline editing mode for a cell.
    */
   const startEditing = async (rIndex, cIndex) => {
     if (typeof rIndex === "number" && typeof cIndex === "number") {
@@ -161,9 +164,44 @@ export function use2DGrid(rowCount, colCount, options = {}) {
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
-        exitEditing();
+        void exitEditing();
       }
       return;
+    }
+
+    const targetEl = event.target;
+    const isTextEntryChild =
+      targetEl &&
+      targetEl !== event.currentTarget &&
+      typeof targetEl.closest === "function" &&
+      Boolean(
+        targetEl.closest(
+          'input:not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable="true"]'
+        )
+      );
+
+    if (isTextEntryChild) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        void focusActiveCell();
+        return;
+      }
+      if (
+        event.key === "ArrowLeft" ||
+        event.key === "ArrowRight" ||
+        event.key === "Home" ||
+        event.key === "End" ||
+        event.key === " "
+      ) {
+        return;
+      }
+      if (
+        (event.key === "ArrowUp" || event.key === "ArrowDown") &&
+        Boolean(targetEl.closest('input[type="number"], select, textarea'))
+      ) {
+        return;
+      }
     }
 
     if (typeof rIndex === "number" && typeof cIndex === "number") {
@@ -233,7 +271,6 @@ export function use2DGrid(rowCount, colCount, options = {}) {
       );
       handled = true;
     } else if (event.key === "Enter" || event.key === " ") {
-      const targetEl = event.target;
       const isInteractiveChild =
         targetEl &&
         targetEl !== event.currentTarget &&
@@ -262,7 +299,7 @@ export function use2DGrid(rowCount, colCount, options = {}) {
     if (handled) {
       event.preventDefault();
       clampCoordinates();
-      focusActiveCell();
+      void focusActiveCell();
     }
   };
 

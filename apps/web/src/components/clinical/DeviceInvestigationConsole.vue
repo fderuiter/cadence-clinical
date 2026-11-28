@@ -2126,6 +2126,7 @@ onMounted(() => {
   display: flex;
   gap: 8px;
   border-bottom: 2px solid var(--semantic-color-border);
+  position: relative;
   overflow-x: auto;
 }
 
@@ -2345,6 +2346,7 @@ onMounted(() => {
 
 /* Tables */
 .table-responsive {
+  position: relative;
   overflow-x: auto;
   margin-top: 8px;
 }

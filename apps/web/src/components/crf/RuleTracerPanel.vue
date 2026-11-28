@@ -498,6 +498,7 @@ function resetSimulation() {
   color: var(--semantic-color-text-inverse);
   font-family: var(--semantic-font-mono);
   font-size: 0.75rem;
+  position: relative;
   overflow-x: auto;
 }
 

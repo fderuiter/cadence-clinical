@@ -4,7 +4,7 @@ import {
   canStageEtmfQc,
   canTagEtmf,
 } from "../../../canvas/authority.ts";
-import { use2DGrid } from "../../../composables/use2DGrid";
+import { use2DGrid } from "ui";
 import { useAuthStore } from "../../../stores/auth";
 import { useEtmfStore } from "../../../stores/etmf";
 import { formatDate } from "../../../utils/formatDate";

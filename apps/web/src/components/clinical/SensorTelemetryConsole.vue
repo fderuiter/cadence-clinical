@@ -1550,6 +1550,7 @@ onMounted(() => {
 
 /* Tables */
 .table-container {
+  position: relative;
   overflow-x: auto;
 }
 
@@ -1597,6 +1598,7 @@ onMounted(() => {
   padding: 14px;
   border-radius: 6px;
   font-size: 12px;
+  position: relative;
   overflow-x: auto;
   margin: 0;
   font-family: var(--semantic-font-mono);

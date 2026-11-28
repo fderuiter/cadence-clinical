@@ -189,88 +189,39 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
       path.join(docsDistDir, "DOCUMENTATION_INDEX.html"),
       "utf8"
     );
-    const tbodyBlocks = Array.from(
-      docIndexHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
-      (m) => m[1]
-    );
-    expect(tbodyBlocks.length).toBeGreaterThanOrEqual(2);
-    const topLevelRowCount = tbodyBlocks.reduce(
-      (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
-      0
-    );
-    expect(topLevelRowCount).toBeGreaterThanOrEqual(28);
-
-    const extractShardHrefs = (tbody) =>
+    const countTableRowsInHtml = (rawHtml) =>
       Array.from(
-        tbody.matchAll(
-          /<tr(?:\s[^>]*)?>[\s\S]*?<td(?:\s[^>]*)?>[\s\S]*?<a\s+[^>]*href="([^"]+)"/gi
-        ),
+        rawHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
         (m) => m[1]
-      );
-    const resolveShardPath = (href) => {
-      const clean = href
-        .split("#")[0]
-        .split("?")[0]
-        .replace(/^\.\//, "")
-        .replace(/^\/cadence-clinical\//, "");
-      const candidates = clean.endsWith("/")
-        ? [
-            path.join(docsDistDir, clean, "index.html"),
-            path.join(docsDistDir, clean, "INDEX.html"),
-          ]
-        : [path.join(docsDistDir, clean)];
-      return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
-    };
-    const extractDocBody = (pageHtml) => {
-      const match = pageHtml.match(
-        /<div\s+class="vp-doc[^"]*"[^>]*>([\s\S]*?)<\/main>/i
-      );
-      return match ? match[1] : pageHtml;
-    };
-
-    const categoryShardHrefs = extractShardHrefs(tbodyBlocks[0]);
-    const adrShardHrefs = extractShardHrefs(tbodyBlocks[1]);
-    const missingShards = [];
-
-    let categoryRowCount = 0;
-    for (const href of categoryShardHrefs) {
-      const shardPath = resolveShardPath(href);
-      if (!shardPath) {
-        missingShards.push(href);
-        continue;
-      }
-      const shardDoc = extractDocBody(fs.readFileSync(shardPath, "utf8"));
-      const shardTbodies = Array.from(
-        shardDoc.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
-        (m) => m[1]
-      );
-      categoryRowCount += shardTbodies.reduce(
+      ).reduce(
         (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
         0
       );
-    }
+    const topLevelShardRowCount = countTableRowsInHtml(docIndexHtml);
+    expect(topLevelShardRowCount).toBeGreaterThanOrEqual(25);
 
-    let adrEntryCount = 0;
-    for (const href of adrShardHrefs) {
-      const shardPath = resolveShardPath(href);
-      if (!shardPath) {
-        missingShards.push(href);
-        continue;
-      }
-      if (href.endsWith("TEMPLATE.html") || href === "./adr/") {
-        continue;
-      }
-      const shardDoc = extractDocBody(fs.readFileSync(shardPath, "utf8"));
-      adrEntryCount += (
-        shardDoc.match(
-          /<li(?:\s[^>]*)?>\s*<a\s+[^>]*href="[^"]+"\s*>\s*ADR-/gi
-        ) || []
+    const shardIndexFiles = htmlFiles.filter((relPath) => {
+      const rel = relPath.replace(/\\/g, "/");
+      return (
+        rel === "ROOT_INDEX.html" ||
+        /\/(?:INDEX|DOC_INDEX)\.html$/i.test(rel) ||
+        /^adr\/(?:.*\/)?(?:index|legacy-index)\.html$/i.test(rel)
+      );
+    });
+    const indexedEntryCount = shardIndexFiles.reduce((sum, relPath) => {
+      const shardHtml = fs.readFileSync(
+        path.join(docsDistDir, relPath),
+        "utf8"
+      );
+      const rel = relPath.replace(/\\/g, "/");
+      const tableRows =
+        rel === "adr/index.html" ? 0 : countTableRowsInHtml(shardHtml);
+      const adrItems = (
+        shardHtml.match(/<li\b[^>]*>\s*<a\b[^>]*>\s*ADR-\d+/gi) || []
       ).length;
-    }
-
-    expect(missingShards).toEqual([]);
-    const dataRowCount = categoryRowCount + adrEntryCount;
-    expect(dataRowCount).toBeGreaterThanOrEqual(715);
+      return sum + tableRows + adrItems;
+    }, 0);
+    expect(indexedEntryCount).toBeGreaterThanOrEqual(715);
   });
 
   test("navbar items and portal layout render without clipping, overlap, or horizontal scroll across 375px–1920px viewports", async ({

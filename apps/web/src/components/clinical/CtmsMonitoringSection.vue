@@ -601,13 +601,21 @@ const canComplete = computed(() => canCompleteMonitoringVisits(authStore));
 const canSignOff = computed(() => canSignOffMonitoringVisits(authStore));
 
 const visitColumns = [
-  { key: "site_id", label: "Site", rowHeader: true },
-  { key: "visit_type", label: "Type" },
+  {
+    key: "site_id",
+    label: "Site",
+    rowHeader: true,
+    sticky: "left",
+    cardRole: "identifier",
+    mono: true,
+    sortable: true,
+  },
+  { key: "visit_type", label: "Type", cardRole: "title", sortable: true },
   { key: "cra_id", label: "Monitor" },
-  { key: "scheduled_date", label: "Scheduled" },
-  { key: "status", label: "Status" },
+  { key: "scheduled_date", label: "Scheduled", sortable: true },
+  { key: "status", label: "Status", cardRole: "status", sortable: true },
   { key: "findings", label: "Findings" },
-  { key: "actions", label: "Actions" },
+  { key: "actions", label: "Actions", sticky: "right", cardRole: "actions" },
 ];
 
 const visits = ref<MonitoringVisitRow[]>([]);

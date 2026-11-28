@@ -1,6 +1,9 @@
 import {
   AlertCircle,
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   BookOpen,
   Calendar,
   Camera,
@@ -58,6 +61,9 @@ export { CLINICAL_ROUTE_ICON_NAMES, isClinicalRouteIconName };
 export const CLINICAL_ROUTE_ICONS = {
   "alert-circle": AlertCircle,
   "alert-triangle": AlertTriangle,
+  "arrow-down": ArrowDown,
+  "arrow-up": ArrowUp,
+  "arrow-up-down": ArrowUpDown,
   "book-open": BookOpen,
   calendar: Calendar,
   camera: Camera,

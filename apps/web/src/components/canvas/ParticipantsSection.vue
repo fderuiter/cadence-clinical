@@ -222,9 +222,17 @@ const emit = defineEmits<{
 const SEARCH_DEBOUNCE_MS = 180;
 
 const participantColumns = [
-  { key: "subject_id", label: "Participant", rowHeader: true },
-  { key: "status", label: "State" },
-  { key: "site_id", label: "Site" },
+  {
+    key: "subject_id",
+    label: "Participant",
+    rowHeader: true,
+    sticky: "left",
+    cardRole: "identifier",
+    mono: true,
+    sortable: true,
+  },
+  { key: "status", label: "State", cardRole: "status", sortable: true },
+  { key: "site_id", label: "Site", mono: true, sortable: true },
   { key: "enrollment_index", label: "Enrollment", align: "right" },
 ];
 

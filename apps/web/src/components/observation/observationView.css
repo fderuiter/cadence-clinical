@@ -115,76 +115,53 @@
   overflow-wrap: anywhere;
 }
 
-.observation-table-scroll {
+:deep(.observation-table-scroll) {
   position: relative;
   overflow-x: auto;
   max-width: 100%;
   margin-bottom: 16px;
-  padding: 2px;
   box-sizing: border-box;
 }
 
-.observation-table-scroll:focus-visible {
-  outline: 2px solid var(--semantic-color-accent);
-  outline-offset: 2px;
-  border-radius: 4px;
+@media (min-width: 481px) {
+  :deep(table.observation-revisions),
+  :deep(table.observation-audit) {
+    min-width: 46rem;
+  }
 }
 
-table {
-  width: 100%;
-  min-width: 46rem;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  text-align: left;
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--semantic-color-border);
-}
-
-.observation-revisions th:nth-child(1),
-.observation-revisions td:nth-child(1),
-.observation-audit th:nth-child(1),
-.observation-audit td:nth-child(1),
-.observation-audit th:nth-child(5),
-.observation-audit td:nth-child(5) {
+:deep(.observation-revisions th:nth-child(1)),
+:deep(.observation-revisions td:nth-child(1)),
+:deep(.observation-audit th:nth-child(1)),
+:deep(.observation-audit td:nth-child(1)),
+:deep(.observation-audit th:nth-child(5)),
+:deep(.observation-audit td:nth-child(5)) {
   min-width: 5rem;
 }
 
-.observation-revisions th:nth-child(2),
-.observation-revisions td:nth-child(2),
-.observation-revisions th:nth-child(4),
-.observation-revisions td:nth-child(4),
-.observation-audit th:nth-child(3),
-.observation-audit td:nth-child(3) {
+:deep(.observation-revisions th:nth-child(2)),
+:deep(.observation-revisions td:nth-child(2)),
+:deep(.observation-revisions th:nth-child(4)),
+:deep(.observation-revisions td:nth-child(4)),
+:deep(.observation-audit th:nth-child(3)),
+:deep(.observation-audit td:nth-child(3)) {
   min-width: 7rem;
 }
 
-.observation-revisions th:nth-child(3),
-.observation-revisions td:nth-child(3),
-.observation-audit th:nth-child(4),
-.observation-audit td:nth-child(4),
-.observation-audit th:nth-child(6),
-.observation-audit td:nth-child(6) {
+:deep(.observation-revisions th:nth-child(3)),
+:deep(.observation-revisions td:nth-child(3)),
+:deep(.observation-audit th:nth-child(4)),
+:deep(.observation-audit td:nth-child(4)),
+:deep(.observation-audit th:nth-child(6)),
+:deep(.observation-audit td:nth-child(6)) {
   min-width: 9rem;
 }
 
-.observation-revisions th:nth-child(5),
-.observation-revisions td:nth-child(5),
-.observation-revisions th:nth-child(6),
-.observation-revisions td:nth-child(6),
-.observation-audit th:nth-child(2),
-.observation-audit td:nth-child(2) {
+:deep(.observation-revisions th:nth-child(5)),
+:deep(.observation-revisions td:nth-child(5)),
+:deep(.observation-revisions th:nth-child(6)),
+:deep(.observation-revisions td:nth-child(6)),
+:deep(.observation-audit th:nth-child(2)),
+:deep(.observation-audit td:nth-child(2)) {
   min-width: 8.5rem;
-}
-
-.observation-revisions td:nth-child(1),
-.observation-revisions td:nth-child(2),
-.observation-revisions td:nth-child(5),
-.observation-revisions td:nth-child(6),
-.observation-audit td:nth-child(1),
-.observation-audit td:nth-child(2),
-.observation-audit td:nth-child(5) {
-  font-family: var(--semantic-font-mono);
 }

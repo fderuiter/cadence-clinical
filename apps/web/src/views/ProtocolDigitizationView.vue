@@ -1628,6 +1628,7 @@ const commitAndActivateEDC = async () => {
   padding: 16px;
   border-radius: 6px;
   font-size: 0.8rem;
+  position: relative;
   overflow-x: auto;
   max-height: 480px;
 }

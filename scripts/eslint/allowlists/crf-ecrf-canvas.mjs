@@ -10,10 +10,7 @@ export const CRF_ECRF_CANVAS_EXEMPT_2D_MATRICES = [
 
 export const CRF_ECRF_CANVAS_RAW_TABLE_ALLOWLIST = [
   "components/crf/CanvasFieldWidget.vue",
-  "components/ecrf/EcrfItemTable.vue",
-  "components/ecrf/EcrfSignaturesSection.vue",
   "components/persona/CraVerificationConsole.vue",
-  "views/ObservationView.vue",
 ];
 
 export const CRF_ECRF_CANVAS_UNGUARDED_BUTTON_ALLOWLIST = [

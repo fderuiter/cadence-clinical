@@ -261,6 +261,7 @@ const addCriterion = () => {
 }
 
 .crit-table-container {
+  position: relative;
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);

@@ -94,6 +94,7 @@
           activeSchedule.columns.length > 0 &&
           activeSchedule.scheduledRows.length > 0
         "
+        ref="matrixContainerRef"
         class="casebook-matrix-scroll"
         role="region"
         :aria-label="`${subjectCode} scheduled casebook matrix`"
@@ -179,7 +180,7 @@
           </thead>
           <tbody data-testid="casebook-scheduled-rows">
             <tr
-              v-for="row in activeSchedule.scheduledRows"
+              v-for="(row, rowIdx) in activeSchedule.scheduledRows"
               :key="row.collectionSpecId"
               :data-spec="row.collectionSpecId"
             >
@@ -197,7 +198,15 @@
                 v-for="(col, colIdx) in activeSchedule.columns"
                 :key="col.activityId"
                 :data-cell="`${row.collectionSpecId}:${col.activityId}`"
-                :class="cellClasses(row, colIdx, col.activityId)"
+                :data-row="rowIdx"
+                :data-col="colIdx"
+                :tabindex="getCellTabindex(rowIdx, colIdx)"
+                :class="[
+                  cellClasses(row, colIdx, col.activityId),
+                  'focus-ring-inset',
+                ]"
+                @click="selectCell(rowIdx, colIdx, false)"
+                @keydown="handleCellKeyDown($event, rowIdx, colIdx)"
               >
                 <template
                   v-if="
@@ -377,7 +386,8 @@
 </template>
 
 <script setup lang="ts">
-import { getCurrentInstance } from "vue";
+import { getCurrentInstance, ref } from "vue";
+import { use2DGrid } from "ui";
 import * as VueRouter from "vue-router";
 import type { RouteLocationRaw } from "vue-router";
 import type { EcrfFormSummary } from "../../api/ecrfFormsApi";
@@ -472,6 +482,21 @@ const {
   unmappedScheduledForms,
   unscheduledForms,
 } = useParticipantCasebook(props, (loaded) => emit("forms-loaded", loaded));
+
+const matrixContainerRef = ref<HTMLElement | null>(null);
+const { getCellTabindex, selectCell, handleCellKeyDown } = use2DGrid(
+  () => activeSchedule.value?.scheduledRows.length ?? 0,
+  () => activeSchedule.value?.columns.length ?? 0,
+  {
+    containerRef: matrixContainerRef,
+    onCellAction: (rIdx: number, cIdx: number) => {
+      const link = matrixContainerRef.value?.querySelector<HTMLElement>(
+        `[data-row="${rIdx}"][data-col="${cIdx}"] a, [data-row="${rIdx}"][data-col="${cIdx}"] button`
+      );
+      link?.click();
+    },
+  }
+);
 </script>
 
 <style scoped src="./participantFormsPanel.css"></style>

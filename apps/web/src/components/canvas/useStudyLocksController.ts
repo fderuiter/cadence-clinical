@@ -19,7 +19,7 @@ export type QuickDialogState =
   | { mode: "release"; lockRef: string; lockKind: string };
 
 const LOCKS_RECOVERED_TARGETS = [
-  '[data-testid="study-locks-table"] button:not([disabled])',
+  '[data-testid="study-locks-table"] tbody button:not([disabled]), [data-testid="study-locks-table"] .clinical-record-card button:not([disabled])',
   '[data-testid="study-locks-table-scroll"]',
   "#lock-apply-scope-kind",
   "#study-locks-title",
@@ -186,14 +186,29 @@ export function useStudyLocksController(studyCodeGetter: () => string) {
   }
 
   const lockColumns = computed(() => [
-    { key: "kind", label: "Kind" },
-    { key: "scope", label: "Scope" },
+    {
+      key: "kind",
+      label: "Kind",
+      rowHeader: true,
+      sticky: "left" as const,
+      cardRole: "identifier" as const,
+    },
+    { key: "scope", label: "Scope", cardRole: "title" as const },
     { key: "participant", label: "Participant" },
     { key: "signed_by", label: "Signed by" },
     { key: "locked_at", label: "Locked at" },
-    { key: "reason", label: "Reason" },
-    { key: "state", label: "State" },
-    ...(canRelease.value ? [{ key: "action", label: "Action" }] : []),
+    { key: "reason", label: "Reason", fullWidth: true },
+    { key: "state", label: "State", cardRole: "status" as const },
+    ...(canRelease.value
+      ? [
+          {
+            key: "action",
+            label: "Action",
+            sticky: "right" as const,
+            cardRole: "actions" as const,
+          },
+        ]
+      : []),
   ]);
 
   const isApplyDisabled = computed(() => {

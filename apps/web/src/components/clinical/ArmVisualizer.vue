@@ -253,6 +253,7 @@ const formatArmType = (type) => {
   display: flex;
   gap: 6px;
   margin-top: 12px;
+  position: relative;
   overflow-x: auto;
 }
 
@@ -327,6 +328,7 @@ const formatArmType = (type) => {
   display: flex;
   align-items: center;
   gap: 12px;
+  position: relative;
   overflow-x: auto;
 }
 

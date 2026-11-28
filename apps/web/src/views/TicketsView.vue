@@ -708,25 +708,41 @@ const ticketTableColumns = computed(() => [
         {
           key: "select",
           label: "",
+          cardRole: "select",
           headerClass: "checkbox-cell",
           cellClass: "checkbox-cell",
         },
       ]
     : []),
-  { key: "reference", label: "Reference", cellClass: "ref-cell font-mono" },
-  { key: "title", label: "Title", cellClass: "title-cell font-semibold" },
+  {
+    key: "reference",
+    label: "Reference",
+    rowHeader: true,
+    sticky: "left",
+    cardRole: "identifier",
+    mono: true,
+    sortable: true,
+    cellClass: "ref-cell font-mono",
+  },
+  {
+    key: "title",
+    label: "Title",
+    cardRole: "title",
+    sortable: true,
+    cellClass: "title-cell font-semibold",
+  },
   { key: "category", label: "Category" },
   { key: "gxp_severity", label: "GxP Severity" },
-  { key: "status", label: "Status" },
+  { key: "status", label: "Status", cardRole: "status", sortable: true },
   {
     key: "context",
     label: "Study / Site / Subject",
     cellClass: "context-cell",
   },
-  { key: "priority", label: "Priority" },
+  { key: "priority", label: "Priority", sortable: true },
   { key: "sla", label: "SLA Status" },
   { key: "signoff", label: "Sign-Off" },
-  { key: "actions", label: "Actions" },
+  { key: "actions", label: "Actions", sticky: "right", cardRole: "actions" },
 ]);
 
 const resolveTicketRowClass = (t) => [

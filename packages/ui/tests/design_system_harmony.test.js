@@ -29,6 +29,7 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ClinicalQueryFlag",
   "ClinicalQueryPanel",
   "ClinicalRadioGroup",
+  "ClinicalRecordCard",
   "ClinicalTabs",
   "ClinicalThemeToggle",
   "ClinicalToastHost",
@@ -40,6 +41,7 @@ const EXPECTED_SHARED_COMPONENTS = [
 ];
 
 const EXPECTED_KEYBOARD_HELPERS = [
+  "use2DGrid",
   "useFocusTrap",
   "hasActiveModalFocusTrap",
   "getTopActiveModalContainer",
@@ -236,14 +238,14 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(27);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(28);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
     });
 
-    it("exposes all 5 keyboard interaction helpers, floating position helpers, theme controller helpers, and createSrOnlyActionButton from root index.js", () => {
-      expect(EXPECTED_KEYBOARD_HELPERS).toHaveLength(5);
+    it("exposes all 6 keyboard interaction helpers, floating position helpers, theme controller helpers, and createSrOnlyActionButton from root index.js", () => {
+      expect(EXPECTED_KEYBOARD_HELPERS).toHaveLength(6);
       expect(EXPECTED_FLOATING_HELPERS).toHaveLength(5);
       expect(EXPECTED_THEME_FUNCTIONS).toHaveLength(10);
       expect(EXPECTED_THEME_CONSTANTS).toHaveLength(4);
@@ -320,6 +322,8 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       const webFiles = walkFiles(webSrcDir, [".vue", ".js", ".ts"]);
       const forbiddenNames = new Set([
         "EmptyState.vue",
+        "use2DGrid.js",
+        "use2DGrid.ts",
         "useFocusTrap.js",
         "useFocusTrap.ts",
         "useEscapeClose.js",
@@ -2809,6 +2813,10 @@ const tabs = [{ id: "a", label: "Alpha" }];
       path.join(webSrcDir, "components/tickets/TicketCreateModal.vue"),
       path.join(webSrcDir, "components/tickets/TicketSignModal.vue"),
       path.join(webSrcDir, "components/tickets/TicketDetailDrawer.vue"),
+      path.join(webSrcDir, "components/ecrf/EcrfItemTable.vue"),
+      path.join(webSrcDir, "components/ecrf/EcrfSignaturesSection.vue"),
+      path.join(webSrcDir, "views/ObservationView.vue"),
+      path.join(webSrcDir, "views/AuditView.vue"),
       path.join(portalSrcDir, "views/ComplianceView.vue"),
     ];
 
@@ -3558,5 +3566,156 @@ describe("ADR-2679 centralized Lucide icons and zero-emoji guardrails", () => {
     expect(() =>
       uiExports.renderClinicalIconSvg("not-a-valid-icon", { size: 16 })
     ).toThrow(/Unknown ClinicalIcon name/);
+  });
+});
+
+describe("Slot-projected ClinicalRecordCard, shared use2DGrid & scroll-wrapper / sort-glyph guardrails", () => {
+  it("requires position: relative (or sticky/absolute/fixed) on every scroll wrapper across packages/ui, apps/web/src, and apps/subject-portal/src", async () => {
+    const { walkCssRuleBlocks } =
+      await import("../../../scripts/eslint/shared.mjs");
+    const overflowRe = /\boverflow(?:-x)?\s*:\s*(?:auto|scroll)\b/i;
+    const posRe = /\bposition\s*:\s*(?:relative|sticky|absolute|fixed)\b/i;
+
+    const files = [
+      path.join(uiDir, "tokens.css"),
+      path.join(uiDir, "responsive.css"),
+      ...walkFiles(path.join(uiDir, "src"), [".vue", ".css"]),
+      ...walkFiles(webSrcDir, [".vue", ".css"]),
+      ...walkFiles(portalSrcDir, [".vue", ".css"]),
+    ];
+
+    const violations = [];
+    for (const file of files) {
+      const rel = path.relative(repoRoot, file).split(path.sep).join("/");
+      const raw = fs.readFileSync(file, "utf-8");
+      const cssBlocks = file.endsWith(".css")
+        ? [raw]
+        : [...raw.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)].map(
+            (m) => m[1]
+          );
+      for (const css of cssBlocks) {
+        walkCssRuleBlocks(css, ({ rawSelectorText, body }) => {
+          if (overflowRe.test(body) && !posRe.test(body)) {
+            violations.push(`${rel} (${rawSelectorText.trim()})`);
+          }
+        });
+      }
+      if (file.endsWith(".vue")) {
+        for (const m of raw.matchAll(/\bstyle\s*=\s*"([^"]*)"/gi)) {
+          if (overflowRe.test(m[1]) && !posRe.test(m[1])) {
+            violations.push(`${rel} (inline style="${m[1]}")`);
+          }
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+
+    const responsiveCss = fs.readFileSync(
+      path.join(uiDir, "responsive.css"),
+      "utf-8"
+    );
+    expect(responsiveCss).toMatch(
+      /@media\s*\(min-width:\s*481px\)\s*\{[\s\S]*?\.scrollable-table-wrapper\s+table\s*\{[\s\S]*?min-width:\s*600px/
+    );
+    expect(responsiveCss).toContain(".scrollable-table-wrapper--matrix table");
+  });
+
+  it("eliminates Unicode sort glyphs in ClinicalDataTable.vue and wires 16px 1.75px-stroke Lucide icons + 44px/48px targets", () => {
+    const tableSfc = fs.readFileSync(
+      path.join(uiDir, "src/components/clinical/ClinicalDataTable.vue"),
+      "utf-8"
+    );
+    expect(tableSfc).not.toMatch(/[\u2191\u2193\u2195\u21C5\u25B2-\u25BF]/);
+    expect(tableSfc).toContain("ArrowUpDown");
+    expect(tableSfc).toContain("ArrowUp");
+    expect(tableSfc).toContain("ArrowDown");
+    expect(tableSfc).toContain(':stroke-width="CLINICAL_ICON_STROKE_WIDTH"');
+    expect(tableSfc).toContain("ClinicalRecordCard");
+    expect(tableSfc).toMatch(/\.sort-button\s*\{[\s\S]*?min-height:\s*44px/);
+    expect(tableSfc).toMatch(/\.pagination-btn\s*\{[\s\S]*?min-height:\s*44px/);
+    expect(tableSfc).toContain("48px");
+  });
+
+  it("wires shared use2DGrid roving tabindex across all seven EXEMPT_2D_CLINICAL_MATRICES", async () => {
+    const { EXEMPT_2D_CLINICAL_MATRICES } =
+      await import("../../../scripts/eslint/allowlists/index.mjs");
+    expect(EXEMPT_2D_CLINICAL_MATRICES).toHaveLength(7);
+    for (const relMatrix of EXEMPT_2D_CLINICAL_MATRICES) {
+      const fullPath = path.join(webSrcDir, relMatrix);
+      const src = fs.readFileSync(fullPath, "utf-8");
+      const usesDirectOrComposable =
+        src.includes("use2DGrid") ||
+        (relMatrix.endsWith("DocumentGrid.vue") &&
+          fs
+            .readFileSync(
+              path.join(
+                webSrcDir,
+                "components/etmf/document-grid/useDocumentGridState.js"
+              ),
+              "utf-8"
+            )
+            .includes("use2DGrid"));
+      expect(
+        usesDirectOrComposable,
+        `${relMatrix} must wire shared use2DGrid`
+      ).toBe(true);
+      expect(
+        /getCellTabindex|getActiveCellTabindex|gridCellBind/.test(src),
+        `${relMatrix} must bind roving tabindex`
+      ).toBe(true);
+    }
+  });
+
+  it("fails ESLint when a scroll wrapper omits position: relative or when ClinicalDataTable contains Unicode sort characters", async () => {
+    const { ESLint } = await import("eslint");
+    const eslint = new ESLint({
+      cwd: repoRoot,
+      overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+    });
+
+    const [badCssScroll] = await eslint.lintText(
+      `.table-wrap {\n  overflow-x: auto;\n}\n`,
+      { filePath: path.join(webSrcDir, "components/__BadScroll.css") }
+    );
+    expect(
+      badCssScroll.messages.filter(
+        (m) => m.ruleId === "custom-vue/require-scroll-wrapper-relative"
+      )
+    ).toHaveLength(1);
+
+    const [badVueInlineScroll] = await eslint.lintText(
+      `<template>\n  <div style="overflow-x: auto">content</div>\n</template>\n`,
+      { filePath: path.join(webSrcDir, "views/__BadInlineScroll.vue") }
+    );
+    expect(
+      badVueInlineScroll.messages.filter(
+        (m) => m.ruleId === "custom-vue/require-scroll-wrapper-relative"
+      )
+    ).toHaveLength(1);
+
+    const [goodCssScroll] = await eslint.lintText(
+      `.table-wrap {\n  position: relative;\n  overflow-x: auto;\n}\n`,
+      { filePath: path.join(webSrcDir, "components/__GoodScroll.css") }
+    );
+    expect(
+      goodCssScroll.messages.filter(
+        (m) => m.ruleId === "custom-vue/require-scroll-wrapper-relative"
+      )
+    ).toEqual([]);
+
+    const [badUnicodeSort] = await eslint.lintText(
+      `<template>\n  <button type="button" class="sort-button">Name <span>⇅</span></button>\n</template>\n`,
+      {
+        filePath: path.join(
+          uiDir,
+          "src/components/clinical/__ClinicalDataTableSortProbe.vue"
+        ),
+      }
+    );
+    expect(
+      badUnicodeSort.messages.filter(
+        (m) => m.ruleId === "custom-vue/no-unicode-sort-glyphs"
+      )
+    ).toHaveLength(1);
   });
 });

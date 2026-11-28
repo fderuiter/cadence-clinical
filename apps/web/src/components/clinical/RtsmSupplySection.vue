@@ -584,23 +584,46 @@ const canManageSchemes = computed(() =>
 );
 
 const kitColumns = [
-  { key: "kit_number", label: "Kit number", rowHeader: true },
-  { key: "lot_number", label: "Lot" },
-  { key: "status", label: "Status" },
-  { key: "expiration_date", label: "Expiration" },
+  {
+    key: "kit_number",
+    label: "Kit number",
+    rowHeader: true,
+    sticky: "left",
+    cardRole: "identifier",
+    mono: true,
+    sortable: true,
+  },
+  { key: "lot_number", label: "Lot", mono: true },
+  { key: "status", label: "Status", cardRole: "status", sortable: true },
+  { key: "expiration_date", label: "Expiration", sortable: true },
 ];
 
 const schemeColumns = computed(() => {
   const cols = [
-    { key: "version", label: "Version", rowHeader: true },
-    { key: "method", label: "Method" },
-    { key: "status", label: "Status" },
+    {
+      key: "version",
+      label: "Version",
+      rowHeader: true,
+      sticky: "left",
+      cardRole: "identifier",
+      mono: true,
+    },
+    { key: "method", label: "Method", cardRole: "title" },
+    { key: "status", label: "Status", cardRole: "status" },
     { key: "requires_kit", label: "Requires kit" },
     { key: "drafted_by", label: "Drafted by" },
     { key: "approved_by", label: "Approved by" },
   ];
   return canManageSchemes.value
-    ? [...cols, { key: "actions", label: "Actions" }]
+    ? [
+        ...cols,
+        {
+          key: "actions",
+          label: "Actions",
+          sticky: "right",
+          cardRole: "actions",
+        },
+      ]
     : cols;
 });
 

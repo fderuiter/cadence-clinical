@@ -37,7 +37,7 @@
     </div>
 
     <!-- SVG Container -->
-    <div style="width: 100%; overflow-x: auto">
+    <div style="position: relative; width: 100%; overflow-x: auto">
       <svg
         :width="timelineWidth"
         :height="svgHeight"
