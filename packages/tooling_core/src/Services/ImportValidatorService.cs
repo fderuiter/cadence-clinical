@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
+using Cadence.ToolingCore.Primitives;
+
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
@@ -34,7 +36,7 @@ public static partial class ImportValidatorService
         bool preCommit = false,
         GitIndexReader? indexReader = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         Console.WriteLine("Validating cross-service architectural import and reflection boundaries...");
 
         var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
@@ -427,28 +429,6 @@ public static partial class ImportValidatorService
         return normalized.Contains("/bin/", StringComparison.Ordinal)
                || normalized.Contains("/obj/", StringComparison.Ordinal)
                || normalized.Contains("/node_modules/", StringComparison.Ordinal);
-    }
-
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln")))
-            {
-                return current;
-            }
-
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current)
-            {
-                break;
-            }
-
-            current = parent ?? string.Empty;
-        }
-
-        return Directory.GetCurrentDirectory();
     }
 
     public static string NormalizeAppName(string name) =>

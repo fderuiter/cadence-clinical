@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 
 using Cadence.ToolingCore.Markdown;
+using Cadence.ToolingCore.Primitives;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -14,7 +15,7 @@ public static class MarkdownValidatorService
         bool preCommit = false,
         GitIndexReader? indexReader = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         Console.WriteLine("Validating Markdown documentation formatting and workspace links...");
 
         if (files is { Length: 0 })
@@ -122,6 +123,4 @@ public static class MarkdownValidatorService
             return 0;
         }
     }
-
-    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 }
