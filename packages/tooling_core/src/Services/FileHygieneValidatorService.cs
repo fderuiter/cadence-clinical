@@ -2,7 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
+
+using Cadence.ToolingCore.Primitives;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -12,8 +13,6 @@ namespace Cadence.ToolingCore.Services;
 /// </summary>
 public static class FileHygieneValidatorService
 {
-    private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
-
     public static int ValidateTrailingWhitespace(
         string[]? targetFiles = null,
         string? repoRoot = null,
@@ -70,7 +69,7 @@ public static class FileHygieneValidatorService
         string headerMessage,
         Action<string, string, List<string>> inspectFile)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= WorkspacePrimitives.FindRepoRoot();
         if (targetFiles is { Length: 0 })
         {
             return 0;
@@ -88,7 +87,7 @@ public static class FileHygieneValidatorService
             var errors = new List<string>();
             foreach (var (fullPath, relPath) in files)
             {
-                string? text = TryReadUtf8Text(fullPath, relPath, reader);
+                string? text = WorkspacePrimitives.TryReadUtf8Text(fullPath, relPath, reader, rejectBinaryNullBytes: true);
                 if (string.IsNullOrEmpty(text))
                 {
                     continue;
@@ -211,47 +210,4 @@ public static class FileHygieneValidatorService
         rel.StartsWith("packages/kernel/src/Cadence.Standards/Blocks/", StringComparison.OrdinalIgnoreCase) ||
         rel.StartsWith("tests/fixtures/", StringComparison.OrdinalIgnoreCase) ||
         rel.EndsWith(".Designer.cs", StringComparison.OrdinalIgnoreCase);
-
-    private static string? TryReadUtf8Text(string fullPath, string relPath, GitIndexReader? reader)
-    {
-        byte[] bytes;
-        if (reader is not null)
-        {
-            if (!reader.TryReadBytes(relPath, out bytes))
-            {
-                return null;
-            }
-        }
-        else
-        {
-            try
-            {
-                bytes = File.ReadAllBytes(fullPath);
-            }
-            catch (IOException)
-            {
-                return null;
-            }
-        }
-
-        int probeLen = Math.Min(bytes.Length, 8192);
-        for (int i = 0; i < probeLen; i++)
-        {
-            if (bytes[i] == 0)
-            {
-                return null;
-            }
-        }
-
-        try
-        {
-            return StrictUtf8.GetString(bytes);
-        }
-        catch (DecoderFallbackException)
-        {
-            return null;
-        }
-    }
-
-    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 }
