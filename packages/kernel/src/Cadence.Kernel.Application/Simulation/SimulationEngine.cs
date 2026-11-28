@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,9 +18,7 @@ using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Standards.Mapping;
 using Cadence.Kernel.Time;
-using Cadence.Kernel.Trust;
 using Cadence.Rules.Evaluation;
-using Cadence.Rules.Packs;
 using Cadence.Standards.Mapping;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -148,11 +143,21 @@ public sealed class SimulationEngine(
     /// <summary>The engine version recorded when a result carries dependents.</summary>
     public static readonly EngineVersion DependentsEngine = new("lineage.dependents", "2");
 
-    private const int MaxReportedProblems = 10;
-
     private readonly IMappingEngine _mappingEngine = mappingEngine ?? new MappingEngine();
     private readonly IRuleEvaluator _ruleEvaluator = ruleEvaluator ?? new DotNetRuleEvaluator();
     private readonly IBlindedTreatmentClassifier _blinding = blindingClassifier ?? new BlindedTreatmentClassifier();
+
+    internal ISimulationInputs Inputs => inputs;
+
+    internal IAuthorizationProbe Probe => probe;
+
+    internal INodeVisibility Visibility => visibility;
+
+    internal IMappingEngine MappingEngine => _mappingEngine;
+
+    internal IRuleEvaluator RuleEvaluator => _ruleEvaluator;
+
+    internal IBlindedTreatmentClassifier Blinding => _blinding;
 
     public async Task<CommandResult<SimulationResult>> SimulateAsync(
         TenantId tenant, SimulationRequest request, CancellationToken cancellationToken)
@@ -177,10 +182,47 @@ public sealed class SimulationEngine(
         return request.Candidate.Kind switch
         {
             CandidateKind.ProtocolVersion => await SimulateProtocolAsync(tenant, actor, request.Candidate, asOf, cancellationToken).ConfigureAwait(false),
-            CandidateKind.MappingSpecification => await SimulateMappingSpecificationAsync(tenant, actor, request.Candidate, asOf, cancellationToken).ConfigureAwait(false),
-            CandidateKind.RulePack => await SimulateRulePackAsync(tenant, actor, request.Candidate, asOf, cancellationToken).ConfigureAwait(false),
+            CandidateKind.MappingSpecification => await SimulationLibraryCandidateRunner.SimulateMappingSpecificationAsync(this, tenant, actor, request.Candidate, asOf, cancellationToken).ConfigureAwait(false),
+            CandidateKind.RulePack => await SimulationLibraryCandidateRunner.SimulateRulePackAsync(this, tenant, actor, request.Candidate, asOf, cancellationToken).ConfigureAwait(false),
             _ => SimulationErrors.ContentInvalid,
         };
+    }
+
+    internal async Task<KernelError?> AuthorizeRunAsync(TenantId tenant, NodeRef scope, CancellationToken cancellationToken)
+    {
+        var decision = await probe.CanIAsync(tenant, SimulationCapabilities.Run, scope, cancellationToken).ConfigureAwait(false);
+        if (decision.Permitted)
+        {
+            return null;
+        }
+
+        return KernelErrors.AuthorizationDenied.WithMessage(decision.Reason ?? KernelErrors.AuthorizationDenied.Message)
+            with
+        { Explanation = decision.Explain(SimulationCapabilities.Run.Token, scope) };
+    }
+
+    internal async Task<MaskReason?> CheckTopLevelMaskAsync(
+        TenantId tenant,
+        Actor actor,
+        IReadOnlyList<NodeRef?> nodes,
+        CancellationToken cancellationToken)
+    {
+        var nonNull = nodes.OfType<NodeRef>().Distinct().ToArray();
+        if (nonNull.Length == 0)
+        {
+            return null;
+        }
+
+        var hidden = await visibility.MaskAsync(tenant, actor, nonNull, cancellationToken).ConfigureAwait(false);
+        foreach (var node in nonNull)
+        {
+            if (hidden.TryGetValue(node, out var reason))
+            {
+                return reason;
+            }
+        }
+
+        return null;
     }
 
     private async Task<CommandResult<SimulationResult>> SimulateProtocolAsync(
@@ -190,7 +232,7 @@ public sealed class SimulationEngine(
         SimulationAsOf asOf,
         CancellationToken cancellationToken)
     {
-        var loaded = await LoadProtocolAsync(tenant, candidateRequest, cancellationToken).ConfigureAwait(false);
+        var loaded = await SimulationCandidateLoader.LoadProtocolAsync(inputs, tenant, candidateRequest, cancellationToken).ConfigureAwait(false);
         if (loaded.Error is { } loadError)
         {
             return loadError;
@@ -219,7 +261,7 @@ public sealed class SimulationEngine(
                 new MaskedPart(ScheduleChangesPart, reason),
                 new MaskedPart(StructuralDiffPart, reason),
             ];
-            return SealResult(
+            return SimulationResultSealer.SealResult(
                 scope,
                 asOf,
                 maskedSummary,
@@ -244,8 +286,8 @@ public sealed class SimulationEngine(
         var summary = new CandidateSummary(
             CandidateKind.ProtocolVersion, versionRef, baseRef, candidate.ContentHash, baseVersion?.ContentHash);
         var diff = compared.Value!;
-        var schedule = ScheduleChanges(baseVersion?.Content, candidate.Content);
-        var matrixGaps = EvaluateMatrixGaps(candidate.Content);
+        var schedule = SimulationResultSealer.ScheduleChanges(baseVersion?.Content, candidate.Content);
+        var matrixGaps = SimulationResultSealer.EvaluateMatrixGaps(candidate.Content);
         var engines = new List<EngineVersion> { ProtocolStructuralDiff.Engine, ScheduleEngine, MatrixGapEngine };
 
         DependentsReport? dependents = null;
@@ -261,7 +303,7 @@ public sealed class SimulationEngine(
         if (!rawSnapshot.Loaded)
         {
             engines.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
-            return SealResult(
+            return SimulationResultSealer.SealResult(
                 scope,
                 asOf,
                 summary,
@@ -297,8 +339,8 @@ public sealed class SimulationEngine(
             (dependents, dependentMaskReasons) = SimulationSnapshotMasking.OmitMaskedDependents(dependents);
         }
 
-        var pinnedSpecs = ParsePinnedMappingSpecs(maskedSnapshot.PinnedLibraryItems);
-        var pinnedPacks = ParsePinnedRulePacks(maskedSnapshot.PinnedRulePacks);
+        var pinnedSpecs = SimulationCandidateLoader.ParsePinnedMappingSpecs(maskedSnapshot.PinnedLibraryItems);
+        var pinnedPacks = SimulationCandidateLoader.ParsePinnedRulePacks(maskedSnapshot.PinnedRulePacks);
 
         var (projectionChanges, baseProjected, candProjected, projImpacted) =
             SimulationProjectionAndValidationEvaluator.EvaluateProjections(
@@ -345,10 +387,10 @@ public sealed class SimulationEngine(
             combinedImpacted);
         engines.Add(SimulationOperationalEvaluator.Engine);
 
-        var maskedParts = CombineMaskedParts(maskedSnapshot.MaskedParts, dependentMaskReasons, maskedBlindedFinding);
+        var maskedParts = SimulationResultSealer.CombineMaskedParts(maskedSnapshot.MaskedParts, dependentMaskReasons, maskedBlindedFinding);
         engines.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
 
-        return SealResult(
+        return SimulationResultSealer.SealResult(
             scope,
             asOf,
             summary,
@@ -363,1041 +405,6 @@ public sealed class SimulationEngine(
             projectionChanges,
             validationDelta);
     }
-
-    private async Task<CommandResult<SimulationResult>> SimulateMappingSpecificationAsync(
-        TenantId tenant,
-        Actor actor,
-        SimulationCandidate candidateRequest,
-        SimulationAsOf asOf,
-        CancellationToken cancellationToken)
-    {
-        var studyId = candidateRequest.StudyId!.Value;
-        if (!await inputs.StudyExistsAsync(tenant, studyId, cancellationToken).ConfigureAwait(false))
-        {
-            return SimulationErrors.StudyUnknown;
-        }
-
-        var loaded = await LoadMappingCandidateAsync(tenant, candidateRequest, cancellationToken).ConfigureAwait(false);
-        if (loaded.Error is { } loadError)
-        {
-            return loadError;
-        }
-
-        var (candSpec, candRef, candHash, explicitBaseItem, explicitBaseSpec) = loaded.Value;
-        var scope = NodeRef.For(studyId);
-        if (await AuthorizeRunAsync(tenant, scope, cancellationToken).ConfigureAwait(false) is { } denied)
-        {
-            return denied;
-        }
-
-        var explicitBaseRef = explicitBaseItem is null ? null : NodeRefForItem(explicitBaseItem);
-        var topLevelMask = await CheckTopLevelMaskAsync(tenant, actor, [scope, candRef, explicitBaseRef], cancellationToken).ConfigureAwait(false);
-        if (topLevelMask is { } reason)
-        {
-            var maskedEngines = new List<EngineVersion>
-            {
-                SimulationSpecificationDiff.MappingDiffEngine,
-                SimulationProjectionAndValidationEvaluator.MappingEngineVersion,
-            };
-            maskedEngines.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
-            IReadOnlyList<MaskedPart> withheld =
-            [
-                new MaskedPart(DependentsPart, reason),
-                new MaskedPart(ProjectionChangesPart, reason),
-                new MaskedPart(StructuralDiffPart, reason),
-            ];
-            return SealResult(
-                scope,
-                asOf,
-                new CandidateSummary(CandidateKind.MappingSpecification, null, null, null, null),
-                maskedEngines,
-                visibleStateDigest: null,
-                diff: [],
-                schedule: [],
-                withheld,
-                dependents: null,
-                matrixGaps: null,
-                operationalImpact: null,
-                projectionChanges: null,
-                validationDelta: null);
-        }
-
-        var rawSnapshot = await inputs.LoadStudySnapshotAsync(tenant, studyId, asOf, cancellationToken).ConfigureAwait(false);
-        var maskedSnapshot = await SimulationSnapshotMasking.MaskAsync(
-            tenant,
-            studyId,
-            actor,
-            rawSnapshot,
-            extraDesigns: [],
-            visibility,
-            _blinding,
-            probe,
-            cancellationToken).ConfigureAwait(false);
-
-        var (baseItem, baseSpec) = ResolveMappingBase(candSpec, explicitBaseItem, explicitBaseSpec, maskedSnapshot.PinnedLibraryItems);
-        var baseRef = baseItem is null ? null : NodeRefForItem(baseItem);
-
-        if (baseRef is not null && explicitBaseRef is null)
-        {
-            var inferredBaseMask = await CheckTopLevelMaskAsync(tenant, actor, [baseRef], cancellationToken).ConfigureAwait(false);
-            if (inferredBaseMask is { } baseReason)
-            {
-                var maskedEngines = new List<EngineVersion>
-                {
-                    SimulationSpecificationDiff.MappingDiffEngine,
-                    SimulationProjectionAndValidationEvaluator.MappingEngineVersion,
-                };
-                maskedEngines.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
-                return SealResult(
-                    scope,
-                    asOf,
-                    new CandidateSummary(CandidateKind.MappingSpecification, null, null, null, null),
-                    maskedEngines,
-                    visibleStateDigest: null,
-                    diff: [],
-                    schedule: [],
-                    [
-                        new MaskedPart(DependentsPart, baseReason),
-                        new MaskedPart(ProjectionChangesPart, baseReason),
-                        new MaskedPart(StructuralDiffPart, baseReason),
-                    ],
-                    dependents: null,
-                    matrixGaps: null,
-                    operationalImpact: null,
-                    projectionChanges: null,
-                    validationDelta: null);
-            }
-        }
-
-        var summary = new CandidateSummary(
-            CandidateKind.MappingSpecification,
-            candRef,
-            baseRef,
-            candHash,
-            baseItem?.ContentHash);
-        var diff = SimulationSpecificationDiff.CompareMappingSpecifications(baseSpec, candSpec);
-        var engines = new List<EngineVersion>
-        {
-            SimulationSpecificationDiff.MappingDiffEngine,
-            SimulationProjectionAndValidationEvaluator.MappingEngineVersion,
-            SimulationProjectionAndValidationEvaluator.RuleEvaluatorVersion,
-            SimulationOperationalEvaluator.Engine,
-        };
-
-        DependentsReport? dependents = null;
-        IReadOnlyList<MaskReason> dependentMaskReasons = [];
-        if (diff.Count > 0 && baseItem is not null)
-        {
-            dependents = await inputs.DependentsOfNodeAsync(
-                tenant,
-                actor,
-                NodeRef.For(baseItem.Id),
-                candRef?.Unversioned(),
-                asOf,
-                cancellationToken).ConfigureAwait(false);
-            (dependents, dependentMaskReasons) = SimulationSnapshotMasking.OmitMaskedDependents(dependents);
-            engines.Add(DependentsEngine);
-        }
-
-        var (baselineSpecs, candidateSpecs) = BuildMappingSpecStacks(maskedSnapshot.PinnedLibraryItems, baseItem, baseSpec, candSpec);
-        var activeDesign = SelectActiveProtocolDesign(maskedSnapshot);
-        var pinnedPacks = ParsePinnedRulePacks(maskedSnapshot.PinnedRulePacks);
-
-        var (projectionChanges, baseProjected, candProjected, projImpacted) =
-            SimulationProjectionAndValidationEvaluator.EvaluateProjections(
-                _mappingEngine,
-                maskedSnapshot,
-                baselineSpecs,
-                candidateSpecs,
-                activeDesign,
-                activeDesign);
-
-        var asOfDate = DateOnly.FromDateTime(asOf.ValidAt.UtcDateTime);
-        var (validationDelta, ruleImpacted, maskedBlindedFinding) =
-            SimulationProjectionAndValidationEvaluator.EvaluateValidationDelta(
-                _ruleEvaluator,
-                _blinding,
-                maskedSnapshot,
-                asOfDate,
-                pinnedPacks,
-                pinnedPacks,
-                activeDesign,
-                activeDesign,
-                baseProjected,
-                candProjected);
-
-        var combinedImpacted = new HashSet<EnrollmentId>(projImpacted);
-        combinedImpacted.UnionWith(ruleImpacted);
-
-        var mergedHidden = SimulationSnapshotMasking.MergeHidden(
-            maskedSnapshot.Hidden,
-            dependentMaskReasons.Concat(maskedBlindedFinding ? [MaskReason.Blinded] : []));
-        var operational = SimulationOperationalEvaluator.Evaluate(
-            maskedSnapshot with { Hidden = mergedHidden },
-            asOf,
-            activeDesign,
-            activeDesign,
-            amendment: null,
-            soaDiff: null,
-            combinedImpacted);
-
-        var maskedParts = CombineMaskedParts(maskedSnapshot.MaskedParts, dependentMaskReasons, maskedBlindedFinding);
-        engines.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
-
-        return SealResult(
-            scope,
-            asOf,
-            summary,
-            engines,
-            maskedSnapshot.VisibleStateDigest,
-            diff,
-            schedule: [],
-            maskedParts,
-            dependents,
-            matrixGaps: null,
-            operational,
-            projectionChanges,
-            validationDelta);
-    }
-
-    private async Task<CommandResult<SimulationResult>> SimulateRulePackAsync(
-        TenantId tenant,
-        Actor actor,
-        SimulationCandidate candidateRequest,
-        SimulationAsOf asOf,
-        CancellationToken cancellationToken)
-    {
-        var studyId = candidateRequest.StudyId!.Value;
-        if (!await inputs.StudyExistsAsync(tenant, studyId, cancellationToken).ConfigureAwait(false))
-        {
-            return SimulationErrors.StudyUnknown;
-        }
-
-        var loaded = await LoadRulePackCandidateAsync(tenant, candidateRequest, cancellationToken).ConfigureAwait(false);
-        if (loaded.Error is { } loadError)
-        {
-            return loadError;
-        }
-
-        var (candPack, candItem, candRef, candHash, explicitBaseItem, explicitBasePack) = loaded.Value;
-        var scope = NodeRef.For(studyId);
-        if (await AuthorizeRunAsync(tenant, scope, cancellationToken).ConfigureAwait(false) is { } denied)
-        {
-            return denied;
-        }
-
-        var explicitBaseRef = explicitBaseItem is null ? null : NodeRefForItem(explicitBaseItem);
-        var topLevelMask = await CheckTopLevelMaskAsync(tenant, actor, [scope, candRef, explicitBaseRef], cancellationToken).ConfigureAwait(false);
-        if (topLevelMask is { } reason)
-        {
-            var maskedEngines = new List<EngineVersion>
-            {
-                SimulationSpecificationDiff.RulePackDiffEngine,
-                SimulationProjectionAndValidationEvaluator.RuleEvaluatorVersion,
-            };
-            maskedEngines.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
-            IReadOnlyList<MaskedPart> withheld =
-            [
-                new MaskedPart(DependentsPart, reason),
-                new MaskedPart(StructuralDiffPart, reason),
-                new MaskedPart(ValidationDeltaPart, reason),
-            ];
-            return SealResult(
-                scope,
-                asOf,
-                new CandidateSummary(CandidateKind.RulePack, null, null, null, null),
-                maskedEngines,
-                visibleStateDigest: null,
-                diff: [],
-                schedule: [],
-                withheld,
-                dependents: null,
-                matrixGaps: null,
-                operationalImpact: null,
-                projectionChanges: null,
-                validationDelta: null);
-        }
-
-        var rawSnapshot = await inputs.LoadStudySnapshotAsync(tenant, studyId, asOf, cancellationToken).ConfigureAwait(false);
-        var maskedSnapshot = await SimulationSnapshotMasking.MaskAsync(
-            tenant,
-            studyId,
-            actor,
-            rawSnapshot,
-            extraDesigns: [],
-            visibility,
-            _blinding,
-            probe,
-            cancellationToken).ConfigureAwait(false);
-
-        var (baseItem, basePack) = ResolveRulePackBase(candPack, candItem, explicitBaseItem, explicitBasePack, maskedSnapshot.PinnedRulePacks);
-        var baseRef = baseItem is null ? null : NodeRefForItem(baseItem);
-
-        if (baseRef is not null && explicitBaseRef is null)
-        {
-            var inferredBaseMask = await CheckTopLevelMaskAsync(tenant, actor, [baseRef], cancellationToken).ConfigureAwait(false);
-            if (inferredBaseMask is { } baseReason)
-            {
-                var maskedEngines = new List<EngineVersion>
-                {
-                    SimulationSpecificationDiff.RulePackDiffEngine,
-                    SimulationProjectionAndValidationEvaluator.RuleEvaluatorVersion,
-                };
-                maskedEngines.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
-                return SealResult(
-                    scope,
-                    asOf,
-                    new CandidateSummary(CandidateKind.RulePack, null, null, null, null),
-                    maskedEngines,
-                    visibleStateDigest: null,
-                    diff: [],
-                    schedule: [],
-                    [
-                        new MaskedPart(DependentsPart, baseReason),
-                        new MaskedPart(StructuralDiffPart, baseReason),
-                        new MaskedPart(ValidationDeltaPart, baseReason),
-                    ],
-                    dependents: null,
-                    matrixGaps: null,
-                    operationalImpact: null,
-                    projectionChanges: null,
-                    validationDelta: null);
-            }
-        }
-
-        var summary = new CandidateSummary(
-            CandidateKind.RulePack,
-            candRef,
-            baseRef,
-            candHash,
-            baseItem?.ContentHash);
-        var diff = SimulationSpecificationDiff.CompareRulePacks(basePack, candPack);
-        var engines = new List<EngineVersion>
-        {
-            SimulationSpecificationDiff.RulePackDiffEngine,
-            SimulationProjectionAndValidationEvaluator.MappingEngineVersion,
-            SimulationProjectionAndValidationEvaluator.RuleEvaluatorVersion,
-            SimulationOperationalEvaluator.Engine,
-        };
-
-        DependentsReport? dependents = null;
-        IReadOnlyList<MaskReason> dependentMaskReasons = [];
-        if (diff.Count > 0 && baseItem is not null)
-        {
-            dependents = await inputs.DependentsOfNodeAsync(
-                tenant,
-                actor,
-                NodeRef.For(baseItem.Id),
-                candRef?.Unversioned(),
-                asOf,
-                cancellationToken).ConfigureAwait(false);
-            (dependents, dependentMaskReasons) = SimulationSnapshotMasking.OmitMaskedDependents(dependents);
-            engines.Add(DependentsEngine);
-        }
-
-        var pinnedSpecs = ParsePinnedMappingSpecs(maskedSnapshot.PinnedLibraryItems);
-        var activeDesign = SelectActiveProtocolDesign(maskedSnapshot);
-        var (baselinePacks, candidatePacks) = BuildRulePackStacks(maskedSnapshot.PinnedRulePacks, baseItem, basePack, candPack);
-
-        var (projectionChanges, baseProjected, candProjected, projImpacted) =
-            SimulationProjectionAndValidationEvaluator.EvaluateProjections(
-                _mappingEngine,
-                maskedSnapshot,
-                pinnedSpecs,
-                pinnedSpecs,
-                activeDesign,
-                activeDesign);
-
-        var asOfDate = DateOnly.FromDateTime(asOf.ValidAt.UtcDateTime);
-        var (validationDelta, ruleImpacted, maskedBlindedFinding) =
-            SimulationProjectionAndValidationEvaluator.EvaluateValidationDelta(
-                _ruleEvaluator,
-                _blinding,
-                maskedSnapshot,
-                asOfDate,
-                baselinePacks,
-                candidatePacks,
-                activeDesign,
-                activeDesign,
-                baseProjected,
-                candProjected);
-
-        var combinedImpacted = new HashSet<EnrollmentId>(projImpacted);
-        combinedImpacted.UnionWith(ruleImpacted);
-
-        var mergedHidden = SimulationSnapshotMasking.MergeHidden(
-            maskedSnapshot.Hidden,
-            dependentMaskReasons.Concat(maskedBlindedFinding ? [MaskReason.Blinded] : []));
-        var operational = SimulationOperationalEvaluator.Evaluate(
-            maskedSnapshot with { Hidden = mergedHidden },
-            asOf,
-            activeDesign,
-            activeDesign,
-            amendment: null,
-            soaDiff: null,
-            combinedImpacted);
-
-        var maskedParts = CombineMaskedParts(maskedSnapshot.MaskedParts, dependentMaskReasons, maskedBlindedFinding);
-        engines.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
-
-        return SealResult(
-            scope,
-            asOf,
-            summary,
-            engines,
-            maskedSnapshot.VisibleStateDigest,
-            diff,
-            schedule: [],
-            maskedParts,
-            dependents,
-            matrixGaps: null,
-            operational,
-            projectionChanges,
-            validationDelta);
-    }
-
-    private async Task<KernelError?> AuthorizeRunAsync(TenantId tenant, NodeRef scope, CancellationToken cancellationToken)
-    {
-        var decision = await probe.CanIAsync(tenant, SimulationCapabilities.Run, scope, cancellationToken).ConfigureAwait(false);
-        if (decision.Permitted)
-        {
-            return null;
-        }
-
-        return KernelErrors.AuthorizationDenied.WithMessage(decision.Reason ?? KernelErrors.AuthorizationDenied.Message)
-            with
-        { Explanation = decision.Explain(SimulationCapabilities.Run.Token, scope) };
-    }
-
-    private async Task<MaskReason?> CheckTopLevelMaskAsync(
-        TenantId tenant,
-        Actor actor,
-        IReadOnlyList<NodeRef?> nodes,
-        CancellationToken cancellationToken)
-    {
-        var nonNull = nodes.OfType<NodeRef>().Distinct().ToArray();
-        if (nonNull.Length == 0)
-        {
-            return null;
-        }
-
-        var hidden = await visibility.MaskAsync(tenant, actor, nonNull, cancellationToken).ConfigureAwait(false);
-        foreach (var node in nonNull)
-        {
-            if (hidden.TryGetValue(node, out var reason))
-            {
-                return reason;
-            }
-        }
-
-        return null;
-    }
-
-    private static CommandResult<SimulationResult> SealResult(
-        NodeRef scope,
-        SimulationAsOf asOf,
-        CandidateSummary summary,
-        IReadOnlyList<EngineVersion> engines,
-        string? visibleStateDigest,
-        IReadOnlyList<ElementChange> diff,
-        IReadOnlyList<ScheduleChange> schedule,
-        IReadOnlyList<MaskedPart> masked,
-        DependentsReport? dependents,
-        IReadOnlyList<MatrixGapFinding>? matrixGaps,
-        OperationalImpactSummary? operationalImpact,
-        IReadOnlyList<ProjectionDatasetChange>? projectionChanges,
-        ValidationDeltaSummary? validationDelta)
-    {
-        var inputHash = ComputeInputHash(scope, asOf, summary, engines, masked, visibleStateDigest);
-        var preliminary = new SimulationResult(
-            scope,
-            asOf,
-            summary,
-            engines,
-            inputHash,
-            string.Empty,
-            diff,
-            schedule,
-            masked,
-            dependents,
-            matrixGaps,
-            operationalImpact,
-            projectionChanges,
-            validationDelta);
-        var resultHash = SimulationResultHashing.ComputeResultHash(preliminary);
-        return CommandResult<SimulationResult>.Success(preliminary with { ResultHash = resultHash });
-    }
-
-    private static IReadOnlyList<MaskedPart> CombineMaskedParts(
-        IReadOnlyList<MaskedPart> snapshotParts,
-        IReadOnlyList<MaskReason> dependentMaskReasons,
-        bool maskedBlindedFinding)
-    {
-        var set = new SortedSet<(string Part, MaskReason Reason)>(
-            Comparer<(string Part, MaskReason Reason)>.Create((a, b) =>
-            {
-                var cmp = string.CompareOrdinal(a.Part, b.Part);
-                return cmp != 0 ? cmp : a.Reason.CompareTo(b.Reason);
-            }));
-
-        foreach (var part in snapshotParts)
-        {
-            set.Add((part.Part, part.Reason));
-        }
-
-        foreach (var depReason in dependentMaskReasons)
-        {
-            set.Add((DependentsPart, depReason));
-        }
-
-        if (maskedBlindedFinding)
-        {
-            set.Add((SimulationSnapshotMasking.BlindedTreatmentPart, MaskReason.Blinded));
-        }
-
-        return [.. set.Select(x => new MaskedPart(x.Part, x.Reason))];
-    }
-
-    private static IReadOnlyList<ScheduleChange> ScheduleChanges(string? baseContent, string candidateContent)
-    {
-        var before = baseContent is null ? [] : ExpectedSchedule.Plan(DesignOf(baseContent));
-        var after = ExpectedSchedule.Plan(DesignOf(candidateContent));
-        var beforeById = before.ToDictionary(v => v.ActivityId, StringComparer.Ordinal);
-        var afterById = after.ToDictionary(v => v.ActivityId, StringComparer.Ordinal);
-        var changes = new List<ScheduleChange>();
-        foreach (var id in beforeById.Keys.Union(afterById.Keys).Order(StringComparer.Ordinal))
-        {
-            var old = beforeById.GetValueOrDefault(id);
-            var @new = afterById.GetValueOrDefault(id);
-            if (old is null)
-            {
-                changes.Add(new ScheduleChange(id, ElementChangeKind.Added, null, @new));
-            }
-            else if (@new is null)
-            {
-                changes.Add(new ScheduleChange(id, ElementChangeKind.Removed, old, null));
-            }
-            else if (old.EpochId != @new.EpochId
-                || ExpectedSchedule.NormalizeStudyDay(old.StudyDay) != ExpectedSchedule.NormalizeStudyDay(@new.StudyDay)
-                || old.WindowBefore != @new.WindowBefore
-                || old.WindowAfter != @new.WindowAfter)
-            {
-                changes.Add(new ScheduleChange(id, ElementChangeKind.Changed, old, @new));
-            }
-        }
-
-        return changes;
-
-        static ProtocolDesign DesignOf(string content) =>
-            ProtocolDesignDocument.Read(content).Design
-            ?? throw new InvalidOperationException("Simulation compared content that is not a protocol design.");
-    }
-
-    private async Task<CommandResult<(ProtocolCandidate Candidate, ProtocolVersionSnapshot? Base)>> LoadProtocolAsync(
-        TenantId tenant, SimulationCandidate request, CancellationToken cancellationToken)
-    {
-        if (request.VersionId is { } versionId)
-        {
-            var stored = await inputs.FindProtocolVersionAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);
-            if (stored is null)
-            {
-                return SimulationErrors.VersionUnknown;
-            }
-
-            if (request.Version is { } expectedVersion && stored.VersionIndex != expectedVersion)
-            {
-                return SimulationErrors.VersionStale.WithMessage(
-                    $"The protocol version is at version {stored.VersionIndex}, not {expectedVersion}; reload and simulate the current version.");
-            }
-
-            ProtocolVersionSnapshot? parent = null;
-            if (stored.ParentVersionId is { } parentId)
-            {
-                parent = await inputs.FindProtocolVersionAsync(tenant, parentId, cancellationToken).ConfigureAwait(false);
-                if (parent is null)
-                {
-                    return SimulationErrors.VersionUnknown.WithMessage("The protocol version's parent does not exist.");
-                }
-            }
-
-            var hash = stored.ContentHash ?? ContentHash.Compute(stored.Content);
-            return CommandResult<(ProtocolCandidate, ProtocolVersionSnapshot?)>.Success(
-                (new ProtocolCandidate(stored.Id, stored.StudyId, stored.Content, hash, stored.VersionIndex, stored.Amendment), parent));
-        }
-
-        var baseId = request.BaseVersionId!.Value;
-        var baseVersion = await inputs.FindProtocolVersionAsync(tenant, baseId, cancellationToken).ConfigureAwait(false);
-        if (baseVersion is null)
-        {
-            return SimulationErrors.VersionUnknown;
-        }
-
-        if (request.BaseVersion is { } expectedBaseVersion && baseVersion.VersionIndex != expectedBaseVersion)
-        {
-            return SimulationErrors.VersionStale.WithMessage(
-                $"The base protocol version is at version {baseVersion.VersionIndex}, not {expectedBaseVersion}; reload and simulate against the current version.");
-        }
-
-        if (baseVersion.ContentHash is null)
-        {
-            return SimulationErrors.BaseNotFrozen;
-        }
-
-        var read = ProtocolDesignDocument.Read(request.Content!);
-        if (!read.IsValid)
-        {
-            var more = read.Problems.Count > MaxReportedProblems ? $" (and {read.Problems.Count - MaxReportedProblems} more)" : string.Empty;
-            return SimulationErrors.ContentInvalid.WithMessage(
-                $"{SimulationErrors.ContentInvalid.Message} {string.Join(" ", read.Problems.Take(MaxReportedProblems))}{more}");
-        }
-
-        return CommandResult<(ProtocolCandidate, ProtocolVersionSnapshot?)>.Success(
-            (new ProtocolCandidate(null, baseVersion.StudyId, request.Content!, ContentHash.Compute(request.Content!), 0, null), baseVersion));
-    }
-
-    private async Task<CommandResult<(
-        MappingSpecification Candidate,
-        NodeRef? CandidateRef,
-        string CandidateHash,
-        LibraryItemView? ExplicitBaseItem,
-        MappingSpecification? ExplicitBaseSpec)>> LoadMappingCandidateAsync(
-        TenantId tenant,
-        SimulationCandidate request,
-        CancellationToken cancellationToken)
-    {
-        LibraryItemView? explicitBaseItem = null;
-        MappingSpecification? explicitBaseSpec = null;
-        if (request.BaseLibraryItemId is { } baseId)
-        {
-            explicitBaseItem = await inputs.FindLibraryItemAsync(tenant, baseId, cancellationToken).ConfigureAwait(false);
-            if (explicitBaseItem is null || explicitBaseItem.Kind != LibraryItemKind.MappingSpecification)
-            {
-                return SimulationErrors.LibraryItemUnknown;
-            }
-
-            if (request.LibraryItemId is null && explicitBaseItem.Status == GovernanceStatus.Draft)
-            {
-                return SimulationErrors.BaseNotFrozen;
-            }
-
-            var (parsedBase, baseProblems) = MappingSpecificationJson.Read(explicitBaseItem.Content);
-            if (parsedBase is null)
-            {
-                return FormatInvalid(SimulationErrors.MappingSpecificationInvalid, baseProblems);
-            }
-
-            explicitBaseSpec = parsedBase;
-        }
-
-        if (request.LibraryItemId is { } itemId)
-        {
-            var item = await inputs.FindLibraryItemAsync(tenant, itemId, cancellationToken).ConfigureAwait(false);
-            if (item is null || item.Kind != LibraryItemKind.MappingSpecification)
-            {
-                return SimulationErrors.LibraryItemUnknown;
-            }
-
-            var (parsed, problems) = MappingSpecificationJson.Read(item.Content);
-            if (parsed is null)
-            {
-                return FormatInvalid(SimulationErrors.MappingSpecificationInvalid, problems);
-            }
-
-            return CommandResult<(MappingSpecification, NodeRef?, string, LibraryItemView?, MappingSpecification?)>.Success(
-                (parsed, NodeRefForItem(item), item.ContentHash, explicitBaseItem, explicitBaseSpec));
-        }
-
-        JsonDocument doc;
-        try
-        {
-            doc = JsonDocument.Parse(request.Content!);
-        }
-        catch (JsonException ex)
-        {
-            return SimulationErrors.MappingSpecificationInvalid.WithMessage($"{SimulationErrors.MappingSpecificationInvalid.Message} {ex.Message}");
-        }
-
-        using (doc)
-        {
-            var (parsed, problems) = MappingSpecificationJson.Read(doc.RootElement);
-            if (parsed is null)
-            {
-                return FormatInvalid(SimulationErrors.MappingSpecificationInvalid, problems);
-            }
-
-            return CommandResult<(MappingSpecification, NodeRef?, string, LibraryItemView?, MappingSpecification?)>.Success(
-                (parsed, null, ContentHash.Compute(request.Content!), explicitBaseItem, explicitBaseSpec));
-        }
-    }
-
-    private async Task<CommandResult<(
-        RulePack Candidate,
-        LibraryItemView? CandidateItem,
-        NodeRef? CandidateRef,
-        string CandidateHash,
-        LibraryItemView? ExplicitBaseItem,
-        RulePack? ExplicitBasePack)>> LoadRulePackCandidateAsync(
-        TenantId tenant,
-        SimulationCandidate request,
-        CancellationToken cancellationToken)
-    {
-        LibraryItemView? explicitBaseItem = null;
-        RulePack? explicitBasePack = null;
-        if (request.BaseLibraryItemId is { } baseId)
-        {
-            explicitBaseItem = await inputs.FindLibraryItemAsync(tenant, baseId, cancellationToken).ConfigureAwait(false);
-            if (explicitBaseItem is null || explicitBaseItem.Kind != LibraryItemKind.RulePack)
-            {
-                return SimulationErrors.LibraryItemUnknown;
-            }
-
-            if (request.LibraryItemId is null && explicitBaseItem.Status == GovernanceStatus.Draft)
-            {
-                return SimulationErrors.BaseNotFrozen;
-            }
-
-            var (parsedBase, baseProblems) = RulePackJson.Read(explicitBaseItem.Content);
-            if (parsedBase is null)
-            {
-                return FormatInvalid(SimulationErrors.RulePackInvalid, baseProblems);
-            }
-
-            explicitBasePack = parsedBase;
-        }
-
-        if (request.LibraryItemId is { } itemId)
-        {
-            var item = await inputs.FindLibraryItemAsync(tenant, itemId, cancellationToken).ConfigureAwait(false);
-            if (item is null || item.Kind != LibraryItemKind.RulePack)
-            {
-                return SimulationErrors.LibraryItemUnknown;
-            }
-
-            var (parsed, problems) = RulePackJson.Read(item.Content);
-            if (parsed is null)
-            {
-                return FormatInvalid(SimulationErrors.RulePackInvalid, problems);
-            }
-
-            return CommandResult<(RulePack, LibraryItemView?, NodeRef?, string, LibraryItemView?, RulePack?)>.Success(
-                (parsed, item, NodeRefForItem(item), item.ContentHash, explicitBaseItem, explicitBasePack));
-        }
-
-        JsonDocument doc;
-        try
-        {
-            doc = JsonDocument.Parse(request.Content!);
-        }
-        catch (JsonException ex)
-        {
-            return SimulationErrors.RulePackInvalid.WithMessage($"{SimulationErrors.RulePackInvalid.Message} {ex.Message}");
-        }
-
-        using (doc)
-        {
-            var (parsed, problems) = RulePackJson.Read(doc.RootElement);
-            if (parsed is null)
-            {
-                return FormatInvalid(SimulationErrors.RulePackInvalid, problems);
-            }
-
-            return CommandResult<(RulePack, LibraryItemView?, NodeRef?, string, LibraryItemView?, RulePack?)>.Success(
-                (parsed, null, null, ContentHash.Compute(request.Content!), explicitBaseItem, explicitBasePack));
-        }
-    }
-
-    private static (LibraryItemView? BaseItem, MappingSpecification? BaseSpec) ResolveMappingBase(
-        MappingSpecification candidate,
-        LibraryItemView? explicitBaseItem,
-        MappingSpecification? explicitBaseSpec,
-        IReadOnlyList<LibraryItemView> pinnedItems)
-    {
-        if (explicitBaseItem is not null && explicitBaseSpec is not null)
-        {
-            return (explicitBaseItem, explicitBaseSpec);
-        }
-
-        if (!string.IsNullOrWhiteSpace(candidate.Overrides))
-        {
-            var overridden = pinnedItems.FirstOrDefault(i =>
-                i.Kind == LibraryItemKind.MappingSpecification
-                && string.Equals(i.Key, candidate.Overrides, StringComparison.Ordinal));
-            if (overridden is not null && MappingSpecificationJson.Read(overridden.Content).Specification is { } parsedOverridden)
-            {
-                return (overridden, parsedOverridden);
-            }
-        }
-
-        var firstPinned = pinnedItems.FirstOrDefault(i => i.Kind == LibraryItemKind.MappingSpecification);
-        if (firstPinned is not null && MappingSpecificationJson.Read(firstPinned.Content).Specification is { } parsedFirst)
-        {
-            return (firstPinned, parsedFirst);
-        }
-
-        return (null, null);
-    }
-
-    private static (LibraryItemView? BaseItem, RulePack? BasePack) ResolveRulePackBase(
-        RulePack candidate,
-        LibraryItemView? candidateItem,
-        LibraryItemView? explicitBaseItem,
-        RulePack? explicitBasePack,
-        IReadOnlyList<LibraryItemView> pinnedPacks)
-    {
-        if (explicitBaseItem is not null && explicitBasePack is not null)
-        {
-            return (explicitBaseItem, explicitBasePack);
-        }
-
-        LibraryItemView? matching = null;
-        if (candidateItem is not null)
-        {
-            matching = pinnedPacks.FirstOrDefault(p =>
-                p.Id != candidateItem.Id && string.Equals(p.Key, candidateItem.Key, StringComparison.Ordinal));
-        }
-
-        matching ??= pinnedPacks.FirstOrDefault(p => string.Equals(p.Title, candidate.Title, StringComparison.Ordinal))
-            ?? pinnedPacks.FirstOrDefault();
-
-        if (matching is not null && RulePackJson.Read(matching.Content).Pack is { } parsed)
-        {
-            return (matching, parsed);
-        }
-
-        return (null, null);
-    }
-
-    private static (IReadOnlyList<MappingSpecification> Baseline, IReadOnlyList<MappingSpecification> Candidate) BuildMappingSpecStacks(
-        IReadOnlyList<LibraryItemView> pinnedItems,
-        LibraryItemView? baseItem,
-        MappingSpecification? baseSpec,
-        MappingSpecification candidateSpec)
-    {
-        var pinned = new List<(LibraryItemView Item, MappingSpecification Spec)>();
-        foreach (var item in pinnedItems.Where(i => i.Kind == LibraryItemKind.MappingSpecification))
-        {
-            if (MappingSpecificationJson.Read(item.Content).Specification is { } parsed)
-            {
-                pinned.Add((item, parsed));
-            }
-        }
-
-        pinned = [.. pinned
-            .OrderBy(x => string.IsNullOrWhiteSpace(x.Spec.Overrides) ? 0 : 1)
-            .ThenBy(x => x.Item.Key, StringComparer.Ordinal)];
-
-        if (pinned.Count == 0)
-        {
-            IReadOnlyList<MappingSpecification> baselineOnly = baseSpec is null ? [] : [baseSpec];
-            IReadOnlyList<MappingSpecification> candidateOnly = baseSpec is not null && !string.IsNullOrWhiteSpace(candidateSpec.Overrides)
-                ? [baseSpec, candidateSpec]
-                : [candidateSpec];
-            return (baselineOnly, candidateOnly);
-        }
-
-        var baselineList = pinned.Select(p => p.Spec).ToList();
-        if (baseItem is not null && baseSpec is not null && pinned.All(p => p.Item.Id != baseItem.Id))
-        {
-            baselineList.Add(baseSpec);
-        }
-
-        var candidateList = new List<MappingSpecification>(pinned.Count + 1);
-        var replaced = false;
-        foreach (var (item, spec) in pinned)
-        {
-            if (baseItem is not null && item.Id == baseItem.Id && string.IsNullOrWhiteSpace(candidateSpec.Overrides))
-            {
-                candidateList.Add(candidateSpec);
-                replaced = true;
-            }
-            else
-            {
-                candidateList.Add(spec);
-            }
-        }
-
-        if (!replaced)
-        {
-            candidateList.Add(candidateSpec);
-        }
-
-        return (baselineList, candidateList);
-    }
-
-    private static (IReadOnlyList<RulePack> Baseline, IReadOnlyList<RulePack> Candidate) BuildRulePackStacks(
-        IReadOnlyList<LibraryItemView> pinnedPackItems,
-        LibraryItemView? baseItem,
-        RulePack? basePack,
-        RulePack candidatePack)
-    {
-        var pinned = new List<(LibraryItemView Item, RulePack Pack)>();
-        foreach (var item in pinnedPackItems.Where(i => i.Kind == LibraryItemKind.RulePack))
-        {
-            if (RulePackJson.Read(item.Content).Pack is { } parsed)
-            {
-                pinned.Add((item, parsed));
-            }
-        }
-
-        if (pinned.Count == 0)
-        {
-            IReadOnlyList<RulePack> baselineOnly = basePack is null ? [] : [basePack];
-            return (baselineOnly, [candidatePack]);
-        }
-
-        var baselineList = pinned.Select(p => p.Pack).ToList();
-        if (baseItem is not null && basePack is not null && pinned.All(p => p.Item.Id != baseItem.Id))
-        {
-            baselineList.Add(basePack);
-        }
-
-        var candidateList = new List<RulePack>(pinned.Count + 1);
-        var replaced = false;
-        foreach (var (item, pack) in pinned)
-        {
-            if (baseItem is not null && item.Id == baseItem.Id)
-            {
-                candidateList.Add(candidatePack);
-                replaced = true;
-            }
-            else
-            {
-                candidateList.Add(pack);
-            }
-        }
-
-        if (!replaced)
-        {
-            candidateList.Add(candidatePack);
-        }
-
-        return (baselineList, candidateList);
-    }
-
-    private static IReadOnlyList<MappingSpecification> ParsePinnedMappingSpecs(IReadOnlyList<LibraryItemView> items) =>
-        [.. items
-            .Where(i => i.Kind == LibraryItemKind.MappingSpecification)
-            .Select(i => (Item: i, Spec: MappingSpecificationJson.Read(i.Content).Specification))
-            .Where(x => x.Spec is not null)
-            .OrderBy(x => string.IsNullOrWhiteSpace(x.Spec!.Overrides) ? 0 : 1)
-            .ThenBy(x => x.Item.Key, StringComparer.Ordinal)
-            .Select(x => x.Spec!)];
-
-    private static IReadOnlyList<RulePack> ParsePinnedRulePacks(IReadOnlyList<LibraryItemView> items) =>
-        [.. items
-            .Where(i => i.Kind == LibraryItemKind.RulePack)
-            .Select(i => RulePackJson.Read(i.Content).Pack)
-            .OfType<RulePack>()];
-
-    private static ProtocolDesign? SelectActiveProtocolDesign(MaskedSimulationSnapshot snapshot)
-    {
-        var effectiveVersionIds = snapshot.VisibleEffectivities
-            .Where(e => e.StatusAsOf == EffectivityStatus.Effective)
-            .Select(e => e.ProtocolVersionId)
-            .ToHashSet();
-
-        foreach (var id in effectiveVersionIds.OrderBy(x => x.Value))
-        {
-            if (snapshot.ProtocolDesigns.TryGetValue(id, out var effectiveDesign))
-            {
-                return effectiveDesign;
-            }
-        }
-
-        return snapshot.ProtocolDesigns
-            .OrderBy(kv => kv.Key.Value)
-            .Select(kv => kv.Value)
-            .LastOrDefault();
-    }
-
-    private static KernelError FormatInvalid(KernelError error, IReadOnlyList<string> problems)
-    {
-        if (problems.Count == 0)
-        {
-            return error;
-        }
-
-        var more = problems.Count > MaxReportedProblems ? $" (and {problems.Count - MaxReportedProblems} more)" : string.Empty;
-        return error.WithMessage($"{error.Message} {string.Join(" ", problems.Take(MaxReportedProblems))}{more}");
-    }
-
-    private static string ComputeInputHash(
-        NodeRef scope,
-        SimulationAsOf asOf,
-        CandidateSummary candidate,
-        IReadOnlyList<EngineVersion> engines,
-        IReadOnlyList<MaskedPart> masked,
-        string? visibleStateDigest) =>
-        ContentHash.ComputeStreaming(writer =>
-        {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName("as_of"u8);
-            writer.WriteStartObject();
-            writer.WriteString("known_at"u8, asOf.KnownAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
-            writer.WriteString("valid_at"u8, asOf.ValidAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
-            writer.WriteEndObject();
-
-            writer.WritePropertyName("candidate"u8);
-            writer.WriteStartObject();
-            writer.WriteString("base_content_hash"u8, candidate.BaseContentHash);
-            writer.WriteString("base_version"u8, candidate.BaseVersion?.ToString());
-            writer.WriteString("content_hash"u8, candidate.ContentHash);
-            writer.WriteString("kind"u8, candidate.Kind.ToString());
-            writer.WriteString("version"u8, candidate.Version?.ToString());
-            writer.WriteEndObject();
-
-            writer.WritePropertyName("engines"u8);
-            writer.WriteStartArray();
-            for (var i = 0; i < engines.Count; i++)
-            {
-                var engine = engines[i];
-                writer.WriteStartObject();
-                writer.WriteString("name"u8, engine.Name);
-                writer.WriteString("version"u8, engine.Version);
-                writer.WriteEndObject();
-            }
-
-            writer.WriteEndArray();
-
-            writer.WritePropertyName("masked"u8);
-            writer.WriteStartArray();
-            for (var i = 0; i < masked.Count; i++)
-            {
-                var part = masked[i];
-                writer.WriteStartObject();
-                writer.WriteString("part"u8, part.Part);
-                writer.WriteString("reason"u8, part.Reason.ToString());
-                writer.WriteEndObject();
-            }
-
-            writer.WriteEndArray();
-
-            writer.WriteString("scope"u8, scope.ToString());
-            if (visibleStateDigest is not null)
-            {
-                writer.WriteString("visible_state_digest"u8, visibleStateDigest);
-            }
-
-            writer.WriteEndObject();
-        });
-
-    private static IReadOnlyList<MatrixGapFinding> EvaluateMatrixGaps(string content)
-    {
-        var read = ProtocolDesignDocument.Read(content);
-        return read.Design is { } design ? MatrixGapAnalyzer.Analyze(design) : [];
-    }
-
-    private static NodeRef NodeRefForItem(LibraryItemView item) =>
-        item.VersionIndex >= 1 ? NodeRef.For(item.Id, item.VersionIndex) : NodeRef.For(item.Id);
-
-    private sealed record ProtocolCandidate(
-        ProtocolVersionId? Id,
-        StudyId StudyId,
-        string Content,
-        string ContentHash,
-        long VersionIndex,
-        ProtocolAmendment? Amendment);
 }
 
 /// <summary>Registers the simulation engine.</summary>

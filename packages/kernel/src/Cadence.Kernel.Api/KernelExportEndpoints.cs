@@ -4,7 +4,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -48,7 +47,6 @@ public static class KernelExportEndpoints
     /// <summary>Response header reporting collapsed hidden scopes without leaking cross-site record counts (ADR-2590).</summary>
     public const string HiddenScopesHeader = "X-Cadence-Hidden-Scopes";
 
-    private static readonly Capability EnrollmentUnblindCapability = new("enrollment.unblind", VerbClass.Read);
     private static readonly Capability StudyExportCapability = new("study.export", VerbClass.Execute);
     private static readonly Capability EnrollmentExportCapability = new("enrollment.export", VerbClass.Execute);
 
@@ -106,14 +104,14 @@ public static class KernelExportEndpoints
             return KernelProblems.WrongKind(studyNode, NodeKinds.Study);
         }
 
-        if (!TryParseStudyFormat(format, out var exportFormat, out var formatToken))
+        if (!KernelStudyExportProjector.TryParseStudyFormat(format, out var exportFormat, out var formatToken))
         {
             return KernelProblems.BadRequest(
                 "Invalid export format",
                 "Supported study export formats are csv, odm_xml, dataset_json, sas_bundle, r_bundle, and study_archive.");
         }
 
-        if (!TryParseLockFilter(lockFilter, out var parsedLockFilter, out var normalizedLockFilter))
+        if (!KernelStudyExportProjector.TryParseLockFilter(lockFilter, out var parsedLockFilter, out var normalizedLockFilter))
         {
             return KernelProblems.BadRequest(
                 "Invalid lock_filter",
@@ -158,7 +156,7 @@ public static class KernelExportEndpoints
                     effectiveValidAt,
                     effectiveKnownAt,
                     IncludesUnblindedData: false,
-                    ReadOrCreateIdempotencyKey(context, generatedAt),
+                    KernelStudyExportProjector.ReadOrCreateIdempotencyKey(context, generatedAt),
                     $"Export study snapshot ({studyId}, format={formatToken}, lock_filter={normalizedLockFilter})"),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             return deniedReceipt.IsSuccess
@@ -177,7 +175,7 @@ public static class KernelExportEndpoints
             return KernelProblems.NotFound(studyNode);
         }
 
-        var visibilityMap = await EvaluateStudyVisibilityAsync(
+        var visibilityMap = await KernelStudyExportProjector.EvaluateStudyVisibilityAsync(
             tenant,
             studyNode,
             snapshot,
@@ -190,9 +188,9 @@ public static class KernelExportEndpoints
             return KernelProblems.NotVisible($"You may not see this study ({studyMask}), so its clinical exports are refused.");
         }
 
-        var (visibleObservations, visibleEnrollmentIds, hiddenScopes) = PartitionStudyVisibility(snapshot, visibilityMap);
-        var filteredObservations = FilterObservations(visibleObservations, parsedLockFilter);
-        var projected = ProjectStudyExport(
+        var (visibleObservations, visibleEnrollmentIds, hiddenScopes) = KernelStudyExportProjector.PartitionStudyVisibility(snapshot, visibilityMap);
+        var filteredObservations = KernelStudyExportProjector.FilterObservations(visibleObservations, parsedLockFilter);
+        var projected = KernelStudyExportProjector.ProjectStudyExport(
             snapshot,
             filteredObservations,
             normalizedLockFilter,
@@ -201,7 +199,7 @@ public static class KernelExportEndpoints
             visibleEnrollmentIds,
             hiddenScopes);
 
-        var safeCode = SanitizeFileName(snapshot.StudyCode);
+        var safeCode = KernelExportFormatting.SanitizeFileName(snapshot.StudyCode);
         var effectiveHidden = projected.Hidden;
 
         await using var buffer = new MemoryStream();
@@ -224,7 +222,7 @@ public static class KernelExportEndpoints
                     IReadOnlyList<KernelCasebookResponse> archiveCasebooks = [];
                     if (exportFormat == StudyExportFormat.StudyArchive)
                     {
-                        archiveCasebooks = await BuildStudyArchiveCasebooksAsync(
+                        archiveCasebooks = await KernelStudyExportProjector.BuildStudyArchiveCasebooksAsync(
                             tenant,
                             snapshot,
                             filteredObservations,
@@ -261,7 +259,7 @@ public static class KernelExportEndpoints
         var disclosure = includesUnblinded ? "unblinded" : "blinded";
         var artifactId = ArtifactId.New(generatedAt);
         var versionId = ArtifactVersionId.New(generatedAt);
-        var idempotencyKey = ReadOrCreateIdempotencyKey(context, generatedAt);
+        var idempotencyKey = KernelStudyExportProjector.ReadOrCreateIdempotencyKey(context, generatedAt);
         var reason = $"Export study snapshot ({snapshot.StudyCode}, format={formatToken}, lock_filter={normalizedLockFilter}, disclosure={disclosure})";
 
         var receipt = await sender.SendAsync(
@@ -295,7 +293,7 @@ public static class KernelExportEndpoints
             context.Response.Headers[HiddenReasonsHeader] = string.Join(',', effectiveHidden.Reasons);
         }
 
-        context.Response.Headers[HiddenScopesHeader] = FormatHiddenScopesHeader(
+        context.Response.Headers[HiddenScopesHeader] = KernelStudyExportProjector.FormatHiddenScopesHeader(
             new HiddenScopeSummary(effectiveHidden.MoreExist, effectiveHidden.Reasons));
         context.Response.Headers.ETag = $"\"{wireSha256}\"";
         context.Response.Headers.ContentDisposition = $"attachment; filename=\"{safeCode}-{normalizedLockFilter}.{extension}\"";
@@ -329,7 +327,7 @@ public static class KernelExportEndpoints
             return KernelProblems.WrongKind(enrollmentNode, NodeKinds.Enrollment);
         }
 
-        if (!TryParseCasebookFormat(format, out var casebookFormat, out var formatToken))
+        if (!KernelStudyExportProjector.TryParseCasebookFormat(format, out var casebookFormat, out var formatToken))
         {
             return KernelProblems.BadRequest(
                 "Invalid casebook format",
@@ -372,7 +370,7 @@ public static class KernelExportEndpoints
                     queryValidAt,
                     queryKnownAt,
                     IncludesUnblindedData: false,
-                    ReadOrCreateIdempotencyKey(context, requestNow),
+                    KernelStudyExportProjector.ReadOrCreateIdempotencyKey(context, requestNow),
                     $"Export participant casebook ({enrollmentId}, format={formatToken})"),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             return deniedReceipt.IsSuccess
@@ -402,6 +400,7 @@ public static class KernelExportEndpoints
         {
             casebookGeneratedAt = snapshot.KnownAt;
         }
+
         var effectiveValidAt = snapshot.ValidAt;
         var effectiveKnownAt = snapshot.KnownAt;
 
@@ -426,7 +425,11 @@ public static class KernelExportEndpoints
         bool mayUnblind = false;
         if (enrollmentMask is null && !hasBlindedNodeMask && snapshot.Observations.Any(o => o.IsBlindedTreatment))
         {
-            var unblindDecision = await probe.CanIAsync(tenant, EnrollmentUnblindCapability, enrollmentNode, cancellationToken).ConfigureAwait(false);
+            var unblindDecision = await probe.CanIAsync(
+                tenant,
+                KernelStudyExportProjector.EnrollmentUnblindCapability,
+                enrollmentNode,
+                cancellationToken).ConfigureAwait(false);
             mayUnblind = unblindDecision.Permitted;
         }
 
@@ -457,12 +460,12 @@ public static class KernelExportEndpoints
         var payloadBytes = buffer.ToArray();
         var wireSha256 = Convert.ToHexString(SHA256.HashData(payloadBytes)).ToLowerInvariant();
         var contentHash = ContentHash.OfBytes(payloadBytes);
-        var fileLabel = projected.Masked ? "masked-participant" : SanitizeFileName(snapshot.SubjectCode);
+        var fileLabel = projected.Masked ? "masked-participant" : KernelExportFormatting.SanitizeFileName(snapshot.SubjectCode);
         bool includesUnblinded = enrollmentMask is null && mayUnblind && snapshot.Observations.Any(o => o.IsBlindedTreatment);
-        var disclosure = ResolveCasebookDisclosure(projected.Masked, includesUnblinded);
+        var disclosure = KernelStudyExportProjector.ResolveCasebookDisclosure(projected.Masked, includesUnblinded);
         var artifactId = ArtifactId.New(requestNow);
         var versionId = ArtifactVersionId.New(requestNow);
-        var idempotencyKey = ReadOrCreateIdempotencyKey(context, requestNow);
+        var idempotencyKey = KernelStudyExportProjector.ReadOrCreateIdempotencyKey(context, requestNow);
         var reason = $"Export participant casebook ({snapshot.StudyCode}/{fileLabel}, format={formatToken}, disclosure={disclosure})";
 
         var receipt = await sender.SendAsync(
@@ -494,689 +497,8 @@ public static class KernelExportEndpoints
             ? $"more_exist=true;reasons={projected.Mask ?? "NotPermitted"}"
             : "more_exist=false";
         context.Response.Headers.ETag = $"\"{wireSha256}\"";
-        context.Response.Headers.ContentDisposition = $"attachment; filename=\"{SanitizeFileName(snapshot.StudyCode)}-{fileLabel}.{extension}\"";
+        context.Response.Headers.ContentDisposition = $"attachment; filename=\"{KernelExportFormatting.SanitizeFileName(snapshot.StudyCode)}-{fileLabel}.{extension}\"";
         await context.Response.Body.WriteAsync(payloadBytes, cancellationToken).ConfigureAwait(false);
         return Results.Empty;
     }
-
-    private static async Task<IReadOnlyList<KernelCasebookResponse>> BuildStudyArchiveCasebooksAsync(
-        TenantId tenant,
-        StudyExportSnapshot snapshot,
-        IReadOnlyList<ExportObservationSnapshot> filteredObservations,
-        StudyLockFilter lockFilter,
-        DateTimeOffset validAt,
-        DateTimeOffset knownAt,
-        DateTimeOffset generatedAt,
-        string requestedBy,
-        StudyExportVisibility visibility,
-        IReadOnlySet<EnrollmentId> visibleEnrollmentIds,
-        IKernelExportReader exportReader,
-        CancellationToken cancellationToken)
-    {
-        var includedEnrollmentIds = lockFilter == StudyLockFilter.All
-            ? visibleEnrollmentIds.ToHashSet()
-            : filteredObservations.Select(o => o.EnrollmentId).ToHashSet();
-
-        var siteById = snapshot.StudySites.ToDictionary(s => s.StudySiteId);
-        var casebooks = new List<KernelCasebookResponse>(includedEnrollmentIds.Count);
-
-        foreach (var enrollment in snapshot.Enrollments.Where(e => visibleEnrollmentIds.Contains(e.EnrollmentId) && includedEnrollmentIds.Contains(e.EnrollmentId)))
-        {
-            var enrollmentMask = visibility.Masks.For(NodeRef.For(enrollment.EnrollmentId))
-                ?? visibility.Masks.For(NodeRef.For(enrollment.StudySiteId));
-            if (enrollmentMask is { } hiddenMask && hiddenMask != MaskReason.Blinded)
-            {
-                continue;
-            }
-
-            var casebookSnapshot = await exportReader.ReadEnrollmentCasebookAsync(
-                tenant,
-                enrollment.EnrollmentId,
-                validAt,
-                knownAt,
-                cancellationToken).ConfigureAwait(false)
-                ?? SynthesizeEnrollmentCasebookSnapshot(snapshot, enrollment, siteById);
-
-            if (lockFilter != StudyLockFilter.All)
-            {
-                casebookSnapshot = casebookSnapshot with
-                {
-                    Observations = FilterObservations(casebookSnapshot.Observations, lockFilter),
-                };
-            }
-
-            var mayUnblind = enrollmentMask is null && visibility.UnblindedEnrollments.Contains(enrollment.EnrollmentId);
-
-            casebooks.Add(KernelExportStreamer.BuildCasebookModel(
-                casebookSnapshot,
-                generatedAt,
-                requestedBy,
-                enrollmentMask: null,
-                mayUnblind));
-        }
-
-        return casebooks;
-    }
-
-    private static EnrollmentCasebookSnapshot SynthesizeEnrollmentCasebookSnapshot(
-        StudyExportSnapshot snapshot,
-        ExportEnrollmentSnapshot enrollment,
-        IReadOnlyDictionary<StudySiteId, ExportSiteSnapshot> siteById)
-    {
-        siteById.TryGetValue(enrollment.StudySiteId, out var site);
-        var collections = snapshot.Collections.Where(c => c.EnrollmentId == enrollment.EnrollmentId).ToList();
-        var observations = snapshot.Observations.Where(o => o.EnrollmentId == enrollment.EnrollmentId).ToList();
-        var obsIds = observations.Select(o => o.ObservationId.Value).ToHashSet();
-        var formIds = collections.Select(c => c.CollectionInstanceId.Value).ToHashSet();
-        var targetIds = new HashSet<Guid>(obsIds);
-        targetIds.UnionWith(formIds);
-        targetIds.Add(enrollment.EnrollmentId.Value);
-        targetIds.Add(enrollment.StudySiteId.Value);
-        targetIds.Add(snapshot.StudyId.Value);
-
-        var assertions = observations
-            .SelectMany(o => o.Assertions)
-            .DistinctBy(a => a.AssertionId)
-            .ToList();
-        var locks = snapshot.Locks
-            .Where(l => targetIds.Contains(l.Scope.Id))
-            .ToList();
-        var attestations = snapshot.Attestations
-            .Where(a => targetIds.Contains(a.TargetId))
-            .ToList();
-        var allowedAuditKeys = observations.Select(o => o.ObservationId.ToString())
-            .Concat(assertions.Select(a => a.AssertionId.ToString()))
-            .Concat(collections.Select(c => c.CollectionInstanceId.ToString()))
-            .Concat(locks.Select(l => l.LockId.ToString()))
-            .Concat(attestations.Select(a => a.AttestationId.ToString()))
-            .Append(enrollment.EnrollmentId.ToString())
-            .ToHashSet(StringComparer.Ordinal);
-        var audits = snapshot.AuditAggregateIdsBySequence is { } aggregateIds
-            ? snapshot.AuditEntries
-                .Where(entry => aggregateIds.TryGetValue(entry.Sequence, out var aggId) && allowedAuditKeys.Contains(aggId))
-                .ToList()
-            : snapshot.AuditEntries;
-
-        return new EnrollmentCasebookSnapshot(
-            StudyId: snapshot.StudyId,
-            StudyCode: snapshot.StudyCode,
-            StudyTitle: snapshot.StudyTitle,
-            StudySiteId: enrollment.StudySiteId,
-            SiteCode: site?.SiteCode ?? enrollment.SiteCode,
-            SiteName: site?.SiteName ?? enrollment.SiteCode,
-            EnrollmentId: enrollment.EnrollmentId,
-            ParticipantId: enrollment.ParticipantId,
-            SubjectCode: enrollment.SubjectCode,
-            StatusAtCut: enrollment.StatusAtCut,
-            ValidAt: snapshot.ValidAt,
-            KnownAt: snapshot.KnownAt,
-            ProtocolVersions: snapshot.ProtocolVersions,
-            Collections: collections,
-            Observations: observations,
-            Assertions: assertions,
-            Locks: locks,
-            Attestations: attestations,
-            AuditEntries: audits,
-            BlindedAuditSequences: snapshot.BlindedAuditSequences);
-    }
-
-    private static async Task<StudyExportVisibility> EvaluateStudyVisibilityAsync(
-        TenantId tenant,
-        NodeRef studyNode,
-        StudyExportSnapshot snapshot,
-        INodeVisibility visibility,
-        IAuthorizationProbe probe,
-        ICurrentActor actor,
-        CancellationToken cancellationToken)
-    {
-        var nodes = new List<NodeRef> { studyNode };
-        nodes.AddRange(snapshot.StudySites.Select(s => NodeRef.For(s.StudySiteId)));
-        nodes.AddRange(snapshot.Enrollments.Select(e => NodeRef.For(e.EnrollmentId)));
-        nodes.AddRange(snapshot.Observations.Select(o => NodeRef.For(o.ObservationId)));
-
-        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, nodes, cancellationToken).ConfigureAwait(false);
-        var unblindedEnrollments = new HashSet<EnrollmentId>();
-
-        var enrollmentsWithBlindedObs = snapshot.Observations
-            .Where(o => o.IsBlindedTreatment)
-            .Select(o => o.EnrollmentId)
-            .Distinct()
-            .ToList();
-
-        foreach (var enrollmentId in enrollmentsWithBlindedObs)
-        {
-            var enrollmentNode = NodeRef.For(enrollmentId);
-            if (masks.For(enrollmentNode) is not null)
-            {
-                continue;
-            }
-
-            var decision = await probe.CanIAsync(tenant, EnrollmentUnblindCapability, enrollmentNode, cancellationToken).ConfigureAwait(false);
-            if (decision.Permitted)
-            {
-                unblindedEnrollments.Add(enrollmentId);
-            }
-        }
-
-        return new StudyExportVisibility(masks, unblindedEnrollments);
-    }
-
-    private static List<ExportObservationSnapshot> FilterObservations(
-        IReadOnlyList<ExportObservationSnapshot> observations,
-        StudyLockFilter filter) =>
-        filter switch
-        {
-            StudyLockFilter.LockedOnly => [.. observations.Where(o => o.EffectiveLock == LockKind.Locked)],
-            StudyLockFilter.FrozenOrLocked => [.. observations.Where(o => o.EffectiveLock is LockKind.Frozen or LockKind.Locked)],
-            StudyLockFilter.UnlockedOnly => [.. observations.Where(o => o.EffectiveLock is null)],
-            _ => [.. observations],
-        };
-
-    private static (List<ExportObservationSnapshot> VisibleObservations, HashSet<EnrollmentId> VisibleEnrollmentIds, HiddenScopeSummary HiddenScopes) PartitionStudyVisibility(
-        StudyExportSnapshot snapshot,
-        StudyExportVisibility visibility)
-    {
-        var hiddenReasons = new SortedSet<string>(StringComparer.Ordinal);
-        foreach (var site in snapshot.StudySites)
-        {
-            if (visibility.Masks.For(NodeRef.For(site.StudySiteId)) is { } siteMask && siteMask != MaskReason.Blinded)
-            {
-                hiddenReasons.Add(siteMask.ToString());
-            }
-        }
-
-        var visibleEnrollmentIds = new HashSet<EnrollmentId>();
-        foreach (var enrollment in snapshot.Enrollments)
-        {
-            var enrollmentMask = visibility.Masks.For(NodeRef.For(enrollment.EnrollmentId))
-                ?? visibility.Masks.For(NodeRef.For(enrollment.StudySiteId));
-            if (enrollmentMask is { } mask && mask != MaskReason.Blinded)
-            {
-                hiddenReasons.Add(mask.ToString());
-            }
-            else
-            {
-                visibleEnrollmentIds.Add(enrollment.EnrollmentId);
-            }
-        }
-
-        var visibleObservations = new List<ExportObservationSnapshot>(snapshot.Observations.Count);
-        foreach (var obs in snapshot.Observations)
-        {
-            var accessMask = visibility.Masks.For(NodeRef.For(obs.EnrollmentId))
-                ?? visibility.Masks.For(NodeRef.For(obs.StudySiteId));
-            if (accessMask is { } hiddenAccess && hiddenAccess != MaskReason.Blinded)
-            {
-                hiddenReasons.Add(hiddenAccess.ToString());
-                continue;
-            }
-
-            if (!visibleEnrollmentIds.Contains(obs.EnrollmentId))
-            {
-                continue;
-            }
-
-            var obsMask = visibility.Masks.For(NodeRef.For(obs.ObservationId));
-            if (obsMask is { } hiddenObs && hiddenObs != MaskReason.Blinded)
-            {
-                hiddenReasons.Add(hiddenObs.ToString());
-                continue;
-            }
-
-            visibleObservations.Add(obs);
-        }
-
-        var hiddenScopes = hiddenReasons.Count > 0
-            ? new HiddenScopeSummary(true, [.. hiddenReasons])
-            : HiddenScopeSummary.None;
-        return (visibleObservations, visibleEnrollmentIds, hiddenScopes);
-    }
-
-    private static ProjectedStudyExport ProjectStudyExport(
-        StudyExportSnapshot snapshot,
-        IReadOnlyList<ExportObservationSnapshot> filteredVisibleObservations,
-        string lockFilterName,
-        DateTimeOffset generatedAt,
-        StudyExportVisibility visibility,
-        IReadOnlySet<EnrollmentId> visibleEnrollmentIds,
-        HiddenScopeSummary hiddenScopes)
-    {
-        var enrollmentById = snapshot.Enrollments.ToDictionary(e => e.EnrollmentId);
-        var siteById = snapshot.StudySites.ToDictionary(s => s.StudySiteId);
-
-        var rows = new List<ProjectedObservationRow>(filteredVisibleObservations.Count);
-        foreach (var obs in filteredVisibleObservations)
-        {
-            enrollmentById.TryGetValue(obs.EnrollmentId, out var enrollment);
-            siteById.TryGetValue(obs.StudySiteId, out var site);
-
-            var accessMask = visibility.Masks.For(NodeRef.For(obs.EnrollmentId))
-                ?? visibility.Masks.For(NodeRef.For(obs.StudySiteId));
-            var obsMask = visibility.Masks.For(NodeRef.For(obs.ObservationId));
-            if (accessMask == MaskReason.Blinded
-                || obsMask == MaskReason.Blinded
-                || (obs.IsBlindedTreatment && !visibility.UnblindedEnrollments.Contains(obs.EnrollmentId)))
-            {
-                rows.Add(ProjectedObservationRow.CreateBlinded(snapshot.StudyCode, enrollment, site, obs));
-                continue;
-            }
-
-            rows.Add(ProjectedObservationRow.CreateVisible(snapshot.StudyCode, enrollment, site, obs));
-        }
-
-        return new ProjectedStudyExport(
-            snapshot,
-            lockFilterName,
-            generatedAt,
-            rows,
-            visibility,
-            visibleEnrollmentIds,
-            new KernelHiddenContentResponse(hiddenScopes.MoreExist, hiddenScopes.Reasons),
-            hiddenScopes);
-    }
-
-    private static string FormatHiddenScopesHeader(HiddenScopeSummary hiddenScopes) =>
-        hiddenScopes.MoreExist
-            ? $"more_exist=true;reasons={string.Join(',', hiddenScopes.Reasons)}"
-            : "more_exist=false";
-
-    private static string ResolveCasebookDisclosure(bool masked, bool includesUnblinded)
-    {
-        if (masked)
-        {
-            return "masked";
-        }
-
-        return includesUnblinded ? "unblinded" : "blinded";
-    }
-
-    private static string ReadOrCreateIdempotencyKey(HttpContext context, DateTimeOffset generatedAt)
-    {
-        var supplied = context.Request.Headers["Idempotency-Key"].FirstOrDefault();
-        return string.IsNullOrWhiteSpace(supplied)
-            ? $"export-{Guid.CreateVersion7(generatedAt):N}"
-            : supplied.Trim();
-    }
-
-    private static bool TryParseStudyFormat(string? raw, out StudyExportFormat format, out string normalizedFormat)
-    {
-        var normalized = string.IsNullOrWhiteSpace(raw) ? "csv" : raw.Trim().ToLowerInvariant();
-        switch (normalized)
-        {
-            case "csv":
-                format = StudyExportFormat.Csv;
-                normalizedFormat = "csv";
-                return true;
-            case "odm_xml" or "odm":
-                format = StudyExportFormat.OdmXml;
-                normalizedFormat = "odm_xml";
-                return true;
-            case "dataset_json" or "dataset-json":
-                format = StudyExportFormat.DatasetJson;
-                normalizedFormat = "dataset_json";
-                return true;
-            case "sas_bundle" or "sas-bundle":
-                format = StudyExportFormat.SasBundle;
-                normalizedFormat = "sas_bundle";
-                return true;
-            case "r_bundle" or "r-bundle":
-                format = StudyExportFormat.RBundle;
-                normalizedFormat = "r_bundle";
-                return true;
-            case "study_archive" or "study-archive":
-                format = StudyExportFormat.StudyArchive;
-                normalizedFormat = "study_archive";
-                return true;
-            default:
-                format = default;
-                normalizedFormat = string.Empty;
-                return false;
-        }
-    }
-
-    private static bool TryParseCasebookFormat(string? raw, out CasebookExportFormat format, out string normalizedFormat)
-    {
-        var normalized = string.IsNullOrWhiteSpace(raw) ? "json" : raw.Trim().ToLowerInvariant();
-        switch (normalized)
-        {
-            case "json":
-                format = CasebookExportFormat.Json;
-                normalizedFormat = "json";
-                return true;
-            case "odm_xml" or "odm":
-                format = CasebookExportFormat.OdmXml;
-                normalizedFormat = "odm_xml";
-                return true;
-            case "html":
-                format = CasebookExportFormat.Html;
-                normalizedFormat = "html";
-                return true;
-            case "pdf":
-                format = CasebookExportFormat.Pdf;
-                normalizedFormat = "pdf";
-                return true;
-            default:
-                format = default;
-                normalizedFormat = string.Empty;
-                return false;
-        }
-    }
-
-    private static bool TryParseLockFilter(string? raw, out StudyLockFilter filter, out string normalized)
-    {
-        var token = string.IsNullOrWhiteSpace(raw) ? "all" : raw.Trim().ToLowerInvariant();
-        switch (token)
-        {
-            case "all":
-                filter = StudyLockFilter.All;
-                normalized = "all";
-                return true;
-            case "locked_only" or "locked":
-                filter = StudyLockFilter.LockedOnly;
-                normalized = "locked_only";
-                return true;
-            case "frozen_or_locked":
-                filter = StudyLockFilter.FrozenOrLocked;
-                normalized = "frozen_or_locked";
-                return true;
-            case "unlocked_only" or "unlocked":
-                filter = StudyLockFilter.UnlockedOnly;
-                normalized = "unlocked_only";
-                return true;
-            default:
-                filter = default;
-                normalized = string.Empty;
-                return false;
-        }
-    }
-
-    private static string SanitizeFileName(string value)
-    {
-        var chars = value.Select(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_' ? ch : '_').ToArray();
-        return chars.Length == 0 ? "export" : new string(chars);
-    }
 }
-
-internal enum StudyExportFormat
-{
-    Csv,
-    OdmXml,
-    DatasetJson,
-    SasBundle,
-    RBundle,
-    StudyArchive,
-}
-
-internal enum CasebookExportFormat
-{
-    Json,
-    OdmXml,
-    Html,
-    Pdf,
-}
-
-internal enum StudyLockFilter
-{
-    All,
-    LockedOnly,
-    FrozenOrLocked,
-    UnlockedOnly,
-}
-
-internal sealed record HiddenScopeSummary(bool MoreExist, IReadOnlyList<string> Reasons)
-{
-    public static HiddenScopeSummary None { get; } = new(false, []);
-}
-
-internal sealed record StudyExportVisibility(
-    IReadOnlyDictionary<NodeRef, MaskReason> Masks,
-    HashSet<EnrollmentId> UnblindedEnrollments);
-
-internal sealed record ProjectedStudyExport(
-    StudyExportSnapshot Snapshot,
-    string LockFilter,
-    DateTimeOffset GeneratedAt,
-    IReadOnlyList<ProjectedObservationRow> Rows,
-    StudyExportVisibility Visibility,
-    IReadOnlySet<EnrollmentId> VisibleEnrollmentIds,
-    KernelHiddenContentResponse Hidden,
-    HiddenScopeSummary HiddenScopes);
-
-internal sealed record ProjectedObservationRow(
-    string StudyCode,
-    string SiteCode,
-    string SubjectCode,
-    string EnrollmentRef,
-    string ObservationRef,
-    string? CollectionInstanceRef,
-    string CollectionSpecId,
-    string? PlannedActivityId,
-    string ItemId,
-    string ConceptRef,
-    string ConceptCode,
-    string ConceptLabel,
-    DateTimeOffset? ObservedAt,
-    int? Revision,
-    string ValueKind,
-    string ResultText,
-    decimal? ResultDecimal,
-    string? ResultUnit,
-    string? LockState,
-    bool Masked,
-    string? MaskReason,
-    string? RecordedBy,
-    DateTimeOffset? RecordedAt,
-    ExportObservationSnapshot? SourceObservation,
-    CollectionInstanceId? GroupingCollectionInstanceId = null)
-{
-    public static ProjectedObservationRow CreateBlinded(
-        string studyCode,
-        ExportEnrollmentSnapshot? enrollment,
-        ExportSiteSnapshot? site,
-        ExportObservationSnapshot obs) =>
-        new(
-            StudyCode: studyCode,
-            SiteCode: site?.SiteCode ?? enrollment?.SiteCode ?? obs.StudySiteId.ToString(),
-            SubjectCode: enrollment?.SubjectCode ?? obs.EnrollmentId.ToString(),
-            EnrollmentRef: NodeRef.For(obs.EnrollmentId).ToString(),
-            ObservationRef: "masked",
-            CollectionInstanceRef: null,
-            CollectionSpecId: obs.CollectionSpecId ?? "unscheduled",
-            PlannedActivityId: obs.PlannedActivityId,
-            ItemId: obs.ItemId ?? obs.ConceptCode,
-            ConceptRef: obs.Concept.ToString(),
-            ConceptCode: obs.ConceptCode,
-            ConceptLabel: obs.ConceptLabel,
-            ObservedAt: obs.ObservedAt,
-            Revision: null,
-            ValueKind: "masked",
-            ResultText: "masked",
-            ResultDecimal: null,
-            ResultUnit: null,
-            LockState: obs.EffectiveLock?.ToString(),
-            Masked: true,
-            MaskReason: Cadence.Kernel.References.MaskReason.Blinded.ToString(),
-            RecordedBy: null,
-            RecordedAt: obs.CurrentRevision.RecordedAt,
-            SourceObservation: null,
-            GroupingCollectionInstanceId: obs.CollectionInstanceId);
-
-    public static ProjectedObservationRow CreateVisible(
-        string studyCode,
-        ExportEnrollmentSnapshot? enrollment,
-        ExportSiteSnapshot? site,
-        ExportObservationSnapshot obs)
-    {
-        var current = obs.CurrentRevision.Value;
-        decimal? numeric = current is QuantityValue qv ? qv.Value : null;
-        string? unit = current is QuantityValue qu ? qu.Unit : null;
-        string display = current switch
-        {
-            QuantityValue quantity => quantity.ToResultString(),
-            _ => current.ToDisplayString(),
-        };
-
-        return new ProjectedObservationRow(
-            StudyCode: studyCode,
-            SiteCode: site?.SiteCode ?? enrollment?.SiteCode ?? obs.StudySiteId.ToString(),
-            SubjectCode: enrollment?.SubjectCode ?? obs.EnrollmentId.ToString(),
-            EnrollmentRef: NodeRef.For(obs.EnrollmentId).ToString(),
-            ObservationRef: NodeRef.For(obs.ObservationId, obs.CurrentRevision.Number).ToString(),
-            CollectionInstanceRef: obs.CollectionInstanceId is { } cid ? NodeRef.For(cid).ToString() : null,
-            CollectionSpecId: obs.CollectionSpecId ?? "unscheduled",
-            PlannedActivityId: obs.PlannedActivityId,
-            ItemId: obs.ItemId ?? obs.ConceptCode,
-            ConceptRef: obs.Concept.ToString(),
-            ConceptCode: obs.ConceptCode,
-            ConceptLabel: obs.ConceptLabel,
-            ObservedAt: obs.ObservedAt,
-            Revision: obs.CurrentRevision.Number,
-            ValueKind: current.Kind.ToString(),
-            ResultText: display,
-            ResultDecimal: numeric,
-            ResultUnit: unit,
-            LockState: obs.EffectiveLock?.ToString(),
-            Masked: false,
-            MaskReason: null,
-            RecordedBy: obs.CurrentRevision.RecordedBy,
-            RecordedAt: obs.CurrentRevision.RecordedAt,
-            SourceObservation: obs,
-            GroupingCollectionInstanceId: obs.CollectionInstanceId);
-    }
-}
-
-/// <summary>Streamed JSON response shape for <c>GET /api/v1/kernel/enrollments/{enrollmentRef}/casebook</c>.</summary>
-/// <param name="Producer">Component that generated the certified casebook projection.</param>
-/// <param name="GeneratedAt">Server timestamp from <see cref="IClock"/> when the casebook was projected.</param>
-/// <param name="RequestedBy">Authenticated caller identifier.</param>
-/// <param name="ValidAt">Evaluated valid-time coordinate of the bitemporal snapshot.</param>
-/// <param name="KnownAt">Evaluated recorded-time coordinate of the bitemporal snapshot.</param>
-/// <param name="CasebookDigestSha256">Canonical SHA-256 digest over the projected casebook contents.</param>
-/// <param name="StudyRef">Study NodeRef.</param>
-/// <param name="StudyCode">Study code.</param>
-/// <param name="StudyTitle">Study title.</param>
-/// <param name="SiteRef">Study site NodeRef, or <c>masked</c> when hidden.</param>
-/// <param name="SiteCode">Site code, or <c>masked</c> when hidden.</param>
-/// <param name="EnrollmentRef">Enrollment NodeRef, or <c>masked</c> when hidden.</param>
-/// <param name="SubjectCode">Pseudonymous subject code (never a direct identifier), or <c>masked</c> when hidden.</param>
-/// <param name="EnrollmentStatus">Enrollment status at the evaluated coordinate, or null when masked.</param>
-/// <param name="Masked">True when the enrollment itself is masked for the caller.</param>
-/// <param name="Mask">Why the enrollment is masked, or null when visible.</param>
-/// <param name="Forms">Form instances collected for the participant.</param>
-/// <param name="Observations">Recorded observations with current and superseded revisions.</param>
-/// <param name="Queries">Raised queries and answers on the participant's observations.</param>
-/// <param name="Verifications">Source data verifications recorded on the participant's observations.</param>
-/// <param name="Locks">Locks covering the study, site, enrollment, forms or observations.</param>
-/// <param name="Attestations">Electronic signatures recorded on forms and lock assertions.</param>
-/// <param name="AuditTrail">Kernel audit-chain entries for the participant's clinical records.</param>
-/// <param name="ProtocolVersions">Internal protocol version snapshots used when rendering structured XML casebooks (omitted from JSON wire output).</param>
-public sealed record KernelCasebookResponse(
-    string Producer,
-    DateTimeOffset GeneratedAt,
-    string RequestedBy,
-    DateTimeOffset ValidAt,
-    DateTimeOffset KnownAt,
-    string CasebookDigestSha256,
-    string StudyRef,
-    string StudyCode,
-    string StudyTitle,
-    string SiteRef,
-    string SiteCode,
-    string EnrollmentRef,
-    string SubjectCode,
-    string? EnrollmentStatus,
-    bool Masked,
-    string? Mask,
-    IReadOnlyList<KernelCasebookFormView> Forms,
-    IReadOnlyList<KernelCasebookObservationView> Observations,
-    IReadOnlyList<KernelCasebookQueryView> Queries,
-    IReadOnlyList<KernelCasebookVerificationView> Verifications,
-    IReadOnlyList<KernelLockResponse> Locks,
-    IReadOnlyList<KernelCasebookAttestationView> Attestations,
-    IReadOnlyList<ObservationAuditView> AuditTrail,
-    [property: JsonIgnore] IReadOnlyList<ExportProtocolSnapshot>? ProtocolVersions = null);
-
-/// <summary>One form instance in a participant casebook.</summary>
-public sealed record KernelCasebookFormView(
-    string Ref,
-    string CollectionSpecId,
-    string Title,
-    string? PlannedActivityId,
-    string? PlannedActivityName,
-    DateTimeOffset? CollectedAt,
-    DateTimeOffset? OpenedAt,
-    string? OpenedBy,
-    string? ContentHash,
-    bool Masked,
-    string? Mask,
-    [property: JsonIgnore] Guid? GroupingFormId = null);
-
-/// <summary>One observation with its current and superseded revisions in a participant casebook.</summary>
-public sealed record KernelCasebookObservationView(
-    string Ref,
-    string? CollectionInstanceRef,
-    string? CollectionSpecId,
-    string? ItemId,
-    string ConceptRef,
-    string ConceptCode,
-    string ConceptLabel,
-    DateTimeOffset? ObservedAt,
-    int? CurrentRevision,
-    string ValueKind,
-    string DisplayValue,
-    decimal? NumericValue,
-    string? Unit,
-    string? EffectiveLock,
-    bool Masked,
-    string? Mask,
-    IReadOnlyList<KernelCasebookRevisionView> Revisions,
-    [property: JsonIgnore] Guid? GroupingFormId = null);
-
-/// <summary>One revision (current or superseded) of an observation in a participant casebook.</summary>
-public sealed record KernelCasebookRevisionView(
-    int Revision,
-    string ValueKind,
-    string DisplayValue,
-    decimal? NumericValue,
-    string? Unit,
-    string? ReasonForChange,
-    string? RecordedBy,
-    DateTimeOffset RecordedAt,
-    DateTimeOffset? SupersededAt,
-    bool Superseded);
-
-/// <summary>One query or query answer in a participant casebook.</summary>
-public sealed record KernelCasebookQueryView(
-    string Ref,
-    string Kind,
-    string TargetRef,
-    string? Text,
-    string? AssertedBy,
-    DateTimeOffset AssertedAt,
-    string? ReasonForChange,
-    bool Closed,
-    DateTimeOffset? ClosedAt,
-    int? Revision = null);
-
-/// <summary>One source data verification entry in a participant casebook.</summary>
-public sealed record KernelCasebookVerificationView(
-    string Ref,
-    string ObservationRef,
-    int? Revision,
-    string? VerifiedBy,
-    DateTimeOffset VerifiedAt,
-    string? ReasonForChange,
-    bool Retracted,
-    DateTimeOffset? RetractedAt);
-
-/// <summary>One 21 CFR Part 11 electronic signature (<c>Attestation</c>) in a participant casebook.</summary>
-public sealed record KernelCasebookAttestationView(
-    string Ref,
-    string TargetRef,
-    string Meaning,
-    string SignerId,
-    DateTimeOffset AuthenticatedAt,
-    string Method,
-    DateTimeOffset SignedAt,
-    string TargetContentHash,
-    string Reason);
