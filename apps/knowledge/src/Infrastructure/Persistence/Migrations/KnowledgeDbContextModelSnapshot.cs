@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using NpgsqlTypes;
 
 #nullable disable
 
@@ -85,181 +84,6 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("knowledge_contextual_help_mappings", (string)null);
-                });
-
-            modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.DelegationRecord", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<string>("BatchTransactionId")
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Duties")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset?>("PiApprovedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("PiSignatureHash")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("SignedOff")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("SiteId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("StaffName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("StaffUserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("StudyId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("TaskCode")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.Property<long>("_version")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasDefaultValue(0L);
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("DelegationRecords");
-                });
-
-            modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.DelegationRecordPeriod", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(36)
-                        .HasColumnType("character varying(36)");
-
-                    b.Property<string>("BatchTransactionId")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("DelegationRecordId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Duties")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset?>("PiApprovedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("PiSignatureHash")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("ReasonForChange")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<NpgsqlRange<DateTimeOffset>>("RecordedPeriod")
-                        .HasColumnType("tstzrange")
-                        .HasColumnName("recorded_period");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<bool>("SignedOff")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("SiteCode")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("StaffName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("StaffUserId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("StudyCode")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("TaskCode")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.Property<NpgsqlRange<DateTimeOffset>>("ValidPeriod")
-                        .HasColumnType("tstzrange")
-                        .HasColumnName("valid_period");
-
-                    b.Property<long>("_version")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasDefaultValue(0L);
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DelegationRecordId");
-
-                    b.HasIndex("TenantId");
-
-                    b.HasIndex("StudyCode", "SiteCode");
-
-                    b.ToTable("delegation_record_periods", (string)null);
                 });
 
             modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.KnowledgeArticle", b =>
@@ -718,6 +542,18 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("EtmfDocumentId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("KernelArtifactVersionRef")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("KernelQualificationRef")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<double?>("QuizScore")
                         .HasColumnType("double precision");
 
@@ -766,7 +602,7 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("TrainingAssignments");
+                    b.ToTable("TrainingAssignments", (string)null);
                 });
 
             modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.TrainingCertificate", b =>
@@ -787,6 +623,18 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                     b.Property<string>("EtmfArtifactId")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("EtmfDocumentId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("KernelArtifactVersionRef")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("KernelQualificationRef")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("Meaning")
                         .IsRequired()
@@ -818,7 +666,7 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("TrainingCertificates");
+                    b.ToTable("TrainingCertificates", (string)null);
                 });
 
             modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.TrainingCurriculum", b =>
@@ -839,8 +687,31 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("ModulesJson")
+                        .HasColumnType("text");
+
+                    b.Property<double>("PassingScore")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("double precision")
+                        .HasDefaultValue(0.80000000000000004);
+
                     b.Property<string>("ProtocolVersion")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("ProtocolVersionNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<string>("QualificationCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasDefaultValue("protocol_training");
+
+                    b.Property<string>("QuizQuestionsJson")
                         .HasColumnType("text");
 
                     b.Property<string>("ReasonForChange")
@@ -869,7 +740,7 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("TrainingCurricula");
+                    b.ToTable("TrainingCurricula", (string)null);
                 });
 
             modelBuilder.Entity("Cadence.Core.Domain.Audit.AuditLogEntry", b =>
@@ -1018,15 +889,6 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                     b.HasIndex("RetainUntil");
 
                     b.ToTable("consumed_signature_tokens", (string)null);
-                });
-
-            modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.DelegationRecordPeriod", b =>
-                {
-                    b.HasOne("Cadence.Apps.Knowledge.Domain.DelegationRecord", null)
-                        .WithMany()
-                        .HasForeignKey("DelegationRecordId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.KnowledgeArticleVersion", b =>

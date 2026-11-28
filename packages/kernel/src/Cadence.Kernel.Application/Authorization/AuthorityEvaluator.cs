@@ -173,6 +173,9 @@ public sealed record KernelAuthorityOptions(IReadOnlySet<string> PlatformOperato
     /// <summary>Dedicated service account for commercial billing operations.</summary>
     public static readonly Actor CommercialBillingOperator = CommercialOperators.BillingOperator;
 
+    /// <summary>Dedicated service account for verified Knowledge training artifact and qualification recording.</summary>
+    public static readonly Actor KnowledgeTrainingOperator = TrustOperators.KnowledgeTrainingOperator;
+
     /// <summary>The capabilities a platform operator holds without a grant.</summary>
     public static readonly FrozenSet<string> PlatformCapabilities = FrozenSet.Create(StringComparer.Ordinal, "tenant.provision", "grant.issue", "role.define");
 
@@ -184,6 +187,13 @@ public sealed record KernelAuthorityOptions(IReadOnlySet<string> PlatformOperato
         "subscription.expire",
         "entitlement.grant",
         "entitlement.revoke");
+
+    /// <summary>The training evidence capabilities held exclusively by <see cref="KnowledgeTrainingOperator"/> when registered as a host operator.</summary>
+    public static readonly FrozenSet<string> KnowledgeTrainingCapabilities = FrozenSet.Create(
+        StringComparer.Ordinal,
+        "artifact.register",
+        "artifact.add_version",
+        "qualification.record");
 }
 
 /// <summary>
@@ -225,6 +235,9 @@ public sealed partial class AuthorityEvaluator(IAuthorityStore store, KernelAuth
 
     /// <summary>Condition: the actor is the dedicated commercial billing operator.</summary>
     public const string CommercialBillingOperatorCondition = "actor.commercial_billing_operator";
+
+    /// <summary>Condition: the actor is the dedicated Knowledge training qualification operator.</summary>
+    public const string KnowledgeTrainingOperatorCondition = "actor.knowledge_training_operator";
 
     /// <summary>Condition: an automation agent acts only within its verb classes.</summary>
     public const string AgentVerbCondition = "actor.agent_verb";
@@ -281,6 +294,13 @@ public sealed partial class AuthorityEvaluator(IAuthorityStore store, KernelAuth
             {
                 return AuthorizationDecision.Permit(
                     conditions: EvaluatedCondition.Satisfied(CommercialBillingOperatorCondition, $"{request.Actor.Id} operates commercial billing"));
+            }
+
+            if (request.Actor == TrustOperators.KnowledgeTrainingOperator
+                && KernelAuthorityOptions.KnowledgeTrainingCapabilities.Contains(token))
+            {
+                return AuthorizationDecision.Permit(
+                    conditions: EvaluatedCondition.Satisfied(KnowledgeTrainingOperatorCondition, $"{request.Actor.Id} records verified training qualifications"));
             }
         }
 
@@ -343,6 +363,14 @@ public sealed partial class AuthorityEvaluator(IAuthorityStore store, KernelAuth
             {
                 var permitted = AuthorizationDecision.Permit(
                     conditions: EvaluatedCondition.Satisfied(CommercialBillingOperatorCondition, $"{actor.Id} operates commercial billing"));
+                return distinct.ToDictionary(r => r, _ => permitted);
+            }
+
+            if (actor == TrustOperators.KnowledgeTrainingOperator
+                && KernelAuthorityOptions.KnowledgeTrainingCapabilities.Contains(token))
+            {
+                var permitted = AuthorizationDecision.Permit(
+                    conditions: EvaluatedCondition.Satisfied(KnowledgeTrainingOperatorCondition, $"{actor.Id} records verified training qualifications"));
                 return distinct.ToDictionary(r => r, _ => permitted);
             }
         }

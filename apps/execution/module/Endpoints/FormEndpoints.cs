@@ -45,6 +45,7 @@ internal static class FormEndpoints
     public const string IdempotencyKeyHeader = "Idempotency-Key";
 
     private static readonly Capability SignFormCapability = new("collection.sign", VerbClass.Execute);
+    private static readonly Capability RecordFormCapability = new("collection.record", VerbClass.Execute);
 
     public static IEndpointRouteBuilder MapFormEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -325,6 +326,11 @@ internal static class FormEndpoints
             SignFormCapability,
             enrollmentNode,
             cancellationToken).ConfigureAwait(false);
+        var (canRecord, captureExplanation) = await access.ExplainExerciseAsync(
+            tenant,
+            RecordFormCapability,
+            enrollmentNode,
+            cancellationToken).ConfigureAwait(false);
         if (!evaluatedUnblind)
         {
             canUnblind = await access.CanUnblindAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
@@ -357,7 +363,9 @@ internal static class FormEndpoints
             blindedObservationIds,
             openQueryCount,
             answeredQueryCount,
-            assessment));
+            assessment,
+            canRecord,
+            captureExplanation));
     }
 
     internal static async Task<Results<Ok<FormPreviewResponse>, ProblemHttpResult>> PreviewAsync(
@@ -530,6 +538,13 @@ internal static class FormEndpoints
                     SignFormCapability,
                     enrollmentNode,
                     cancellationToken).ConfigureAwait(false);
+            var (canRecord, captureExplanation) = access is null
+                ? (true, null)
+                : await access.ExplainExerciseAsync(
+                    tenant,
+                    RecordFormCapability,
+                    enrollmentNode,
+                    cancellationToken).ConfigureAwait(false);
             if (access is not null)
             {
                 if (!evaluatedSaveUnblind)
@@ -581,7 +596,17 @@ internal static class FormEndpoints
                 context.RequestServices,
                 cancellationToken).ConfigureAwait(false);
 
-            hydrated = FormResponse.From(updated, layout, canSign, blindedItemIds, blindedObservationIds, openQueryCount, answeredQueryCount, saveAssessment);
+            hydrated = FormResponse.From(
+                updated,
+                layout,
+                canSign,
+                blindedItemIds,
+                blindedObservationIds,
+                openQueryCount,
+                answeredQueryCount,
+                saveAssessment,
+                canRecord,
+                captureExplanation);
         }
 
         return TypedResults.Ok(FormSavedResponse.From(state, hydrated, blindedItemIds, blindedObservationIds));

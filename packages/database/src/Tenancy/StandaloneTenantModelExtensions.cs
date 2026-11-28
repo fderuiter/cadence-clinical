@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
+using Cadence.Kernel;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -46,6 +48,10 @@ public static class StandaloneTenantModelExtensions
     private static readonly ValueConverter<string, Guid> StringToGuidTenantConverter = new(
         value => ParseOrEmpty(value),
         guid => guid.ToString("D"));
+
+    private static readonly ValueConverter<TenantId, Guid> KernelTenantIdConverter = new(
+        tenantId => tenantId.Value,
+        guid => guid == Guid.Empty ? default : TenantId.FromGuid(guid));
 
     /// <summary>
     /// Identifies append-only/insert-only audit, outbox, transition, and historical revision entities that are never
@@ -142,10 +148,14 @@ public static class StandaloneTenantModelExtensions
         ArgumentNullException.ThrowIfNull(context);
         var entityBuilder = modelBuilder.Entity<TEntity>();
         IMutableProperty? existingProp = entityType.FindProperty(TenantPropertyName);
+        Type? clrTenantType = existingProp?.ClrType
+            ?? entityType.ClrType.GetProperty(
+                TenantPropertyName,
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)?.PropertyType;
 
-        if (existingProp is not null && existingProp.ClrType == typeof(string))
+        if (clrTenantType == typeof(string))
         {
-            existingProp.SetMaxLength(null);
+            existingProp?.SetMaxLength(null);
             entityBuilder.Property<string>(TenantPropertyName)
                 .HasColumnName(TenantColumnName)
                 .HasColumnType("uuid")
@@ -156,6 +166,20 @@ public static class StandaloneTenantModelExtensions
             if (!context.Database.IsRelational())
             {
                 ApplyStringTenantQueryFilter(entityBuilder, entityType, context);
+            }
+        }
+        else if (clrTenantType == typeof(TenantId))
+        {
+            entityBuilder.Property<TenantId>(TenantPropertyName)
+                .HasColumnName(TenantColumnName)
+                .HasColumnType("uuid")
+                .HasConversion(KernelTenantIdConverter)
+                .IsRequired();
+            entityBuilder.HasIndex(TenantPropertyName);
+
+            if (!context.Database.IsRelational())
+            {
+                ApplyKernelTenantIdQueryFilter(entityBuilder, entityType, context);
             }
         }
         else
@@ -227,6 +251,39 @@ public static class StandaloneTenantModelExtensions
         var matchesSeed = Expression.AndAlso(
             notUnbound,
             Expression.Equal(efPropertyCall, Expression.Constant(Guid.Empty)));
+
+        Expression predicate = Expression.OrElse(filterIsNull, Expression.OrElse(matchesActive, matchesSeed));
+        CombineAndSetQueryFilter(entityBuilder, entityType, parameter, predicate);
+    }
+
+    private static void ApplyKernelTenantIdQueryFilter<TContext>(
+        Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder entityBuilder,
+        IMutableEntityType entityType,
+        TContext context)
+        where TContext : DbContext, ITenantScopedDbContext
+    {
+        var parameter = Expression.Parameter(entityType.ClrType, "e");
+        var contextConst = Expression.Constant(context, typeof(TContext));
+        var activeFilter = Expression.Property(contextConst, nameof(ITenantScopedDbContext.ActiveInMemoryTenantFilter));
+        var filterIsNull = Expression.Equal(activeFilter, Expression.Constant(null, typeof(Guid?)));
+
+        var efPropertyCall = Expression.Call(
+            typeof(EF),
+            nameof(EF.Property),
+            [typeof(TenantId)],
+            parameter,
+            Expression.Constant(TenantPropertyName));
+        var valueProp = Expression.Property(efPropertyCall, nameof(TenantId.Value));
+
+        var matchesActive = Expression.Equal(
+            Expression.Convert(valueProp, typeof(Guid?)),
+            activeFilter);
+        var notUnbound = Expression.NotEqual(
+            activeFilter,
+            Expression.Constant((Guid?)UnboundTenantSentinel, typeof(Guid?)));
+        var matchesSeed = Expression.AndAlso(
+            notUnbound,
+            Expression.Equal(valueProp, Expression.Constant(Guid.Empty)));
 
         Expression predicate = Expression.OrElse(filterIsNull, Expression.OrElse(matchesActive, matchesSeed));
         CombineAndSetQueryFilter(entityBuilder, entityType, parameter, predicate);

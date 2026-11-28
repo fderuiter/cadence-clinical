@@ -180,10 +180,10 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
             .ToListAsync(Ct);
         betaLetters.Should().BeEmpty();
 
-        var betaShared = await db.CtmsDelegations.AsNoTracking().SingleAsync(d => d.Id == "DEL-BETA-SHARED", Ct);
+        var betaShared = await db.CtmsDoaTaskEndorsements.AsNoTracking().SingleAsync(d => d.Id == "DEL-BETA-SHARED", Ct);
         betaShared.SignedOff.Should().BeFalse();
 
-        var betaOnly = await db.CtmsDelegations.AsNoTracking().SingleAsync(d => d.Id == "DEL-BETA-ONLY", Ct);
+        var betaOnly = await db.CtmsDoaTaskEndorsements.AsNoTracking().SingleAsync(d => d.Id == "DEL-BETA-ONLY", Ct);
         betaOnly.IsActive.Should().BeTrue();
     }
 
@@ -236,10 +236,11 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
 
         await using var scope = _factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<CtmsDbContext>();
-        var saved = await db.CtmsDelegations.AsNoTracking().SingleAsync(d => d.Id == created.RecordId, Ct);
-        saved.StudyId.Should().Be("STUDY-ALPHA");
-        saved.SiteId.Should().Be("SITE-SHARED");
+        var saved = await db.CtmsDoaTaskEndorsements.AsNoTracking().SingleAsync(d => d.Id == created.RecordId, Ct);
+        saved.StudyId.Raw.Should().Be("STUDY-ALPHA");
+        saved.SiteId.Raw.Should().Be("SITE-SHARED");
         saved.SignedOff.Should().BeTrue();
+        saved.KernelGrantId.Should().NotBeNull();
     }
 
     [Fact]
@@ -316,7 +317,7 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
         var db = scope.ServiceProvider.GetRequiredService<CtmsDbContext>();
 
         // 1. Delegation-only site in STUDY-BETA (no greenlight gate, milestone, or monitoring visit)
-        db.CtmsDelegations.Add(new CtmsDelegation("DEL-BETA-ONLY")
+        db.CtmsDoaTaskEndorsements.Add(new CtmsDoaTaskEndorsement("DEL-BETA-ONLY")
         {
             StudyId = "STUDY-BETA",
             SiteId = "SITE-BETA-DELEG",
@@ -358,8 +359,8 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
                 VersionIndex = 1,
             });
 
-        db.CtmsDelegations.AddRange(
-            new CtmsDelegation("DEL-ALPHA-SHARED")
+        db.CtmsDoaTaskEndorsements.AddRange(
+            new CtmsDoaTaskEndorsement("DEL-ALPHA-SHARED")
             {
                 StudyId = "STUDY-ALPHA",
                 SiteId = "SITE-SHARED",
@@ -373,7 +374,7 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
                 ReasonForChange = "Seed alpha shared delegation",
                 VersionIndex = 1,
             },
-            new CtmsDelegation("DEL-BETA-SHARED")
+            new CtmsDoaTaskEndorsement("DEL-BETA-SHARED")
             {
                 StudyId = "STUDY-BETA",
                 SiteId = "SITE-SHARED",

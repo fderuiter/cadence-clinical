@@ -5,6 +5,7 @@ using System.Linq;
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Validation;
@@ -252,6 +253,8 @@ public sealed record FormSummaryResponse(
 /// <param name="WindowStart">First allowed date of the visit window, when timed.</param>
 /// <param name="WindowEnd">Last allowed date of the visit window, when timed.</param>
 /// <param name="DeviationCategory">Emitted deviation category (<c>VISIT_WINDOW</c>) when out of window, otherwise null.</param>
+/// <param name="CanRecord">Whether the current caller holds <c>collection.record</c> (including active delegation and protocol training qualification) over the form's enrollment.</param>
+/// <param name="CaptureExplanation">Masked ADR-2482 authorization explanation when <paramref name="CanRecord"/> is false (K-AUTH-5, K-AUTH-6).</param>
 public sealed record FormResponse(
     Guid FormId,
     Guid EnrollmentId,
@@ -284,7 +287,9 @@ public sealed record FormResponse(
     DateOnly? TargetDate = null,
     DateOnly? WindowStart = null,
     DateOnly? WindowEnd = null,
-    string? DeviationCategory = null)
+    string? DeviationCategory = null,
+    bool CanRecord = true,
+    ProblemExplanation? CaptureExplanation = null)
 {
     /// <summary>
     /// Shapes the kernel's record for a form screen: items in <paramref name="layout"/> order (the specification's order
@@ -299,7 +304,9 @@ public sealed record FormResponse(
         IReadOnlySet<ObservationId>? blindedObservationIds = null,
         int? openQueryCount = null,
         int? answeredQueryCount = null,
-        VisitTimingAssessment? assessment = null)
+        VisitTimingAssessment? assessment = null,
+        bool canRecord = true,
+        ProblemExplanation? captureExplanation = null)
     {
         var specification = record.Items.ToDictionary(i => i.Id, StringComparer.Ordinal);
         var values = record.Values.ToDictionary(v => v.ItemId, StringComparer.Ordinal);
@@ -431,7 +438,9 @@ public sealed record FormResponse(
             assessment?.Expected.Target,
             assessment?.Expected.WindowStart,
             assessment?.Expected.WindowEnd,
-            VisitTimingEvaluator.DeviationCategoryOf(assessment));
+            VisitTimingEvaluator.DeviationCategoryOf(assessment),
+            canRecord,
+            captureExplanation);
     }
 }
 

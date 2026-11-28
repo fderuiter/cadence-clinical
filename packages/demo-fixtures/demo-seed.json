@@ -59,7 +59,9 @@
       "code": "DEMO_INVESTIGATOR",
       "name": "Site investigator",
       "capabilities": [
+        "participant.register",
         "participant.screen",
+        "enrollment.change_status",
         "observation.record",
         "observation.correct",
         "collection.open",
@@ -67,7 +69,13 @@
         "collection.sign",
         "attestation.sign",
         "execution.query.answer",
-        "enrollment.export"
+        "enrollment.export",
+        "grant.delegate",
+        "grant.revoke",
+        "qualification.record",
+        "qualification.revoke",
+        "artifact.register",
+        "artifact.add_version"
       ]
     },
     {
@@ -116,7 +124,15 @@
         "proposal.reject",
         "simulation.run",
         "study.export",
-        "enrollment.export"
+        "enrollment.export",
+        "role.define",
+        "grant.issue",
+        "grant.delegate",
+        "grant.revoke",
+        "qualification.record",
+        "qualification.revoke",
+        "qualification_requirement.define",
+        "qualification_requirement.retire"
       ]
     },
     {
@@ -151,7 +167,15 @@
         "attestation.sign",
         "work_queue.define",
         "proposal.approve",
-        "proposal.reject"
+        "proposal.reject",
+        "role.define",
+        "grant.issue",
+        "grant.delegate",
+        "grant.revoke",
+        "qualification.record",
+        "qualification.revoke",
+        "qualification_requirement.define",
+        "qualification_requirement.retire"
       ]
     },
     {

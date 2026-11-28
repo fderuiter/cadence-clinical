@@ -188,6 +188,16 @@ public static class CommercialOperators
     public static readonly Actor GatewayPostureProbe = Actor.ServiceAccount("gateway-entitlements");
 }
 
+/// <summary>Named clinical trust service accounts for verified cross-service delegation reads and training qualification recording.</summary>
+public static class TrustOperators
+{
+    /// <summary>Dedicated Knowledge service account permitted to read study grants, register signed 05.02.04 training artifacts, and record verified qualifications.</summary>
+    public static readonly Actor KnowledgeTrainingOperator = Actor.ServiceAccount("knowledge-training");
+
+    /// <summary>Dedicated CTMS service account permitted to read canonical site grants for RBAC-scoped Delegation of Authority logs.</summary>
+    public static readonly Actor CtmsDelegationReader = Actor.ServiceAccount("ctms-delegation-reader");
+}
+
 /// <summary>Signing configuration for cryptographic commercial quote tokens.</summary>
 /// <param name="SigningSecret">Shared HMAC secret used to verify issued <see cref="SubscriptionQuoteToken"/> values.</param>
 public sealed record CommercialQuoteOptions(string? SigningSecret);

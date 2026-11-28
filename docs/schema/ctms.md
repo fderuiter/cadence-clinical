@@ -172,42 +172,9 @@ Indexes:
 - `IX_ctms_defeated_monitoring_visits_VisitId`: (`VisitId`)
 - `IX_ctms_defeated_monitoring_visits_tenant_id`: (`tenant_id`)
 
-## ctms.ctms_delegation_periods
+## ctms.ctms_doa_task_endorsements
 
-Entity: `CtmsDelegationPeriod`
-
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DelegationId` | `character varying(36)` | no |  |  |
-| `EndDate` | `character varying(50)` | yes |  |  |
-| `IsActive` | `boolean` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `SignedOff` | `boolean` | no |  |  |
-| `SiteCode` | `character varying(255)` | no |  |  |
-| `StaffUserId` | `character varying(255)` | no |  |  |
-| `StartDate` | `character varying(50)` | no |  |  |
-| `StudyCode` | `character varying(255)` | no |  |  |
-| `TaskCodes` | `jsonb` | no |  |  |
-| `_version` | `bigint` | no | `0` |  |
-| `recorded_period` | `tstzrange` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `valid_period` | `tstzrange` | no |  |  |
-
-Foreign keys:
-
-- `FK_ctms_delegation_periods_ctms_delegations_DelegationId`: (`DelegationId`) references `ctms.ctms_delegations` (`Id`), on delete restrict
-
-Indexes:
-
-- `IX_ctms_delegation_periods_DelegationId`: (`DelegationId`)
-- `IX_ctms_delegation_periods_SiteCode_StudyCode`: (`SiteCode`, `StudyCode`)
-- `IX_ctms_delegation_periods_tenant_id`: (`tenant_id`)
-
-## ctms.ctms_delegations
-
-Entity: `CtmsDelegation`
+Entity: `CtmsDoaTaskEndorsement`
 
 | Column | Type | Null | Default | Key |
 | --- | --- | --- | --- | --- |
@@ -216,8 +183,13 @@ Entity: `CtmsDelegation`
 | `CreatedBy` | `character varying(255)` | no |  |  |
 | `EndDate` | `character varying(50)` | yes |  |  |
 | `IsActive` | `boolean` | no |  |  |
+| `KernelGrantId` | `uuid` | yes |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `RevokedAt` | `timestamp with time zone` | yes |  |  |
+| `RevokedBy` | `character varying(255)` | yes |  |  |
 | `SignedOff` | `boolean` | no |  |  |
+| `SignedOffAt` | `timestamp with time zone` | yes |  |  |
+| `SignedOffBy` | `character varying(255)` | yes |  |  |
 | `SiteId` | `character varying(255)` | no |  |  |
 | `StaffUserId` | `character varying(255)` | no |  |  |
 | `StartDate` | `character varying(50)` | no |  |  |
@@ -228,10 +200,11 @@ Entity: `CtmsDelegation`
 
 Indexes:
 
-- `IX_ctms_delegations_SiteId`: (`SiteId`)
-- `IX_ctms_delegations_StaffUserId`: (`StaffUserId`)
-- `IX_ctms_delegations_StudyId`: (`StudyId`)
-- `IX_ctms_delegations_tenant_id`: (`tenant_id`)
+- `IX_ctms_doa_task_endorsements_KernelGrantId`: (`KernelGrantId`)
+- `IX_ctms_doa_task_endorsements_SiteId`: (`SiteId`)
+- `IX_ctms_doa_task_endorsements_StaffUserId`: (`StaffUserId`)
+- `IX_ctms_doa_task_endorsements_StudyId`: (`StudyId`)
+- `IX_ctms_doa_task_endorsements_tenant_id`: (`tenant_id`)
 
 ## ctms.ctms_generated_letters
 
@@ -522,70 +495,6 @@ Indexes:
 - `IX_ctms_site_milestones_SiteId`: (`SiteId`)
 - `IX_ctms_site_milestones_StudyId`: (`StudyId`)
 - `IX_ctms_site_milestones_tenant_id`: (`tenant_id`)
-
-## ctms.doa_delegation_periods
-
-Entity: `DoaDelegationPeriod`
-
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DelegationRecordId` | `character varying(255)` | no |  |  |
-| `EndDate` | `timestamp with time zone` | yes |  |  |
-| `IsActive` | `boolean` | no |  |  |
-| `PiApprovedAt` | `timestamp with time zone` | yes |  |  |
-| `PiSignatureHash` | `character varying(255)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `SiteCode` | `character varying(255)` | no |  |  |
-| `StaffUserId` | `character varying(255)` | no |  |  |
-| `StartDate` | `timestamp with time zone` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `TaskCode` | `character varying(255)` | no |  |  |
-| `_version` | `bigint` | no | `0` |  |
-| `recorded_period` | `tstzrange` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `valid_period` | `tstzrange` | no |  |  |
-
-Foreign keys:
-
-- `FK_doa_delegation_periods_doa_delegation_records_DelegationRec~`: (`DelegationRecordId`) references `ctms.doa_delegation_records` (`Id`), on delete restrict
-
-Indexes:
-
-- `IX_doa_delegation_periods_DelegationRecordId`: (`DelegationRecordId`)
-- `IX_doa_delegation_periods_SiteCode`: (`SiteCode`)
-- `IX_doa_delegation_periods_tenant_id`: (`tenant_id`)
-
-## ctms.doa_delegation_records
-
-Entity: `DoaDelegationRecord`
-
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `text` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `EndDate` | `timestamp with time zone` | yes |  |  |
-| `IsActive` | `boolean` | no |  |  |
-| `IsDeleted` | `boolean` | no |  |  |
-| `PiApprovedAt` | `timestamp with time zone` | yes |  |  |
-| `PiSignatureHash` | `text` | yes |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `SiteId` | `text` | no |  |  |
-| `StaffUserId` | `text` | no |  |  |
-| `StartDate` | `timestamp with time zone` | no |  |  |
-| `Status` | `text` | no |  |  |
-| `TaskCode` | `text` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-
-Indexes:
-
-- `IX_doa_delegation_records_SiteId`: (`SiteId`)
-- `IX_doa_delegation_records_StaffUserId`: (`StaffUserId`)
-- `IX_doa_delegation_records_TaskCode`: (`TaskCode`)
-- `IX_doa_delegation_records_tenant_id`: (`tenant_id`)
 
 ## ctms.transactional_outbox
 

@@ -596,18 +596,13 @@ describe("Centralized Focus Containment & Reactive Inert Primitives", () => {
       is_active: true,
       modules: [],
     });
-    vi.spyOn(trainingApi, "listDelegations").mockResolvedValue([
+    vi.spyOn(trainingApi, "listStudyStaff").mockResolvedValue([
       {
-        id: "del-01",
-        study_id: "CARDIO-2026",
+        user_id: "usr-01",
+        user_name: "Marcus Vance",
         site_id: "SITE-101",
-        staff_user_id: "usr-01",
-        staff_name: "Marcus Vance",
         role: "Sub-Investigator",
-        task_code: "INFORMED_CONSENT",
-        duties: "Informed Consent",
-        status: "PENDING",
-        signed_off: false,
+        grant_id: "grant-01",
       },
     ]);
 
@@ -676,24 +671,15 @@ describe("Centralized Focus Containment & Reactive Inert Primitives", () => {
     expect(wrapper.vm.showBatchModal).toBe(false);
     expect(document.activeElement).toBe(batchTriggerBtn.element);
 
-    // Switch to Delegation Log tab and verify Bulk Delegation Sign-Off Modal
-    const delTab = wrapper
-      .findAll(".tab-btn")
-      .find((b) => b.text().includes("Delegation"));
-    await delTab.trigger("click");
+    // Verify Author Curriculum Modal focus containment and Escape lock
+    const authorTriggerBtn = wrapper.find("#btn-open-author-curriculum");
+    authorTriggerBtn.element.focus();
+    await authorTriggerBtn.trigger("click");
     await nextTick();
+    await nextTick();
+    expect(wrapper.vm.showAuthorModal).toBe(true);
 
-    await wrapper.find("thead input[type='checkbox']").setValue(true);
-    await nextTick();
-
-    const signTriggerBtn = wrapper.find(".delegation-actions-bar button");
-    signTriggerBtn.element.focus();
-    await signTriggerBtn.trigger("click");
-    await nextTick();
-    await nextTick();
-    expect(wrapper.vm.showBulkSignModal).toBe(true);
-
-    wrapper.vm.submittingBulkSign = true;
+    wrapper.vm.submittingCurriculum = true;
     await nextTick();
     document.dispatchEvent(
       new KeyboardEvent("keydown", {
@@ -703,9 +689,9 @@ describe("Centralized Focus Containment & Reactive Inert Primitives", () => {
       })
     );
     await nextTick();
-    expect(wrapper.vm.showBulkSignModal).toBe(true);
+    expect(wrapper.vm.showAuthorModal).toBe(true);
 
-    wrapper.vm.submittingBulkSign = false;
+    wrapper.vm.submittingCurriculum = false;
     await nextTick();
     document.dispatchEvent(
       new KeyboardEvent("keydown", {
@@ -716,7 +702,7 @@ describe("Centralized Focus Containment & Reactive Inert Primitives", () => {
     );
     await nextTick();
     await nextTick();
-    expect(wrapper.vm.showBulkSignModal).toBe(false);
-    expect(document.activeElement).toBe(signTriggerBtn.element);
+    expect(wrapper.vm.showAuthorModal).toBe(false);
+    expect(document.activeElement).toBe(authorTriggerBtn.element);
   });
 });

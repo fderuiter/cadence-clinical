@@ -340,7 +340,7 @@ const trainingLink = computed(() => scopedWorkflowPath("/training"));
     vi.spyOn(kernelApi, "listProtocolVersions").mockResolvedValue([]);
     vi.spyOn(trainingApi, "listCurricula").mockResolvedValue([]);
     vi.spyOn(trainingApi, "listAssignments").mockResolvedValue([]);
-    vi.spyOn(trainingApi, "listDelegations").mockResolvedValue([]);
+    vi.spyOn(trainingApi, "listStudyStaff").mockResolvedValue([]);
 
     const canvasStore = useStudyCanvasStore();
     canvasStore.studyCode = "CADENCE-101";
@@ -475,7 +475,7 @@ const trainingLink = computed(() => scopedWorkflowPath("/training"));
   it("syncs standalone scope changes to URL queries via router.replace across /ctms, /ssu, /training, /tickets, /knowledge, /ecrf, and /etmf without false draft prompts (Req 8)", async () => {
     vi.spyOn(trainingApi, "listCurricula").mockResolvedValue([]);
     vi.spyOn(trainingApi, "listAssignments").mockResolvedValue([]);
-    vi.spyOn(trainingApi, "listDelegations").mockResolvedValue([]);
+    vi.spyOn(trainingApi, "listStudyStaff").mockResolvedValue([]);
     vi.spyOn(ticketsApi, "listTickets").mockResolvedValue([]);
     vi.spyOn(knowledgeService, "listCategories").mockResolvedValue([]);
     vi.spyOn(knowledgeService, "listArticles").mockResolvedValue([]);
@@ -2090,7 +2090,7 @@ const trainingLink = computed(() => scopedWorkflowPath("/training"));
   it("preserves active study, site, and participant scope on CrcFormRenderer #btn-complete-training, unavailable route redirects, and UnavailableView #btn-unavailable-study", async () => {
     vi.spyOn(trainingApi, "listCurricula").mockResolvedValue([]);
     vi.spyOn(trainingApi, "listAssignments").mockResolvedValue([]);
-    vi.spyOn(trainingApi, "listDelegations").mockResolvedValue([]);
+    vi.spyOn(trainingApi, "listStudyStaff").mockResolvedValue([]);
 
     const pinia = createPinia();
     setActivePinia(pinia);

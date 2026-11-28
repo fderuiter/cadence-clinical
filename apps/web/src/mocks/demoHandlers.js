@@ -25,6 +25,6 @@ export function createWebDemoHandlers(store = webDemoStore) {
     ...createEtmfAndTicketsHandlers(store),
     ...createPaymentsHandlers(store),
     ...createAmendmentsAndSoaHandlers(store),
-    ...createEconsentLabsDctAndTrainingHandlers(),
+    ...createEconsentLabsDctAndTrainingHandlers(store),
   ];
 }

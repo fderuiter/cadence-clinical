@@ -4,34 +4,6 @@
 
 Generated from the EF Core model of `Cadence.Apps.Knowledge.Infrastructure.Persistence.KnowledgeDbContext`, not from a live database. Unqualified tables live in the `knowledge` schema.
 
-## knowledge.DelegationRecords
-
-Entity: `DelegationRecord`
-
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `text` | no |  | PK |
-| `BatchTransactionId` | `text` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `Duties` | `text` | no |  |  |
-| `PiApprovedAt` | `timestamp with time zone` | yes |  |  |
-| `PiSignatureHash` | `text` | yes |  |  |
-| `Role` | `text` | no |  |  |
-| `SignedOff` | `boolean` | no |  |  |
-| `SiteId` | `text` | no |  |  |
-| `StaffName` | `text` | no |  |  |
-| `StaffUserId` | `text` | no |  |  |
-| `Status` | `text` | no |  |  |
-| `StudyId` | `text` | no |  |  |
-| `TaskCode` | `text` | no |  |  |
-| `_version` | `bigint` | no | `0` |  |
-| `tenant_id` | `uuid` | no |  |  |
-
-Indexes:
-
-- `IX_DelegationRecords_tenant_id`: (`tenant_id`)
-
 ## knowledge.OrgAuditLogs
 
 Entity: `OrgAuditLog`
@@ -66,6 +38,9 @@ Entity: `TrainingAssignment`
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `CreatedBy` | `text` | no |  |  |
 | `CurriculumId` | `text` | no |  |  |
+| `EtmfDocumentId` | `character varying(128)` | yes |  |  |
+| `KernelArtifactVersionRef` | `character varying(128)` | yes |  |  |
+| `KernelQualificationRef` | `character varying(128)` | yes |  |  |
 | `QuizScore` | `double precision` | yes |  |  |
 | `ReasonForChange` | `text` | no |  |  |
 | `SiteId` | `text` | no |  |  |
@@ -93,6 +68,9 @@ Entity: `TrainingCertificate`
 | `BatchTransactionId` | `text` | yes |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `EtmfArtifactId` | `text` | no |  |  |
+| `EtmfDocumentId` | `character varying(128)` | yes |  |  |
+| `KernelArtifactVersionRef` | `character varying(128)` | yes |  |  |
+| `KernelQualificationRef` | `character varying(128)` | yes |  |  |
 | `Meaning` | `text` | no |  |  |
 | `Sha256Seal` | `text` | no |  |  |
 | `SignerName` | `text` | no |  |  |
@@ -115,7 +93,12 @@ Entity: `TrainingCurriculum`
 | `CreatedBy` | `text` | no |  |  |
 | `Description` | `text` | yes |  |  |
 | `IsActive` | `boolean` | no |  |  |
+| `ModulesJson` | `text` | yes |  |  |
+| `PassingScore` | `double precision` | no | `0.8` |  |
 | `ProtocolVersion` | `text` | no |  |  |
+| `ProtocolVersionNumber` | `integer` | no | `1` |  |
+| `QualificationCode` | `character varying(128)` | no | `protocol_training` |  |
+| `QuizQuestionsJson` | `text` | yes |  |  |
 | `ReasonForChange` | `text` | no |  |  |
 | `StudyId` | `text` | no |  |  |
 | `Title` | `text` | no |  |  |
@@ -164,43 +147,6 @@ Entity: `ConsumedSignatureToken`
 Indexes:
 
 - `IX_consumed_signature_tokens_RetainUntil`: (`RetainUntil`)
-
-## knowledge.delegation_record_periods
-
-Entity: `DelegationRecordPeriod`
-
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `BatchTransactionId` | `character varying(100)` | yes |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DelegationRecordId` | `text` | no |  |  |
-| `Duties` | `text` | no |  |  |
-| `PiApprovedAt` | `timestamp with time zone` | yes |  |  |
-| `PiSignatureHash` | `character varying(255)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Role` | `character varying(255)` | no |  |  |
-| `SignedOff` | `boolean` | no |  |  |
-| `SiteCode` | `character varying(255)` | no |  |  |
-| `StaffName` | `character varying(255)` | no |  |  |
-| `StaffUserId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyCode` | `character varying(255)` | no |  |  |
-| `TaskCode` | `character varying(100)` | no |  |  |
-| `_version` | `bigint` | no | `0` |  |
-| `recorded_period` | `tstzrange` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `valid_period` | `tstzrange` | no |  |  |
-
-Foreign keys:
-
-- `FK_delegation_record_periods_DelegationRecords_DelegationRecor~`: (`DelegationRecordId`) references `knowledge.DelegationRecords` (`Id`), on delete restrict
-
-Indexes:
-
-- `IX_delegation_record_periods_DelegationRecordId`: (`DelegationRecordId`)
-- `IX_delegation_record_periods_StudyCode_SiteCode`: (`StudyCode`, `SiteCode`)
-- `IX_delegation_record_periods_tenant_id`: (`tenant_id`)
 
 ## knowledge.knowledge_article_audit_logs
 

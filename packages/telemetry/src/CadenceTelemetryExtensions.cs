@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.OpenApi;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -146,6 +147,7 @@ public static partial class CadenceTelemetryExtensions
 
         services.AddOpenApi(documentName, options =>
         {
+            options.AddSchemaTransformer<KernelWireTypesOpenApiTransformer>();
             options.ShouldInclude = includeUngrouped
                 ? description => description.GroupName is null
                     || string.Equals(description.GroupName, documentName, StringComparison.Ordinal)
@@ -181,7 +183,8 @@ public static partial class CadenceTelemetryExtensions
         {
             builder.Services.AddProblemDetails();
         }
-        builder.Services.AddOpenApi();
+        builder.Services.AddOpenApi(options => options.AddSchemaTransformer<KernelWireTypesOpenApiTransformer>());
+        builder.Services.ConfigureAll<OpenApiOptions>(options => options.AddSchemaTransformer<KernelWireTypesOpenApiTransformer>());
         if (string.Equals(builder.Environment.ApplicationName, KernelHostApplicationName, StringComparison.Ordinal))
         {
             builder.Services.AddCadenceOpenApiDocument(KernelOpenApiDocument, includeUngrouped: true);

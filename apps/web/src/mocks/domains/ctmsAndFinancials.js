@@ -95,13 +95,34 @@ export function createCtmsAndFinancialsDomain(ctx) {
           revoked_delegations: [],
           delegated_staff: [
             {
-              id: "doa-staff-01",
-              staff_id: "usr-crc-01",
+              record_id: "doa-staff-01",
+              site_id: "SITE-101",
+              staff_user_id: "usr-crc-01",
               staff_name: "Site Coordinator 01",
               role: "CRC",
-              tasks: ["CRF_DATA_ENTRY", "SUBJECT_SCREENING"],
+              task_codes: ["CRF_DATA_ENTRY", "SUBJECT_SCREENING"],
+              start_date: "2026-07-15", // deid-ignore
+              end_date: null,
+              is_active: true,
+              signed_off: true,
               status: "ACTIVE",
-              signed_at: "2026-07-15T10:00:00Z",
+              pi_signed_off_by: "usr-pi-01",
+              pi_signed_off_at: "2026-07-15T10:00:00Z", // deid-ignore
+            },
+            {
+              record_id: "doa-staff-02",
+              site_id: "SITE-101",
+              staff_user_id: "usr-crc-02",
+              staff_name: "Site Coordinator 02",
+              role: "CRC",
+              task_codes: ["CRF_DATA_ENTRY"],
+              start_date: "2026-07-20", // deid-ignore
+              end_date: null,
+              is_active: true,
+              signed_off: false,
+              status: "PENDING_PI_SIGNATURE",
+              pi_signed_off_by: null,
+              pi_signed_off_at: null,
             },
           ],
           audit_history: [

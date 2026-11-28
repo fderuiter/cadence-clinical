@@ -275,7 +275,7 @@ export interface components {
       submission_value?: null | string;
     };
     /** @description Strongly-typed UUIDv7 identifier for an immutable, checksum-verified release of a code system in the Concept Registry. */
-    ExecutionForms_CodeSystemVersionId: unknown;
+    ExecutionForms_CodeSystemVersionId: string;
     /** @enum {unknown} */
     ExecutionForms_DateTimePrecision:
       "Year" | "Month" | "Day" | "Minute" | "Second" | null;
@@ -505,6 +505,10 @@ export interface components {
       /** Format: date */
       window_end?: null | string;
       deviation_category?: null | string;
+      /** @default true */
+      can_record: boolean;
+      capture_explanation?:
+        null | components["schemas"]["ExecutionForms_ProblemExplanation"];
     };
     ExecutionForms_FormSavedResponse: {
       /** Format: uuid */
@@ -853,6 +857,13 @@ export interface components {
     ExecutionForms_PreviewFormValuesRequest: {
       values: components["schemas"]["ExecutionForms_PreviewFormItemValueRequest"][];
     };
+    /** @description Wire representation of an EvaluatedCondition inside ProblemExplanation. */
+    ExecutionForms_ProblemCondition: {
+      code: string;
+      description: string;
+      met: boolean;
+      evidence: string[];
+    };
     ExecutionForms_ProblemDetails: {
       type?: null | string;
       title?: null | string;
@@ -860,6 +871,29 @@ export interface components {
       status?: null | number | string;
       detail?: null | string;
       instance?: null | string;
+    };
+    /**
+     * @description Canonical RFC 9457 `ProblemDetails.extensions["explanation"]` wire representation of an ADR-2482
+     *     Explanation, shared across kernel error endpoints and standalone RBAC problem details.
+     */
+    ExecutionForms_ProblemExplanation: {
+      subject: null | string;
+      claim: string;
+      producer: string;
+      steps: components["schemas"]["ExecutionForms_ProblemExplanationStep"][];
+      conditions: components["schemas"]["ExecutionForms_ProblemCondition"][];
+      next_actions: components["schemas"]["ExecutionForms_ProblemNextAction"][];
+    };
+    /** @description Wire representation of an ExplanationStep inside ProblemExplanation. */
+    ExecutionForms_ProblemExplanationStep: {
+      claim: string;
+      evidence: string[];
+    };
+    /** @description Wire representation of a NextAction inside ProblemExplanation. */
+    ExecutionForms_ProblemNextAction: {
+      description: string;
+      capability: null | string;
+      target: null | string;
     };
     /** @enum {unknown} */
     ExecutionForms_QuantityComparator: "<" | "<=" | ">" | ">=" | null;

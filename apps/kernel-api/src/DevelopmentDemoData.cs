@@ -108,6 +108,20 @@ internal static partial class DevelopmentDemoData
         "work_queue.define",
         "person.register",
         "tenant.enroll_member",
+        "qualification.record",
+        "qualification_requirement.define",
+    ];
+
+    internal const string CaptureQualificationCode = "protocol_training";
+
+    internal static readonly string[] CaptureGatedCapabilities =
+    [
+        "participant.screen",
+        "observation.record",
+        "observation.correct",
+        "collection.open",
+        "collection.record",
+        "collection.sign",
     ];
 
     /// <summary>Default capability-keyed work queues seeded idempotently for every tenant.</summary>
@@ -197,8 +211,11 @@ internal static partial class DevelopmentDemoData
             }
 
             var assignedRole = roles[userSeed.Role];
+            bool withGrantOption = string.Equals(userSeed.Role, "DEMO_INVESTIGATOR", StringComparison.Ordinal)
+                || string.Equals(userSeed.Role, "DEMO_DATA_MANAGER", StringComparison.Ordinal)
+                || string.Equals(userSeed.Role, "DEMO_DESIGNER", StringComparison.Ordinal);
             await seeder.EnsureGrantAsync(
-                new IssueGrant(tenant, ids.Grant(userSeed.Username), Actor.Person(userSeed.Subject), null, assignedRole.RoleId, scope, Epoch, null, false, Key($"grant:{userSeed.Username}"), Reason),
+                new IssueGrant(tenant, ids.Grant(userSeed.Username), Actor.Person(userSeed.Subject), null, assignedRole.RoleId, scope, Epoch, null, withGrantOption, Key($"grant:{userSeed.Username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
 
             if (!assignedRole.CoversSimulationRun
@@ -360,6 +377,79 @@ internal static partial class DevelopmentDemoData
                 Key("artifact:ethics:v1"),
                 Reason),
             cancellationToken).ConfigureAwait(false);
+
+        foreach (string gatedCapability in CaptureGatedCapabilities)
+        {
+            await seeder.SendAsync(
+                new DefineQualificationRequirement(
+                    tenant,
+                    ids.QualificationRequirement($"protocol:v1:{gatedCapability}"),
+                    gatedCapability,
+                    CaptureQualificationCode,
+                    versionId,
+                    AuthorityScope.Study(study),
+                    Epoch,
+                    null,
+                    Key($"qual-req:v1:{gatedCapability}"),
+                    Reason),
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        const string trainingPayload = "cadence-demo-protocol-v1-training-record";
+        var trainingBytes = Encoding.UTF8.GetBytes(trainingPayload);
+        var trainingVersionId = ids.ArtifactVersion("training:protocol:v1:v1");
+        var trainingContent = new ArtifactContent(
+            ContentHash.OfBytes(trainingBytes),
+            trainingBytes.Length,
+            "application/pdf",
+            "blob://demo/training-protocol-v1.pdf");
+        await seeder.SendAsync(
+            new RegisterArtifact(
+                tenant,
+                ids.Artifact("training:protocol:v1"),
+                trainingVersionId,
+                ArtifactKind.TrainingRecord,
+                study,
+                "CADENCE-101 Protocol v1 GCP and eCRF Capture Training Record",
+                trainingContent,
+                Key("artifact:training:protocol:v1"),
+                Reason),
+            cancellationToken).ConfigureAwait(false);
+
+        await seeder.SendAsync(
+            new RecordQualification(
+                tenant,
+                ids.Qualification("seeder:protocol:v1"),
+                DevelopmentTenantBootstrap.Operator,
+                QualificationKind.ProtocolTraining,
+                CaptureQualificationCode,
+                versionId,
+                trainingVersionId,
+                Epoch,
+                null,
+                Key("qualification:seeder:protocol:v1"),
+                Reason),
+            cancellationToken).ConfigureAwait(false);
+
+        foreach (var qualifiedUser in Seed.Users.Where(u =>
+                     string.Equals(u.Role, "DEMO_INVESTIGATOR", StringComparison.Ordinal)
+                     || string.Equals(u.Role, "DEMO_CRC", StringComparison.Ordinal)))
+        {
+            await seeder.SendAsync(
+                new RecordQualification(
+                    tenant,
+                    ids.Qualification($"{qualifiedUser.Username}:protocol:v1"),
+                    Actor.Person(qualifiedUser.Subject),
+                    QualificationKind.ProtocolTraining,
+                    CaptureQualificationCode,
+                    versionId,
+                    trainingVersionId,
+                    Epoch,
+                    null,
+                    Key($"qualification:{qualifiedUser.Username}:protocol:v1"),
+                    Reason),
+                cancellationToken).ConfigureAwait(false);
+        }
 
         var effectivityId = ids.Effectivity("protocol:v1:study");
         await seeder.SendAsync(
@@ -850,6 +940,11 @@ internal static partial class DevelopmentDemoData
         public ArtifactId Artifact(string name) => ArtifactId.FromGuid(Derive("artifact", name));
 
         public ArtifactVersionId ArtifactVersion(string name) => ArtifactVersionId.FromGuid(Derive("artifact-version", name));
+
+        public QualificationId Qualification(string name) => QualificationId.FromGuid(Derive("qualification", name));
+
+        public QualificationRequirementId QualificationRequirement(string name) =>
+            QualificationRequirementId.FromGuid(Derive("qualification-requirement", name));
 
         public EffectivityId Effectivity(string name) => EffectivityId.FromGuid(Derive("effectivity", name));
 

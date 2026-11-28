@@ -3708,7 +3708,7 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
       ).toContain("VS_SYSBP_HIGH");
       expect(assertionReads).toBe(0);
       expect(selectedIncludesCalls).toBe(0);
-    } finally {
+      } finally {
       Array.prototype.includes = origIncludes;
       if (origPreviewValues === undefined) {
         delete apiWithPreview.previewValues;
@@ -3717,5 +3717,89 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
       }
       vi.useRealTimers();
     }
+  });
+});
+
+describe("EcrfFormPanel Kernel qualification gating (PRD-TRN-002)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  it("locks inputs, blocks submission, displays K-AUTH-6 explanation, and links to /training when can_record is false", async () => {
+    /**
+     * @req: PRD-TRN-002
+     */
+    setActivePinia(createPinia());
+    resetQueries();
+    vi.mocked(ecrfFormsApi.saveValues).mockReset();
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(
+      form({
+        can_record: false,
+        capture_explanation: {
+          decision: "deny",
+          claim:
+            "Actor lacks required qualification 'protocol_training' for capability 'observation.record' at site SITE-102.",
+          conditions: [
+            {
+              code: "K-AUTH-6",
+              description:
+                "Actor holds active qualification 'protocol_training' required by protocol v2.0.",
+              met: false,
+              evidence: [],
+            },
+          ],
+        },
+      }) as never
+    );
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: "/", component: { template: "<div />" } },
+        { path: "/training", name: "training", component: { template: "<div />" } },
+        {
+          path: "/observations/:observationRef",
+          name: "observation",
+          component: { template: "<div />" },
+        },
+      ],
+    });
+    await router.push("/");
+    await router.isReady();
+
+    const view = mount(EcrfFormPanel, {
+      props: {
+        formId: FORM_ID,
+        studyCode: "CADENCE-101",
+        siteCode: "SITE-102",
+      },
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+
+    const banner = view.find('[data-testid="ecrf-qualification-gate-banner"]');
+    expect(banner.exists()).toBe(true);
+    expect(banner.text()).toContain("protocol_training");
+    expect(banner.text()).toContain("K-AUTH-6");
+
+    const trainingLink = view.find(
+      '[data-testid="ecrf-qualification-training-link"]'
+    );
+    expect(trainingLink.exists()).toBe(true);
+    expect(trainingLink.attributes("href")).toContain("/training");
+    expect(trainingLink.attributes("href")).toContain("studyId=CADENCE-101");
+    expect(trainingLink.attributes("href")).toContain("siteId=SITE-102");
+
+    expect(view.find("#ecrf-item-SYSBP").attributes("disabled")).toBeDefined();
+    expect(view.find("#ecrf-item-DIABP").attributes("disabled")).toBeDefined();
+    expect(view.find("#ecrf-save-reason").attributes("disabled")).toBeDefined();
+    expect(view.find("#ecrf-form-save").attributes("disabled")).toBeDefined();
+
+    await view.find("#ecrf-form-page").trigger("submit");
+    await flushPromises();
+    expect(ecrfFormsApi.saveValues).not.toHaveBeenCalled();
+
+    view.unmount();
   });
 });

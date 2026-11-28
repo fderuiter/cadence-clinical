@@ -54,8 +54,11 @@ public static partial class ExplanationMasking
                 set.Add(subject);
             }
 
+            CollectInlineNodes(explanation.Claim, set);
+
             foreach (var step in explanation.Steps)
             {
+                CollectInlineNodes(step.Claim, set);
                 foreach (var node in step.Evidence)
                 {
                     set.Add(node);
@@ -64,6 +67,7 @@ public static partial class ExplanationMasking
 
             foreach (var condition in explanation.Conditions)
             {
+                CollectInlineNodes(condition.Description, set);
                 foreach (var node in condition.Evidence)
                 {
                     set.Add(node);
@@ -72,6 +76,7 @@ public static partial class ExplanationMasking
 
             foreach (var action in explanation.NextActions)
             {
+                CollectInlineNodes(action.Description, set);
                 if (action.Target is { } target)
                 {
                     set.Add(target);
@@ -80,6 +85,35 @@ public static partial class ExplanationMasking
         }
 
         return [.. set];
+    }
+
+    /// <summary>Collects inline <c>kind:uuid[@version]</c> <see cref="NodeRef"/> tokens embedded in free text.</summary>
+    public static IReadOnlyList<NodeRef> CollectInlineNodes(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return [];
+        }
+
+        var set = new HashSet<NodeRef>();
+        CollectInlineNodes(text, set);
+        return [.. set];
+    }
+
+    private static void CollectInlineNodes(string? text, HashSet<NodeRef> destination)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        foreach (Match match in InlineNodeRefPattern().Matches(text))
+        {
+            if (NodeRef.TryParse(match.Value, out var parsed))
+            {
+                destination.Add(parsed);
+            }
+        }
     }
 
     /// <summary>Looks up the <see cref="MaskReason"/> for <paramref name="node"/> or its unversioned identity.</summary>

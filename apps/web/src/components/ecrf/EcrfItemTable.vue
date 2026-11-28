@@ -60,6 +60,7 @@
                   :value="formState.entries[item.item_id]?.text ?? ''"
                   :disabled="
                     formState.locked ||
+                    !formState.canRecord ||
                     formState.saving ||
                     !!formState.entries[item.item_id]?.missing
                   "
@@ -110,6 +111,7 @@
                   "
                   :disabled="
                     formState.locked ||
+                    !formState.canRecord ||
                     formState.saving ||
                     !!formState.entries[item.item_id]?.missing
                   "
@@ -145,7 +147,7 @@
                     }}</span>
                   </div>
                   <button
-                    v-if="!formState.locked"
+                    v-if="!formState.locked && formState.canRecord"
                     :id="`ecrf-revert-${item.item_id}`"
                     :data-testid="`ecrf-revert-${item.item_id}`"
                     type="button"
@@ -181,7 +183,11 @@
                 <select
                   :value="formState.entries[item.item_id]?.missing ?? ''"
                   :aria-label="`Why ${item.item_id} is missing`"
-                  :disabled="formState.locked || formState.saving"
+                  :disabled="
+                    formState.locked ||
+                    !formState.canRecord ||
+                    formState.saving
+                  "
                   @change="
                     emit(
                       'entry-missing',
@@ -513,13 +519,19 @@
         v-model="reason"
         type="text"
         autocomplete="off"
+        :disabled="!formState.canRecord || formState.saving"
         placeholder="Initial data entry"
       />
       <button
         id="ecrf-form-save"
         class="btn btn-primary"
         type="submit"
-        :disabled="formState.saving || !formState.dirty || !reason.trim()"
+        :disabled="
+          formState.saving ||
+          !formState.canRecord ||
+          !formState.dirty ||
+          !reason.trim()
+        "
       >
         {{
           formState.saving

@@ -212,7 +212,18 @@ export function useEcrfForm(
 
   const items = computed<EcrfFormItem[]>(() => form.value?.items ?? []);
   const locked = computed(() => (form.value?.locks.length ?? 0) > 0);
+  const canRecord = computed(() => form.value?.can_record !== false);
+  const captureBlocked = computed(
+    () => form.value !== null && form.value.can_record === false
+  );
+  const captureExplanation = computed(
+    () => form.value?.capture_explanation ?? null
+  );
+  const inputLocked = computed(() => locked.value || captureBlocked.value);
   const lockSummaryLabel = computed(() => {
+    if (!locked.value && captureBlocked.value) {
+      return "Qualification required";
+    }
     const kinds = [
       ...new Set((form.value?.locks ?? []).map((held) => held.kind)),
     ];
@@ -494,7 +505,7 @@ export function useEcrfForm(
 
     const byId = new Map(loaded.items.map((item) => [item.item_id, item]));
 
-    if ((loaded.locks?.length ?? 0) > 0) {
+    if ((loaded.locks?.length ?? 0) > 0 || loaded.can_record === false) {
       const unapplied: EcrfLockedDraftItem[] = [];
       for (const [itemId, saved] of Object.entries(parsed.items)) {
         if (!saved || typeof saved !== "object") continue;
@@ -577,7 +588,7 @@ export function useEcrfForm(
     ) {
       return;
     }
-    if (dirty.value && !locked.value) {
+    if (dirty.value && !inputLocked.value) {
       persistDraft(scheduledFormId, scheduledKey);
     } else {
       removeDraftKey(scheduledKey);
@@ -595,7 +606,7 @@ export function useEcrfForm(
     }
     cancelDraftSave();
     const current = form.value;
-    if (!current || locked.value || !dirty.value || draftCleared) return;
+    if (!current || inputLocked.value || !dirty.value || draftCleared) return;
     if (
       !loadedScopeKey ||
       scopedKey(currentScope(), ECRF_FORM_DRAFT_NAMESPACE) !== loadedScopeKey
@@ -610,7 +621,7 @@ export function useEcrfForm(
   function scheduleDraftSave() {
     cancelDraftSave();
     const current = form.value;
-    if (!current || locked.value) return;
+    if (!current || inputLocked.value) return;
     const scheduledKey = getDraftStorageKey(current.form_id);
     if (!scheduledKey) return;
     if (!dirty.value && !draftSaved) return;
@@ -668,7 +679,7 @@ export function useEcrfForm(
     const current = form.value;
     if (
       !current ||
-      locked.value ||
+      inputLocked.value ||
       !dirty.value ||
       typeof ecrfFormsApi.previewValues !== "function"
     ) {
@@ -731,7 +742,7 @@ export function useEcrfForm(
 
   function schedulePreview() {
     cancelPreview();
-    if (!form.value || locked.value || !dirty.value) {
+    if (!form.value || inputLocked.value || !dirty.value) {
       clearRecord(previewWarnings);
       return;
     }
@@ -760,7 +771,7 @@ export function useEcrfForm(
 
   const unregisterDraftSource = registerDraftSource({
     flush: flushDraft,
-    hasDrafts: () => Boolean(form.value && !locked.value && dirty.value),
+    hasDrafts: () => Boolean(form.value && !inputLocked.value && dirty.value),
   });
 
   if (getCurrentInstance()) {
@@ -890,7 +901,7 @@ export function useEcrfForm(
 
     if (!form.value) return;
     const byId = new Map(items.value.map((item) => [item.item_id, item]));
-    if (locked.value) {
+    if (inputLocked.value) {
       clearDraft(currentId);
       const unapplied: EcrfLockedDraftItem[] = [];
       for (const saved of editedBeforeReload) {
@@ -1017,6 +1028,15 @@ export function useEcrfForm(
   async function save(reason: string): Promise<void> {
     const current = form.value;
     if (!current || saving.value || !dirty.value) return;
+    if (current.can_record === false) {
+      outcome.value = {
+        kind: "failed",
+        message:
+          current.capture_explanation?.claim ||
+          "You lack an active Kernel delegation or qualification to record values on this form.",
+      };
+      return;
+    }
     clearRecord(itemErrors);
     outcome.value = null;
 
@@ -1120,6 +1140,23 @@ export function useEcrfForm(
           kind: "locked",
           message: "This form is locked; nothing was saved.",
           unsaved,
+        };
+      } else if (status === 403) {
+        const explanationClaim =
+          error instanceof ApiError
+            ? (
+                error.data as {
+                  explanation?: { claim?: unknown };
+                } | null
+              )?.explanation?.claim
+            : null;
+        outcome.value = {
+          kind: "failed",
+          message:
+            typeof explanationClaim === "string" &&
+            explanationClaim.trim().length > 0
+              ? explanationClaim
+              : messageOf(error),
         };
       } else {
         outcome.value = { kind: "failed", message: messageOf(error) };
@@ -1265,6 +1302,10 @@ export function useEcrfForm(
     signing,
     signOutcome,
     canSign,
+    canRecord,
+    captureBlocked,
+    captureExplanation,
+    inputLocked,
     locked,
     lockSummaryLabel,
     assertionsLocked,

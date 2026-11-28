@@ -67,6 +67,8 @@
 
       <EcrfFormPanel
         :form-id="formId"
+        :study-code="studyCode"
+        :site-code="participant?.site_id ?? null"
         :collection-spec-id="collectionSpecId"
         :planned-activity-id="plannedActivityId"
         :enrollment-context="enrollmentContext"

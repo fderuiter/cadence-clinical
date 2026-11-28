@@ -8,14 +8,18 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
+using Cadence.Apps.Ctms.Infrastructure.Kernel;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Database.Concurrency;
-using Cadence.Database.Temporal;
+using Cadence.Database.Tenancy;
+using Cadence.Kernel;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Apps.Ctms.Application.Services;
 
@@ -44,8 +48,11 @@ public sealed class DoaMutationService(
     CtmsDbContext db,
     ICtmsUnitOfWork unitOfWork,
     ICtmsSiteScopeService siteScope,
-    IClock clock) : IDoaMutationService
+    IClock clock,
+    ICtmsKernelTrustClient? kernelTrust = null) : IDoaMutationService
 {
+    private readonly ICtmsKernelTrustClient _kernelTrust = kernelTrust ?? new InMemoryCtmsKernelTrustClient(clock);
+
     public async Task<IResult> DelegateTasksAsync(
         DelegationTaskRequest request,
         HttpContext httpContext,
@@ -65,9 +72,10 @@ public sealed class DoaMutationService(
             return missingScope;
         }
 
-        if (!string.IsNullOrWhiteSpace(request.Study)
+        string? bodyStudy = request.Study?.TrimmedOrNull;
+        if (!string.IsNullOrWhiteSpace(bodyStudy)
             && !string.IsNullOrWhiteSpace(studyId)
-            && !string.Equals(request.Study.Trim(), studyId.Trim(), StringComparison.Ordinal))
+            && !string.Equals(bodyStudy, studyId.Trim(), StringComparison.Ordinal))
         {
             return TypedResults.Problem(
                 title: "Conflicting study ID",
@@ -75,9 +83,10 @@ public sealed class DoaMutationService(
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        string? requestedStudyId = !string.IsNullOrWhiteSpace(request.Study) ? request.Study.Trim() : studyId?.Trim();
+        string? requestedStudyId = bodyStudy ?? studyId?.Trim();
+        string? requestedSiteId = request.Site.TrimmedOrNull;
 
-        if (string.IsNullOrWhiteSpace(request.Site))
+        if (string.IsNullOrWhiteSpace(requestedSiteId))
         {
             return TypedResults.Problem(
                 title: "Site ID required",
@@ -85,7 +94,7 @@ public sealed class DoaMutationService(
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var scope = await siteScope.ResolveDoaSiteScopeAsync(httpContext, request.Site, requestedStudyId, ct);
+        var scope = await siteScope.ResolveDoaSiteScopeAsync(httpContext, requestedSiteId, requestedStudyId, ct);
         if (scope.Error is not null)
         {
             return scope.Error;
@@ -124,19 +133,19 @@ public sealed class DoaMutationService(
         {
             return TypedResults.Problem(
                 title: "Study ID required",
-                detail: $"Site '{request.Site.Trim()}' belongs to multiple authorized studies; specify 'study_id'.",
+                detail: $"Site '{requestedSiteId}' belongs to multiple authorized studies; specify 'study_id'.",
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
         string resolvedStudyId = scope.AuthorizedStudies.First();
-        string trimmedSite = request.Site.Trim();
         var now = clock.UtcNow;
         var (user, role) = CallerScope.ResolveActor(httpContext, "site_coordinator");
 
-        var delegation = new CtmsDelegation
+        var endorsement = new CtmsDoaTaskEndorsement
         {
-            StudyId = resolvedStudyId,
-            SiteId = trimmedSite,
+            StudyId = new KernelStudyCode(resolvedStudyId),
+            SiteId = new KernelSiteCode(requestedSiteId),
+            KernelGrantId = null,
             StaffUserId = request.StaffUserId.Trim(),
             TaskCodes = JsonSerializer.Serialize(request.TaskCodes),
             StartDate = request.StartDate.Trim(),
@@ -149,14 +158,7 @@ public sealed class DoaMutationService(
             VersionIndex = 1,
         };
 
-        db.CtmsDelegations.Add(delegation);
-        DateTimeOffset validFrom = ParseDelegationStartDate(delegation.StartDate, now);
-        db.CtmsDelegationPeriods.Add(CreateDelegationPeriod(
-            delegation,
-            user,
-            reason,
-            StandaloneBitemporalModelExtensions.CreateOpenPeriod(validFrom),
-            StandaloneBitemporalModelExtensions.CreateOpenPeriod(now)));
+        db.CtmsDoaTaskEndorsements.Add(endorsement);
 
         var auditEntry = new CtmsAuditLog
         {
@@ -164,9 +166,9 @@ public sealed class DoaMutationService(
             UserId = user,
             UserRole = role,
             Action = "DOA_DELEGATE",
-            Details = $"Delegated tasks [{string.Join(", ", request.TaskCodes)}] to staff {delegation.StaffUserId} at site {delegation.SiteId} in study {delegation.StudyId}.",
-            StudyId = delegation.StudyId,
-            SiteId = delegation.SiteId,
+            Details = $"Delegated tasks [{string.Join(", ", request.TaskCodes)}] to staff {endorsement.StaffUserId} at site {endorsement.SiteId.Raw} in study {endorsement.StudyId.Raw}.",
+            StudyId = endorsement.StudyId.Raw,
+            SiteId = endorsement.SiteId.Raw,
             ReasonForChange = reason,
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
@@ -176,7 +178,7 @@ public sealed class DoaMutationService(
 
         await unitOfWork.CommitAsync(ct);
 
-        return TypedResults.Created($"/api/v1/ctms/doa/sites/{delegation.SiteId}/log", ToResponseDto(delegation));
+        return TypedResults.Created($"/api/v1/ctms/doa/sites/{endorsement.SiteId.Raw}/log", ToResponseDto(endorsement));
     }
 
     public async Task<IResult> RevokeDelegationAsync(
@@ -198,9 +200,10 @@ public sealed class DoaMutationService(
             return missingScope;
         }
 
-        if (!string.IsNullOrWhiteSpace(request.Study)
+        string? bodyStudy = request.Study?.TrimmedOrNull;
+        if (!string.IsNullOrWhiteSpace(bodyStudy)
             && !string.IsNullOrWhiteSpace(studyId)
-            && !string.Equals(request.Study.Trim(), studyId.Trim(), StringComparison.Ordinal))
+            && !string.Equals(bodyStudy, studyId.Trim(), StringComparison.Ordinal))
         {
             return TypedResults.Problem(
                 title: "Conflicting study ID",
@@ -208,7 +211,7 @@ public sealed class DoaMutationService(
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        string? requestedStudyId = !string.IsNullOrWhiteSpace(request.Study) ? request.Study.Trim() : studyId?.Trim();
+        string? requestedStudyId = bodyStudy ?? studyId?.Trim();
         if (!string.IsNullOrWhiteSpace(requestedStudyId)
             && CtmsScopeGuard.RequireStudy(httpContext, requestedStudyId) is { } requestedStudyDenied)
         {
@@ -216,8 +219,12 @@ public sealed class DoaMutationService(
         }
 
         string trimmedRecordId = request.RecordId.Trim();
-        var delegation = await db.CtmsDelegations.FirstOrDefaultAsync(d => d.Id == trimmedRecordId, ct);
-        if (delegation is null)
+        Guid? parsedGrantId = TryParseGrantGuid(trimmedRecordId);
+        var endorsement = await db.CtmsDoaTaskEndorsements.FirstOrDefaultAsync(
+            d => d.Id == trimmedRecordId || (parsedGrantId.HasValue && d.KernelGrantId == parsedGrantId.Value),
+            ct);
+
+        if (endorsement is null)
         {
             return TypedResults.Problem(
                 title: "Delegation record not found",
@@ -225,13 +232,13 @@ public sealed class DoaMutationService(
                 statusCode: StatusCodes.Status404NotFound);
         }
 
-        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, delegation.StudyId, delegation.SiteId) is { } scopeDenied)
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, endorsement.StudyId.Raw, endorsement.SiteId.Raw) is { } scopeDenied)
         {
             return scopeDenied;
         }
 
         if (!string.IsNullOrWhiteSpace(requestedStudyId)
-            && !string.Equals(delegation.StudyId, requestedStudyId, StringComparison.Ordinal))
+            && !string.Equals(endorsement.StudyId.Raw, requestedStudyId, StringComparison.Ordinal))
         {
             return TypedResults.Problem(
                 title: "Delegation record not found",
@@ -244,7 +251,7 @@ public sealed class DoaMutationService(
             return problem!;
         }
 
-        if (!delegation.IsActive)
+        if (!endorsement.IsActive)
         {
             return TypedResults.Problem(
                 title: "Already revoked",
@@ -254,20 +261,37 @@ public sealed class DoaMutationService(
 
         StandaloneConcurrencyTokenInterceptor.EnforceExpectedVersion(
             db,
-            delegation,
+            endorsement,
             request.ExpectedVersionIndex,
             httpContext);
 
         var now = clock.UtcNow;
         var (user, role) = CallerScope.ResolveActor(httpContext, "investigator");
-        long baselineVersion = db.Entry(delegation).Property(x => x.VersionIndex).OriginalValue;
+        var (tenantId, tenantCode, actorRoles) = await ResolveCallerContextAsync(httpContext, role, ct);
+        long baselineVersion = db.Entry(endorsement).Property(x => x.VersionIndex).OriginalValue;
 
-        delegation.IsActive = false;
-        delegation.EndDate = now.ToString("yyyy-MM-dd");
-        delegation.ReasonForChange = reason;
-        delegation.VersionIndex = baselineVersion + 1;
+        if (endorsement.KernelGrantId is { } kernelGrantId && kernelGrantId != Guid.Empty)
+        {
+            await _kernelTrust.RevokeSiteGrantAsync(
+                tenantId,
+                tenantCode,
+                kernelGrantId,
+                endorsement.StudyId.Raw,
+                endorsement.SiteId.Raw,
+                now,
+                user,
+                actorRoles,
+                reason,
+                $"ctms-doa-revoke:{endorsement.Id}:{baselineVersion + 1}",
+                ct);
+        }
 
-        await AppendDelegationPeriodTransitionAsync(delegation, user, reason, now, isRevocation: true, ct);
+        endorsement.IsActive = false;
+        endorsement.EndDate = now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        endorsement.RevokedAt = now;
+        endorsement.RevokedBy = user;
+        endorsement.ReasonForChange = reason;
+        endorsement.VersionIndex = baselineVersion + 1;
 
         var auditEntry = new CtmsAuditLog
         {
@@ -275,9 +299,9 @@ public sealed class DoaMutationService(
             UserId = user,
             UserRole = role,
             Action = "DOA_REVOKE",
-            Details = $"Revoked delegation assignment {delegation.Id} for staff {delegation.StaffUserId} at site {delegation.SiteId} in study {delegation.StudyId}.",
-            StudyId = delegation.StudyId,
-            SiteId = delegation.SiteId,
+            Details = $"Revoked delegation assignment {endorsement.Id} for staff {endorsement.StaffUserId} at site {endorsement.SiteId.Raw} in study {endorsement.StudyId.Raw}.",
+            StudyId = endorsement.StudyId.Raw,
+            SiteId = endorsement.SiteId.Raw,
             ReasonForChange = reason,
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
@@ -287,7 +311,7 @@ public sealed class DoaMutationService(
 
         await unitOfWork.CommitAsync(ct);
 
-        return TypedResults.Ok(ToResponseDto(delegation));
+        return TypedResults.Ok(ToResponseDto(endorsement));
     }
 
     public async Task<IResult> SignOffDelegationAsync(
@@ -309,9 +333,10 @@ public sealed class DoaMutationService(
             return missingScope;
         }
 
-        if (!string.IsNullOrWhiteSpace(request.Study)
+        string? bodyStudy = request.Study?.TrimmedOrNull;
+        if (!string.IsNullOrWhiteSpace(bodyStudy)
             && !string.IsNullOrWhiteSpace(studyId)
-            && !string.Equals(request.Study.Trim(), studyId.Trim(), StringComparison.Ordinal))
+            && !string.Equals(bodyStudy, studyId.Trim(), StringComparison.Ordinal))
         {
             return TypedResults.Problem(
                 title: "Conflicting study ID",
@@ -319,7 +344,7 @@ public sealed class DoaMutationService(
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        string? requestedStudyId = !string.IsNullOrWhiteSpace(request.Study) ? request.Study.Trim() : studyId?.Trim();
+        string? requestedStudyId = bodyStudy ?? studyId?.Trim();
         if (!string.IsNullOrWhiteSpace(requestedStudyId)
             && CtmsScopeGuard.RequireStudy(httpContext, requestedStudyId) is { } requestedStudyDenied)
         {
@@ -327,8 +352,8 @@ public sealed class DoaMutationService(
         }
 
         string trimmedRecordId = request.RecordId.Trim();
-        var delegation = await db.CtmsDelegations.FirstOrDefaultAsync(d => d.Id == trimmedRecordId, ct);
-        if (delegation is null)
+        var endorsement = await db.CtmsDoaTaskEndorsements.FirstOrDefaultAsync(d => d.Id == trimmedRecordId, ct);
+        if (endorsement is null)
         {
             return TypedResults.Problem(
                 title: "Delegation record not found",
@@ -336,13 +361,13 @@ public sealed class DoaMutationService(
                 statusCode: StatusCodes.Status404NotFound);
         }
 
-        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, delegation.StudyId, delegation.SiteId) is { } scopeDenied)
+        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, endorsement.StudyId.Raw, endorsement.SiteId.Raw) is { } scopeDenied)
         {
             return scopeDenied;
         }
 
         if (!string.IsNullOrWhiteSpace(requestedStudyId)
-            && !string.Equals(delegation.StudyId, requestedStudyId, StringComparison.Ordinal))
+            && !string.Equals(endorsement.StudyId.Raw, requestedStudyId, StringComparison.Ordinal))
         {
             return TypedResults.Problem(
                 title: "Delegation record not found",
@@ -355,7 +380,7 @@ public sealed class DoaMutationService(
             return problem!;
         }
 
-        if (!delegation.IsActive)
+        if (!endorsement.IsActive)
         {
             return TypedResults.Problem(
                 title: "Cannot sign off revoked record",
@@ -363,7 +388,7 @@ public sealed class DoaMutationService(
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (delegation.SignedOff)
+        if (endorsement.SignedOff)
         {
             return TypedResults.Problem(
                 title: "Already signed off",
@@ -373,19 +398,37 @@ public sealed class DoaMutationService(
 
         StandaloneConcurrencyTokenInterceptor.EnforceExpectedVersion(
             db,
-            delegation,
+            endorsement,
             request.ExpectedVersionIndex,
             httpContext);
 
         var (user, role) = CallerScope.ResolveActor(httpContext, "investigator");
+        var (tenantId, tenantCode, actorRoles) = await ResolveCallerContextAsync(httpContext, role, ct);
         var now = clock.UtcNow;
-        long baselineVersion = db.Entry(delegation).Property(x => x.VersionIndex).OriginalValue;
+        long baselineVersion = db.Entry(endorsement).Property(x => x.VersionIndex).OriginalValue;
 
-        delegation.SignedOff = true;
-        delegation.ReasonForChange = reason;
-        delegation.VersionIndex = baselineVersion + 1;
+        var taskCodes = ParseTaskCodes(endorsement.TaskCodes);
+        DateTimeOffset validFrom = ParseDelegationStartDate(endorsement.StartDate, now);
+        var kernelGrant = await _kernelTrust.IssueOrDelegateSiteGrantAsync(
+            tenantId,
+            tenantCode,
+            endorsement.StudyId.Raw,
+            endorsement.SiteId.Raw,
+            endorsement.StaffUserId,
+            taskCodes,
+            validFrom,
+            user,
+            actorRoles,
+            reason,
+            $"ctms-doa-signoff:{endorsement.Id}",
+            ct);
 
-        await AppendDelegationPeriodTransitionAsync(delegation, user, reason, now, isRevocation: false, ct);
+        endorsement.KernelGrantId = kernelGrant.GrantId;
+        endorsement.SignedOff = true;
+        endorsement.SignedOffAt = now;
+        endorsement.SignedOffBy = user;
+        endorsement.ReasonForChange = reason;
+        endorsement.VersionIndex = baselineVersion + 1;
 
         var auditEntry = new CtmsAuditLog
         {
@@ -393,9 +436,9 @@ public sealed class DoaMutationService(
             UserId = user,
             UserRole = role,
             Action = "DOA_PI_SIGN_OFF",
-            Details = $"Principal Investigator sign-off endorsed for delegation {delegation.Id} (staff {delegation.StaffUserId}) at site {delegation.SiteId} in study {delegation.StudyId}.",
-            StudyId = delegation.StudyId,
-            SiteId = delegation.SiteId,
+            Details = $"Principal Investigator sign-off endorsed for delegation {endorsement.Id} (staff {endorsement.StaffUserId}, kernel grant {kernelGrant.GrantId:D}) at site {endorsement.SiteId.Raw} in study {endorsement.StudyId.Raw}.",
+            StudyId = endorsement.StudyId.Raw,
+            SiteId = endorsement.SiteId.Raw,
             ReasonForChange = reason,
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
@@ -405,7 +448,7 @@ public sealed class DoaMutationService(
 
         await unitOfWork.CommitAsync(ct);
 
-        return TypedResults.Ok(ToResponseDto(delegation));
+        return TypedResults.Ok(ToResponseDto(endorsement));
     }
 
     public static List<string> ParseTaskCodes(string taskCodesJson)
@@ -425,7 +468,7 @@ public sealed class DoaMutationService(
         }
     }
 
-    public static DelegationResponseDto ToResponseDto(CtmsDelegation d) =>
+    public static DelegationResponseDto ToResponseDto(CtmsDoaTaskEndorsement d) =>
         new(
             RecordId: d.Id,
             Site: d.SiteId,
@@ -437,9 +480,10 @@ public sealed class DoaMutationService(
             SignedOff: d.SignedOff,
             ReasonForChange: d.ReasonForChange,
             CreatedBy: d.CreatedBy,
-            VersionIndex: d.VersionIndex);
+            VersionIndex: d.VersionIndex,
+            KernelGrantId: d.KernelGrantId);
 
-    private static DateTimeOffset ParseDelegationStartDate(string startDate, DateTimeOffset fallback) =>
+    internal static DateTimeOffset ParseDelegationStartDate(string startDate, DateTimeOffset fallback) =>
         DateTimeOffset.TryParse(
             startDate,
             CultureInfo.InvariantCulture,
@@ -448,96 +492,65 @@ public sealed class DoaMutationService(
             ? parsed
             : fallback;
 
-    private static CtmsDelegationPeriod CreateDelegationPeriod(
-        CtmsDelegation delegation,
-        string actorId,
-        string reasonForChange,
-        NpgsqlTypes.NpgsqlRange<DateTimeOffset> validPeriod,
-        NpgsqlTypes.NpgsqlRange<DateTimeOffset> recordedPeriod) =>
-        new()
-        {
-            DelegationId = delegation.Id,
-            StudyCode = delegation.StudyId,
-            SiteCode = delegation.SiteId,
-            StaffUserId = delegation.StaffUserId,
-            TaskCodes = delegation.TaskCodes,
-            StartDate = delegation.StartDate,
-            EndDate = delegation.EndDate,
-            IsActive = delegation.IsActive,
-            SignedOff = delegation.SignedOff,
-            CreatedBy = actorId,
-            ReasonForChange = reasonForChange,
-            ValidPeriod = validPeriod,
-            RecordedPeriod = recordedPeriod,
-        };
-
-    private async Task AppendDelegationPeriodTransitionAsync(
-        CtmsDelegation delegation,
-        string actorId,
-        string reasonForChange,
-        DateTimeOffset now,
-        bool isRevocation,
+    internal static async Task<(TenantId TenantId, string? TenantCode, IReadOnlyList<string> ActorRoles)> ResolveCallerContextAsync(
+        HttpContext httpContext,
+        string fallbackRole,
         CancellationToken ct)
     {
-        var allPeriods = await db.CtmsDelegationPeriods
-            .Where(p => p.DelegationId == delegation.Id)
-            .ToListAsync(ct);
-        var openPeriods = allPeriods
-            .Where(p => p.RecordedPeriod.UpperBoundInfinite)
-            .ToList();
-
-        DateTimeOffset recordedCutover = now;
-        foreach (var openPeriod in openPeriods)
+        var principal = CtmsScopeGuard.ResolvePrincipal(httpContext);
+        string? tenantCode = principal?.TenantId;
+        IReadOnlyList<string> actorRoles;
+        if (principal?.RawRoles is { Count: > 0 } rawRoles)
         {
-            var closed = StandaloneBitemporalModelExtensions.CloseRecordedAt(openPeriod.RecordedPeriod, now);
-            openPeriod.RecordedPeriod = closed;
-            if (closed.UpperBound > recordedCutover)
+            actorRoles = rawRoles;
+        }
+        else if (principal?.Roles is { Count: > 0 } normRoles)
+        {
+            actorRoles = normRoles;
+        }
+        else
+        {
+            actorRoles = [fallbackRole];
+        }
+
+        var accessor = httpContext.RequestServices?.GetService<ICurrentTenantAccessor>();
+        if (accessor is not null)
+        {
+            Guid? resolved = await accessor.GetCurrentTenantIdAsync(ct).ConfigureAwait(false);
+            if (resolved.HasValue && resolved.Value != Guid.Empty)
             {
-                recordedCutover = closed.UpperBound;
+                return (TenantId.FromGuid(resolved.Value), tenantCode, actorRoles);
             }
         }
 
-        DateTimeOffset validFrom = ParseDelegationStartDate(delegation.StartDate, now);
-        var openRecorded = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover);
-
-        if (isRevocation && validFrom < recordedCutover)
+        if (!string.IsNullOrWhiteSpace(tenantCode))
         {
-            bool wasSignedOff = openPeriods.FirstOrDefault()?.SignedOff ?? delegation.SignedOff;
-            string priorReason = openPeriods.FirstOrDefault()?.ReasonForChange ?? delegation.ReasonForChange;
-            string priorActor = openPeriods.FirstOrDefault()?.CreatedBy ?? delegation.CreatedBy;
-
-            db.CtmsDelegationPeriods.Add(new CtmsDelegationPeriod
-            {
-                DelegationId = delegation.Id,
-                StudyCode = delegation.StudyId,
-                SiteCode = delegation.SiteId,
-                StaffUserId = delegation.StaffUserId,
-                TaskCodes = delegation.TaskCodes,
-                StartDate = delegation.StartDate,
-                EndDate = null,
-                IsActive = true,
-                SignedOff = wasSignedOff,
-                CreatedBy = priorActor,
-                ReasonForChange = priorReason,
-                ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(validFrom, recordedCutover),
-                RecordedPeriod = openRecorded,
-            });
-
-            db.CtmsDelegationPeriods.Add(CreateDelegationPeriod(
-                delegation,
-                actorId,
-                reasonForChange,
-                StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover),
-                openRecorded));
-            return;
+            Guid deterministic = Guid.TryParse(tenantCode, out var parsed)
+                ? parsed
+                : DeterministicTenantCodeResolver.ComputeDeterministicGuid(tenantCode);
+            return (TenantId.FromGuid(deterministic), tenantCode, actorRoles);
         }
 
-        DateTimeOffset nextValidFrom = isRevocation ? recordedCutover : validFrom;
-        db.CtmsDelegationPeriods.Add(CreateDelegationPeriod(
-            delegation,
-            actorId,
-            reasonForChange,
-            StandaloneBitemporalModelExtensions.CreateOpenPeriod(nextValidFrom),
-            openRecorded));
+        return (default, null, actorRoles);
+    }
+
+    private static Guid? TryParseGrantGuid(string raw)
+    {
+        if (raw.StartsWith("grant:", StringComparison.OrdinalIgnoreCase))
+        {
+            string suffix = raw["grant:".Length..];
+            int at = suffix.IndexOf('@', StringComparison.Ordinal);
+            if (at >= 0)
+            {
+                suffix = suffix[..at];
+            }
+
+            if (Guid.TryParse(suffix, out var fromRef))
+            {
+                return fromRef;
+            }
+        }
+
+        return Guid.TryParse(raw, out var parsed) ? parsed : null;
     }
 }

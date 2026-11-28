@@ -5,16 +5,18 @@
       v-model:selected-curriculum-id="selectedCurriculumId"
       :loading="loading"
       :is-gated="isGated"
+      :can-assign-curriculum="canAssignCurriculum"
       :assignments="assignments"
       :curricula="curricula"
       :active-assignment="activeAssignment"
       :active-curriculum="activeCurriculum"
+      :live-quiz-percent="liveQuizPercent"
       @refresh="refreshData"
+      @open-author-modal="showAuthorModal = true"
       @assignment-change="onAssignmentChange"
       @curriculum-change="onCurriculumChange"
     />
 
-    <!-- Main Learning & Governance Workspace -->
     <div v-if="activeCurriculum" class="training-workspace">
       <ClinicalTabs
         :model-value="activeTab"
@@ -26,14 +28,24 @@
         @update:model-value="handleTrainingTabChange"
       />
 
-      <!-- TAB 1: MODULES -->
       <TrainingModulesReaderTab
         v-if="activeTab === 'modules'"
         v-model:selected-module-index="selectedModuleIndex"
+        v-model:attestation-meaning="attestationForm.meaning"
+        v-model:attestation-reason="attestationForm.reasonForChange"
+        v-model:attestation-credential="attestationForm.signerCredential"
         :active-curriculum="activeCurriculum"
+        :active-assignment="activeAssignment"
+        :quiz-questions="quizQuestions"
+        :quiz-answers="quizAnswers"
+        :quiz-ready="quizReady"
+        :submitting-completion="submittingCompletion"
+        :completion-result="completionResult"
+        :completion-error="completionError"
+        @answer-quiz="setQuizAnswer"
+        @submit-attestation="handleCompleteAssignment"
       />
 
-      <!-- TAB 2: BATCH ASSIGNMENT WORKSPACE -->
       <div
         v-if="activeTab === 'batch'"
         id="training-console-panel-batch"
@@ -43,10 +55,10 @@
       >
         <div class="batch-card card">
           <div class="batch-header">
-            <h3>Multi-Site &amp; Role Batch Curriculum Assignment</h3>
+            <h3>Kernel Site-Grant Batch Curriculum Assignment</h3>
             <p class="section-desc">
-              Select target clinical trial sites and roles to batch-assign
-              training curricula. Bypasses duplicate active assignments
+              Select target clinical trial sites and roles resolved from active
+              canonical Kernel grants. Duplicate active assignments are skipped
               automatically with a 200 target personnel limit.
             </p>
           </div>
@@ -56,8 +68,8 @@
             class="text-muted batch-empty"
             data-testid="batch-empty"
           >
-            No staff are on this study's delegation log yet, so there is no one
-            to assign this curriculum to.
+            No staff hold active Kernel site grants on this study yet, so there
+            is no one to assign this curriculum to.
           </p>
 
           <div v-else class="batch-filter-grid">
@@ -74,7 +86,7 @@
                     type="checkbox"
                     :value="site"
                   />
-                  <span>{{ site }}</span>
+                  <span class="font-mono">{{ site }}</span>
                 </label>
               </div>
             </fieldset>
@@ -110,17 +122,21 @@
           </p>
 
           <div class="batch-preview-bar">
-            <div class="preview-info">
+            <div class="preview-info tabular-nums">
+              <span>
+                Target Scope:
+                <strong class="tabular-nums"
+                  >{{ computedBatchCount }} personnel</strong
+                >
+                ({{ batchForm.selectedSites.length }} sites &times;
+                {{ batchForm.selectedRoles.length }} roles)
+              </span>
               <span
-                >Target Scope:
-                <strong>{{ computedBatchCount }} personnel</strong> ({{
-                  batchForm.selectedSites.length
-                }}
-                sites &times; {{ batchForm.selectedRoles.length }} roles)</span
+                v-if="computedBatchCount > 200"
+                class="badge badge-error tabular-nums"
               >
-              <span v-if="computedBatchCount > 200" class="badge badge-error">
-                Exceeds 200 Synchronous Limit</span
-              >
+                Exceeds 200 Synchronous Limit
+              </span>
             </div>
             <button
               type="button"
@@ -136,7 +152,7 @@
               "
               @click="showBatchModal = true"
             >
-              <span>Execute Batch Assignment </span>
+              <span>Execute Batch Assignment</span>
             </button>
           </div>
 
@@ -144,7 +160,6 @@
             {{ batchError }}
           </p>
 
-          <!-- Batch Execution Result Manifest -->
           <div v-if="batchResult" class="batch-result-card">
             <div class="result-header">
               <h4>Batch Assignment Summary</h4>
@@ -155,14 +170,14 @@
                 :reference="batchResult.batch_transaction_id"
               />
             </div>
-            <div class="result-stats">
-              <div class="stat-pill success-pill">
+            <div class="result-stats tabular-nums">
+              <div class="stat-pill success-pill tabular-nums">
                 Assigned: {{ batchResult.total_assigned }}
               </div>
-              <div class="stat-pill warning-pill">
+              <div class="stat-pill warning-pill tabular-nums">
                 Skipped Duplicates: {{ batchResult.total_skipped }}
               </div>
-              <div class="stat-pill info-pill">
+              <div class="stat-pill info-pill tabular-nums">
                 Total Eligible: {{ batchResult.total_eligible }}
               </div>
             </div>
@@ -188,8 +203,8 @@
                     v-for="(item, idx) in batchResult.skipped_items"
                     :key="idx"
                   >
-                    <td>{{ item.user_id }}</td>
-                    <td>{{ item.site_id }}</td>
+                    <td class="font-mono">{{ item.user_id }}</td>
+                    <td class="font-mono">{{ item.site_id }}</td>
                     <td>{{ formatRoleLabel(item.user_role) }}</td>
                     <td>
                       <span class="badge badge-warning">{{ item.reason }}</span>
@@ -201,176 +216,27 @@
           </div>
         </div>
       </div>
-
-      <!-- TAB 3: DELEGATION BULK SIGN-OFF WORKSPACE -->
-      <div
-        v-if="activeTab === 'delegations'"
-        id="training-console-panel-delegations"
-        role="tabpanel"
-        aria-labelledby="training-console-tab-delegations"
-        class="tab-content delegations-layout"
-      >
-        <div class="delegations-card card">
-          <div class="delegation-header">
-            <div>
-              <h3>
-                21 CFR Part 11 Principal Investigator Delegation Log Sign-Off
-              </h3>
-              <p class="section-desc">
-                Review pending site staff delegation duties and execute legally
-                binding electronic bulk signatures with digital seals (SHA-256)
-                routed to eTMF Zone 5 (Artifact 05.02.04).
-              </p>
-            </div>
-            <button
-              type="button"
-              class="btn btn-secondary btn-sm"
-              @click="loadDelegations"
-            >
-              Refresh Log
-            </button>
-          </div>
-
-          <div class="delegations-table-wrapper">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th style="width: 40px">
-                    <input
-                      type="checkbox"
-                      aria-label="Select all delegations"
-                      :checked="isAllDelegationsSelected"
-                      @change="toggleSelectAllDelegations"
-                    />
-                  </th>
-                  <th>Staff Member</th>
-                  <th>Role</th>
-                  <th>Site ID</th>
-                  <th>Task &amp; Duties</th>
-                  <th>Status</th>
-                  <th>Digital Seal</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="del in delegations" :key="del.id">
-                  <td>
-                    <input
-                      v-model="selectedDelegationIds"
-                      type="checkbox"
-                      :value="del.id"
-                      :aria-label="`Select delegation ${del.id}`"
-                      :disabled="del.status === 'COMPLETED'"
-                    />
-                  </td>
-                  <td>
-                    <strong>{{ del.staff_name }}</strong><br /><small
-                      class="text-muted"
-                      >{{ del.staff_user_id }}</small
-                    >
-                  </td>
-                  <td>
-                    <span class="badge badge-role">{{
-                      formatRoleLabel(del.role)
-                    }}</span>
-                  </td>
-                  <td>{{ del.site_id }}</td>
-                  <td>
-                    <strong>{{
-                      formatClinicalEnum(del.task_code)
-                    }}</strong><br /><small>{{ del.duties }}</small>
-                  </td>
-                  <td>
-                    <span
-                      class="badge"
-                      :class="
-                        del.status === 'COMPLETED'
-                          ? 'badge-success'
-                          : 'badge-warning'
-                      "
-                    >
-                      {{ formatClinicalStatus(del.status) }}
-                    </span>
-                  </td>
-                  <td>
-                    <template v-if="del.pi_signature_hash">
-                      <span class="badge badge-success">Sealed</span>
-                      <SupportDetails
-                        summary-label="Digital seal"
-                        :reference="del.pi_signature_hash"
-                      />
-                    </template>
-                    <span v-else class="text-muted">Unsigned</span>
-                  </td>
-                </tr>
-                <tr v-if="delegations.length === 0">
-                  <td colspan="7" class="text-center">
-                    No delegation records found.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <p
-            v-if="!canSignDelegations"
-            id="training-delegation-role-note"
-            class="role-note"
-            role="note"
-          >
-            {{ TRAINING_DELEGATION_SIGN_ROLE_REASON }}
-          </p>
-
-          <div class="delegation-actions-bar">
-            <span
-              >Selected for Sign-Off:
-              <strong>{{ selectedDelegationIds.length }} records</strong></span
-            >
-            <button
-              type="button"
-              class="btn btn-success"
-              :disabled="
-                !canSignDelegations || selectedDelegationIds.length === 0
-              "
-              :title="
-                !canSignDelegations
-                  ? TRAINING_DELEGATION_SIGN_ROLE_REASON
-                  : undefined
-              "
-              @click="showBulkSignModal = true"
-            >
-              Execute Part 11 Bulk Signature
-            </button>
-          </div>
-
-          <!-- Last Bulk Sign Response Manifest -->
-          <div
-            v-if="bulkSignResult"
-            class="bulk-sign-result alert-banner success-banner"
-          >
-            <div class="banner-content">
-              <span class="banner-icon"
-                ><ClinicalIcon name="check-circle" :size="20"
-              /></span>
-              <div>
-                <strong>Bulk Delegation Sign-Off Executed Successfully</strong
-                ><br />
-                <small>
-                  Signed Records: {{ bulkSignResult.total_signed }} | eTMF
-                  Artifact: Zone 5 ({{ bulkSignResult.etmf_artifact_id }})
-                </small>
-                <SupportDetails
-                  summary-label="Signature verification details"
-                  :detail="`Batch Tx: ${bulkSignResult.batch_transaction_id}`"
-                  :reference="bulkSignResult.sha256_seal"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
-    <!-- Batch Assignment Modal -->
+    <div
+      v-else-if="!loading"
+      data-testid="training-empty-curriculum"
+      class="empty-curriculum-state"
+    >
+      <p class="text-muted">
+        No active protocol training curriculum is published for this study scope
+        yet.
+      </p>
+      <button
+        v-if="canAssignCurriculum"
+        type="button"
+        class="btn btn-primary"
+        @click="showAuthorModal = true"
+      >
+        Author First Protocol Curriculum
+      </button>
+    </div>
+
     <ClinicalModal
       v-model="showBatchModal"
       :teleport="false"
@@ -378,15 +244,18 @@
       dialog-class="modal-card"
       title="Confirm Batch Curriculum Assignment"
     >
-      <p class="modal-description">
+      <p class="modal-description tabular-nums">
         You are about to assign curriculum
         <strong>{{ activeCurriculum?.title || "Protocol Training" }}</strong>
         across
-        <strong>{{ batchForm.selectedSites.length }} sites</strong> and
-        <strong>{{ batchForm.selectedRoles.length }} roles</strong> ({{
-          computedBatchCount
-        }}
-        target personnel).
+        <strong class="tabular-nums"
+          >{{ batchForm.selectedSites.length }} sites</strong
+        >
+        and
+        <strong class="tabular-nums"
+          >{{ batchForm.selectedRoles.length }} roles</strong
+        >
+        ({{ computedBatchCount }} target personnel).
       </p>
       <div class="form-group">
         <label for="batch-reason">Reason for Change / Audit Note:</label>
@@ -394,9 +263,9 @@
           id="batch-reason"
           v-model="batchForm.reasonForChange"
           type="text"
-          class="text-input"
+          class="text-input control-touch"
           :disabled="submittingBatch"
-          placeholder="e.g. Protocol Amendment V3.0 Deployment"
+          placeholder="e.g. Protocol Amendment V2.0 Deployment"
         />
       </div>
       <template #footer>
@@ -415,38 +284,28 @@
           @click="handleExecuteBatchAssign"
         >
           <span v-if="submittingBatch">Deploying Batch...</span>
-          <span v-else>Confirm &amp; Deploy Batch </span>
+          <span v-else>Confirm &amp; Deploy Batch</span>
         </button>
       </template>
     </ClinicalModal>
 
-    <!-- Bulk Delegation Sign-Off Modal -->
-    <TrainingBulkSignModal
-      v-model="showBulkSignModal"
-      v-model:signer-name="bulkSignForm.signerName"
-      v-model:signer-role="bulkSignForm.signerRole"
-      v-model:signer-credential="bulkSignForm.password"
-      :selected-count="selectedDelegationIds.length"
-      :bulk-sign-error="bulkSignError"
-      :submitting-bulk-sign="submittingBulkSign"
-      @submit="handleExecuteBulkSignOff"
+    <TrainingCurriculumAuthorModal
+      v-model="showAuthorModal"
+      v-model:form="authorForm"
+      :study-id="effectiveStudyId"
+      :submitting="submittingCurriculum"
+      :error-message="authorError"
+      @submit="handleAuthorCurriculum"
     />
   </div>
 </template>
 
 <script setup>
-import { ClinicalIcon, ClinicalModal, ClinicalTabs } from "ui";
-import {
-  TRAINING_ASSIGN_ROLE_REASON,
-  TRAINING_DELEGATION_SIGN_ROLE_REASON,
-} from "../../canvas/authority";
-import {
-  formatClinicalEnum,
-  formatClinicalStatus,
-  formatRoleLabel,
-} from "../../utils/clinicalLabels";
+import { ClinicalModal, ClinicalTabs } from "ui";
+import { TRAINING_ASSIGN_ROLE_REASON } from "../../canvas/authority";
+import { formatRoleLabel } from "../../utils/clinicalLabels";
 import SupportDetails from "../canvas/SupportDetails.vue";
-import TrainingBulkSignModal from "./training/TrainingBulkSignModal.vue";
+import TrainingCurriculumAuthorModal from "./training/TrainingCurriculumAuthorModal.vue";
 import TrainingModulesReaderTab from "./training/TrainingModulesReaderTab.vue";
 import TrainingSelectorHeader from "./training/TrainingSelectorHeader.vue";
 import { useProtocolTrainingConsole } from "./training/useProtocolTrainingConsole";
@@ -466,45 +325,51 @@ const props = defineProps({
   },
 });
 
+const emit = defineEmits(["training-updated"]);
+
 const {
   activeAssignment,
   activeCurriculum,
   activeTab,
   assignments,
+  attestationForm,
+  authorError,
+  authorForm,
   availableRoles,
   availableSites,
   batchError,
   batchForm,
   batchResult,
-  bulkSignError,
-  bulkSignForm,
-  bulkSignResult,
   canAssignCurriculum,
-  canSignDelegations,
+  completionError,
+  completionResult,
   computedBatchCount,
   curricula,
-  delegations,
+  effectiveStudyId,
+  handleAuthorCurriculum,
+  handleCompleteAssignment,
   handleExecuteBatchAssign,
-  handleExecuteBulkSignOff,
   handleTrainingTabChange,
-  isAllDelegationsSelected,
   isGated,
-  loadDelegations,
+  liveQuizPercent,
   loading,
   onAssignmentChange,
   onCurriculumChange,
+  quizAnswers,
+  quizQuestions,
+  quizReady,
   refreshData,
   selectedAssignmentId,
   selectedCurriculumId,
-  selectedDelegationIds,
   selectedModuleIndex,
+  setQuizAnswer,
+  showAuthorModal,
   showBatchModal,
-  showBulkSignModal,
   submittingBatch,
-  submittingBulkSign,
-  toggleSelectAllDelegations,
+  submittingCompletion,
+  submittingCurriculum,
   trainingTabs,
-} = useProtocolTrainingConsole(props);
+} = useProtocolTrainingConsole(props, emit);
 </script>
 
 <style scoped src="./protocolTrainingConsole.css"></style>

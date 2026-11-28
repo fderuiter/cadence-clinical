@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Tenancy;
 using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Http;
@@ -44,8 +45,9 @@ public sealed class CtmsSiteScopeService(CtmsDbContext db) : ICtmsSiteScopeServi
         }
 
         string trimmedSite = siteId.Trim();
+        var siteCode = new KernelSiteCode(trimmedSite);
         return await db.CtmsSiteGreenlightGates.AnyAsync(g => g.SiteId == trimmedSite, ct)
-            || await db.CtmsDelegations.AnyAsync(d => d.SiteId == trimmedSite, ct)
+            || await db.CtmsDoaTaskEndorsements.AnyAsync(d => d.SiteId == siteCode, ct)
             || await db.CtmsSiteMilestones.AnyAsync(m => m.SiteId == trimmedSite, ct)
             || await db.CtmsMonitoringVisits.AnyAsync(v => v.SiteId == trimmedSite, ct)
             || await db.CtmsCraAllocations.AnyAsync(a => a.SiteId == trimmedSite, ct)
@@ -53,8 +55,7 @@ public sealed class CtmsSiteScopeService(CtmsDbContext db) : ICtmsSiteScopeServi
             || await db.CtmsInvestigatorGrants.AnyAsync(g => g.SiteId == trimmedSite, ct)
             || await db.CtmsRecruitmentRecords.AnyAsync(r => r.SiteId == trimmedSite, ct)
             || await db.CtmsRegulatoryForms.AnyAsync(f => f.SiteId == trimmedSite, ct)
-            || await db.CtmsGeneratedLetters.AnyAsync(l => l.SiteId == trimmedSite, ct)
-            || await db.DoaDelegationRecords.AnyAsync(r => r.SiteId == trimmedSite, ct);
+            || await db.CtmsGeneratedLetters.AnyAsync(l => l.SiteId == trimmedSite, ct);
     }
 
     public async Task<ProblemHttpResult?> RequireDoaSiteScopeAsync(
@@ -140,9 +141,12 @@ public sealed class CtmsSiteScopeService(CtmsDbContext db) : ICtmsSiteScopeServi
         AddNonEmpty(studies, await db.CtmsCraAllocations.AsNoTracking()
             .Where(a => a.SiteId == trimmedSite && a.StudyId != string.Empty)
             .Select(a => a.StudyId).Distinct().ToListAsync(ct));
-        AddNonEmpty(studies, await db.CtmsDelegations.AsNoTracking()
-            .Where(d => d.SiteId == trimmedSite && d.StudyId != string.Empty)
-            .Select(d => d.StudyId).Distinct().ToListAsync(ct));
+        var siteCode = new KernelSiteCode(trimmedSite);
+        var endorsementStudies = await db.CtmsDoaTaskEndorsements.AsNoTracking()
+            .Where(d => d.SiteId == siteCode)
+            .Select(d => d.StudyId)
+            .ToListAsync(ct);
+        AddNonEmpty(studies, endorsementStudies.Select(s => s.Raw));
         AddNonEmpty(studies, await db.CtmsClinicalQueries.AsNoTracking()
             .Where(q => q.SiteId == trimmedSite && q.StudyId != string.Empty)
             .Select(q => q.StudyId).Distinct().ToListAsync(ct));

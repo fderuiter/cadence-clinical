@@ -69,6 +69,7 @@ string[] platformOperators =
     .. DevelopmentTenantBootstrap.Register(builder.Services, builder.Configuration, builder.Environment),
     KernelAuthorityOptions.TrialOnboardingOperator.Id,
     KernelAuthorityOptions.CommercialBillingOperator.Id,
+    KernelAuthorityOptions.KnowledgeTrainingOperator.Id,
 ];
 string? quoteSigningSecret = builder.Configuration["CommercialQuote:SigningSecret"]
     ?? builder.Configuration["Security:GatewaySecret"]
@@ -156,6 +157,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "Returns the Clinical Kernel API's operational status.");
 app.MapKernelApi()
     .MapKernelReads()
+    .MapKernelTrust()
     .MapKernelStudyImports()
     .MapKernelProtocolGovernance()
     .MapKernelObservations()

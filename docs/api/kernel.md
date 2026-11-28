@@ -17,6 +17,10 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `POST` | `/api/v1/kernel/entitlements/activate` | KernelActivateSubscription | Activates a Trialing or Expired commercial subscription after validating study scoping and a verified quote token. |
 | `GET` | `/api/v1/kernel/entitlements/posture` | KernelGetEntitlementPosture | Minimal internal tenant commercial posture for the API gateway. |
 | `POST` | `/api/v1/kernel/entitlements/tier` | KernelUpgradeSubscriptionTier | Switches the tenant's commercial evaluation tier in place while preserving trial countdown and clinical records. |
+| `GET` | `/api/v1/kernel/grants` | KernelListGrants | Queries canonical grants and delegations with bitemporal valid_at and known_at evaluation (K-TIME-1). |
+| `POST` | `/api/v1/kernel/grants` | KernelIssueGrant | Issues a canonical bitemporal grant to an actor within a scope (grant.issue). |
+| `POST` | `/api/v1/kernel/grants/{grantRef}/delegate` | KernelDelegateGrant | Delegates authority bounded by a parent grant carrying withGrantOption (grant.delegate). |
+| `POST` | `/api/v1/kernel/grants/{grantRef}/revoke` | KernelRevokeGrant | Ends a grant or delegation's bitemporal validity at effective_at without erasing prior periods (grant.revoke). |
 | `POST` | `/api/v1/kernel/library-items/{itemRef}/approve` | KernelApproveLibraryItem | Approves a draft library item version with an Approved attestation (library_item.approve). |
 | `POST` | `/api/v1/kernel/locks` | KernelApplyLock | Applies a Frozen or Locked assertion to a study, study site, enrollment, form instance or observation (lock.apply). |
 | `GET` | `/api/v1/kernel/locks/in-force` | KernelGetScopeWriteLock | Checks whether any active write-denying lock (Frozen or Locked) covers a study, study site, or enrollment scope. |
@@ -51,6 +55,14 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `POST` | `/api/v1/kernel/protocol-versions/{versionRef}/submit-for-review` | KernelSubmitProtocolVersionForReview | Freezes a draft protocol version's content, computes its content hash, and moves it to InReview (protocol.submit_for_review). |
 | `POST` | `/api/v1/kernel/protocol-versions/{versionRef}/withdraw` | KernelWithdrawProtocolVersion | Records a 21 CFR Part 11 Withdrawn attestation bound to the frozen protocol content hash and withdraws an InReview or Approved protocol version (protocol.withdraw). |
 | `POST` | `/api/v1/kernel/protocols/matrix-gap-check` | KernelMatrixGapCheck | Performs immediate real-time matrix gap check on a candidate protocol design graph. |
+| `GET` | `/api/v1/kernel/qualification-requirements` | KernelListQualificationRequirements | Queries canonical qualification requirements with bitemporal valid_at and known_at evaluation (K-TIME-1). |
+| `POST` | `/api/v1/kernel/qualification-requirements` | KernelDefineQualificationRequirement | Defines a bitemporal qualification requirement gating a capability within a scope (qualification_requirement.define). |
+| `POST` | `/api/v1/kernel/qualification-requirements/{requirementRef}/retire` | KernelRetireQualificationRequirement | Retires a qualification requirement at effective_at while preserving earlier periods (qualification_requirement.retire). |
+| `GET` | `/api/v1/kernel/qualifications` | KernelListQualifications | Queries canonical qualifications with bitemporal valid_at and known_at evaluation (K-TIME-1). |
+| `POST` | `/api/v1/kernel/qualifications` | KernelRecordQualification | Records an artifact-backed bitemporal qualification for an actor (qualification.record). |
+| `POST` | `/api/v1/kernel/qualifications/{qualificationRef}/revoke` | KernelRevokeQualification | Ends a qualification's bitemporal validity at effective_at (qualification.revoke). |
+| `GET` | `/api/v1/kernel/roles` | KernelListRoles | Lists canonical roles defined in the caller's tenant. |
+| `POST` | `/api/v1/kernel/roles` | KernelDefineRole | Defines an immutable capability bundle role in the caller's tenant (role.define). |
 | `GET` | `/api/v1/kernel/search` | KernelSearch | Finds kernel objects in the caller's tenant by code or title. |
 | `POST` | `/api/v1/kernel/simulation/simulate` | KernelSimulateProtocol | Evaluates a candidate protocol version, mapping specification, or rule pack in memory at a bitemporal (valid_at, known_at) instant without database changes. |
 | `GET` | `/api/v1/kernel/sites` | KernelListSites | Lists visible investigational sites in the caller's tenant. |

@@ -101,9 +101,10 @@ public sealed class KernelCommandPipeline(
         {
             var denial = decision with { Reason = decision.Reason ?? KernelErrors.AuthorizationDenied.Message };
             await transaction.RecordDenialAsync(denial, cancellationToken).ConfigureAwait(false);
+            var targetResource = ResolveCommandTarget(command, commandType);
             return KernelErrors.AuthorizationDenied.WithMessage(denial.Reason!) with
             {
-                Explanation = denial.Explain(execution.CommandType),
+                Explanation = denial.Explain(execution.CommandType, targetResource),
             };
         }
 
@@ -556,6 +557,29 @@ public sealed class KernelCommandPipeline(
         return null;
     }
 
+
+    private NodeRef? ResolveCommandTarget(ICommand command, Type commandType)
+    {
+        if (command is Attest attest)
+        {
+            if (attest.Target is { } evidenceTarget
+                && evidenceTarget.Id != Guid.Empty
+                && NodeKinds.IsRegistered(evidenceTarget.Kind))
+            {
+                return new NodeRef(evidenceTarget.Kind, evidenceTarget.Id);
+            }
+
+            if (attest.Scope is { } scope)
+            {
+                return scope.Unversioned();
+            }
+
+            return !attest.TenantId.IsEmpty ? NodeRef.For(attest.TenantId) : null;
+        }
+
+        var catalog = services.GetService<KernelCommandCatalog>() ?? KernelCommandCatalog.Kernel;
+        return catalog.Find(commandType)?.ResourceOf(command);
+    }
 
     private interface IHandlerInvoker<TResult>
     {

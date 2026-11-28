@@ -29,8 +29,6 @@ public sealed class KnowledgeDbContext(DbContextOptions<KnowledgeDbContext> opti
     public DbSet<ProtocolKnowledgeChunk> ProtocolKnowledgeChunks => Set<ProtocolKnowledgeChunk>();
     public DbSet<TrainingCurriculum> TrainingCurricula => Set<TrainingCurriculum>();
     public DbSet<TrainingAssignment> TrainingAssignments => Set<TrainingAssignment>();
-    public DbSet<DelegationRecord> DelegationRecords => Set<DelegationRecord>();
-    public DbSet<DelegationRecordPeriod> DelegationRecordPeriods => Set<DelegationRecordPeriod>();
     public DbSet<OrgAuditLog> OrgAuditLogs => Set<OrgAuditLog>();
     public DbSet<TrainingCertificate> TrainingCertificates => Set<TrainingCertificate>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
@@ -39,7 +37,6 @@ public sealed class KnowledgeDbContext(DbContextOptions<KnowledgeDbContext> opti
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        // Used e-signature tokens, single use across instances and restarts (ADR-2515, #5434).
         modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
 
         modelBuilder.ApplyConfiguration(new KnowledgeCategoryConfiguration());
@@ -48,7 +45,9 @@ public sealed class KnowledgeDbContext(DbContextOptions<KnowledgeDbContext> opti
         modelBuilder.ApplyConfiguration(new KnowledgeArticleAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new ContextualHelpMappingConfiguration());
         modelBuilder.ApplyConfiguration(new ProtocolKnowledgeChunkConfiguration());
-        modelBuilder.ApplyConfiguration(new DelegationRecordPeriodConfiguration(this));
+        modelBuilder.ApplyConfiguration(new TrainingCurriculumConfiguration());
+        modelBuilder.ApplyConfiguration(new TrainingAssignmentConfiguration());
+        modelBuilder.ApplyConfiguration(new TrainingCertificateConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
         modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
         modelBuilder.ConfigureStandaloneTenancy(this);

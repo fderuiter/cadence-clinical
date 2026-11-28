@@ -13,6 +13,7 @@ using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
@@ -26,6 +27,7 @@ using Cadence.Kernel.Validation;
 using Cadence.Modules.Execution.Domain;
 using Cadence.Modules.Execution.Endpoints;
 using Cadence.Modules.Execution.Infrastructure;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -708,6 +710,59 @@ public sealed class ExecutionFormModuleTests
             && e.DaysOutsideWindow == 6);
     }
 
+    [Fact(DisplayName = "FormEndpoints_GetAsync_SurfacesCanRecordFalseAndCaptureExplanation_WhenQualificationMissing")]
+    [GxPRequirement("PRD-TRN-002")]
+    public async Task FormEndpointsGetAsyncSurfacesCanRecordFalseAndCaptureExplanationWhenQualificationMissing()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tenant = TenantId.New();
+        var record = Record([Item("sbp", required: true)], Value("sbp", new QuantityValue(120m, "mm[Hg]")));
+        var contexts = new InMemoryFormContextFactory($"exec-forms-qual-{Guid.NewGuid():N}");
+        var http = await ContextWithTenantAsync(tenant);
+
+        var explanation = ProblemExplanation.From(
+            new Cadence.Kernel.Explanations.Explanation(
+                NodeRef.For(record.EnrollmentId),
+                "collection.record requires current protocol_training qualification (K-AUTH-6).",
+                "kernel.authorization",
+                [],
+                [
+                    new Cadence.Kernel.Explanations.EvaluatedCondition(
+                        "K-AUTH-6",
+                        "Actor lacks active Training qualification 'protocol_training' for Protocol V3.",
+                        false,
+                        []),
+                ],
+                []));
+
+        var gatedAccess = new StubReadAccess(canSee: true, canSign: false, canRecord: false, captureExplanation: explanation);
+        var gatedResult = await FormEndpoints.GetAsync(
+            record.CollectionInstanceId.Value,
+            http,
+            new StubCollectionInstanceRecords([], [record]),
+            contexts,
+            gatedAccess,
+            ct);
+
+        var gatedForm = gatedResult.Result.Should().BeOfType<Ok<FormResponse>>().Subject.Value!;
+        gatedForm.CanRecord.Should().BeFalse();
+        gatedForm.CaptureExplanation.Should().NotBeNull();
+        gatedForm.CaptureExplanation!.Conditions.Should().ContainSingle(c => c.Code == "K-AUTH-6" && !c.Met);
+
+        var qualifiedAccess = new StubReadAccess(canSee: true, canSign: true, canRecord: true);
+        var qualifiedResult = await FormEndpoints.GetAsync(
+            record.CollectionInstanceId.Value,
+            http,
+            new StubCollectionInstanceRecords([], [record]),
+            contexts,
+            qualifiedAccess,
+            ct);
+
+        var qualifiedForm = qualifiedResult.Result.Should().BeOfType<Ok<FormResponse>>().Subject.Value!;
+        qualifiedForm.CanRecord.Should().BeTrue();
+        qualifiedForm.CaptureExplanation.Should().BeNull();
+    }
+
     private static async Task<HttpContext> ContextWithTenantAsync(TenantId tenant, IServiceProvider? services = null)
     {
         var http = new DefaultHttpContext();
@@ -761,7 +816,12 @@ public sealed class ExecutionFormModuleTests
         public string? Read(HttpContext context) => reason;
     }
 
-    private sealed class StubReadAccess(bool canSee, bool canSign = false, bool? canUnblind = null) : IKernelReadAccess
+    private sealed class StubReadAccess(
+        bool canSee,
+        bool canSign = false,
+        bool? canUnblind = null,
+        bool canRecord = true,
+        ProblemExplanation? captureExplanation = null) : IKernelReadAccess
     {
         public NodeRef? CheckedNode { get; private set; }
 
@@ -771,8 +831,34 @@ public sealed class ExecutionFormModuleTests
             return ValueTask.FromResult(canSee);
         }
 
-        public ValueTask<bool> CanExerciseAsync(TenantId tenant, Capability capability, NodeRef resource, CancellationToken cancellationToken) =>
-            ValueTask.FromResult(Capability.IsUnblinding(capability.Token) ? (canUnblind ?? canSign) : canSign);
+        public ValueTask<bool> CanExerciseAsync(TenantId tenant, Capability capability, NodeRef resource, CancellationToken cancellationToken)
+        {
+            if (Capability.IsUnblinding(capability.Token))
+            {
+                return ValueTask.FromResult(canUnblind ?? canSign);
+            }
+
+            if (capability.Token == "collection.record")
+            {
+                return ValueTask.FromResult(canRecord);
+            }
+
+            return ValueTask.FromResult(canSign);
+        }
+
+        public ValueTask<(bool Permitted, ProblemExplanation? Explanation)> ExplainExerciseAsync(
+            TenantId tenant,
+            Capability capability,
+            NodeRef resource,
+            CancellationToken cancellationToken)
+        {
+            if (capability.Token == "collection.record" && !canRecord)
+            {
+                return ValueTask.FromResult<(bool, ProblemExplanation?)>((false, captureExplanation));
+            }
+
+            return ValueTask.FromResult<(bool, ProblemExplanation?)>((true, null));
+        }
     }
 
     private sealed class InMemoryFormContextFactory(string dbName) : IModuleTenantContextFactory<ExecutionModuleDbContext>

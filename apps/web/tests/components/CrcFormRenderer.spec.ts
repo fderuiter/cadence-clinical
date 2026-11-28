@@ -251,4 +251,28 @@ describe("CrcFormRenderer.vue", () => {
     );
     unavailableWrapper.unmount();
   });
+
+  it("disables eCRF fieldset and blocks submission when isTrainingGated is true", async () => {
+    /**
+     * @req: PRD-TRN-002
+     */
+    const gatedWrapper = createWrapper({
+      isTrainingGated: true,
+      missingCourses: ["Protocol v2.0 Core Qualification"],
+    });
+    expect(gatedWrapper.find("#training-gating-banner").exists()).toBe(true);
+    expect(
+      gatedWrapper.find("#form-VS_DEMO fieldset").attributes("disabled")
+    ).toBeDefined();
+    expect(
+      gatedWrapper.find("#btn-clear-ecrf").attributes("disabled")
+    ).toBeDefined();
+    expect(
+      gatedWrapper.find("#btn-submit-ecrf").attributes("disabled")
+    ).toBeDefined();
+
+    await gatedWrapper.find("#btn-submit-ecrf").trigger("click");
+    expect(gatedWrapper.emitted("submit-ecrf")).toBeUndefined();
+    gatedWrapper.unmount();
+  });
 });

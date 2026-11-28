@@ -1,56 +1,73 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createMemoryHistory, createRouter } from "vue-router";
 import * as signatureVerification from "../../src/api/signatureVerification";
 import { trainingApi } from "../../src/api/training";
 import ProtocolTrainingConsole from "../../src/components/clinical/ProtocolTrainingConsole.vue";
 import { useAuthStore } from "../../src/stores/auth";
-import { delegationBatchBindingId } from "../../src/utils/signatureBinding";
 import { signInAs } from "../helpers/signIn.js";
 
-describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Off", () => {
+describe("ProtocolTrainingConsole.vue - Kernel Site-Grant Batch Assignment & Part 11 Qualification Filing", () => {
   const mockCurriculum = {
     id: "curriculum-v3-delta",
     title: "Protocol V3.0 Delta Amendment Curriculum",
     protocol_version: "3.0",
+    protocol_version_number: 3,
+    qualification_code: "protocol_training",
+    passing_score: 0.8,
     study_id: "CARDIO-2026",
     description: "Delta overview...",
     is_active: true,
     created_at: "2026-10-01T10:00:00Z",
+    modules: [
+      {
+        id: "mod-1",
+        title: "Section 4.1 Eligibility Updates",
+        section_ref: "Section 4.1",
+        summary: "Updated baseline laboratory thresholds.",
+        key_changes: ["Verify eGFR >= 45 mL/min prior to enrollment."],
+        estimated_minutes: 10,
+      },
+    ],
+    quiz_questions: [
+      {
+        id: "q-1",
+        prompt: "What is the minimum baseline eGFR threshold?",
+        options: [
+          { id: "opt-a", label: "45 mL/min" },
+          { id: "opt-b", label: "15 mL/min" },
+        ],
+        correct_option_id: "opt-a",
+      },
+    ],
   };
 
-  const mockDelegations = [
+  const mockStudyStaff = [
     {
-      id: "del-01",
-      study_id: "CARDIO-2026",
+      user_id: "usr-01",
+      user_name: "Marcus Vance",
       site_id: "SITE-101",
-      staff_user_id: "usr-01",
-      staff_name: "Marcus Vance",
       role: "Sub-Investigator",
-      task_code: "INFORMED_CONSENT",
-      duties: "Informed Consent Administration",
-      status: "PENDING",
-      signed_off: false,
-      pi_signature_hash: null,
-      pi_approved_at: null,
-      batch_transaction_id: null,
+      grant_id: "grant-01",
     },
     {
-      id: "del-02",
-      study_id: "CARDIO-2026",
+      user_id: "usr-02",
+      user_name: "Sarah Jenkins",
       site_id: "SITE-101",
-      staff_user_id: "usr-02",
-      staff_name: "Sarah Jenkins",
       role: "Clinical Research Coordinator",
-      task_code: "EDC_DATA_ENTRY",
-      duties: "eCRF Data Entry",
-      status: "PENDING",
-      signed_off: false,
-      pi_signature_hash: null,
-      pi_approved_at: null,
-      batch_transaction_id: null,
+      grant_id: "grant-02",
     },
   ];
+
+  function createTestRouter() {
+    return createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: "/studies/:studyCode?", name: "study", component: { template: "<div />" } },
+      ],
+    });
+  }
 
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -59,7 +76,7 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Of
     vi.spyOn(trainingApi, "listAssignments").mockResolvedValue([]);
     vi.spyOn(trainingApi, "listCurricula").mockResolvedValue([mockCurriculum]);
     vi.spyOn(trainingApi, "getCurriculum").mockResolvedValue(mockCurriculum);
-    vi.spyOn(trainingApi, "listDelegations").mockResolvedValue(mockDelegations);
+    vi.spyOn(trainingApi, "listStudyStaff").mockResolvedValue(mockStudyStaff);
   });
 
   afterEach(() => {
@@ -67,8 +84,10 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Of
   });
 
   async function openBatchTab() {
+    const router = createTestRouter();
     const wrapper = mount(ProtocolTrainingConsole, {
       props: { studyId: "CARDIO-2026" },
+      global: { plugins: [router] },
     });
     await flushPromises();
     const batchTabBtn = wrapper
@@ -80,10 +99,10 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Of
     return wrapper;
   }
 
-  it("offers only the sites and roles on the study's delegation log, with nothing pre-selected (#5400)", async () => {
+  it("offers only the sites and roles resolved from canonical Kernel study-staff grants, with nothing pre-selected (#5400)", async () => {
     const wrapper = await openBatchTab();
 
-    expect(trainingApi.listDelegations).toHaveBeenCalledWith({
+    expect(trainingApi.listStudyStaff).toHaveBeenCalledWith({
       study_id: "CARDIO-2026",
     });
     const options = wrapper
@@ -105,7 +124,7 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Of
     ).toBeDefined();
   });
 
-  it("counts the people on the delegation log the selection reaches", async () => {
+  it("counts the personnel holding active Kernel site grants reached by the selection", async () => {
     const wrapper = await openBatchTab();
 
     await wrapper
@@ -119,8 +138,8 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Of
     expect(wrapper.text()).toContain("Target Scope: 1 personnel");
   });
 
-  it("shows an empty state and offers no audience when the delegation log is empty", async () => {
-    vi.mocked(trainingApi.listDelegations).mockResolvedValue([]);
+  it("shows an empty state and offers no audience when no Kernel site grants exist", async () => {
+    vi.mocked(trainingApi.listStudyStaff).mockResolvedValue([]);
     const wrapper = await openBatchTab();
 
     expect(wrapper.find("[data-testid='batch-empty']").exists()).toBe(true);
@@ -195,123 +214,177 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Of
     expect(wrapper.text()).toContain("Skipped Duplicates: 1");
   });
 
-  it("renders Delegation Bulk Sign-Off tab and executes Part 11 signature via POST /api/v1/training/delegations/bulk-signoff", async () => {
-    signInAs(useAuthStore(), ["Principal Investigator"], {
-      username: "pi_vance",
-    });
-    vi.spyOn(signatureVerification, "requestStepUpSignature").mockResolvedValue(
-      {
-        sig_token: "step-up-token",
-      }
+  it("authors a protocol curriculum via POST /api/v1/training/curricula", async () => {
+    /**
+     * @req: PRD-TRN-001
+     */
+    const createdCurriculum = {
+      ...mockCurriculum,
+      id: "curriculum-v4",
+      title: "Protocol V4.0 Core Qualification",
+      protocol_version: "4.0",
+      protocol_version_number: 4,
+    };
+    vi.spyOn(trainingApi, "createCurriculum").mockResolvedValue(
+      createdCurriculum
     );
-    vi.spyOn(trainingApi, "bulkSignOffDelegations").mockResolvedValue({
-      batch_transaction_id: "tx-del-888",
-      total_requested: 2,
-      total_signed: 2,
-      total_failed: 0,
-      signed_delegations: [],
-      failed_items: [],
-      sha256_seal:
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
-      etmf_artifact_id: "05.02.04",
-      executed_at: "2026-10-07T10:00:00Z",
-    });
 
+    const router = createTestRouter();
     const wrapper = mount(ProtocolTrainingConsole, {
       props: { studyId: "CARDIO-2026" },
+      global: { plugins: [router] },
     });
     await flushPromises();
 
-    const delTabBtn = wrapper
-      .findAll(".tab-btn")
-      .find((btn) => btn.text().includes("Delegation Bulk Sign-Off"));
-    await delTabBtn!.trigger("click");
+    await wrapper.find("#btn-open-author-curriculum").trigger("click");
     await flushPromises();
 
-    await wrapper.find("thead input[type='checkbox']").setValue(true);
-    await wrapper.find(".delegation-actions-bar button").trigger("click");
-    await wrapper.find("#bulk-password").setValue("SecurePassword123!");
     await wrapper
-      .findAll(".modal-footer button")
-      .find((btn) => btn.text().includes("Confirm & Execute Signature"))!
-      .trigger("click");
+      .find("#curriculum-author-title")
+      .setValue("Protocol V4.0 Core Qualification");
+    await wrapper.find("#curriculum-author-version").setValue("4.0");
+    await wrapper
+      .find("#curriculum-author-mod-summary")
+      .setValue("Updated eligibility and endpoint rules.");
+    await wrapper.find("#btn-submit-curriculum").trigger("click");
+    await flushPromises();
+
+    expect(trainingApi.createCurriculum).toHaveBeenCalledWith(
+      expect.objectContaining({
+        study_id: "CARDIO-2026",
+        title: "Protocol V4.0 Core Qualification",
+        protocol_version: "4.0",
+        protocol_version_number: 4,
+        qualification_code: "protocol_training",
+      })
+    );
+  });
+
+  it("scores quiz answers and executes Part 11 signature to file TMF 05.02.04 certificate and Kernel Qualification", async () => {
+    /**
+     * @req: PRD-TRN-001
+     * @req: PRD-TRN-004
+     */
+    signInAs(useAuthStore(), ["CRC"], { username: "crc_jenkins" });
+    const pendingAssignment = {
+      id: "asn-pending-01",
+      curriculum_id: "curriculum-v3-delta",
+      study_id: "CARDIO-2026",
+      site_id: "SITE-101",
+      user_id: "crc_jenkins",
+      user_name: "Sarah Jenkins",
+      user_role: "CRC",
+      status: "PENDING",
+      batch_transaction_id: null,
+      quiz_score: null,
+      time_spent_seconds: 0,
+      completed_at: null,
+      etmf_document_id: null,
+      kernel_artifact_version_ref: null,
+      kernel_qualification_ref: null,
+      created_at: "2026-10-07T09:00:00Z",
+    };
+    vi.mocked(trainingApi.listAssignments).mockResolvedValue([
+      pendingAssignment,
+    ] as never);
+    vi.spyOn(trainingApi, "getAssignmentDetail").mockResolvedValue({
+      ...pendingAssignment,
+      curriculum: mockCurriculum,
+    } as never);
+    vi.spyOn(signatureVerification, "requestStepUpSignature").mockResolvedValue(
+      {
+        sig_token: "step-up-trn-token",
+      }
+    );
+    vi.spyOn(trainingApi, "completeAssignment").mockResolvedValue({
+      assignment: {
+        ...pendingAssignment,
+        status: "COMPLETED",
+        quiz_score: 1,
+        completed_at: "2026-10-07T10:15:00Z",
+        etmf_document_id: "00000000-0000-0000-0000-000000009401", // deid-ignore
+        kernel_artifact_version_ref:
+          "artifact_version:00000000-0000-0000-0000-000000009501", // deid-ignore
+        kernel_qualification_ref:
+          "qualification:00000000-0000-0000-0000-000000009601", // deid-ignore
+      },
+      quiz_score: 1,
+      passing_score: 0.8,
+      sha256_seal: "sha256-seal-050204",
+      etmf_artifact_id: "05.02.04",
+      etmf_document_id: "00000000-0000-0000-0000-000000009401", // deid-ignore
+      kernel_artifact_version_ref:
+        "artifact_version:00000000-0000-0000-0000-000000009501", // deid-ignore
+      kernel_qualification_ref:
+        "qualification:00000000-0000-0000-0000-000000009601", // deid-ignore
+      executed_at: "2026-10-07T10:15:00Z",
+    });
+
+    const router = createTestRouter();
+    const wrapper = mount(ProtocolTrainingConsole, {
+      props: { studyId: "CARDIO-2026" },
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+
+    // Retired duplicate Knowledge DoA sign-off tab is absent
+    expect(
+      wrapper
+        .findAll(".tab-btn")
+        .some((btn) => btn.text().includes("Delegation"))
+    ).toBe(false);
+
+    // Answer comprehension quiz question
+    const quizRadio = wrapper.find(
+      "[data-testid='training-quiz-card'] input[type='radio'][value='opt-a']"
+    );
+    expect(quizRadio.exists()).toBe(true);
+    await quizRadio.setValue(true);
+    await flushPromises();
+
+    // Enter step-up credential and submit Part 11 attestation
+    await wrapper
+      .find("#training-attestation-credential")
+      .setValue("SecurePassword123!"); // pragma: allowlist secret
+    expect(
+      wrapper
+        .find("#btn-complete-training-assignment")
+        .attributes("disabled")
+    ).toBeUndefined();
+    await wrapper.find("#training-attestation-form").trigger("submit");
     await flushPromises();
 
     expect(signatureVerification.requestStepUpSignature).toHaveBeenCalledWith(
       expect.objectContaining({
         password: "SecurePassword123!", // pragma: allowlist secret
-        action: "/api/v1/training/delegations/bulk-signoff",
-        semanticAction: "knowledge.delegation.sign_off",
-        batchId: await delegationBatchBindingId(["del-01", "del-02"]),
+        action: "/api/v1/training/assignments/asn-pending-01/complete",
+        semanticAction: "training.assignment.complete",
       })
     );
-    expect(trainingApi.bulkSignOffDelegations).toHaveBeenCalledWith(
-      {
-        delegation_ids: ["del-01", "del-02"],
-        study_id: "CARDIO-2026",
-        site_id: "SITE-101",
-        signature_payload: {
-          meaning:
-            "I confirm that I have reviewed and approved the delegated duties for the selected site staff personnel in accordance with 21 CFR Part 11 and ICH GCP E6(R2).",
-          reason_for_change:
-            "21 CFR Part 11 Principal Investigator bulk delegation sign-off",
-        },
-      },
-      "step-up-token"
+    expect(trainingApi.completeAssignment).toHaveBeenCalledWith(
+      "asn-pending-01",
+      expect.objectContaining({
+        quiz_answers: [{ question_id: "q-1", selected_option_id: "opt-a" }],
+        signature_payload: expect.objectContaining({
+          meaning: "I have read, understood, and completed protocol training",
+        }),
+      }),
+      "step-up-trn-token"
     );
-    expect(wrapper.text()).toContain(
-      "Bulk Delegation Sign-Off Executed Successfully"
+
+    const manifest = wrapper.find("[data-testid='training-completion-manifest']");
+    expect(manifest.exists()).toBe(true);
+    expect(manifest.text()).toContain("05.02.04");
+    expect(manifest.text()).toContain("Document version");
+    expect(manifest.text()).toContain("Qualification");
+    const chipRefs = manifest
+      .findAllComponents({ name: "NodeRefChip" })
+      .map((chip: { props: (key: string) => unknown }) => chip.props("nodeRef"));
+    expect(chipRefs).toEqual(
+      expect.arrayContaining([
+        "artifact_version:00000000-0000-0000-0000-000000009501", // deid-ignore
+        "qualification:00000000-0000-0000-0000-000000009601", // deid-ignore
+      ])
     );
-    expect(wrapper.text()).toContain("eTMF Artifact: Zone 5 (05.02.04)");
-  });
-
-  it("names no site when the selected delegations span several sites", async () => {
-    signInAs(useAuthStore(), ["Principal Investigator"], {
-      username: "pi_vance",
-    });
-    vi.mocked(trainingApi.listDelegations).mockResolvedValue([
-      mockDelegations[0],
-      { ...mockDelegations[1], site_id: "SITE-102" },
-    ]);
-    vi.spyOn(signatureVerification, "requestStepUpSignature").mockResolvedValue(
-      {
-        sig_token: "step-up-token",
-      }
-    );
-    vi.spyOn(trainingApi, "bulkSignOffDelegations").mockResolvedValue({
-      batch_transaction_id: "tx-del-889",
-      total_requested: 2,
-      total_signed: 2,
-      total_failed: 0,
-      signed_delegations: [],
-      failed_items: [],
-      sha256_seal: "seal",
-      etmf_artifact_id: "05.02.04",
-      executed_at: "2026-10-07T10:00:00Z",
-    });
-
-    const wrapper = mount(ProtocolTrainingConsole, {
-      props: { studyId: "CARDIO-2026" },
-    });
-    await flushPromises();
-    await wrapper
-      .findAll(".tab-btn")
-      .find((btn) => btn.text().includes("Delegation Bulk Sign-Off"))!
-      .trigger("click");
-    await flushPromises();
-    await wrapper.find("thead input[type='checkbox']").setValue(true);
-    await wrapper.find(".delegation-actions-bar button").trigger("click");
-    await wrapper.find("#bulk-password").setValue("SecurePassword123!");
-    await wrapper
-      .findAll(".modal-footer button")
-      .find((btn) => btn.text().includes("Confirm & Execute Signature"))!
-      .trigger("click");
-
-    await vi.waitFor(() => {
-      expect(trainingApi.bulkSignOffDelegations).toHaveBeenCalledWith(
-        expect.objectContaining({ study_id: "CARDIO-2026", site_id: null }),
-        "step-up-token"
-      );
-    });
   });
 });

@@ -13,8 +13,13 @@ describe("StudyTrainingView.vue", () => {
     id: "curr-2026-v2",
     study_id: "CAD-101",
     protocol_version: "2.0",
+    protocol_version_number: 2,
+    qualification_code: "protocol_training",
+    passing_score: 0.8,
     title: "CAD-101 Amendment 2 Curriculum",
     description: "Updated inclusion criteria.",
+    modules: [],
+    quiz_questions: [],
     is_active: true,
     created_at: "2026-10-01T12:00:00Z",
   };
@@ -25,7 +30,7 @@ describe("StudyTrainingView.vue", () => {
     vi.spyOn(trainingApi, "listCurricula").mockResolvedValue([mockCurriculum]);
     vi.spyOn(trainingApi, "getCurriculum").mockResolvedValue(mockCurriculum);
     vi.spyOn(trainingApi, "listAssignments").mockResolvedValue([]);
-    vi.spyOn(trainingApi, "listDelegations").mockResolvedValue([]);
+    vi.spyOn(trainingApi, "listStudyStaff").mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -89,7 +94,7 @@ describe("StudyTrainingView.vue", () => {
         site_id: "SITE-101",
       })
     );
-    expect(trainingApi.listDelegations).toHaveBeenCalledWith({
+    expect(trainingApi.listStudyStaff).toHaveBeenCalledWith({
       study_id: "CAD-101",
       site_id: "SITE-101",
     });
@@ -97,7 +102,7 @@ describe("StudyTrainingView.vue", () => {
     wrapper.unmount();
   });
 
-  it("passes synchronized study_id to listCurricula, listAssignments, and listDelegations when opening /training without a query parameter", async () => {
+  it("passes synchronized study_id to listCurricula, listAssignments, and listStudyStaff when opening /training without a query parameter", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
     const authStore = useAuthStore();
@@ -125,7 +130,7 @@ describe("StudyTrainingView.vue", () => {
     expect(trainingApi.listAssignments).toHaveBeenCalledWith(
       expect.objectContaining({ study_id: "CAD-101" })
     );
-    expect(trainingApi.listDelegations).toHaveBeenCalledWith(
+    expect(trainingApi.listStudyStaff).toHaveBeenCalledWith(
       expect.objectContaining({ study_id: "CAD-101" })
     );
     wrapper.unmount();

@@ -11,8 +11,13 @@ describe("ProtocolTrainingConsole.vue", () => {
     id: "curr-1",
     study_id: "STUDY-2026",
     protocol_version: "2.0",
+    protocol_version_number: 2,
+    qualification_code: "protocol_training",
+    passing_score: 0.8,
     title: "Protocol Version 2.0 Delta Training",
     description: "Detailed procedural updates for Version 2.0...",
+    modules: [],
+    quiz_questions: [],
     is_active: true,
     created_at: "2026-09-01T10:00:00Z",
   };
@@ -26,14 +31,14 @@ describe("ProtocolTrainingConsole.vue", () => {
     vi.spyOn(trainingApi, "listAssignments").mockResolvedValue([]);
     vi.spyOn(trainingApi, "listCurricula").mockResolvedValue([mockCurriculum]);
     vi.spyOn(trainingApi, "getCurriculum").mockResolvedValue(mockCurriculum);
-    vi.spyOn(trainingApi, "listDelegations").mockResolvedValue([]);
+    vi.spyOn(trainingApi, "listStudyStaff").mockResolvedValue([]);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("loads no assignments, curricula, or delegations when no one is signed in (#5400)", async () => {
+  it("loads no assignments, curricula, or study-staff grants when no one is signed in (#5400)", async () => {
     const auth = useAuthStore();
     auth.user = null;
     auth.rawRoles = [];
@@ -46,11 +51,11 @@ describe("ProtocolTrainingConsole.vue", () => {
 
     expect(trainingApi.listAssignments).not.toHaveBeenCalled();
     expect(trainingApi.listCurricula).not.toHaveBeenCalled();
-    expect(trainingApi.listDelegations).not.toHaveBeenCalled();
+    expect(trainingApi.listStudyStaff).not.toHaveBeenCalled();
     expect(wrapper.find(".training-workspace").exists()).toBe(false);
   });
 
-  it("passes protocol_version to listCurricula and renders live curriculum without unmounted quiz/progress/sign-off tabs", async () => {
+  it("passes protocol_version to listCurricula and retires duplicate Knowledge delegation APIs", async () => {
     const wrapper = mount(ProtocolTrainingConsole, {
       props: {
         studyId: "STUDY-2026",
@@ -68,13 +73,15 @@ describe("ProtocolTrainingConsole.vue", () => {
     expect(callArg).not.toHaveProperty("protocol_version_id");
 
     expect(wrapper.find(".console-title").text()).toContain(
-      "Protocol Amendment Training & Qualification Console"
+      "Study Training & Qualification Hub"
     );
     expect(wrapper.text()).toContain(
       "Detailed procedural updates for Version 2.0..."
     );
-    expect(wrapper.text()).not.toContain("Take Qualification Quiz");
+    expect(wrapper.text()).not.toContain("Delegation Bulk Sign-Off");
 
+    expect("listDelegations" in trainingApi).toBe(false);
+    expect("bulkSignOffDelegations" in trainingApi).toBe(false);
     expect("recordProgress" in trainingApi).toBe(false);
     expect("submitQuiz" in trainingApi).toBe(false);
     expect("signOffTraining" in trainingApi).toBe(false);

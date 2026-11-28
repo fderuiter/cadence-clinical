@@ -486,6 +486,21 @@ public sealed class CommercialAndOnboardingUnitTests
         issuedGrants.Should().ContainSingle(g => g.Grantee == Actor.ServiceAccount("execution-forms"));
         issuedGrants.Should().ContainSingle(g =>
             g.Grantee == Actor.Person(subjectId) && g.Capability == SimulationCapabilities.Run.Token);
+        issuedGrants.Should().ContainSingle(g =>
+            g.Grantee == Actor.Person(subjectId)
+            && g.IdempotencyKey.EndsWith(":grant:site-investigator", StringComparison.Ordinal)
+            && g.WithGrantOption);
+
+        sender.Commands.OfType<DefineQualificationRequirement>()
+            .Select(r => r.Capability)
+            .Should()
+            .BeEquivalentTo(
+                "participant.screen",
+                "observation.record",
+                "observation.correct",
+                "collection.open",
+                "collection.record",
+                "collection.sign");
 
         var demoDesigner = Cadence.Kernel.Host.DevelopmentDemoData.Roles.Single(r => r.Code == "DEMO_DESIGNER");
         demoDesigner.Capabilities.Should().Contain([
@@ -718,6 +733,9 @@ public sealed class CommercialAndOnboardingUnitTests
                 ProvisionSubscription ps => ps.SubscriptionId,
                 GrantProductEntitlement gpe => gpe.ProductEntitlementId,
                 DefineWorkQueue dwq => new WorkQueueDefinitionState(dwq.WorkQueueDefinitionId, dwq.Code, 1, dwq.Title, dwq.Capability, dwq.VerbClass, dwq.Source),
+                DefineQualificationRequirement dqr => new QualificationRequirementState(dqr.RequirementId, dqr.Capability, dqr.QualificationCode, dqr.ProtocolVersionId, dqr.Scope, dqr.ValidFrom, dqr.ValidTo, false),
+                RegisterArtifact ra => new ArtifactState(ra.ArtifactId, ra.Kind, ra.StudyId, ra.Title, ra.ArtifactVersionId, 1, ra.Content.ContentHash),
+                RecordQualification rq => new QualificationState(rq.QualificationId, rq.Holder, rq.Kind, rq.Code, rq.ProtocolVersionId, rq.Evidence, rq.ValidFrom, rq.ValidTo, false),
                 _ => throw new NotSupportedException($"Unexpected onboarding command {command.GetType().Name}."),
             };
             return Task.FromResult(CommandResult<TResult>.Success((TResult)outcome));
@@ -763,6 +781,8 @@ public sealed class CommercialAndOnboardingUnitTests
                 DefineWorkQueue dwq => new WorkQueueDefinitionState(dwq.WorkQueueDefinitionId, dwq.Code, 1, dwq.Title, dwq.Capability, dwq.VerbClass, dwq.Source),
                 RegisterParticipant part => part.ParticipantId,
                 ScreenParticipant sp => new EnrollmentState(sp.EnrollmentId, sp.ParticipantId, default, sp.StudySiteId, sp.SubjectCode, EnrollmentStatus.Screening, sp.ScreenedAt, null, "sha256:2222222222222222222222222222222222222222222222222222222222222222"),
+                DefineQualificationRequirement dqr => new QualificationRequirementState(dqr.RequirementId, dqr.Capability, dqr.QualificationCode, dqr.ProtocolVersionId, dqr.Scope, dqr.ValidFrom, dqr.ValidTo, false),
+                RecordQualification rq => new QualificationState(rq.QualificationId, rq.Holder, rq.Kind, rq.Code, rq.ProtocolVersionId, rq.Evidence, rq.ValidFrom, rq.ValidTo, false),
                 _ => throw new NotSupportedException($"Unexpected demo seed command {command.GetType().Name}."),
             };
             return Task.FromResult(CommandResult<TResult>.Success((TResult)outcome));

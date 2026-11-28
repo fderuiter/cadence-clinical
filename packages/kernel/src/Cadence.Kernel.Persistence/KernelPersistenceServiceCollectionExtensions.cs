@@ -31,6 +31,7 @@ using Cadence.Kernel.Persistence.Trust;
 using Cadence.Kernel.Persistence.WorkQueues;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Tenancy;
+using Cadence.Kernel.Trust;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -78,6 +79,7 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<IKernelUnitOfWorkFactory>(sp => sp.GetRequiredService<KernelUnitOfWorkFactory>());
         services.TryAddSingleton<KernelAuditChainVerifier>();
         services.TryAddSingleton<IAttestationVerifier, KernelAttestationVerifier>();
+        services.TryAddSingleton<IKernelTrustReader, KernelTrustReader>();
         services.TryAddSingleton<IEnrollmentDirectory, KernelEnrollmentDirectory>();
         services.TryAddSingleton<IStudyDirectory, KernelStudyDirectory>();
         services.TryAddSingleton<IBlindedTreatmentClassifier>(BlindedTreatmentClassifier.Instance);

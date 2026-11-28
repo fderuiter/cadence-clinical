@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\..\packages\telemetry\src\Cadence.Telemetry.csproj" />
     <ProjectReference Include="..\..\..\packages\database\src\Cadence.Database.csproj" />
     <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\packages\compliance\src\Cadence.Compliance.csproj" />
   </ItemGroup>
 
   <ItemGroup>
