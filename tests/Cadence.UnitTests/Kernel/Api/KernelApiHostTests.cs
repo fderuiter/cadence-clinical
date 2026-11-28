@@ -14,10 +14,12 @@ using Cadence.Apps.Execution.Infrastructure.Kernel;
 using Cadence.Kernel;
 using Cadence.Kernel.Activity;
 using Cadence.Kernel.Api;
+using Cadence.Kernel.Application;
 using Cadence.Kernel.Application.Activity;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Execution;
+using Cadence.Kernel.Application.Protocol;
 using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Application.WorkQueues;
 using Cadence.Kernel.Authorization;
@@ -28,6 +30,7 @@ using Cadence.Kernel.Execution;
 using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Intelligence;
 using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
@@ -36,6 +39,7 @@ using Cadence.Kernel.Search;
 using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Tenancy;
+using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
 using Cadence.Kernel.Validation;
 using Cadence.Kernel.WorkQueues;
@@ -459,6 +463,237 @@ public sealed class KernelApiHostTests : IDisposable
         using var gapDoc = JsonDocument.Parse(await gapResponse.Content.ReadAsStringAsync(ct));
         gapDoc.RootElement[0].GetProperty("kind").GetString().Should().Be("IchM11Violation");
         gapDoc.RootElement[0].GetProperty("severity").GetString().Should().Be("Error");
+    }
+
+    /// <summary>
+    /// A forked InReview amendment simulated on the kernel API host emits governed protocol_element NodeRefs without
+    /// altering canonical SimulationResultHashing, saves a SimulationReport artifact, signs a Part 11 Reviewed
+    /// attestation via X-Sig-Token, and passes ProtocolApprovalSimulationGate with reviewAttestationRef.
+    /// </summary>
+    [Fact]
+    [KernelRule("K-PROT-2")]
+    [KernelRule("K-SIM-5")]
+    public async Task ForkedInReviewAmendment_SavesSimulationReport_SignsReviewedViaSigToken_AndPassesApprovalGate()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var t0 = new DateTimeOffset(2026, 10, 15, 9, 0, 0, TimeSpan.Zero);
+        var clock = new FakeClock(t0);
+        var replayCache = new ReplayCache(clock);
+        var govTenant = TenantId.New();
+        var store = new KernelProtocolGovernanceEndpointsTests.InMemoryGovernanceStore(govTenant, clock);
+        var reviewer = TestSecurityContext.Identity("sponsor.reviewer", "Sponsor Reviewer");
+        store.GrantRole(
+            Actor.Person(reviewer.UserId),
+            "SPONSOR_REVIEWER",
+            [
+                "protocol.draft",
+                "protocol.amend",
+                "protocol.revise_draft",
+                "protocol.submit_for_review",
+                "protocol.approve",
+                "simulation.run",
+                "simulation.save_report",
+                "artifact.register",
+                "artifact.add_version",
+                "attestation.sign",
+            ],
+            AuthorityScope.Tenant());
+
+        var sbpConcept = store.SeedSbpConcept();
+        var v1Design = new ProtocolDesign
+        {
+            Title = "CARDIO-2",
+            Epochs = [new Epoch("ep.screening", "Screening", 1), new Epoch("ep.treatment", "Treatment", 2)],
+            PlannedActivities =
+            [
+                new PlannedActivity("visit.screening", "Screening", "ep.screening", [ActivityLocation.Site], ["cs.vitals"], new ActivityTiming(1, 0, 0)),
+                new PlannedActivity("visit.week12", "Week 12", "ep.treatment", [ActivityLocation.Site], ["cs.vitals"], new ActivityTiming(85, 3, 3)),
+            ],
+            CollectionSpecs =
+            [
+                new CollectionSpec("cs.vitals", "Vital Signs", [new CollectionItem("item.sbp", sbpConcept, "mm[Hg]", Required: true)]),
+            ],
+        };
+        var v2Design = v1Design with
+        {
+            PlannedActivities =
+            [
+                .. v1Design.PlannedActivities.Select(a => a.Id == "visit.week12" ? a with { Timing = a.Timing! with { Day = 92 } } : a),
+            ],
+        };
+        var v2Diff = ScheduleOfActivitiesDiff.Compare(v1Design, v2Design);
+        var v1Id = store.SeedDraftProtocolVersion(ProtocolDesignDocument.Write(v1Design));
+        var studyRef = NodeRef.For(store.StudyId).ToString();
+        var v1Ref = NodeRef.For(v1Id).ToString();
+
+        var hostFactory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
+        {
+            builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IClock>();
+                services.AddSingleton<IClock>(clock);
+                services.RemoveAll<ISigTokenUseStore>();
+                services.AddSingleton<ISigTokenUseStore>(replayCache);
+                services.RemoveAll<ITenantDirectory>();
+                services.AddSingleton<ITenantDirectory>(store);
+                services.RemoveAll<IAuthorityStore>();
+                services.AddSingleton<IAuthorityStore>(store);
+                services.RemoveAll<IStudyDirectory>();
+                services.AddSingleton<IStudyDirectory>(store);
+                services.RemoveAll<IProtocolVersionReader>();
+                services.AddSingleton<IProtocolVersionReader>(store);
+                services.RemoveAll<IStudyGovernanceReader>();
+                services.AddSingleton<IStudyGovernanceReader>(store);
+                services.RemoveAll<IAttestationVerifier>();
+                services.AddSingleton<IAttestationVerifier>(store);
+                services.RemoveAll<ITenantEntitlementReader>();
+                services.AddSingleton<ITenantEntitlementReader>(store);
+                services.RemoveAll<ITenantResidencyReader>();
+                services.AddSingleton<ITenantResidencyReader>(store);
+                services.RemoveAll<IKernelUnitOfWorkFactory>();
+                services.AddSingleton<IKernelUnitOfWorkFactory>(store);
+                services.RemoveAll<ISimulationInputs>();
+                services.AddSingleton<ISimulationInputs>(store);
+                services.RemoveAll<Cadence.Kernel.Knowledge.IConceptRegistry>();
+                services.AddSingleton<Cadence.Kernel.Knowledge.IConceptRegistry>(store);
+                services.RemoveAll<IProtocolSubmissionCheck>();
+                services.RemoveBackgroundHostedServices();
+            });
+        });
+        _factories.Add(hostFactory);
+        using var client = hostFactory.CreateSignedClient(reviewer);
+        var jsonOptions = hostFactory.Services.GetRequiredService<IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>().Value.SerializerOptions;
+
+        string v1Hash;
+        using (var submitV1 = await client.SendAsync(
+            KernelProtocolGovernanceEndpointsTests.BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/submit-for-review", "host-v1-submit", "Freeze v1", null),
+            ct))
+        {
+            submitV1.StatusCode.Should().Be(HttpStatusCode.OK, await submitV1.Content.ReadAsStringAsync(ct));
+            v1Hash = JsonDocument.Parse(await submitV1.Content.ReadAsStringAsync(ct)).RootElement.GetProperty("content_hash").GetString()!;
+        }
+
+        var v1ApprovePath = $"/api/v1/kernel/protocol-versions/{v1Ref}/approve";
+        var v1Sig = TestSecurityContext.CreateSigToken(
+            reviewer.UserId,
+            v1ApprovePath,
+            KernelProtocolGovernanceEndpoints.ApproveProtocolVersionSemanticAction,
+            issuedAt: clock.UtcNow);
+        using (var approveV1 = await client.SendAsync(
+            KernelProtocolGovernanceEndpointsTests.BuildPost(v1ApprovePath, "host-v1-approve", "Approve v1", v1Sig, new { meaning = "Approved", expected_content_hash = v1Hash }),
+            ct))
+        {
+            approveV1.StatusCode.Should().Be(HttpStatusCode.OK, await approveV1.Content.ReadAsStringAsync(ct));
+        }
+
+        var v2Id = ProtocolVersionId.New();
+        using (var forkV2 = await client.SendAsync(
+            KernelProtocolGovernanceEndpointsTests.BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/fork", "host-v2-fork", "Fork v2", null, new
+            {
+                intent = "Move Week 12 visit to Day 92",
+                rationale = "Align with quarterly clinic window",
+                classification = "NonSubstantial",
+                summary_of_changes = "Moves visit.week12 from Day 85 to Day 92",
+                impacted_elements = v2Diff.ImpactedElements,
+                transition_policy = "Automatic",
+                protocol_version_id = v2Id.Value,
+            }),
+            ct))
+        {
+            forkV2.StatusCode.Should().Be(HttpStatusCode.Created, await forkV2.Content.ReadAsStringAsync(ct));
+        }
+
+        await using (var scope = hostFactory.Services.CreateAsyncScope())
+        {
+            scope.ServiceProvider.GetRequiredService<ServiceActorScope>().Actor = Actor.Person(reviewer.UserId);
+            var sender = scope.ServiceProvider.GetRequiredService<IKernelCommandSender>();
+            var amendment = new ProtocolAmendment(
+                "Move Week 12 visit to Day 92",
+                "Align with quarterly clinic window",
+                AmendmentClassification.NonSubstantial,
+                "Moves visit.week12 from Day 85 to Day 92",
+                v2Diff.ImpactedElements,
+                TransitionPolicy.Automatic);
+            var revised = await sender.SendAsync(
+                new ReviseProtocolDraft(govTenant, v2Id, ProtocolDesignDocument.Write(v2Design), amendment, "host-v2-revise", "Apply Week 12 shift"),
+                cancellationToken: ct);
+            revised.IsSuccess.Should().BeTrue(revised.Error?.Message);
+        }
+
+        var v2Ref = NodeRef.For(v2Id).ToString();
+        string v2Hash;
+        using (var submitV2 = await client.SendAsync(
+            KernelProtocolGovernanceEndpointsTests.BuildPost($"/api/v1/kernel/protocol-versions/{v2Ref}/submit-for-review", "host-v2-submit", "Submit v2 for review", null),
+            ct))
+        {
+            submitV2.StatusCode.Should().Be(HttpStatusCode.OK, await submitV2.Content.ReadAsStringAsync(ct));
+            v2Hash = JsonDocument.Parse(await submitV2.Content.ReadAsStringAsync(ct)).RootElement.GetProperty("content_hash").GetString()!;
+        }
+
+        KernelSimulationResponse simResult;
+        using (var simRes = await client.PostAsJsonAsync(
+            new Uri("/api/v1/kernel/simulation/simulate", UriKind.Relative),
+            new { stored_version_ref = v2Ref, valid_at = t0, known_at = t0 },
+            ct))
+        {
+            simRes.StatusCode.Should().Be(HttpStatusCode.OK, await simRes.Content.ReadAsStringAsync(ct));
+            simResult = (await simRes.Content.ReadFromJsonAsync<KernelSimulationResponse>(jsonOptions, ct))!;
+            simResult.ScheduleChanges.Should().ContainSingle(c => c.ActivityId == "visit.week12")
+                .Which.ProtocolElement.Should().StartWith("protocol_element:").And.EndWith("@1");
+        }
+
+        string reportArtifactVersionRef;
+        string reportContentHash;
+        using (var saveRes = await client.SendAsync(
+            KernelProtocolGovernanceEndpointsTests.BuildPost($"/api/v1/kernel/studies/{studyRef}/simulation-reports", "host-v2-save-sim", "Save v2 simulation report", null, new
+            {
+                title = "CARDIO-2 v2 Simulation Report",
+                result = simResult,
+            }, jsonOptions),
+            ct))
+        {
+            saveRes.StatusCode.Should().Be(HttpStatusCode.Created, await saveRes.Content.ReadAsStringAsync(ct));
+            var doc = JsonDocument.Parse(await saveRes.Content.ReadAsStringAsync(ct)).RootElement;
+            reportArtifactVersionRef = doc.GetProperty("artifact_version_ref").GetString()!;
+            reportContentHash = doc.GetProperty("content_hash").GetString()!;
+        }
+
+        var reviewPath = KernelSimulationEndpoints.ReviewArtifactVersionAction(reportArtifactVersionRef);
+        var reviewSig = TestSecurityContext.CreateSigToken(
+            reviewer.UserId,
+            reviewPath,
+            KernelSimulationEndpoints.ReviewArtifactVersionSemanticAction,
+            issuedAt: clock.UtcNow);
+        string reviewAttestationRef;
+        using (var reviewRes = await client.SendAsync(
+            KernelProtocolGovernanceEndpointsTests.BuildPost(reviewPath, "host-v2-review", "Sign Reviewed attestation", reviewSig, new
+            {
+                meaning = "Reviewed",
+                expected_content_hash = reportContentHash,
+            }),
+            ct))
+        {
+            reviewRes.StatusCode.Should().Be(HttpStatusCode.OK, await reviewRes.Content.ReadAsStringAsync(ct));
+            reviewAttestationRef = JsonDocument.Parse(await reviewRes.Content.ReadAsStringAsync(ct)).RootElement.GetProperty("attestation_ref").GetString()!;
+        }
+
+        var v2ApprovePath = $"/api/v1/kernel/protocol-versions/{v2Ref}/approve";
+        var v2ApproveSig = TestSecurityContext.CreateSigToken(
+            reviewer.UserId,
+            v2ApprovePath,
+            KernelProtocolGovernanceEndpoints.ApproveProtocolVersionSemanticAction,
+            issuedAt: clock.UtcNow);
+        using var approveV2 = await client.SendAsync(
+            KernelProtocolGovernanceEndpointsTests.BuildPost(v2ApprovePath, "host-v2-approve", "Approve v2 with reviewAttestationRef", v2ApproveSig, new
+            {
+                meaning = "Approved",
+                expected_content_hash = v2Hash,
+                review_attestation_ref = reviewAttestationRef,
+            }),
+            ct);
+        approveV2.StatusCode.Should().Be(HttpStatusCode.OK, await approveV2.Content.ReadAsStringAsync(ct));
+        JsonDocument.Parse(await approveV2.Content.ReadAsStringAsync(ct)).RootElement.GetProperty("status").GetString().Should().Be("Approved");
     }
 
     /// <summary>A caller the gateway signed without a subject has no actor, so CanI denies with the unresolved-actor condition.</summary>

@@ -1233,7 +1233,7 @@ public static class KnowledgeCatalogSeeder
                     priority: 25,
                     createdAt: baseTime.AddMinutes(-2))),
 
-            // 16. Clinical Canvas: Design -> Protocol versions (?stage=design&section=protocol-versions)
+            // 16. Clinical Canvas: Design -> Protocol versions & Schedule of activities (?stage=design&section=protocol-versions and ?stage=design&section=schedule-of-activities)
             CreateSop(
                 articleId: "art-can-prot-sop",
                 versionId: "ver-can-110-v2",
@@ -1242,25 +1242,43 @@ public static class KnowledgeCatalogSeeder
                 categoryId: "cat-study-authoring",
                 versionLabel: "1.1",
                 versionIndex: 2,
-                tags: ["clinical-canvas", "protocol-versions", "usdm", "design", "amendments"],
+                tags: ["clinical-canvas", "protocol-versions", "schedule-of-activities", "usdm", "design", "amendments"],
                 primaryAnchor: "#canvas-protocol-versions",
                 markdown: """
                     ## Protocol Versions & USDM Draft Governance
-                    Governs protocol version inspection, USDM JSON draft import, Schedule of Activities review, and amendment impact evaluation in Clinical Canvas (`stage=design&section=protocol-versions`).
+                    Governs protocol version inspection, USDM JSON draft import, Schedule of Activities review, and amendment impact evaluation in Clinical Canvas (`stage=design&section=protocol-versions` and `stage=design&section=schedule-of-activities`).
 
                     ### Key Controls
                     1. Validate USDM schedule structure, visit windows, and form bindings before publishing a new protocol version.
                     2. Record a 21 CFR Part 11 justification whenever importing or superseding protocol versions.
+
+                    ### Schedule of Activities Matrix & Visit Windows
+                    Inspect epochs, visit windows, collection rows, CDISC concepts, and protocol footnotes across approved and draft protocol versions before locking or amending the schedule.
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-55),
-                mappings: BuildCanvasSectionMappings(
-                    code: "pv",
-                    stage: "design",
-                    section: "protocol-versions",
-                    includeStageFallback: true,
-                    articleId: "art-can-prot-sop",
-                    defaultAnchor: "#canvas-protocol-versions",
-                    createdAt: baseTime.AddMinutes(-1).AddSeconds(-55))),
+                mappings:
+                [
+                    .. BuildCanvasSectionMappings(
+                        code: "pv",
+                        stage: "design",
+                        section: "protocol-versions",
+                        includeStageFallback: true,
+                        articleId: "art-can-prot-sop",
+                        defaultAnchor: "#canvas-protocol-versions",
+                        createdAt: baseTime.AddMinutes(-1).AddSeconds(-55)),
+                    .. BuildCanvasSectionMappings(
+                        code: "soa",
+                        stage: "design",
+                        section: "schedule-of-activities",
+                        includeStageFallback: false,
+                        articleId: "art-can-prot-sop",
+                        defaultAnchor: "#canvas-schedule-of-activities",
+                        createdAt: baseTime.AddMinutes(-1).AddSeconds(-55)),
+                ],
+                headingAnchors: new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["Schedule of Activities Matrix & Visit Windows"] = "canvas-schedule-of-activities",
+                }),
 
             // 17. Clinical Canvas: Start & Conduct -> Sites (?stage=start&section=sites and ?stage=conduct&section=sites)
             CreateSop(

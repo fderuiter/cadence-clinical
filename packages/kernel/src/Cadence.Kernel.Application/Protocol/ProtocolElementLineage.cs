@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Simulation;
@@ -23,6 +25,111 @@ namespace Cadence.Kernel.Application.Protocol;
 /// </summary>
 internal static class ProtocolElementLineage
 {
+    private static readonly IReadOnlyDictionary<string, NodeRef> EmptyElements =
+        new ReadOnlyDictionary<string, NodeRef>(new Dictionary<string, NodeRef>(StringComparer.Ordinal));
+
+    /// <summary>
+    /// Resolves the governed <c>protocol_element</c> lineage nodes for <paramref name="versionId"/> (when approved) or,
+    /// when <paramref name="includeApprovedAncestorWhenUnapproved"/> is true, its nearest approved ancestor along
+    /// <see cref="ProtocolVersionSummary.ParentVersionId"/>. Returns empty when no approved governing version exists or
+    /// any version in the approved chain does not hold a valid typed <see cref="ProtocolDesign"/>.
+    /// </summary>
+    public static async Task<IReadOnlyDictionary<string, NodeRef>> ResolveApprovedChainElementsAsync(
+        IProtocolVersionReader reader,
+        TenantId tenant,
+        ProtocolVersionId versionId,
+        bool includeApprovedAncestorWhenUnapproved,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(reader);
+        if (await reader.GetAsync(tenant, versionId, cancellationToken).ConfigureAwait(false) is not { } current)
+        {
+            return EmptyElements;
+        }
+
+        var allVersions = await reader.ListForStudyAsync(tenant, current.StudyId, cancellationToken).ConfigureAwait(false);
+        var byId = allVersions.ToDictionary(v => v.Id);
+        byId[current.Id] = current;
+
+        var target = IsApprovedGoverning(current) ? current : null;
+        if (target is null && includeApprovedAncestorWhenUnapproved)
+        {
+            var cursor = current.ParentVersionId;
+            var visited = new HashSet<ProtocolVersionId> { current.Id };
+            while (cursor is { } parentId && visited.Add(parentId))
+            {
+                var summary = byId.GetValueOrDefault(parentId)
+                    ?? await reader.GetAsync(tenant, parentId, cancellationToken).ConfigureAwait(false);
+                if (summary is null)
+                {
+                    break;
+                }
+
+                byId[summary.Id] = summary;
+                if (IsApprovedGoverning(summary))
+                {
+                    target = summary;
+                    break;
+                }
+
+                cursor = summary.ParentVersionId;
+            }
+        }
+
+        if (target is null)
+        {
+            return EmptyElements;
+        }
+
+        var chainSummaries = new List<ProtocolVersionSummary> { target };
+        var ancestorId = target.ParentVersionId;
+        var chainVisited = new HashSet<ProtocolVersionId> { target.Id };
+        while (ancestorId is { } nextId)
+        {
+            if (!chainVisited.Add(nextId))
+            {
+                return EmptyElements;
+            }
+
+            var ancestor = byId.GetValueOrDefault(nextId)
+                ?? await reader.GetAsync(tenant, nextId, cancellationToken).ConfigureAwait(false);
+            if (ancestor is null)
+            {
+                return EmptyElements;
+            }
+
+            chainSummaries.Add(ancestor);
+            ancestorId = ancestor.ParentVersionId;
+        }
+
+        chainSummaries.Reverse();
+        var chain = new List<(int Number, string Content)>(chainSummaries.Count);
+        foreach (var summary in chainSummaries)
+        {
+            var content = await reader.GetContentAsync(tenant, summary.Id, cancellationToken).ConfigureAwait(false);
+            if (content is null)
+            {
+                if (await reader.GetDesignAsync(tenant, summary.Id, cancellationToken).ConfigureAwait(false) is not { } fallbackDesign)
+                {
+                    return EmptyElements;
+                }
+
+                content = ProtocolDesignDocument.Write(fallbackDesign);
+            }
+            else if (!ProtocolDesignDocument.Read(content).IsValid)
+            {
+                return EmptyElements;
+            }
+
+            chain.Add((summary.Number, content));
+        }
+
+        return Elements(target.StudyId, chain);
+    }
+
+    private static bool IsApprovedGoverning(ProtocolVersionSummary summary) =>
+        summary.ApprovalAttestationId is not null
+        || summary.Status is ProtocolVersionStatus.Approved or ProtocolVersionStatus.Superseded;
     /// <summary>
     /// What approving the last version of <paramref name="chain"/> writes: every element of its design as a part, new
     /// when this version added or changed it; <see cref="LineageEdgeKind.Supersedes"/> from a changed element's previous

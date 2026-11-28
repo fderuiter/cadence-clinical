@@ -186,7 +186,7 @@ const active = ref(0);
 
 // Execution accepts any non-blank study code up to 255 characters, compared exactly.
 const MAX_STUDY_CODE = 255;
-const MAX_RESULTS = 30;
+const MAX_RESULTS = 45;
 const DEMO_MAX_RESULTS = 80;
 const maxResults = computed(() =>
   isDemoBuild() ? DEMO_MAX_RESULTS : MAX_RESULTS

@@ -5,6 +5,12 @@
     aria-labelledby="kernel-simulate-title"
   >
     <h3 id="kernel-simulate-title" tabindex="-1">Schedule gap check</h3>
+    <InspectorCandidateRunner
+      :kernel-ref="kernelRef"
+      :protocol-version="protocolVersion"
+      :disabled="simulationLoading"
+      @run-candidate="emit('run-candidate', $event)"
+    />
     <p v-if="simulationLoading" class="inspector-empty">
       Checking schedule matrix and visit windows…
     </p>
@@ -60,7 +66,14 @@
                 ? plainSimulationWords(change.instance_type)
                 : "element"
             }}
-            <code>{{ change.element_id }}</code>
+            <NodeRefChip
+              v-if="
+                change.protocol_element && parseNodeRef(change.protocol_element)
+              "
+              :node-ref="change.protocol_element"
+              :fallback-title="change.element_id"
+            />
+            <code v-else>{{ change.element_id }}</code>
             <span
               v-if="change.properties && change.properties.length"
               class="simulation-meta"
@@ -91,7 +104,14 @@
             :data-change="change.change"
           >
             <span class="simulation-change-kind">{{ change.change }}</span>
-            <code>{{ change.activity_id }}</code>{{ " "
+            <NodeRefChip
+              v-if="
+                change.protocol_element && parseNodeRef(change.protocol_element)
+              "
+              :node-ref="change.protocol_element"
+              :fallback-title="change.activity_id"
+            /><code v-else>{{ change.activity_id }}</code
+            >{{ " "
             }}<span class="simulation-meta numeric">
               {{ formatScheduleChange(change) }}
             </span>
@@ -179,6 +199,20 @@
                 ({{ formatFieldPath(String(gap.json_pointer_path)) }})
               </span>
             </div>
+            <div
+              v-if="gap.element_id || gap.protocol_element"
+              class="gap-card-element"
+            >
+              Element:
+              <NodeRefChip
+                v-if="
+                  gap.protocol_element && parseNodeRef(gap.protocol_element)
+                "
+                :node-ref="gap.protocol_element"
+                :fallback-title="gap.element_id || 'Element'"
+              />
+              <code v-else>{{ gap.element_id }}</code>
+            </div>
             <div class="gap-card-description">
               {{ gap.description }}
             </div>
@@ -191,6 +225,10 @@
           No schedule matrix gaps detected.
         </p>
       </template>
+
+      <InspectorSimulateExtendedSections
+        :simulation-result="simulationResult"
+      />
 
       <details
         v-if="simulationResult.input_hash || simulationResult.result_hash"
@@ -226,6 +264,7 @@ import {
   type KernelProtocolVersion,
   type KernelSimulationResult,
 } from "../../api/kernelApi";
+import { parseNodeRef } from "../../canvas/nodeRef";
 import {
   formatCommandTitle,
   formatFieldPath,
@@ -234,11 +273,14 @@ import {
 } from "../../canvas/nodeResolver";
 import { defineLazyOverlay } from "../../utils/lazyOverlay";
 import CanvasErrorAlert from "./CanvasErrorAlert.vue";
+import InspectorCandidateRunner from "./InspectorCandidateRunner.vue";
+import InspectorSimulateExtendedSections from "./InspectorSimulateExtendedSections.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 import {
   formatScheduleChange,
   formatSimulationPart,
   plainSimulationWords,
+  type CandidateSimulationOverride,
 } from "./useInspectorSimulation";
 
 const SimulationGovernanceActions = defineLazyOverlay(
@@ -247,6 +289,7 @@ const SimulationGovernanceActions = defineLazyOverlay(
 
 const props = defineProps<{
   studyCode?: string;
+  kernelRef?: string;
   protocolVersion?: KernelProtocolVersion | null;
   hasParticipant?: boolean;
   simulationResult: KernelSimulationResult | null;
@@ -256,6 +299,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "retry"): void;
+  (e: "run-candidate", override: CandidateSimulationOverride): void;
   (e: "explain"): void;
 }>();
 
@@ -294,6 +338,16 @@ function isPartMasked(part: string): boolean {
 .gap-card-title {
   font-weight: 600;
   font-size: 0.85rem;
+}
+
+.gap-card-element {
+  font-size: 0.78rem;
+  margin-top: 2px;
+  color: var(--semantic-color-text-secondary);
+}
+
+.gap-card-element code {
+  font-family: var(--semantic-font-mono);
 }
 
 .gap-card-description {

@@ -287,6 +287,8 @@ public sealed record KernelProtocolImportNoteResponse(string Source, string Mess
 /// <param name="Required">True when the item is mandatory.</param>
 /// <param name="ValueKind">Expected value kind (<c>Text</c>, <c>Quantity</c>, <c>DateTime</c>, <c>Boolean</c>, <c>Coded</c>).</param>
 /// <param name="Unit">UCUM unit when constrained.</param>
+/// <param name="ProtocolElement">Optional pinned <c>protocol_element</c> NodeRef when governed by an approved protocol version.</param>
+/// <param name="ConceptRef">Canonical pinned <c>concept</c> NodeRef (<c>concept:&lt;uuid&gt;@&lt;version&gt;</c>).</param>
 public sealed record KernelProtocolFormItemResponse(
     string Id,
     int DisplayOrder,
@@ -294,12 +296,15 @@ public sealed record KernelProtocolFormItemResponse(
     string Concept,
     bool Required,
     string? ValueKind,
-    string? Unit)
+    string? Unit,
+    string? ProtocolElement = null,
+    string? ConceptRef = null)
 {
     internal static KernelProtocolFormItemResponse From(
         CollectionItem item,
         int displayOrder,
-        IReadOnlyDictionary<ConceptRef, string> conceptLabels)
+        IReadOnlyDictionary<ConceptRef, string> conceptLabels,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null)
     {
         var prompt = !string.IsNullOrWhiteSpace(item.Prompt)
             ? item.Prompt
@@ -311,7 +316,9 @@ public sealed record KernelProtocolFormItemResponse(
             item.Concept.ToString(),
             item.Required,
             item.ExpectedKind?.ToString(),
-            item.Unit);
+            item.Unit,
+            KernelElementNodeRefs.Resolve(governedElements, item.Id),
+            NodeRef.For(item.Concept.ConceptId, item.Concept.Version).ToString());
     }
 }
 
@@ -323,6 +330,8 @@ public sealed record KernelProtocolFormItemResponse(
 /// <param name="RequiredItemCount">Number of mandatory items on the form.</param>
 /// <param name="Items">Items in preserved display order.</param>
 /// <param name="Repeating">True when multiple instances of the form may be opened per planned activity or as a repeating log.</param>
+/// <param name="ProtocolElement">Optional pinned <c>protocol_element</c> NodeRef when governed by an approved protocol version.</param>
+/// <param name="FormVersionSnapshot">Optional pinned <c>form_version_snapshot</c> NodeRef when a snapshot exists for this protocol version.</param>
 public sealed record KernelProtocolFormSummaryResponse(
     string Id,
     int DisplayOrder,
@@ -330,15 +339,19 @@ public sealed record KernelProtocolFormSummaryResponse(
     int ItemCount,
     int RequiredItemCount,
     IReadOnlyList<KernelProtocolFormItemResponse> Items,
-    bool Repeating = false)
+    bool Repeating = false,
+    string? ProtocolElement = null,
+    string? FormVersionSnapshot = null)
 {
     internal static KernelProtocolFormSummaryResponse From(
         CollectionSpec spec,
         int displayOrder,
-        IReadOnlyDictionary<ConceptRef, string> conceptLabels)
+        IReadOnlyDictionary<ConceptRef, string> conceptLabels,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null,
+        IReadOnlyDictionary<string, NodeRef>? formSnapshots = null)
     {
         var items = spec.Items
-            .Select((item, idx) => KernelProtocolFormItemResponse.From(item, idx + 1, conceptLabels))
+            .Select((item, idx) => KernelProtocolFormItemResponse.From(item, idx + 1, conceptLabels, governedElements))
             .ToList();
         return new(
             spec.Id,
@@ -347,7 +360,9 @@ public sealed record KernelProtocolFormSummaryResponse(
             items.Count,
             items.Count(i => i.Required),
             items,
-            spec.Repeating);
+            spec.Repeating,
+            KernelElementNodeRefs.Resolve(governedElements, spec.Id),
+            KernelElementNodeRefs.ResolveFormSnapshot(formSnapshots, spec.Id, items.Count > 0));
     }
 }
 
@@ -383,22 +398,27 @@ public sealed record KernelImportedRulePackSummaryResponse(
 /// <param name="SummaryOfChanges">Human-readable description of what changed.</param>
 /// <param name="ImpactedElements">Protocol element identifiers touched by this amendment.</param>
 /// <param name="TransitionPolicy">Participant transition policy (<c>NewParticipantsOnly</c>, <c>RequiresReconsent</c>, <c>Automatic</c>, or <c>ByCohort</c>).</param>
+/// <param name="ProtocolElements">Optional map of governed element ids in <paramref name="ImpactedElements"/> to pinned <c>protocol_element</c> NodeRefs.</param>
 public sealed record KernelProtocolAmendmentResponse(
     string Intent,
     string Rationale,
     string Classification,
     string SummaryOfChanges,
     IReadOnlyList<string> ImpactedElements,
-    string TransitionPolicy)
+    string TransitionPolicy,
+    IReadOnlyDictionary<string, string>? ProtocolElements = null)
 {
-    internal static KernelProtocolAmendmentResponse From(ProtocolAmendment amendment) =>
+    internal static KernelProtocolAmendmentResponse From(
+        ProtocolAmendment amendment,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null) =>
         new(
             amendment.Intent,
             amendment.Rationale,
             amendment.Classification.ToString(),
             amendment.SummaryOfChanges,
             amendment.ImpactedElements,
-            amendment.TransitionPolicy.ToString());
+            amendment.TransitionPolicy.ToString(),
+            KernelElementNodeRefs.ResolveSubset(governedElements, amendment.ImpactedElements));
 }
 
 /// <summary>Viewable protocol draft summary with forms, ordered items, and readable import notes.</summary>
@@ -425,11 +445,14 @@ public sealed record KernelProtocolDraftSummaryResponse(
         ProtocolDesign? design,
         IReadOnlyDictionary<ConceptRef, string> conceptLabels,
         KernelImportedRulePackSummaryResponse? importedRulePack = null,
-        ProtocolAmendment? amendment = null)
+        ProtocolAmendment? amendment = null,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null,
+        IReadOnlyDictionary<string, NodeRef>? formSnapshots = null,
+        IReadOnlyDictionary<string, NodeRef>? amendmentElements = null)
     {
         var specs = design?.CollectionSpecs ?? [];
         var forms = specs
-            .Select((spec, idx) => KernelProtocolFormSummaryResponse.From(spec, idx + 1, conceptLabels))
+            .Select((spec, idx) => KernelProtocolFormSummaryResponse.From(spec, idx + 1, conceptLabels, governedElements, formSnapshots))
             .ToList();
         var notes = (design?.ImportNotes ?? [])
             .Select(KernelProtocolImportNoteResponse.From)
@@ -442,6 +465,6 @@ public sealed record KernelProtocolDraftSummaryResponse(
             forms,
             notes,
             importedRulePack,
-            amendment is not null ? KernelProtocolAmendmentResponse.From(amendment) : null);
+            amendment is not null ? KernelProtocolAmendmentResponse.From(amendment, amendmentElements ?? governedElements) : null);
     }
 }

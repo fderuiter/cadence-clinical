@@ -31,17 +31,46 @@ public sealed record KernelScheduleOfActivitiesResponse(
     IReadOnlyList<KernelSoaRowResponse> Rows,
     IReadOnlyList<KernelSoaFootnoteResponse> Footnotes)
 {
-    internal static KernelScheduleOfActivitiesResponse From(ProtocolVersionSummary version, SoaMatrix matrix) =>
+    internal static KernelScheduleOfActivitiesResponse From(
+        ProtocolVersionSummary version,
+        SoaMatrix matrix,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null,
+        IReadOnlyDictionary<string, NodeRef>? formSnapshots = null) =>
         new(
             NodeRef.For(version.Id).ToString(),
             version.ContentHash,
             ScheduleOfActivities.Hash(matrix),
             matrix.Title,
-            [.. matrix.Epochs.Select(e => new KernelSoaEpochResponse(e.EpochId, e.Name, e.Order, e.FirstColumn, e.ColumnCount))],
+            [.. matrix.Epochs.Select(e => new KernelSoaEpochResponse(
+                e.EpochId,
+                e.Name,
+                e.Order,
+                e.FirstColumn,
+                e.ColumnCount,
+                KernelElementNodeRefs.Resolve(governedElements, e.EpochId)))],
             [.. matrix.Columns.Select(c => new KernelSoaColumnResponse(
-                c.ActivityId, c.Name, c.EpochId, c.StudyDay, c.WindowBefore, c.WindowAfter, [.. c.Locations.Select(l => l.ToString())], c.Footnotes, c.Repeating))],
+                c.ActivityId,
+                c.Name,
+                c.EpochId,
+                c.StudyDay,
+                c.WindowBefore,
+                c.WindowAfter,
+                [.. c.Locations.Select(l => l.ToString())],
+                c.Footnotes,
+                c.Repeating,
+                KernelElementNodeRefs.Resolve(governedElements, c.ActivityId)))],
             [.. matrix.Rows.Select(r => new KernelSoaRowResponse(
-                r.CollectionSpecId, r.Name, r.ItemIds, KernelSoaConcepts.Of(r.Concepts), r.Columns, r.Frequency, r.Footnotes, r.Repeating))],
+                r.CollectionSpecId,
+                r.Name,
+                r.ItemIds,
+                KernelSoaConcepts.Of(r.Concepts),
+                r.Columns,
+                r.Frequency,
+                r.Footnotes,
+                r.Repeating,
+                KernelElementNodeRefs.Resolve(governedElements, r.CollectionSpecId),
+                KernelElementNodeRefs.ResolveFormSnapshot(formSnapshots, r.CollectionSpecId, r.ItemIds.Count > 0),
+                KernelElementNodeRefs.ResolveSubset(governedElements, r.ItemIds)))],
             [.. matrix.Footnotes.Select(f => new KernelSoaFootnoteResponse(f.Number, f.Kind.ToString(), f.Text))]);
 }
 
@@ -51,7 +80,14 @@ public sealed record KernelScheduleOfActivitiesResponse(
 /// <param name="Order">The epoch's order in the design.</param>
 /// <param name="FirstColumn">The index of its first column.</param>
 /// <param name="ColumnCount">How many columns it spans.</param>
-public sealed record KernelSoaEpochResponse(string EpochId, string Name, int Order, int FirstColumn, int ColumnCount);
+/// <param name="ProtocolElement">Optional pinned <c>protocol_element</c> NodeRef when governed by an approved protocol version.</param>
+public sealed record KernelSoaEpochResponse(
+    string EpochId,
+    string Name,
+    int Order,
+    int FirstColumn,
+    int ColumnCount,
+    string? ProtocolElement = null);
 
 /// <summary>A column: one planned activity.</summary>
 /// <param name="ActivityId">The planned activity's element id.</param>
@@ -63,6 +99,7 @@ public sealed record KernelSoaEpochResponse(string EpochId, string Name, int Ord
 /// <param name="Locations">Where it may take place: <c>Site</c>, <c>Home</c>, <c>Telehealth</c>, <c>LocalFacility</c>, <c>Remote</c>.</param>
 /// <param name="Footnotes">The numbers of its footnotes.</param>
 /// <param name="Repeating">Whether multiple instances of this planned activity may occur for one enrollment.</param>
+/// <param name="ProtocolElement">Optional pinned <c>protocol_element</c> NodeRef when governed by an approved protocol version.</param>
 public sealed record KernelSoaColumnResponse(
     string ActivityId,
     string Name,
@@ -72,7 +109,8 @@ public sealed record KernelSoaColumnResponse(
     int WindowAfter,
     IReadOnlyList<string> Locations,
     IReadOnlyList<int> Footnotes,
-    bool Repeating = false);
+    bool Repeating = false,
+    string? ProtocolElement = null);
 
 /// <summary>A row: one collection specification and the columns that collect it.</summary>
 /// <param name="CollectionSpecId">The collection specification's element id.</param>
@@ -83,6 +121,9 @@ public sealed record KernelSoaColumnResponse(
 /// <param name="Frequency">How many planned activities collect it.</param>
 /// <param name="Footnotes">The numbers of its footnotes.</param>
 /// <param name="Repeating">Whether multiple instances of this collection specification may be opened per planned activity or as a repeating log.</param>
+/// <param name="ProtocolElement">Optional pinned <c>protocol_element</c> NodeRef when governed by an approved protocol version.</param>
+/// <param name="FormVersionSnapshot">Optional pinned <c>form_version_snapshot</c> NodeRef when a snapshot exists for this protocol version.</param>
+/// <param name="ItemProtocolElements">Optional map of governed item element ids to pinned <c>protocol_element</c> NodeRefs.</param>
 public sealed record KernelSoaRowResponse(
     string CollectionSpecId,
     string Name,
@@ -91,7 +132,10 @@ public sealed record KernelSoaRowResponse(
     IReadOnlyList<int> Columns,
     int Frequency,
     IReadOnlyList<int> Footnotes,
-    bool Repeating = false);
+    bool Repeating = false,
+    string? ProtocolElement = null,
+    string? FormVersionSnapshot = null,
+    IReadOnlyDictionary<string, string>? ItemProtocolElements = null);
 
 /// <summary>A footnote generated from the design.</summary>
 /// <param name="Number">Its number, from 1.</param>
@@ -109,22 +153,31 @@ public sealed record KernelSoaFootnoteResponse(int Number, string Kind, string T
 /// <param name="Undeclared">The impacted elements the amendment does not declare.</param>
 /// <param name="ChangesSchedule">True when what participants already on study do, or when, changes.</param>
 /// <param name="ChangesEligibility">True when who may enter changes, which concerns only new participants.</param>
+/// <param name="ProtocolElements">Optional map of governed element ids in this diff to pinned <c>protocol_element</c> NodeRefs.</param>
 public sealed record KernelSoaAmendmentDiffResponse(
     IReadOnlyList<KernelSoaDirectiveResponse> Directives,
     IReadOnlyList<string> ImpactedElements,
     IReadOnlyList<string> ImpactedConcepts,
     IReadOnlyList<string> Undeclared,
     bool ChangesSchedule,
-    bool ChangesEligibility)
+    bool ChangesEligibility,
+    IReadOnlyDictionary<string, string>? ProtocolElements = null)
 {
-    internal static KernelSoaAmendmentDiffResponse From(SoaAmendmentDiff diff, IEnumerable<string> declared) =>
-        new(
-            [.. diff.Directives.Select(KernelSoaDirectiveResponse.From)],
+    internal static KernelSoaAmendmentDiffResponse From(
+        SoaAmendmentDiff diff,
+        IEnumerable<string> declared,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null)
+    {
+        var undeclared = diff.Undeclared(declared);
+        return new(
+            [.. diff.Directives.Select(d => KernelSoaDirectiveResponse.From(d, governedElements))],
             diff.ImpactedElements,
             KernelSoaConcepts.Of(diff.ImpactedConcepts),
-            diff.Undeclared(declared),
+            undeclared,
             diff.ChangesSchedule,
-            diff.ChangesEligibility);
+            diff.ChangesEligibility,
+            KernelElementNodeRefs.ResolveSubset(governedElements, diff.ImpactedElements.Concat(undeclared)));
+    }
 }
 
 /// <summary>One typed change between two Schedules of Activities.</summary>
@@ -142,6 +195,8 @@ public sealed record KernelSoaAmendmentDiffResponse(
 /// <param name="FrequencyAfter">For a frequency change, how many collect it now.</param>
 /// <param name="CollectedAtAdded">For a frequency change, the activities that now collect it.</param>
 /// <param name="CollectedAtRemoved">For a frequency change, the activities that no longer do.</param>
+/// <param name="ProtocolElement">Optional pinned <c>protocol_element</c> NodeRef for <paramref name="ElementId"/> when governed.</param>
+/// <param name="ProtocolElements">Optional map of governed element ids referenced by this directive to pinned <c>protocol_element</c> NodeRefs.</param>
 public sealed record KernelSoaDirectiveResponse(
     string Kind,
     string ElementId,
@@ -152,9 +207,13 @@ public sealed record KernelSoaDirectiveResponse(
     int? FrequencyBefore,
     int? FrequencyAfter,
     IReadOnlyList<string>? CollectedAtAdded,
-    IReadOnlyList<string>? CollectedAtRemoved)
+    IReadOnlyList<string>? CollectedAtRemoved,
+    string? ProtocolElement = null,
+    IReadOnlyDictionary<string, string>? ProtocolElements = null)
 {
-    internal static KernelSoaDirectiveResponse From(SoaDirective directive) =>
+    internal static KernelSoaDirectiveResponse From(
+        SoaDirective directive,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null) =>
         new(
             directive.Kind.ToString(),
             directive.ElementId,
@@ -165,7 +224,13 @@ public sealed record KernelSoaDirectiveResponse(
             directive.FrequencyBefore,
             directive.FrequencyAfter,
             directive.CollectedAtAdded,
-            directive.CollectedAtRemoved);
+            directive.CollectedAtRemoved,
+            KernelElementNodeRefs.Resolve(governedElements, directive.ElementId),
+            KernelElementNodeRefs.ResolveSubset(
+                governedElements,
+                directive.ImpactedElements
+                    .Concat(directive.CollectedAtAdded ?? [])
+                    .Concat(directive.CollectedAtRemoved ?? [])));
 }
 
 /// <summary>When and where a planned activity happens.</summary>
@@ -194,6 +259,8 @@ public sealed record KernelSoaVisitResponse(string EpochId, int? StudyDay, int W
 /// <param name="WindowStart">First allowed calendar date in site time.</param>
 /// <param name="WindowEnd">Last allowed calendar date in site time.</param>
 /// <param name="WindowStatus">Window status at the evaluation date: <c>NotYetOpen</c>, <c>Open</c>, or <c>Closed</c>.</param>
+/// <param name="ProtocolElement">Optional pinned <c>protocol_element</c> NodeRef for <paramref name="ActivityId"/> when governed.</param>
+/// <param name="EpochProtocolElement">Optional pinned <c>protocol_element</c> NodeRef for <paramref name="EpochId"/> when governed.</param>
 public sealed record KernelExpectedVisitResponse(
     string ActivityId,
     string Name,
@@ -205,9 +272,13 @@ public sealed record KernelExpectedVisitResponse(
     DateOnly TargetDate,
     DateOnly WindowStart,
     DateOnly WindowEnd,
-    string WindowStatus)
+    string WindowStatus,
+    string? ProtocolElement = null,
+    string? EpochProtocolElement = null)
 {
-    internal static KernelExpectedVisitResponse From(ExpectedVisit expected) =>
+    internal static KernelExpectedVisitResponse From(
+        ExpectedVisit expected,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null) =>
         new(
             expected.Visit.ActivityId,
             expected.Visit.Name,
@@ -219,7 +290,9 @@ public sealed record KernelExpectedVisitResponse(
             expected.Target,
             expected.WindowStart,
             expected.WindowEnd,
-            expected.Status.ToString());
+            expected.Status.ToString(),
+            KernelElementNodeRefs.Resolve(governedElements, expected.Visit.ActivityId),
+            KernelElementNodeRefs.Resolve(governedElements, expected.Visit.EpochId));
 }
 
 /// <summary>
@@ -265,4 +338,50 @@ internal static class KernelSoaConcepts
 {
     internal static IReadOnlyList<string> Of(IEnumerable<ConceptRef> concepts) =>
         [.. concepts.Select(c => NodeRef.For(c.ConceptId, c.Version).ToString())];
+}
+
+/// <summary>Formats optional governed <c>protocol_element</c> and <c>form_version_snapshot</c> NodeRefs (ADR-2481).</summary>
+internal static class KernelElementNodeRefs
+{
+    internal static string? Resolve(IReadOnlyDictionary<string, NodeRef>? map, string? elementId) =>
+        map is not null && !string.IsNullOrEmpty(elementId) && map.TryGetValue(elementId, out var nodeRef)
+            ? nodeRef.ToString()
+            : null;
+
+    internal static string? ResolveFormSnapshot(IReadOnlyDictionary<string, NodeRef>? map, string? formId, bool hasItems)
+    {
+        if (map is null || string.IsNullOrEmpty(formId))
+        {
+            return null;
+        }
+
+        if (map.TryGetValue(formId, out var direct))
+        {
+            return direct.ToString();
+        }
+
+        return hasItems && map.TryGetValue("*", out var bundle) ? bundle.ToString() : null;
+    }
+
+    internal static IReadOnlyDictionary<string, string>? ResolveSubset(
+        IReadOnlyDictionary<string, NodeRef>? map,
+        IEnumerable<string>? elementIds)
+    {
+        if (map is null || map.Count == 0 || elementIds is null)
+        {
+            return null;
+        }
+
+        Dictionary<string, string>? subset = null;
+        foreach (var id in elementIds)
+        {
+            if (!string.IsNullOrEmpty(id) && map.TryGetValue(id, out var nodeRef))
+            {
+                subset ??= new Dictionary<string, string>(StringComparer.Ordinal);
+                subset[id] = nodeRef.ToString();
+            }
+        }
+
+        return subset;
+    }
 }

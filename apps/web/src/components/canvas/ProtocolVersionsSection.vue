@@ -240,7 +240,12 @@
         </button>
       </template>
       <template #cell-parent="{ row }">
-        {{ parentNumber(row) }}
+        <NodeRefChip
+          v-if="parentNodeRef(row)"
+          :node-ref="parentNodeRef(row)!"
+          :fallback-title="parentNumber(row)"
+        />
+        <template v-else>{{ parentNumber(row) }}</template>
       </template>
       <template #cell-amendment_intent="{ row }">
         {{ row.amendment_intent || "None recorded" }}
@@ -511,7 +516,7 @@
     </section>
 
     <section
-      v-if="showGovernanceControls && canGovern"
+      v-if="showGovernanceControls && (canGovern || artifacts.length > 0)"
       id="protocol-artifacts-card"
       class="gov-card"
       aria-labelledby="protocol-artifacts-heading"
@@ -542,7 +547,12 @@
               v{{ art.version_number }} · <code>{{ art.content_hash }}</code>
             </span>
           </div>
-          <code class="gov-ref">{{ art.artifact_version_ref }}</code>
+          <NodeRefChip
+            v-if="parseNodeRef(art.artifact_version_ref)"
+            :node-ref="art.artifact_version_ref"
+            :fallback-title="art.title"
+          />
+          <code v-else class="gov-ref">{{ art.artifact_version_ref }}</code>
         </li>
       </ul>
       <p v-else class="gov-empty">
@@ -550,6 +560,7 @@
       </p>
 
       <form
+        v-if="canGovern"
         id="protocol-artifact-form"
         class="gov-form"
         @submit.prevent="registerArtifact"
@@ -690,9 +701,26 @@
           class="gov-effectivity-item"
         >
           <div class="gov-effectivity-summary">
-            <strong>
-              Version {{ effectivityVersionLabel(eff) }} ·
-              {{ formatEffectivityScope(eff) }}
+            <strong class="gov-effectivity-links">
+              <NodeRefChip
+                v-if="parseNodeRef(eff.protocol_version_ref)"
+                :node-ref="eff.protocol_version_ref"
+                :fallback-title="`Version ${effectivityVersionLabel(eff)}`"
+              />
+              <template v-else>
+                Version {{ effectivityVersionLabel(eff) }}
+              </template>
+              <span>·</span>
+              <NodeRefChip
+                v-if="
+                  eff.scope_level === 'StudySite' &&
+                  eff.study_site_ref &&
+                  parseNodeRef(eff.study_site_ref)
+                "
+                :node-ref="eff.study_site_ref"
+                :fallback-title="formatEffectivityScope(eff)"
+              />
+              <template v-else>{{ formatEffectivityScope(eff) }}</template>
             </strong>
             <span
               class="gov-pill"
@@ -914,6 +942,7 @@
       :study-ref="studyNodeRef"
       :study-code="studyCode"
       :selected-version-ref="activeSummaryVersionRef"
+      :can-govern="canImportDraft"
       @imported="onDraftImported"
     />
 
@@ -976,7 +1005,10 @@ import {
   type KernelStudySite,
   type KernelTransitionPolicy,
 } from "../../api/kernelGovernanceApi";
-import { canGovernProtocols } from "../../canvas/authority";
+import {
+  canGovernProtocols,
+  isUnauthenticatedFallback,
+} from "../../canvas/authority";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
@@ -1136,6 +1168,11 @@ function setTransitionReason(effectivityRef: string, reason: string) {
 }
 
 const canGovern = computed(() => canGovernProtocols(authStore));
+const canImportDraft = computed(
+  () =>
+    canGovern.value ||
+    (isUnauthenticatedFallback(authStore) && !authStore.currentPersona)
+);
 
 const signerUsername = computed(() => authStore.identity?.username ?? "");
 const signerFullName = computed(() => {
@@ -1163,7 +1200,9 @@ const canShowImportPanel = computed(
     !error.value &&
     !noStudy.value &&
     Boolean(studyNodeRef.value) &&
-    typeof kernelApi.importProtocolDraft === "function"
+    ((canImportDraft.value &&
+      typeof kernelApi.importProtocolDraft === "function") ||
+      typeof kernelApi.getProtocolDesignSummary === "function")
 );
 
 const activeSummaryVersionRef = computed(() => {
@@ -1342,6 +1381,14 @@ function parentNumber(version: KernelProtocolVersion): string {
   return parent ? `Version ${parent.number}` : "A version you may not see";
 }
 
+function parentNodeRef(version: KernelProtocolVersion): string | null {
+  if (!version.parent_version) return null;
+  const parentId = parseNodeRef(version.parent_version)?.id;
+  const parent = parentId ? byId.value.get(parentId) : undefined;
+  if (!parent || isMasked(parent) || !parent.ref) return null;
+  return parent.ref;
+}
+
 function maskWords(mask: string | null): string {
   return maskReasonWords(mask);
 }
@@ -1485,9 +1532,33 @@ async function refreshGovernanceLists(
   }
   await Promise.all(tasks);
   if (!isCurrent()) return;
-  if (nextArtifacts !== null) artifacts.value = nextArtifacts;
+  if (nextArtifacts !== null) {
+    artifacts.value = nextArtifacts;
+    for (const art of artifacts.value) {
+      if (art.artifact_version_ref && parseNodeRef(art.artifact_version_ref)) {
+        seedNodeSummary(art.artifact_version_ref, {
+          kind: "artifact_version",
+          title: art.title,
+        });
+      }
+    }
+  }
   if (nextEffectivities !== null) effectivities.value = nextEffectivities;
-  if (nextSites !== null) studySites.value = nextSites;
+  if (nextSites !== null) {
+    studySites.value = nextSites;
+    for (const site of studySites.value) {
+      if (site.study_site_ref && parseNodeRef(site.study_site_ref)) {
+        seedNodeSummary(site.study_site_ref, {
+          kind: "study_site",
+          title: site.site_code
+            ? `Site ${site.site_code}`
+            : site.site_name || site.study_site_id,
+          code: site.site_code || undefined,
+          status: site.status,
+        });
+      }
+    }
+  }
   syncEffectivityDefaults(effectivities.value);
 }
 

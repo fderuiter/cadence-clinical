@@ -156,6 +156,158 @@ export function createKernelGraphDomain(ctx) {
         mask: null,
       };
     }
+    if (String(nodeRef).startsWith("protocol_element:")) {
+      const elemMap = {
+        "00000000-0000-0000-0000-000000006101": [
+          "epoch-screening",
+          "Screening Epoch",
+        ],
+        "00000000-0000-0000-0000-000000006102": [
+          "epoch-treatment",
+          "Treatment Epoch",
+        ],
+        "00000000-0000-0000-0000-000000006201": [
+          "visit-screening",
+          "Screening Visit",
+        ],
+        "00000000-0000-0000-0000-000000006202": [
+          "visit-baseline",
+          "Baseline (Day 1)",
+        ],
+        "00000000-0000-0000-0000-000000006203": ["visit-week4", "Week 4 Visit"],
+        "00000000-0000-0000-0000-000000006301": [
+          "form-vital-signs",
+          "Vital Signs (CDASH VS)",
+        ],
+        "00000000-0000-0000-0000-000000006302": [
+          "form-chem-panel",
+          "Clinical Chemistry Panel (CDASH LB)",
+        ],
+        "00000000-0000-0000-0000-000000006303": [
+          "form-adverse-event",
+          "Adverse Event (CDASH AE)",
+        ],
+      };
+      const rawUuid = String(nodeRef)
+        .replace(/^protocol_element:/, "")
+        .split("@")[0];
+      const hit = elemMap[rawUuid];
+      return {
+        ref: nodeRef,
+        kind: "protocol_element",
+        title: hit
+          ? hit[1]
+          : `Governed Protocol Element (${rawUuid.slice(-4)})`,
+        code: hit ? hit[0] : rawUuid.slice(-6),
+        status: "APPROVED",
+        mask: null,
+      };
+    }
+    if (String(nodeRef).startsWith("form_version_snapshot:")) {
+      const snapMap = {
+        "00000000-0000-0000-0000-000000006401": [
+          "VS",
+          "Vital Signs Form Snapshot",
+        ],
+        "00000000-0000-0000-0000-000000006402": [
+          "LB",
+          "Clinical Chemistry Form Snapshot",
+        ],
+        "00000000-0000-0000-0000-000000006403": [
+          "AE",
+          "Adverse Event Form Snapshot",
+        ],
+      };
+      const rawUuid = String(nodeRef)
+        .replace(/^form_version_snapshot:/, "")
+        .split("@")[0];
+      const hit = snapMap[rawUuid];
+      return {
+        ref: nodeRef,
+        kind: "form_version_snapshot",
+        title: hit ? hit[1] : `Form Snapshot (${rawUuid.slice(-4)})`,
+        code: hit ? hit[0] : rawUuid.slice(-4),
+        status: "IMMUTABLE",
+        mask: null,
+      };
+    }
+    if (String(nodeRef).startsWith("concept:")) {
+      const conceptMap = {
+        "00000000-0000-0000-0000-000000007001": [
+          "SYSBP",
+          "Systolic Blood Pressure",
+        ],
+        "00000000-0000-0000-0000-000000007002": [
+          "DIABP",
+          "Diastolic Blood Pressure",
+        ],
+        "00000000-0000-0000-0000-000000007003": ["PULSE", "Pulse Rate"],
+        "00000000-0000-0000-0000-000000007004": [
+          "VSCOMM",
+          "Vital Signs Comments",
+        ],
+        "00000000-0000-0000-0000-000000007005": ["HBA1C", "Hemoglobin A1C"],
+        "00000000-0000-0000-0000-000000007006": ["EGFR", "Estimated GFR"],
+        "00000000-0000-0000-0000-000000007007": [
+          "AETERM",
+          "Reported Term for Adverse Event",
+        ],
+        "00000000-0000-0000-0000-000000007008": ["AESEV", "Severity/Intensity"],
+      };
+      const rawUuid = String(nodeRef)
+        .replace(/^concept:/, "")
+        .split("@")[0];
+      const hit = conceptMap[rawUuid];
+      return {
+        ref: nodeRef,
+        kind: "concept",
+        title: hit ? hit[1] : `CDISC Concept (${rawUuid.slice(-4)})`,
+        code: hit ? hit[0] : rawUuid.slice(-4),
+        status: "ACTIVE",
+        mask: null,
+      };
+    }
+    if (String(nodeRef).startsWith("artifact_version:")) {
+      const cleanRef = String(nodeRef).split("@")[0];
+      let matched = null;
+      for (const list of (state.studyArtifacts || new Map()).values()) {
+        const hit = list.find(
+          (a) => String(a.artifact_version_ref).split("@")[0] === cleanRef
+        );
+        if (hit) {
+          matched = hit;
+          break;
+        }
+      }
+      return {
+        ref: nodeRef,
+        kind: "artifact_version",
+        title: matched?.title || "Evidence Artifact Version",
+        code: matched?.kind || "ARTIFACT",
+        status: "RECORDED",
+        mask: null,
+      };
+    }
+    if (String(nodeRef).startsWith("attestation:")) {
+      return {
+        ref: nodeRef,
+        kind: "attestation",
+        title: "21 CFR Part 11 Electronic Signature",
+        code: String(nodeRef).split(":")[1]?.slice(-4) || "SIGN",
+        status: "SIGNED",
+        mask: null,
+      };
+    }
+    if (String(nodeRef).startsWith("library_item:")) {
+      return {
+        ref: nodeRef,
+        kind: "library_item",
+        title: "Standards Library Item",
+        code: String(nodeRef).split(":")[1]?.slice(-4) || "LIB",
+        status: "PUBLISHED",
+        mask: null,
+      };
+    }
     if (String(nodeRef).startsWith("plan:")) {
       const unversionedPlan = String(nodeRef).split("@")[0];
       const matchingProposal = [...state.proposals.values()].find(

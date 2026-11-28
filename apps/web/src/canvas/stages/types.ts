@@ -3,6 +3,7 @@ export type StageId =
 
 export type SectionId =
   | "protocol-versions"
+  | "schedule-of-activities"
   | "sites"
   | "site-activation"
   | "startup-greenlight"
@@ -11,7 +12,6 @@ export type SectionId =
   | "site-milestones"
   | "delegation"
   | "participants"
-  | "sites"
   | "monitoring-visits"
   | "supply"
   | "queries"
@@ -30,5 +30,7 @@ export interface Stage {
   label: string;
   /** What the stage covers once all of its sections exist (§2.2). */
   scope: string;
+  /** True when the stage's canvas sections are served without missing-service placeholders. */
+  complete?: boolean;
   sections: Section[];
 }

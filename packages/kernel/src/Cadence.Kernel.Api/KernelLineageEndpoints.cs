@@ -185,7 +185,21 @@ internal static class KernelLineageEndpoints
             return KernelProblems.NotFound(node);
         }
 
-        return TypedResults.Ok(KernelAmendmentImpactResponse.From(computed));
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null;
+        var parentNode = NodeRef.For(computed.Parent);
+        var parentMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [parentNode], cancellationToken).ConfigureAwait(false);
+        if (version.Status == ProtocolVersionStatus.Approved || parentMasks.For(parentNode) is null)
+        {
+            governedElements = await versions
+                .GetGovernedProtocolElementsAsync(
+                    tenant,
+                    amended,
+                    includeApprovedAncestorWhenUnapproved: parentMasks.For(parentNode) is null,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return TypedResults.Ok(KernelAmendmentImpactResponse.From(computed, governedElements));
     }
 
     private static (int Depth, IReadOnlySet<LineageEdgeKind>? Kinds, ProblemHttpResult? Problem) ReadWindow(int? depth, string[]? edgeKinds)

@@ -212,6 +212,13 @@ const PROTOCOL_GOVERNANCE_ROLES: ReadonlySet<string> = new Set([
   "protocol_reviewer",
 ]);
 
+const PROTOCOL_GOVERNANCE_PERSONAS: ReadonlySet<string> = new Set([
+  "super_admin",
+  "sponsor_designer",
+  "data_manager",
+  "protocol_reviewer",
+]);
+
 const KERNEL_SITE_GOVERNANCE_ROLES: ReadonlySet<string> = new Set([
   "sysadmin",
   "sponsor_designer",
@@ -223,6 +230,12 @@ export function canGovernProtocols(
   auth: AuthorityAuth | null | undefined
 ): boolean {
   if (!auth || auth.isAuthenticated === false) return false;
+  if (
+    auth.currentPersona &&
+    !PROTOCOL_GOVERNANCE_PERSONAS.has(auth.currentPersona)
+  ) {
+    return false;
+  }
   if (holdsBackendRole(auth, PROTOCOL_GOVERNANCE_ROLES)) return true;
   if (typeof auth.hasRole === "function") {
     return ["study_designer", "designer", "data_manager", "sponsor_admin"].some(

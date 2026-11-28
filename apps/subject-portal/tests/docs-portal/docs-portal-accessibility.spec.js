@@ -185,19 +185,58 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
     expect(orphanedPipeFindings).toEqual([]);
     expect(codeAnchorFindings).toEqual([]);
 
+    const countTableRows = (html) =>
+      Array.from(
+        html.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
+        (m) => m[1]
+      ).reduce(
+        (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
+        0
+      );
+    const countAdrDecisionItems = (html) =>
+      (
+        html.match(/<li(?:\s[^>]*)?>\s*<a\b[^>]*>ADR-(?:\d+|[A-Z]+-\d{8}-)/g) ||
+        []
+      ).length;
+
     const docIndexHtml = fs.readFileSync(
       path.join(docsDistDir, "DOCUMENTATION_INDEX.html"),
       "utf8"
     );
-    const tbodyBlocks = Array.from(
-      docIndexHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
-      (m) => m[1]
+    const topShardRowCount = countTableRows(docIndexHtml);
+    expect(topShardRowCount).toBeGreaterThanOrEqual(28);
+
+    const shardHrefs = new Set(
+      Array.from(
+        docIndexHtml.matchAll(/<tbody(?:\s[^>]*)?>([\s\S]*?)<\/tbody>/gi),
+        (m) => m[1]
+      )
+        .flatMap((tbody) =>
+          Array.from(tbody.matchAll(/href="([^"#]+)"/gi), (m) => m[1])
+        )
+        .filter((href) => !/^https?:/i.test(href))
     );
-    const dataRowCount = tbodyBlocks.reduce(
-      (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
-      0
-    );
-    expect(dataRowCount).toBeGreaterThanOrEqual(715);
+    expect(shardHrefs.size).toBeGreaterThanOrEqual(28);
+
+    let shardTableRowCount = 0;
+    let shardAdrEntryCount = 0;
+    for (const href of shardHrefs) {
+      let rel = href.replace(/^\.\//, "").replace(/^\//, "");
+      if (rel.endsWith("/")) rel += "index.html";
+      if (!rel.endsWith(".html")) rel += ".html";
+      const shardFullPath = path.join(docsDistDir, rel);
+      expect(
+        fs.existsSync(shardFullPath),
+        `Expected compiled shard ${rel} linked from DOCUMENTATION_INDEX.html`
+      ).toBe(true);
+      const shardHtml = fs.readFileSync(shardFullPath, "utf8");
+      shardTableRowCount += countTableRows(shardHtml);
+      if (rel.startsWith("adr/")) {
+        shardAdrEntryCount += countAdrDecisionItems(shardHtml);
+      }
+    }
+    expect(shardTableRowCount).toBeGreaterThanOrEqual(145);
+    expect(shardTableRowCount + shardAdrEntryCount).toBeGreaterThanOrEqual(715);
   });
 
   test("navbar items and portal layout render without clipping, overlap, or horizontal scroll across 375px–1920px viewports", async ({

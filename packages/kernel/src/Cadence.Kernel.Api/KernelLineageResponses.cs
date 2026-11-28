@@ -132,6 +132,7 @@ public sealed record KernelDependentsResponse(
 /// <param name="AffectedParticipantCount">Visible participants whose cohort or upcoming schedule changes under the amendment.</param>
 /// <param name="ReconsentParticipantCount">Visible participants requiring re-consent under the amendment.</param>
 /// <param name="Hidden">Signals when sites, enrollments, or blinded facts were omitted from counts (ADR-2590).</param>
+/// <param name="ProtocolElements">Optional map of governed element ids in <paramref name="ImpactedElements"/> and <paramref name="ChangedElements"/> to pinned <c>protocol_element</c> NodeRefs.</param>
 public sealed record KernelAmendmentImpactResponse(
     string Amended,
     string Parent,
@@ -144,22 +145,40 @@ public sealed record KernelAmendmentImpactResponse(
     int TotalParticipantCount = 0,
     int AffectedParticipantCount = 0,
     int ReconsentParticipantCount = 0,
-    HiddenObjects? Hidden = null)
+    HiddenObjects? Hidden = null,
+    IReadOnlyDictionary<string, string>? ProtocolElements = null)
 {
-    internal static KernelAmendmentImpactResponse From(AmendmentImpact impact) =>
-        new(
+    internal static KernelAmendmentImpactResponse From(
+        AmendmentImpact impact,
+        IReadOnlyDictionary<string, NodeRef>? governedElements = null)
+    {
+        var schedule = impact.Schedule is { } s
+            ? KernelSoaAmendmentDiffResponse.From(s, impact.ImpactedElements, governedElements)
+            : null;
+        var allElementIds = impact.ImpactedElements
+            .Concat(impact.ChangedElements.Select(c => c.ElementId))
+            .Concat(schedule?.ImpactedElements ?? [])
+            .Concat(schedule?.Undeclared ?? []);
+        return new(
             NodeRef.For(impact.Amended).ToString(),
             NodeRef.For(impact.Parent).ToString(),
             impact.ImpactedElements,
             KernelDependentsResponse.From(impact.Dependents),
-            [.. impact.ChangedElements.Select(c => new KernelElementChangeResponse(c.ElementId, c.InstanceType, c.Change.ToString(), c.Properties))],
-            impact.Schedule is { } schedule ? KernelSoaAmendmentDiffResponse.From(schedule, impact.ImpactedElements) : null,
+            [.. impact.ChangedElements.Select(c => new KernelElementChangeResponse(
+                c.ElementId,
+                c.InstanceType,
+                c.Change.ToString(),
+                c.Properties,
+                KernelElementNodeRefs.Resolve(governedElements, c.ElementId)))],
+            schedule,
             impact.ActiveSiteCount,
             impact.PendingSiteCount,
             impact.TotalParticipantCount,
             impact.AffectedParticipantCount,
             impact.ReconsentParticipantCount,
-            impact.Hidden);
+            impact.Hidden,
+            KernelElementNodeRefs.ResolveSubset(governedElements, allElementIds));
+    }
 }
 
 /// <summary>One element an amendment adds, changes or removes.</summary>
@@ -167,4 +186,10 @@ public sealed record KernelAmendmentImpactResponse(
 /// <param name="InstanceType">The element's kind, when the document names one.</param>
 /// <param name="Change">Added, Changed or Removed.</param>
 /// <param name="Properties">For a changed element, the JSON Pointers of its changed values.</param>
-public sealed record KernelElementChangeResponse(string ElementId, string? InstanceType, string Change, IReadOnlyList<string> Properties);
+/// <param name="ProtocolElement">Optional pinned <c>protocol_element</c> NodeRef when governed by an approved protocol version.</param>
+public sealed record KernelElementChangeResponse(
+    string ElementId,
+    string? InstanceType,
+    string Change,
+    IReadOnlyList<string> Properties,
+    string? ProtocolElement = null);

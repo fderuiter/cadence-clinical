@@ -27,6 +27,39 @@ function unpinRef(ref) {
     .split("@")[0];
 }
 
+const DEMO_CONCEPT_NODE_REFS = {
+  SYSBP: "concept:00000000-0000-0000-0000-000000007001@1", // deid-ignore
+  DIABP: "concept:00000000-0000-0000-0000-000000007002@1", // deid-ignore
+  PULSE: "concept:00000000-0000-0000-0000-000000007003@1", // deid-ignore
+  VSCOMM: "concept:00000000-0000-0000-0000-000000007004@1", // deid-ignore
+  HBA1C: "concept:00000000-0000-0000-0000-000000007005@1", // deid-ignore
+  EGFR: "concept:00000000-0000-0000-0000-000000007006@1", // deid-ignore
+  AETERM: "concept:00000000-0000-0000-0000-000000007007@1", // deid-ignore
+  AESEV: "concept:00000000-0000-0000-0000-000000007008@1", // deid-ignore
+};
+
+const DEMO_ELEMENT_BASE_UUIDS = {
+  "epoch-screening": "00000000-0000-0000-0000-000000006101", // deid-ignore
+  "epoch-treatment": "00000000-0000-0000-0000-000000006102", // deid-ignore
+  "visit-screening": "00000000-0000-0000-0000-000000006201", // deid-ignore
+  "visit-baseline": "00000000-0000-0000-0000-000000006202", // deid-ignore
+  "visit-week4": "00000000-0000-0000-0000-000000006203", // deid-ignore
+  "form-vital-signs": "00000000-0000-0000-0000-000000006301", // deid-ignore
+  "form-chem-panel": "00000000-0000-0000-0000-000000006302", // deid-ignore
+  "form-adverse-event": "00000000-0000-0000-0000-000000006303", // deid-ignore
+};
+
+function demoElementRef(elementId, versionNumber = 1) {
+  const uuid = DEMO_ELEMENT_BASE_UUIDS[elementId];
+  if (!uuid) return null;
+  const ver =
+    (elementId === "visit-week4" || elementId === "form-chem-panel") &&
+    Number(versionNumber) >= 2
+      ? 2
+      : 1;
+  return `protocol_element:${uuid}@${ver}`;
+}
+
 function buildSeededStudyVersions(studyRef) {
   const cleanStudyRef = unpinRef(studyRef) || STUDY_REF;
   return [
@@ -247,14 +280,28 @@ export function createProtocolDesignDomain(ctx) {
         }
       }
       const version = getProtocolVersion(versionRef);
+      const isGoverned =
+        String(version?.status || "").toLowerCase() === "approved";
       const vitalsTpl = DEMO_PROTOCOL_TEMPLATES[0];
+      const defaultItems = cloneJson(vitalsTpl.items).map((item, idx) => ({
+        ...item,
+        protocol_element: isGoverned
+          ? `protocol_element:${makeUuidFromIndex("00000650", idx + 1)}@1`
+          : null,
+        concept_ref: DEMO_CONCEPT_NODE_REFS[item.concept] || null,
+      }));
       const defaultForm = {
         id: vitalsTpl.form_oid,
         display_order: 1,
         name: vitalsTpl.form_name,
-        item_count: vitalsTpl.items.length,
-        required_item_count: vitalsTpl.items.filter((i) => i.required).length,
-        items: cloneJson(vitalsTpl.items),
+        item_count: defaultItems.length,
+        required_item_count: defaultItems.filter((i) => i.required).length,
+        items: defaultItems,
+        protocol_element: isGoverned
+          ? "protocol_element:00000000-0000-0000-0000-000000006301@1" // deid-ignore
+          : null,
+        form_version_snapshot:
+          "form_version_snapshot:00000000-0000-0000-0000-000000006401@1", // deid-ignore
       };
       return {
         version,
@@ -608,7 +655,10 @@ export function createProtocolDesignDomain(ctx) {
 
     simulateProtocolCandidate(body = {}) {
       const now = demoNowIso();
+      const simKind = body?.kind || "ProtocolVersion";
       const rawCandidateRef = body?.stored_version_ref || null;
+      const rawLibraryRef = body?.library_item_ref || null;
+      const rawBaseLibraryRef = body?.base_library_item_ref || null;
       const candidateFound = rawCandidateRef
         ? findMutableProtocolVersion(rawCandidateRef)
         : null;
@@ -625,21 +675,49 @@ export function createProtocolDesignDomain(ctx) {
         candidate?.content_hash ||
         (candidate
           ? `sha256-demo-v${candidate.number}-draft`
-          : "sha256:demo-sim-cand");
+          : `sha256:demo-sim-${simKind.toLowerCase()}`);
       const baseHash = base
         ? base.content_hash || `sha256-demo-v${base.number}`
-        : rawBaseRef
+        : rawBaseRef || rawBaseLibraryRef
           ? "sha256:demo-sim-base"
           : null;
-      const isAmendmentSim = Boolean(rawBaseRef);
-      const targetRef = rawCandidateRef || rawBaseRef || scopeRef;
+      const isAmendmentSim = Boolean(
+        rawBaseRef || rawBaseLibraryRef || body?.candidate_content
+      );
+      const targetRef =
+        rawCandidateRef || rawLibraryRef || rawBaseRef || scopeRef;
+      const candidateVersionRef =
+        simKind === "ProtocolVersion"
+          ? rawCandidateRef
+            ? unpinRef(rawCandidateRef)
+            : null
+          : rawLibraryRef
+            ? unpinRef(rawLibraryRef)
+            : null;
+      const baseVersionRefOut =
+        simKind === "ProtocolVersion"
+          ? rawBaseRef
+            ? unpinRef(rawBaseRef)
+            : null
+          : rawBaseLibraryRef
+            ? unpinRef(rawBaseLibraryRef)
+            : null;
+      const governedVerNum = Number(candidate?.number || 2);
+      const week4ElementRef = demoElementRef("visit-week4", governedVerNum);
+      const subjectsList = state.subjects || [];
+      const simBaseMs = demoNowMs();
+      const simDate = (offsetDays) =>
+        new Date(simBaseMs + offsetDays * 86_400_000)
+          .toISOString()
+          .slice(0, 10);
+
       return {
         scope: scopeRef,
         as_of: { valid_at: now, known_at: now },
         candidate: {
-          kind: "ProtocolVersion",
-          version: rawCandidateRef ? unpinRef(rawCandidateRef) : null,
-          base_version: rawBaseRef ? unpinRef(rawBaseRef) : null,
+          kind: simKind,
+          version: candidateVersionRef,
+          base_version: baseVersionRefOut,
           content_hash: candHash,
           base_content_hash: baseHash,
         },
@@ -650,49 +728,156 @@ export function createProtocolDesignDomain(ctx) {
         ],
         input_hash: `sha256-sim-in-${candHash}`,
         result_hash: `sha256-sim-out-${candHash}-${baseHash || "root"}`,
-        structural_diff: isAmendmentSim
-          ? [
-              {
-                element_id: "visit-week4",
-                instance_type: "PlannedVisit",
-                change: "Modified",
-                properties: ["window_before", "window_after"],
-              },
-            ]
-          : [],
-        schedule_changes: isAmendmentSim
-          ? [
-              {
-                activity_id: "visit-week4",
-                name: "Week 4",
-                change: "Modified",
-                before: {
+        structural_diff:
+          simKind === "ProtocolVersion" && isAmendmentSim
+            ? [
+                {
+                  element_id: "visit-week4",
+                  instance_type: "PlannedVisit",
+                  change: "Modified",
+                  properties: ["window_before", "window_after"],
+                  protocol_element: week4ElementRef,
+                },
+              ]
+            : [],
+        schedule_changes:
+          simKind === "ProtocolVersion" && isAmendmentSim
+            ? [
+                {
                   activity_id: "visit-week4",
                   name: "Week 4",
-                  epoch_id: "epoch-treatment",
-                  study_day: 28,
-                  window_before: 2,
-                  window_after: 2,
-                  repeating: false,
-                  locations: ["CLINIC"],
+                  change: "Modified",
+                  protocol_element: week4ElementRef,
+                  before: {
+                    activity_id: "visit-week4",
+                    name: "Week 4",
+                    epoch_id: "epoch-treatment",
+                    epoch_order: 2,
+                    study_day: 28,
+                    window_before: 2,
+                    window_after: 2,
+                    repeating: false,
+                    locations: ["CLINIC"],
+                    protocol_element: demoElementRef("visit-week4", 1),
+                    epoch_protocol_element: demoElementRef(
+                      "epoch-treatment",
+                      1
+                    ),
+                  },
+                  after: {
+                    activity_id: "visit-week4",
+                    name: "Week 4",
+                    epoch_id: "epoch-treatment",
+                    epoch_order: 2,
+                    study_day: 28,
+                    window_before: 3,
+                    window_after: 3,
+                    repeating: false,
+                    locations: ["CLINIC"],
+                    protocol_element: week4ElementRef,
+                    epoch_protocol_element: demoElementRef(
+                      "epoch-treatment",
+                      1
+                    ),
+                  },
                 },
-                after: {
-                  activity_id: "visit-week4",
-                  name: "Week 4",
-                  epoch_id: "epoch-treatment",
-                  study_day: 28,
-                  window_before: 3,
-                  window_after: 3,
-                  repeating: false,
-                  locations: ["CLINIC"],
-                },
-              },
-            ]
-          : [],
+              ]
+            : [],
         masked: [],
         dependents: ctx.getDependents(targetRef),
         matrix_gaps: [],
-        is_empty: !isAmendmentSim,
+        operational_impact: {
+          active_site_count: 2,
+          pending_site_count: 1,
+          total_participant_count: subjectsList.length,
+          affected_participant_count: isAmendmentSim
+            ? Math.min(2, subjectsList.length)
+            : 0,
+          reconsent_participant_count: isAmendmentSim ? 1 : 0,
+          participant_impacts: isAmendmentSim
+            ? subjectsList.slice(0, 2).map((subj, idx) => ({
+                enrollment: `enrollment:${ENROLLMENT_1001_UUID}@1`,
+                subject_code: subj.subject_id || `SUBJ-100${idx + 1}`,
+                status: subj.status || "ENROLLED",
+                cohort: idx === 0 ? "ActiveOnStudy" : "FollowUp",
+                requires_reconsent: idx === 0,
+                schedule_shifts: [
+                  {
+                    activity_id: "visit-week4",
+                    change: "Modified",
+                    protocol_element: week4ElementRef,
+                    before: {
+                      visit_id: "visit-week4",
+                      target_date: simDate(28),
+                      window_start: simDate(26),
+                      window_end: simDate(30),
+                      protocol_element: demoElementRef("visit-week4", 1),
+                    },
+                    after: {
+                      visit_id: "visit-week4",
+                      target_date: simDate(29),
+                      window_start: simDate(26),
+                      window_end: simDate(32),
+                      protocol_element: week4ElementRef,
+                    },
+                  },
+                ],
+              }))
+            : [],
+          hidden: { more_exist: false, reasons: [] },
+        },
+        projection_changes:
+          isAmendmentSim || simKind === "MappingSpecification"
+            ? [
+                {
+                  dataset: "LB",
+                  added_count: 2,
+                  removed_count: 0,
+                  changed_count: 1,
+                  samples: [
+                    {
+                      record_key: "SUBJ-1001:LB:VISIT-WEEK4:HBA1C",
+                      change: "Modified",
+                      before: { VISITDY: "28", LBSTAT: "" },
+                      after: { VISITDY: "28", LBSTAT: "SCHEDULED" },
+                    },
+                  ],
+                },
+              ]
+            : [],
+        validation_delta: {
+          opening:
+            simKind === "RulePack"
+              ? [
+                  {
+                    rule_id: "SDTM-VS-004",
+                    rule_version: 1,
+                    severity: "Warning",
+                    stage: "Submission",
+                    dataset: "VS",
+                    subject: `enrollment:${ENROLLMENT_1001_UUID}@1`,
+                    explanation:
+                      "Seated systolic blood pressure exceeds protocol review threshold.",
+                  },
+                ]
+              : [],
+          resolving: isAmendmentSim
+            ? [
+                {
+                  rule_id: "VISIT-WIN-002",
+                  rule_version: 1,
+                  severity: "Warning",
+                  stage: "Capture",
+                  dataset: "SV",
+                  subject: `enrollment:${ENROLLMENT_1001_UUID}@1`,
+                  explanation:
+                    "Expanded +/-3 day Week 4 visit window resolves prior out-of-window warning.",
+                },
+              ]
+            : [],
+          unchanged_count: 14,
+        },
+        is_empty: !isAmendmentSim && simKind === "ProtocolVersion",
       };
     },
 
@@ -1280,11 +1465,15 @@ export function createProtocolDesignDomain(ctx) {
     },
 
     getScheduleOfActivities(versionRef) {
+      const version = getProtocolVersion(versionRef);
+      const isGoverned =
+        String(version?.status || "Approved").toLowerCase() === "approved";
+      const verNum = Number(version?.number || 2);
       return {
         version: versionRef || VERSION_V2_REF,
         content_hash: "sha256-demo-soa-v2",
         hash: "sha256-demo-soa-matrix",
-        title: "DEMO-01 Schedule of Activities (Protocol v2.0)",
+        title: `DEMO-01 Schedule of Activities (Protocol v${verNum}.0)`,
         epochs: [
           {
             epoch_id: "epoch-screening",
@@ -1292,6 +1481,9 @@ export function createProtocolDesignDomain(ctx) {
             order: 1,
             first_column: 0,
             column_count: 1,
+            protocol_element: isGoverned
+              ? demoElementRef("epoch-screening", verNum)
+              : null,
           },
           {
             epoch_id: "epoch-treatment",
@@ -1299,6 +1491,9 @@ export function createProtocolDesignDomain(ctx) {
             order: 2,
             first_column: 1,
             column_count: 2,
+            protocol_element: isGoverned
+              ? demoElementRef("epoch-treatment", verNum)
+              : null,
           },
         ],
         columns: [
@@ -1312,6 +1507,9 @@ export function createProtocolDesignDomain(ctx) {
             repeating: false,
             locations: ["CLINIC"],
             footnotes: [1],
+            protocol_element: isGoverned
+              ? demoElementRef("visit-screening", verNum)
+              : null,
           },
           {
             activity_id: "visit-baseline",
@@ -1323,6 +1521,9 @@ export function createProtocolDesignDomain(ctx) {
             repeating: false,
             locations: ["CLINIC"],
             footnotes: [],
+            protocol_element: isGoverned
+              ? demoElementRef("visit-baseline", verNum)
+              : null,
           },
           {
             activity_id: "visit-week4",
@@ -1334,6 +1535,9 @@ export function createProtocolDesignDomain(ctx) {
             repeating: false,
             locations: ["CLINIC"],
             footnotes: [],
+            protocol_element: isGoverned
+              ? demoElementRef("visit-week4", verNum)
+              : null,
           },
         ],
         rows: [
@@ -1341,31 +1545,57 @@ export function createProtocolDesignDomain(ctx) {
             collection_spec_id: "form-vital-signs",
             name: "Vital Signs (CDASH VS)",
             item_ids: ["item-sysbp", "item-diabp", "item-pulse", "item-notes"],
-            concepts: ["SYSBP", "DIABP", "PULSE", "VSCOMM"],
+            concepts: [
+              DEMO_CONCEPT_NODE_REFS.SYSBP,
+              DEMO_CONCEPT_NODE_REFS.DIABP,
+              DEMO_CONCEPT_NODE_REFS.PULSE,
+              DEMO_CONCEPT_NODE_REFS.VSCOMM,
+            ],
             columns: [0, 1, 2],
             frequency: 3,
             repeating: false,
             footnotes: [1],
+            protocol_element: isGoverned
+              ? demoElementRef("form-vital-signs", verNum)
+              : null,
+            form_version_snapshot:
+              "form_version_snapshot:00000000-0000-0000-0000-000000006401@1", // deid-ignore
           },
           {
             collection_spec_id: "form-chem-panel",
             name: "Clinical Chemistry Panel (CDASH LB)",
             item_ids: ["item-hba1c", "item-egfr"],
-            concepts: ["HBA1C", "EGFR"],
+            concepts: [
+              DEMO_CONCEPT_NODE_REFS.HBA1C,
+              DEMO_CONCEPT_NODE_REFS.EGFR,
+            ],
             columns: [0, 2],
             frequency: 2,
             repeating: false,
             footnotes: [],
+            protocol_element: isGoverned
+              ? demoElementRef("form-chem-panel", verNum)
+              : null,
+            form_version_snapshot:
+              "form_version_snapshot:00000000-0000-0000-0000-000000006402@1", // deid-ignore
           },
           {
             collection_spec_id: "form-adverse-event",
             name: "Adverse Event (CDASH AE)",
             item_ids: ["item-aeterm", "item-aesev"],
-            concepts: ["AETERM", "AESEV"],
+            concepts: [
+              DEMO_CONCEPT_NODE_REFS.AETERM,
+              DEMO_CONCEPT_NODE_REFS.AESEV,
+            ],
             columns: [],
             frequency: 0,
             repeating: true,
             footnotes: [],
+            protocol_element: isGoverned
+              ? demoElementRef("form-adverse-event", verNum)
+              : null,
+            form_version_snapshot:
+              "form_version_snapshot:00000000-0000-0000-0000-000000006403@1", // deid-ignore
           },
         ],
         footnotes: [
@@ -1497,10 +1727,17 @@ export function createProtocolDesignDomain(ctx) {
     },
 
     getAmendmentImpact(versionRef) {
+      const subjectsList = state.subjects || [];
+      const week4ElementRef = demoElementRef("visit-week4", 2);
+      const chemElementRef = demoElementRef("form-chem-panel", 2);
       return {
         amended: versionRef || VERSION_V2_REF,
         parent: VERSION_V1_REF,
         impacted_elements: ["visit-week4", "form-chem-panel"],
+        protocol_elements: {
+          "visit-week4": week4ElementRef,
+          "form-chem-panel": chemElementRef,
+        },
         dependents: ctx.getDependents(versionRef || VERSION_V2_REF),
         changed_elements: [
           {
@@ -1508,16 +1745,26 @@ export function createProtocolDesignDomain(ctx) {
             instance_type: "PlannedVisit",
             change: "Modified",
             properties: ["window_before", "window_after"],
+            protocol_element: week4ElementRef,
           },
         ],
         schedule: {
           directives: [],
           impacted_elements: ["visit-week4"],
-          impacted_concepts: ["HBA1C"],
+          impacted_concepts: [DEMO_CONCEPT_NODE_REFS.HBA1C],
           undeclared: [],
           changes_schedule: true,
           changes_eligibility: false,
+          protocol_elements: {
+            "visit-week4": week4ElementRef,
+          },
         },
+        active_site_count: 2,
+        pending_site_count: 1,
+        total_participant_count: subjectsList.length,
+        affected_participant_count: Math.min(2, subjectsList.length),
+        reconsent_participant_count: 1,
+        hidden: { more_exist: false, reasons: [] },
       };
     },
 

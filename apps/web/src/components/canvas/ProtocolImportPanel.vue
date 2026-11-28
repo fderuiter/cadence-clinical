@@ -1,6 +1,7 @@
 <template>
   <div :id="`${idPrefix}-panel`" class="protocol-import-panel">
     <form
+      v-if="canGovern"
       :id="`${idPrefix}-form`"
       class="import-card"
       @submit.prevent="submitImport"
@@ -384,13 +385,19 @@
               draftSummary.amendment.impacted_elements.length
             }}):
           </span>
-          <code
+          <template
             v-for="elemId in draftSummary.amendment.impacted_elements"
             :key="elemId"
-            class="amendment-element-code"
           >
-            {{ elemId }}
-          </code>
+            <NodeRefChip
+              v-if="amendmentElementNodeRef(elemId)"
+              :node-ref="amendmentElementNodeRef(elemId)!"
+              :fallback-title="elemId"
+            />
+            <code v-else class="amendment-element-code">
+              {{ elemId }}
+            </code>
+          </template>
         </div>
       </div>
 
@@ -402,7 +409,12 @@
       >
         <span>
           Compiled ODM edit checks into validation rule pack
-          <strong>{{ draftSummary.imported_rule_pack.key }}</strong>
+          <NodeRefChip
+            v-if="parseNodeRef(draftSummary.imported_rule_pack.ref)"
+            :node-ref="draftSummary.imported_rule_pack.ref"
+            :fallback-title="draftSummary.imported_rule_pack.key"
+          />
+          <strong v-else>{{ draftSummary.imported_rule_pack.key }}</strong>
           (v{{ draftSummary.imported_rule_pack.version }},
           {{ draftSummary.imported_rule_pack.rule_count }}
           {{
@@ -462,7 +474,34 @@
               >
                 Repeating
               </span>
-              <code>{{ form.id }}</code> · {{ form.item_count }}
+              <NodeRefChip
+                v-if="
+                  form.form_version_snapshot &&
+                  parseNodeRef(form.form_version_snapshot)
+                "
+                :node-ref="form.form_version_snapshot"
+                :fallback-title="`${form.name || form.id} form`"
+              />
+              <NodeRefChip
+                v-if="
+                  form.protocol_element && parseNodeRef(form.protocol_element)
+                "
+                :node-ref="form.protocol_element"
+                :fallback-title="form.name || form.id"
+              />
+              <code
+                v-if="
+                  !(
+                    form.form_version_snapshot &&
+                    parseNodeRef(form.form_version_snapshot)
+                  ) &&
+                  !(
+                    form.protocol_element && parseNodeRef(form.protocol_element)
+                  )
+                "
+                >{{ form.id }}</code
+              >
+              · {{ form.item_count }}
               {{ form.item_count === 1 ? "item" : "items" }}
             </span>
           </header>
@@ -483,7 +522,19 @@
                 <span v-if="item.value_kind" class="badge-kind">
                   {{ item.value_kind }}{{ item.unit ? ` (${item.unit})` : "" }}
                 </span>
-                <code class="draft-item-id">{{ item.id }}</code>
+                <NodeRefChip
+                  v-if="itemConceptNodeRef(item)"
+                  :node-ref="itemConceptNodeRef(item)!"
+                  :fallback-title="item.prompt || item.id"
+                />
+                <NodeRefChip
+                  v-if="
+                    item.protocol_element && parseNodeRef(item.protocol_element)
+                  "
+                  :node-ref="item.protocol_element"
+                  :fallback-title="item.id"
+                />
+                <code v-else class="draft-item-id">{{ item.id }}</code>
               </span>
             </li>
           </ol>
@@ -500,12 +551,19 @@ import {
   describeKernelError,
   kernelApi,
   type KernelProtocolDraftSummary,
+  type KernelProtocolFormItem,
   type KernelProtocolTemplate,
   type KernelTemplateAssignmentInput,
 } from "../../api/kernelApi";
+import { parseNodeRef } from "../../canvas/nodeRef";
+import {
+  ensureNodesResolved,
+  seedNodeSummary,
+} from "../../canvas/nodeResolver";
 import { formatClinicalStatus } from "../../utils/clinicalLabels";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 import { useScopedNavigation } from "../../composables/useScopedNavigation";
+import NodeRefChip from "./NodeRefChip.vue";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
@@ -515,10 +573,12 @@ const props = withDefaults(
     studyCode: string;
     selectedVersionRef?: string;
     idPrefix?: string;
+    canGovern?: boolean;
   }>(),
   {
     selectedVersionRef: "",
     idPrefix: "protocol-import",
+    canGovern: true,
   }
 );
 
@@ -734,8 +794,87 @@ watch(
   }
 );
 
+function amendmentElementNodeRef(elemId: string): string | null {
+  const refText = draftSummary.value?.amendment?.protocol_elements?.[elemId];
+  return refText && parseNodeRef(refText) ? refText : null;
+}
+
+function itemConceptNodeRef(item: KernelProtocolFormItem): string | null {
+  if (item.concept_ref && parseNodeRef(item.concept_ref)) {
+    return item.concept_ref;
+  }
+  if (item.concept && parseNodeRef(item.concept)) {
+    return item.concept;
+  }
+  return null;
+}
+
+function seedSummaryNodes(summary: KernelProtocolDraftSummary) {
+  if (
+    summary.imported_rule_pack?.ref &&
+    parseNodeRef(summary.imported_rule_pack.ref)
+  ) {
+    seedNodeSummary(summary.imported_rule_pack.ref, {
+      kind: "library_item",
+      title: summary.imported_rule_pack.key,
+      status: summary.imported_rule_pack.status,
+    });
+  }
+  for (const [elemId, elemRef] of Object.entries(
+    summary.amendment?.protocol_elements ?? {}
+  )) {
+    if (elemRef && parseNodeRef(elemRef)) {
+      seedNodeSummary(elemRef, {
+        kind: "protocol_element",
+        title: elemId,
+        code: elemId,
+      });
+    }
+  }
+  const conceptRefs: string[] = [];
+  for (const form of summary.forms ?? []) {
+    if (
+      form.form_version_snapshot &&
+      parseNodeRef(form.form_version_snapshot)
+    ) {
+      seedNodeSummary(form.form_version_snapshot, {
+        kind: "form_version_snapshot",
+        title: `${form.name || form.id} form`,
+      });
+    }
+    if (form.protocol_element && parseNodeRef(form.protocol_element)) {
+      seedNodeSummary(form.protocol_element, {
+        kind: "protocol_element",
+        title: form.name || form.id,
+        code: form.id,
+      });
+    }
+    for (const item of form.items ?? []) {
+      if (item.protocol_element && parseNodeRef(item.protocol_element)) {
+        seedNodeSummary(item.protocol_element, {
+          kind: "protocol_element",
+          title: item.prompt || item.id,
+          code: item.id,
+        });
+      }
+      const cRef = itemConceptNodeRef(item);
+      if (cRef) {
+        conceptRefs.push(cRef);
+      }
+    }
+  }
+  if (conceptRefs.length) {
+    ensureNodesResolved(conceptRefs);
+  }
+}
+
 async function loadTemplates() {
-  if (typeof kernelApi.listProtocolTemplates !== "function") return;
+  if (
+    !props.canGovern ||
+    typeof kernelApi.listProtocolTemplates !== "function"
+  ) {
+    return;
+  }
   try {
     templates.value = await kernelApi.listProtocolTemplates();
   } catch {
@@ -756,8 +895,12 @@ async function loadSelectedSummary(versionRef: string) {
     const loaded = await kernelApi.getProtocolDesignSummary(versionRef);
     if (req === summaryRequest) {
       draftSummary.value = loaded;
+      seedSummaryNodes(loaded);
     }
-    if (typeof kernelApi.getScheduleOfActivities === "function") {
+    if (
+      props.canGovern &&
+      typeof kernelApi.getScheduleOfActivities === "function"
+    ) {
       try {
         const soa = await kernelApi.getScheduleOfActivities(versionRef);
         if (req === summaryRequest && Array.isArray(soa.columns)) {
@@ -837,6 +980,7 @@ async function submitImport() {
     });
 
     draftSummary.value = summary;
+    seedSummaryNodes(summary);
     const notesCount = Number(summary.import_notes?.length ?? 0);
     const notesSuffix =
       notesCount > 0
@@ -865,8 +1009,19 @@ async function submitImport() {
 }
 
 onMounted(() => {
-  loadTemplates();
+  if (props.canGovern) {
+    void loadTemplates();
+  }
 });
+
+watch(
+  () => props.canGovern,
+  (allowed) => {
+    if (allowed && templates.value.length === 0) {
+      void loadTemplates();
+    }
+  }
+);
 
 defineExpose({
   openFilePicker,
@@ -1326,6 +1481,10 @@ defineExpose({
 }
 
 .draft-form-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
   font-size: 0.78rem;
   color: var(--neutral-dark);
 }

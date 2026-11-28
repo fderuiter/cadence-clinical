@@ -547,7 +547,16 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         var factory = CreateFactory();
         using var designer = factory.CreateSignedClient(DesignerIdentity);
 
-        // 1. First version approves with AttestationMeaning.Approved alone (no SimulationReport required for v1).
+        // 1. Before approval, v1 omits protocol_element and form_version_snapshot; once approved, both are emitted.
+        using (var unapprovedSoa = await designer.GetAsync($"/api/v1/kernel/protocol-versions/{v1Ref}/schedule-of-activities", ct))
+        {
+            unapprovedSoa.StatusCode.Should().Be(HttpStatusCode.OK, await unapprovedSoa.Content.ReadAsStringAsync(ct));
+            var doc = JsonDocument.Parse(await unapprovedSoa.Content.ReadAsStringAsync(ct)).RootElement;
+            doc.GetProperty("columns")[0].GetProperty("protocol_element").ValueKind.Should().Be(JsonValueKind.Null);
+            doc.GetProperty("rows")[0].GetProperty("protocol_element").ValueKind.Should().Be(JsonValueKind.Null);
+            doc.GetProperty("rows")[0].GetProperty("form_version_snapshot").ValueKind.Should().Be(JsonValueKind.Null);
+        }
+
         string v1Hash;
         using (var submitV1 = await designer.SendAsync(BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/submit-for-review", "fork-v1-submit", "Freeze v1", null), ct))
         {
@@ -565,6 +574,27 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
             ct))
         {
             approveV1.StatusCode.Should().Be(HttpStatusCode.OK, await approveV1.Content.ReadAsStringAsync(ct));
+        }
+
+        using (var approvedSoa = await designer.GetAsync($"/api/v1/kernel/protocol-versions/{v1Ref}/schedule-of-activities", ct))
+        {
+            approvedSoa.StatusCode.Should().Be(HttpStatusCode.OK, await approvedSoa.Content.ReadAsStringAsync(ct));
+            var doc = JsonDocument.Parse(await approvedSoa.Content.ReadAsStringAsync(ct)).RootElement;
+            doc.GetProperty("epochs")[0].GetProperty("protocol_element").GetString().Should().StartWith("protocol_element:").And.EndWith("@1");
+            doc.GetProperty("columns")[0].GetProperty("protocol_element").GetString().Should().StartWith("protocol_element:").And.EndWith("@1");
+            doc.GetProperty("rows")[0].GetProperty("protocol_element").GetString().Should().StartWith("protocol_element:").And.EndWith("@1");
+            doc.GetProperty("rows")[0].GetProperty("form_version_snapshot").GetString().Should().StartWith("form_version_snapshot:").And.EndWith("@1");
+        }
+
+        using (var approvedSummary = await designer.GetAsync($"/api/v1/kernel/protocol-versions/{v1Ref}/design-summary", ct))
+        {
+            approvedSummary.StatusCode.Should().Be(HttpStatusCode.OK, await approvedSummary.Content.ReadAsStringAsync(ct));
+            var doc = JsonDocument.Parse(await approvedSummary.Content.ReadAsStringAsync(ct)).RootElement;
+            var form = doc.GetProperty("forms")[0];
+            form.GetProperty("protocol_element").GetString().Should().StartWith("protocol_element:").And.EndWith("@1");
+            form.GetProperty("form_version_snapshot").GetString().Should().StartWith("form_version_snapshot:").And.EndWith("@1");
+            form.GetProperty("items")[0].GetProperty("protocol_element").GetString().Should().StartWith("protocol_element:").And.EndWith("@1");
+            form.GetProperty("items")[0].GetProperty("concept_ref").GetString().Should().StartWith("concept:");
         }
 
         // 2. Fork v2 adding visit.week4 + eligibility.age18 while omitting them from ImpactedElements -> SubmitForReview refuses with 422!
@@ -677,7 +707,10 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
             simProtRes.StatusCode.Should().Be(HttpStatusCode.OK, await simProtRes.Content.ReadAsStringAsync(ct));
             protocolSimulation = (await simProtRes.Content.ReadFromJsonAsync<KernelSimulationResponse>(httpJsonOptions, ct))!;
             protocolSimulation.Candidate.Kind.Should().Be("ProtocolVersion");
-            protocolSimulation.ScheduleChanges.Should().ContainSingle(c => c.ActivityId == "visit.week4");
+            var addedWeek4 = protocolSimulation.ScheduleChanges.Should().ContainSingle(c => c.ActivityId == "visit.week4").Subject;
+            addedWeek4.ProtocolElement.Should().BeNull("newly added element on unapproved v2 has no governed protocol_element yet");
+            addedWeek4.After!.EpochProtocolElement.Should().StartWith("protocol_element:").And.EndWith("@1");
+            protocolSimulation.StructuralDiff.Should().Contain(c => c.ElementId == "cs.vitals" || c.ProtocolElement == null);
         }
 
         var mapSpecJson = MappingSpecificationJson.ToJson(
@@ -902,6 +935,21 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
             approvedV2Res.StatusCode.Should().Be(HttpStatusCode.OK, await approvedV2Res.Content.ReadAsStringAsync(ct));
             var doc = JsonDocument.Parse(await approvedV2Res.Content.ReadAsStringAsync(ct)).RootElement;
             doc.GetProperty("status").GetString().Should().Be("Approved");
+        }
+
+        using (var approvedV2Soa = await designer.GetAsync($"/api/v1/kernel/protocol-versions/{v2Ref}/schedule-of-activities", ct))
+        {
+            approvedV2Soa.StatusCode.Should().Be(HttpStatusCode.OK, await approvedV2Soa.Content.ReadAsStringAsync(ct));
+            var doc = JsonDocument.Parse(await approvedV2Soa.Content.ReadAsStringAsync(ct)).RootElement;
+            doc.GetProperty("columns")
+                .EnumerateArray()
+                .Single(c => c.GetProperty("activity_id").GetString() == "visit.screening")
+                .GetProperty("protocol_element").GetString().Should().StartWith("protocol_element:").And.EndWith("@1");
+            doc.GetProperty("columns")
+                .EnumerateArray()
+                .Single(c => c.GetProperty("activity_id").GetString() == "visit.week4")
+                .GetProperty("protocol_element").GetString().Should().StartWith("protocol_element:").And.EndWith("@2");
+            doc.GetProperty("rows")[0].GetProperty("form_version_snapshot").GetString().Should().StartWith("form_version_snapshot:");
         }
     }
 
@@ -1255,6 +1303,8 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
                 services.RemoveAll<ISimulationInputs>();
                 services.AddSingleton<ISimulationInputs>(_store);
                 services.RemoveAll<IProtocolSubmissionCheck>();
+                services.RemoveAll<IConceptRegistry>();
+                services.AddSingleton<IConceptRegistry>(_store);
 
                 foreach (var hosted in services.Where(d => d.ServiceType == typeof(IHostedService)).ToList())
                 {
@@ -1266,7 +1316,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
     private HttpClient CreateClient(GatewayIdentity identity) =>
         CreateFactory().CreateSignedClient(identity);
 
-    private static HttpRequestMessage BuildPost(
+    internal static HttpRequestMessage BuildPost(
         string path,
         string? idempotencyKey,
         string? reason,
@@ -1296,7 +1346,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         return req;
     }
 
-    private sealed class InMemoryGovernanceStore :
+    internal sealed class InMemoryGovernanceStore :
         IKernelUnitOfWorkFactory,
         ITenantDirectory,
         ITenantEntitlementReader,
@@ -1306,7 +1356,8 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         IProtocolVersionReader,
         IStudyGovernanceReader,
         IAttestationVerifier,
-        ISimulationInputs
+        ISimulationInputs,
+        IConceptRegistry
     {
         private readonly TenantId _tenant;
         private readonly IClock _clock;
@@ -1502,10 +1553,47 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
             Task.FromResult(Find<ProtocolVersion>(version) is { } found ? ToSummary(found) : null);
 
         public Task<SoaMatrix?> GetScheduleOfActivitiesAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
-            Task.FromResult<SoaMatrix?>(null);
+            Task.FromResult(Find<ProtocolVersion>(version)?.Design() is { } design ? ScheduleOfActivities.Compile(design) : null);
 
         public Task<ProtocolDesign?> GetDesignAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
             Task.FromResult(Find<ProtocolVersion>(version)?.Design());
+
+        public Task<string?> GetContentAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+            Task.FromResult(Find<ProtocolVersion>(version)?.Content);
+
+        public Task<ProtocolAmendment?> GetAmendmentAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+            Task.FromResult(Find<ProtocolVersion>(version)?.Amendment);
+
+        public Task<IReadOnlyDictionary<string, NodeRef>> GetFormVersionSnapshotsAsync(
+            TenantId tenant,
+            ProtocolVersionId version,
+            CancellationToken cancellationToken)
+        {
+            var result = new Dictionary<string, NodeRef>(StringComparer.Ordinal);
+            foreach (var snapshot in ReadAll<FormVersionSnapshot>().Where(s => s.ProtocolVersionId == version))
+            {
+                var nodeRef = NodeRef.For(snapshot.Id, snapshot.VersionIndex);
+                result[snapshot.FormId] = nodeRef;
+                if (string.Equals(snapshot.FormId, snapshot.StudyId.Value.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    result.TryAdd("*", nodeRef);
+                }
+            }
+
+            return Task.FromResult<IReadOnlyDictionary<string, NodeRef>>(result);
+        }
+
+        public Task<IReadOnlyDictionary<string, NodeRef>> GetGovernedProtocolElementsAsync(
+            TenantId tenant,
+            ProtocolVersionId version,
+            bool includeApprovedAncestorWhenUnapproved,
+            CancellationToken cancellationToken) =>
+            ProtocolElementLineage.ResolveApprovedChainElementsAsync(
+                this,
+                tenant,
+                version,
+                includeApprovedAncestorWhenUnapproved,
+                cancellationToken);
 
         public Task<IReadOnlyList<StudyArtifactSummary>> ListStudyArtifactsAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<StudyArtifactSummary>>([
@@ -1677,6 +1765,57 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
 
         public Task<TenantResidency?> FindAsync(TenantId tenant, CancellationToken cancellationToken) =>
             Task.FromResult<TenantResidency?>(null);
+
+        public Task<ConceptVersionView?> ResolveAsync(TenantId tenant, ConceptRef concept, CancellationToken cancellationToken = default)
+        {
+            if (tenant != _tenant || Find<Concept>(concept.ConceptId) is not { } found)
+            {
+                return Task.FromResult<ConceptVersionView?>(null);
+            }
+
+            var revision = found.Revisions.FirstOrDefault(r => r.Version == concept.Version);
+            if (revision is null)
+            {
+                return Task.FromResult<ConceptVersionView?>(null);
+            }
+
+            return Task.FromResult<ConceptVersionView?>(new ConceptVersionView(
+                concept,
+                found.Origin,
+                found.ExternalCode,
+                found.Kind,
+                revision.PreferredLabel,
+                revision.Definition,
+                found.Status,
+                found.Version,
+                ConceptMappingState.Unmapped,
+                revision.RecordedAt));
+        }
+
+        public Task<ConceptVersionView?> GetCurrentAsync(TenantId tenant, ConceptId concept, CancellationToken cancellationToken = default) =>
+            tenant == _tenant && Find<Concept>(concept) is { } found
+                ? ResolveAsync(tenant, found.Current, cancellationToken)
+                : Task.FromResult<ConceptVersionView?>(null);
+
+        public Task<ConceptVersionView?> FindBiomedicalConceptAsync(TenantId tenant, string cdiscConceptCode, CancellationToken cancellationToken = default) =>
+            tenant == _tenant && ReadAll<Concept>().FirstOrDefault(c => string.Equals(c.ExternalCode, cdiscConceptCode, StringComparison.OrdinalIgnoreCase)) is { } found
+                ? ResolveAsync(tenant, found.Current, cancellationToken)
+                : Task.FromResult<ConceptVersionView?>(null);
+
+        public Task<CodeSystemVersionView?> FindCodeSystemVersionAsync(TenantId tenant, string codeSystemUri, string version, CancellationToken cancellationToken = default) =>
+            Task.FromResult<CodeSystemVersionView?>(null);
+
+        public Task<IReadOnlyList<CodeSystemEntryView>> LookupAsync(TenantId tenant, Coding coding, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<CodeSystemEntryView>>([]);
+
+        public Task<IReadOnlyList<CodeSystemEntryView>> GetGroupAsync(TenantId tenant, CodeSystemVersionId version, string groupCode, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<CodeSystemEntryView>>([]);
+
+        public Task<IReadOnlyList<ConceptMappingView>> ResolveCodingAsync(TenantId tenant, Coding coding, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ConceptMappingView>>([]);
+
+        public Task<IReadOnlyList<ConceptMappingView>> GetMappingsAsync(TenantId tenant, ConceptId concept, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ConceptMappingView>>([]);
 
         private TAggregate? Find<TAggregate>(object id)
             where TAggregate : AggregateRootBase =>

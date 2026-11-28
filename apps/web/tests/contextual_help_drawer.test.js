@@ -1091,7 +1091,7 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
   });
 
   describe("8. Clinical Canvas Query-Aware SOP Scoring & Full Route Coverage", () => {
-    it("resolves distinct section-specific SOPs and #canvas-* anchors for all 15 Clinical Canvas sections and stage=analyze", () => {
+    it("resolves distinct section-specific SOPs and #canvas-* anchors for all 16 Clinical Canvas sections and stage=analyze", () => {
       const bareHelp = getFallbackContextualHelp(
         "/studies/CADENCE-101",
         "data_manager"
@@ -1121,7 +1121,7 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
           }
         }
       }
-      expect(sectionCount).toBe(15);
+      expect(sectionCount).toBe(16);
 
       const analyzeHelp = getFallbackContextualHelp(
         "/studies/CADENCE-101?stage=analyze",
