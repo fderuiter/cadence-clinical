@@ -1240,7 +1240,13 @@ public sealed class StandaloneTenantIsolationPostgresTests(ThrowawayPostgresData
             SiteIds: siteIds,
             TenantId: "tenant-alpha",
             StudyIds: [batchStudyId],
-            ProductFamilies: TestSecurityContext.AllProductFamilies));
+            ProductFamilies: TestSecurityContext.AllProductFamilies,
+            SigToken: TestSecurityContext.CreateSigToken(
+                userId: "fin-batch-officer",
+                action: "/api/v1/payments/invoices/batch-compile",
+                semanticAction: "payments.invoice.approve",
+                roles: ["finance_officer", "sysadmin"],
+                issuedAt: paymentsClock.UtcNow)));
 
         using var batchReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/payments/invoices/batch-compile")
         {
