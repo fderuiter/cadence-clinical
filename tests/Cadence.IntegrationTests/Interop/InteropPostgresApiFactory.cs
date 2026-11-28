@@ -56,7 +56,7 @@ public sealed class InteropPostgresApiFactory : WebApplicationFactory<Cadence.Ap
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseTestGatewaySecret().UseTestFieldProtectionKeys().UseTestSceSigningKey();
+        builder.UseTestGatewaySecret().UseTestScratchWorkspace().UseTestFieldProtectionKeys().UseTestSceSigningKey();
         if (_database.ConnectionString is { } connectionString)
         {
             builder.UseSetting("ConnectionStrings:cadence", connectionString);

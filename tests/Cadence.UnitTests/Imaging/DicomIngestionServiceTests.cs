@@ -12,6 +12,7 @@ using Cadence.Apps.Imaging.Infrastructure.Persistence;
 using Cadence.Apps.Imaging.Services;
 using Cadence.Deid;
 using Cadence.Kernel.Time;
+using Cadence.Storage;
 using Cadence.Testing.Time;
 
 using FellowOakDicom;
@@ -21,6 +22,7 @@ using FluentAssertions;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Options;
 
 using Xunit;
 
@@ -37,13 +39,36 @@ public sealed class DicomIngestionMemoryQuotaCollection
 }
 
 [Collection(DicomIngestionMemoryQuotaCollection.Name)]
-public sealed class DicomIngestionServiceTests
+public sealed class DicomIngestionServiceTests : IDisposable
 {
     private static readonly byte[] SigningKey = RandomNumberGenerator.GetBytes(DicomDeidentifier.MinimumSigningKeyLength);
     private static readonly byte[] PseudonymizationKey = RandomNumberGenerator.GetBytes(DicomDeidentifier.MinimumSigningKeyLength);
+    private readonly string _scratchRoot = Path.Combine(Path.GetTempPath(), $"cadence-dicom-svc-scratch-{Guid.NewGuid():N}");
+    private readonly FileSystemScratchWorkspaceProvider _scratchWorkspace;
+
+    public DicomIngestionServiceTests()
+    {
+        _scratchWorkspace = new FileSystemScratchWorkspaceProvider(
+            new ScratchWorkspaceOptions { RootPath = _scratchRoot });
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_scratchRoot))
+        {
+            Directory.Delete(_scratchRoot, recursive: true);
+        }
+    }
 
     /// <summary>A de-identifier with this run's random keys; imaging has no default key (#5399).</summary>
     internal static DicomDeidentifier TestDeidentifier() => new(SigningKey, PseudonymizationKey);
+
+    private DicomIngestionService CreateService(
+        ImagingDbContext dbContext,
+        DicomDeidentifier? deidentifier = null,
+        IClock? clock = null,
+        BatchArchiveQuotas? quotas = null) =>
+        new(dbContext, deidentifier ?? TestDeidentifier(), _scratchWorkspace, clock ?? SystemClock.Instance, quotas);
 
     /// <summary>A batch manifest verifies under the service's signing key, and not under another key or once altered (#5399).</summary>
     [Fact]
@@ -53,7 +78,7 @@ public sealed class DicomIngestionServiceTests
             .UseInMemoryDatabase($"ImagingManifestKeyTest_{Guid.NewGuid():N}")
             .Options;
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
 
         var result = await service.IngestBatchAsync(
             new BatchIngestionRequest([new("slice_001.dcm", CreateSampleDicomBytesWithPhi("70001"))], "SUBJ-7001", "SITE-701", "STUDY-7001"),
@@ -77,7 +102,7 @@ public sealed class DicomIngestionServiceTests
 
         await using var dbContext = new ImagingDbContext(options);
 
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
 
         byte[] rawDicom = CreateSampleDicomBytesWithPhi("99991");
 
@@ -115,7 +140,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
 
         var files = new List<BatchFileItem>
         {
@@ -162,7 +187,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
 
         const string sharedRawStudyUid = "1.2.840.113619.2.55.9001"; // deid-ignore: synthetic test DICOM UID
         byte[] site1Ct = CreateSampleDicomBytesWithStudyAndModality(
@@ -253,7 +278,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
         byte[] dicomBytes = CreateSampleDicomBytesWithPhi("90101");
 
         var singleAct = async () => await service.IngestInstanceAsync(
@@ -324,7 +349,7 @@ public sealed class DicomIngestionServiceTests
         });
         await dbContext.SaveChangesAsync(ct);
 
-        var service = new DicomIngestionService(dbContext, deidentifier, clock);
+        var service = CreateService(dbContext, deidentifier, clock);
 
         var singleAct = async () => await service.IngestInstanceAsync(
             sample,
@@ -364,7 +389,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
 
         byte[] studyA = CreateSampleDicomBytesWithStudyAndModality(
             "1.2.840.113619.2.55.9201", // deid-ignore: synthetic test DICOM UID
@@ -441,7 +466,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
 
         using var zipMs = new MemoryStream();
         using (var archive = new ZipArchive(zipMs, ZipArchiveMode.Create, leaveOpen: true))
@@ -498,7 +523,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
 
         byte[] compressedDicom = CreateUnsupportedCompressedDicomBytes();
 
@@ -524,7 +549,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
 
         var act = async () => await service.IngestInstanceAsync(
             Array.Empty<byte>(),
@@ -547,7 +572,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
 
         var files = new List<BatchFileItem>
         {
@@ -632,7 +657,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, deidentifier, clock);
+        var service = CreateService(dbContext, deidentifier, clock);
 
         byte[] rawSlice1 = CreateSampleDicomBytesWithPhi("8101");
         byte[] rawSlice2 = CreateSampleDicomBytesWithPhi("8102");
@@ -717,7 +742,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
 
         byte[] zipBytes = CreateArchiveBytes(
         [
@@ -725,8 +750,6 @@ public sealed class DicomIngestionServiceTests
             ("DICOM/slice_002.dcm", CreateSampleDicomBytesWithPhi("8202")),
             ("DICOM/slice_bad.dcm", CreateUnsupportedCompressedDicomBytes())
         ]);
-
-        var spoolFilesBefore = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-batch-*.zip").ToHashSet(StringComparer.Ordinal);
 
         var request = new BatchIngestionRequest(
             Files: [],
@@ -745,10 +768,7 @@ public sealed class DicomIngestionServiceTests
         (await dbContext.ImagingSeriesEnvelopes.CountAsync(ct)).Should().Be(0);
         (await dbContext.ImagingInstanceEnvelopes.CountAsync(ct)).Should().Be(0);
 
-        var leakedSpoolFiles = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-batch-*.zip")
-            .Where(path => !spoolFilesBefore.Contains(path))
-            .ToArray();
-        leakedSpoolFiles.Should().BeEmpty();
+        Directory.GetFiles(_scratchRoot, "cadence-dicom-batch-*.zip").Should().BeEmpty();
     }
 
     [Fact]
@@ -782,7 +802,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
 
         byte[] headerOnlyDicom = CreateHeaderOnlyDicomBytes(rows: ushort.MaxValue, columns: ushort.MaxValue);
 
@@ -813,7 +833,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
 
         byte[] headerOnlyDicom = CreateHeaderOnlyDicomBytes(rows, columns);
 
@@ -848,7 +868,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
 
         var request = new BatchIngestionRequest(
             Files:
@@ -878,10 +898,9 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
 
         byte[] highRatioZip = CreateZeroFilledZipBytes(entryCount: 8, bytesPerEntry: 16 * 1024 * 1024);
-        var spoolFilesBefore = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-batch-*.zip").ToHashSet(StringComparer.Ordinal);
 
         var request = new BatchIngestionRequest(
             Files: [],
@@ -900,10 +919,7 @@ public sealed class DicomIngestionServiceTests
         (await dbContext.ImagingStudyEnvelopes.CountAsync(ct)).Should().Be(0);
         (await dbContext.ImagingInstanceEnvelopes.CountAsync(ct)).Should().Be(0);
 
-        var leakedSpoolFiles = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-batch-*.zip")
-            .Where(path => !spoolFilesBefore.Contains(path))
-            .ToArray();
-        leakedSpoolFiles.Should().BeEmpty();
+        Directory.GetFiles(_scratchRoot, "cadence-dicom-batch-*.zip").Should().BeEmpty();
     }
 
     [Fact]
@@ -915,7 +931,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
 
         byte[] manyEntriesZip = CreateTinyEntriesZipBytes(entryCount: BatchArchiveQuotas.DefaultMaxEntryCount + 1);
 
@@ -943,7 +959,7 @@ public sealed class DicomIngestionServiceTests
         var quotas = new BatchArchiveQuotas(
             MaxEntryUncompressedBytes: 512 * 1024,
             MaxTotalUncompressedBytes: 16 * 1024 * 1024);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance, quotas);
+        var service = CreateService(dbContext, quotas: quotas);
 
         byte[] oversizedEntryZip = CreateArchiveBytes(
         [
@@ -974,7 +990,7 @@ public sealed class DicomIngestionServiceTests
         var quotas = new BatchArchiveQuotas(
             MaxEntryUncompressedBytes: 512 * 1024,
             MaxTotalUncompressedBytes: 16 * 1024 * 1024);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance, quotas);
+        var service = CreateService(dbContext, quotas: quotas);
 
         byte[] payload = RandomNumberGenerator.GetBytes(1024 * 1024);
         await using var innerMs = new MemoryStream(payload, writable: false);
@@ -1007,7 +1023,7 @@ public sealed class DicomIngestionServiceTests
         var quotas = new BatchArchiveQuotas(
             MaxEntryUncompressedBytes: 2 * 1024 * 1024,
             MaxTotalUncompressedBytes: 3 * 1024 * 1024);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance, quotas);
+        var service = CreateService(dbContext, quotas: quotas);
 
         byte[] archiveBytes = CreateArchiveBytes(
             Enumerable.Range(1, 4)
@@ -1035,7 +1051,7 @@ public sealed class DicomIngestionServiceTests
             .Options;
 
         await using var dbContext = new ImagingDbContext(options);
-        var service = new DicomIngestionService(dbContext, TestDeidentifier(), SystemClock.Instance);
+        var service = CreateService(dbContext);
 
         var request = new BatchIngestionRequest(
             Files:
@@ -1134,7 +1150,8 @@ public sealed class DicomIngestionServiceTests
     private static async Task<(long LiveLohBytes, long TotalAllocatedBytes)> RunZipLohProbeAsync(int sliceCount, DicomDeidentifier deidentifier, CancellationToken ct)
     {
         string tempInputZip = Path.Combine(Path.GetTempPath(), $"test-input-{sliceCount}-{Guid.NewGuid():N}.zip");
-        var spoolFilesBefore = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-batch-*.zip").ToHashSet(StringComparer.Ordinal);
+        string probeScratchRoot = Path.Combine(Path.GetTempPath(), $"test-probe-scratch-{sliceCount}-{Guid.NewGuid():N}");
+        var probeScratch = new FileSystemScratchWorkspaceProvider(new ScratchWorkspaceOptions { RootPath = probeScratchRoot });
 
         try
         {
@@ -1157,7 +1174,7 @@ public sealed class DicomIngestionServiceTests
                 .Options;
 
             await using var dbContext = new ImagingDbContext(options);
-            var service = new DicomIngestionService(dbContext, deidentifier, SystemClock.Instance);
+            var service = new DicomIngestionService(dbContext, deidentifier, probeScratch, SystemClock.Instance);
 
             await using var rawZipRead = new FileStream(tempInputZip, FileMode.Open, FileAccess.Read, FileShare.Read);
             await using var nonSeekable = new NonSeekableTestReadStream(rawZipRead);
@@ -1180,10 +1197,7 @@ public sealed class DicomIngestionServiceTests
             result.IngestedSliceCount.Should().Be(sliceCount);
             (await dbContext.ImagingInstanceEnvelopes.CountAsync(ct)).Should().Be(sliceCount);
 
-            var leakedSpoolFiles = Directory.GetFiles(Path.GetTempPath(), "cadence-dicom-batch-*.zip")
-                .Where(path => !spoolFilesBefore.Contains(path))
-                .ToArray();
-            leakedSpoolFiles.Should().BeEmpty();
+            Directory.GetFiles(probeScratchRoot, "cadence-dicom-batch-*.zip").Should().BeEmpty();
 
             return (interceptor.LiveLohBytesAtSaveChanges, allocAfter - allocBefore);
         }
@@ -1192,6 +1206,11 @@ public sealed class DicomIngestionServiceTests
             if (File.Exists(tempInputZip))
             {
                 File.Delete(tempInputZip);
+            }
+
+            if (Directory.Exists(probeScratchRoot))
+            {
+                Directory.Delete(probeScratchRoot, recursive: true);
             }
         }
     }
@@ -1301,5 +1320,61 @@ public sealed class DicomIngestionServiceTests
 
             base.Dispose(disposing);
         }
+    }
+
+    internal sealed class RecordingScratchWorkspaceProvider(IScratchWorkspaceProvider inner) : IScratchWorkspaceProvider
+    {
+        public List<string> CreatedFiles { get; } = [];
+
+        public string RootPath => inner.RootPath;
+
+        public (string Path, FileStream Stream) CreateFile(
+            string prefix = "scratch",
+            string extension = ".tmp",
+            FileAccess access = FileAccess.ReadWrite,
+            int bufferSize = 65_536,
+            FileOptions options = FileOptions.Asynchronous)
+        {
+            var created = inner.CreateFile(prefix, extension, access, bufferSize, options);
+            CreatedFiles.Add(created.Path);
+            return created;
+        }
+
+        public string CreateDirectory(string prefix = "run") =>
+            inner.CreateDirectory(prefix);
+    }
+
+    [Fact]
+    public async Task IngestBatchAsync_NonSeekableZipArchive_SpoolsInsideScratchWorkspace_AndCleansUpAfterwards()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingScratchCanary_{Guid.NewGuid():N}")
+            .Options;
+        await using var dbContext = new ImagingDbContext(options);
+        var recordingScratch = new RecordingScratchWorkspaceProvider(_scratchWorkspace);
+        var service = new DicomIngestionService(
+            dbContext,
+            TestDeidentifier(),
+            recordingScratch,
+            SystemClock.Instance);
+
+        byte[] zipBytes = CreateArchiveBytes([("DICOM/slice_001.dcm", CreateSampleDicomBytesWithPhi("9401"))]);
+        var request = new BatchIngestionRequest(
+            Files: [],
+            SubjectId: "SUBJ-CANARY",
+            SiteId: "SITE-101",
+            StudyId: "STUDY-CANARY")
+        {
+            StreamFiles = SingleNonSeekableZipStreamAsync("study.zip", zipBytes)
+        };
+
+        var result = await service.IngestBatchAsync(request, ct);
+
+        result.IngestedSliceCount.Should().Be(1);
+        recordingScratch.CreatedFiles.Should().ContainSingle();
+        Path.GetFullPath(recordingScratch.CreatedFiles[0])
+            .Should().StartWith(Path.GetFullPath(_scratchRoot) + Path.DirectorySeparatorChar);
+        Directory.GetFileSystemEntries(_scratchRoot).Should().BeEmpty("spooled ZIP archive must be deleted after ingestion");
     }
 }

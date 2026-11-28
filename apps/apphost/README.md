@@ -19,8 +19,10 @@
 
 Pass them on the command line after `--` (`-- --AppHost:Profile=core`) or as environment variables
 (`AppHost__Profile=core`). An unknown profile or a malformed authority stops the AppHost with a message. In the
-`core` profile the gateway is given every other service's usual host port, where nothing listens, so those
-routes answer as the service being down.
+`core` profile the gateway is given `"disabled"` for every omitted service's `*_SERVICE_URL`, so those routes
+answer `503 Service Unavailable` directly without probing unused host ports. Outside Development, `Storage:RootPath`
+(and `Scratch:RootPath` in the `full` profile) must be set to explicit, fully qualified directory paths; in
+Development, AppHost defaults them under `LocalApplicationData/cadence-clinical/` without using ambient OS temp directories.
 
 ## Resources
 
@@ -53,7 +55,7 @@ routes answer as the service being down.
   (`ConnectionStrings:cadence`), waits for PostgreSQL, and applies its own migrations on start
   (`Database__MigrateOnStartup=true`), as in docker compose. Each project has a health check on
   `/healthz/ready` (the gateway on `/healthz/live`), shown in the dashboard.
-- The gateway receives every `*_SERVICE_URL` from the service endpoints above.
+- The gateway receives every `*_SERVICE_URL` from the running service endpoints above (or `"disabled"` for services omitted by the `core` profile), `etmf` receives `EXECUTION_SERVICE_URL` from the `execution` endpoint, `eisf`, `etmf`, and `fileshare` receive per-service subdirectories under `Storage:RootPath`, and in the `full` profile `imaging` and `interop` receive isolated `Scratch__RootPath` subdirectories under `Scratch:RootPath`.
 - The kernel runs in the AppHost's environment (`ASPNETCORE_ENVIRONMENT`; project resources do not inherit it), and in
   Development it gets `Kernel__DevelopmentTenant__Code=cadence-local`, so it provisions the tenant the local realm's
   users sign in with (ADR-2514, ADR-2542) and the Canvas's kernel reads are served on a fresh database.

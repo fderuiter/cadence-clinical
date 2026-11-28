@@ -24,6 +24,7 @@ using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
+using Cadence.Storage;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
@@ -50,9 +51,10 @@ namespace Cadence.UnitTests.Etmf;
 public class EtmfExportTests
 {
     private readonly FakeClock _clock = new(new DateTimeOffset(2026, 10, 12, 12, 0, 0, TimeSpan.Zero));
+    private readonly InMemoryBlobStore _blobStore = new();
 
-    private IEtmfExportService CreateExportService(EtmfDbContext dbContext, EtmfExportQueue? queue = null) =>
-        new EtmfExportService(dbContext, new EtmfUnitOfWork(dbContext), queue ?? new EtmfExportQueue(), _clock);
+    private IEtmfExportService CreateExportService(EtmfDbContext dbContext, EtmfExportQueue? queue = null, IStoragePort<byte[]>? storage = null) =>
+        new EtmfExportService(dbContext, new EtmfUnitOfWork(dbContext), queue ?? new EtmfExportQueue(), _clock, storage ?? _blobStore);
 
     private IEtmfDocumentService CreateDocumentService(EtmfDbContext dbContext) =>
         new EtmfDocumentService(dbContext, new EtmfUnitOfWork(dbContext), _clock);
@@ -588,6 +590,7 @@ public class EtmfExportTests
         var services = new ServiceCollection();
         services.AddSingleton(dbContext);
         services.AddSingleton<IClock>(_clock);
+        services.AddSingleton<IStoragePort<byte[]>>(_blobStore);
         var provider = services.BuildServiceProvider();
 
         var worker = new EtmfExportWorker(provider, queue, NullLogger<EtmfExportWorker>.Instance);
@@ -635,6 +638,7 @@ public class EtmfExportTests
             return new EtmfDbContext(optionsBuilder.Options);
         });
         services.AddSingleton<IClock>(_clock);
+        services.AddSingleton<IStoragePort<byte[]>>(_blobStore);
 
         await using var provider = services.BuildServiceProvider();
         var queue = new EtmfExportQueue();
@@ -893,7 +897,8 @@ public class EtmfExportTests
         {
             host.UseTestGatewaySecret()
                 .UseTestPostgresConnectionString()
-                .UseTestStorage();
+                .UseTestStorage()
+                .UseTestLocalhostFallbacks();
 
             host.ConfigureTestServices(services =>
             {
@@ -1127,5 +1132,99 @@ public class EtmfExportTests
 
             return await base.ReaderExecutedAsync(command, eventData, result, cancellationToken);
         }
+    }
+
+    [Theory]
+    [InlineData("Zone_01/Section_01.01", "../escape.pdf")]
+    [InlineData("Zone_01/Section_01.01", "Zone_01/../../escape.pdf")]
+    [InlineData("Zone_01/Section_01.01", "/absolute/root.pdf")]
+    [InlineData("Zone_01/Section_01.01", "\\unc\\share.pdf")]
+    [InlineData("Zone_01/Section_01.01", "C:\\Windows\\System32\\cmd.exe")]
+    [InlineData("Zone_01/Section_01.01", "Zone_01//empty_segment.pdf")]
+    [InlineData("Zone_01/Section_01.01", "Zone_01/./dot_segment.pdf")]
+    [InlineData("Zone_01/Section_01.01", "Zone_02/Section_02.01/wrong_section.pdf")]
+    [InlineData("Zone_01/../Section_01.01", "Zone_01/Section_01.01/doc.pdf")]
+    [InlineData("Zone_01/Section_01.01", "")]
+    public void EnsureConfinedEntryPath_RejectsTraversalRootedDriveAndEmptySegments(string sectionDir, string candidate)
+    {
+        Action act = () => EtmfExportPackager.EnsureConfinedEntryPath(sectionDir, candidate);
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task ExportPackagerServiceAndWorker_RequireObjectStorage_AndNeverFallbackToTempExportsDir()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        Action nullServiceStorage = () => _ = new EtmfExportService(
+            new EtmfDbContext(new DbContextOptionsBuilder<EtmfDbContext>().UseInMemoryDatabase($"etmf-null-svc-{Guid.NewGuid():N}").Options),
+            new EtmfUnitOfWork(new EtmfDbContext(new DbContextOptionsBuilder<EtmfDbContext>().UseInMemoryDatabase($"etmf-uow-{Guid.NewGuid():N}").Options)),
+            new EtmfExportQueue(),
+            _clock,
+            null!);
+        nullServiceStorage.Should().Throw<ArgumentNullException>();
+
+        var options = new DbContextOptionsBuilder<EtmfDbContext>()
+            .UseInMemoryDatabase($"etmf-storage-required-{Guid.NewGuid():N}")
+            .Options;
+        await using var dbContext = new EtmfDbContext(options);
+        dbContext.TmfDocuments.Add(TmfDocument.CreateApproved(
+            id: "DOC-CANARY-1",
+            studyId: "STUDY-CANARY",
+            filename: "Protocol.pdf",
+            createdBy: "cra.user",
+            createdAt: _clock.UtcNow.UtcDateTime,
+            reasonForChange: "Approved protocol",
+            siteId: "SITE-1",
+            zone: 1,
+            section: "01.01",
+            artifactCode: "01.01.01",
+            artifactType: "Protocol",
+            content: "Canary Content",
+            mimeType: "application/pdf",
+            protocolVersionIndex: 1));
+        dbContext.TmfExportJobs.Add(new TmfExportJob("JOB-CANARY-1")
+        {
+            StudyId = "STUDY-CANARY",
+            RequestedBy = "cra.user",
+            Status = "QUEUED",
+            TotalDocuments = 1,
+            ProcessedDocuments = 0,
+            CreatedAt = _clock.UtcNow.UtcDateTime,
+        });
+        await dbContext.SaveChangesAsync(ct);
+
+        var missingStoreServices = new ServiceCollection();
+        missingStoreServices.AddSingleton(dbContext);
+        missingStoreServices.AddSingleton<IClock>(_clock);
+        await using (var missingProvider = missingStoreServices.BuildServiceProvider())
+        {
+            var missingWorker = new EtmfExportWorker(missingProvider, new EtmfExportQueue(), NullLogger<EtmfExportWorker>.Instance);
+            Func<Task> missingAct = () => missingWorker.ProcessJobAsync("JOB-CANARY-1", ct);
+            await missingAct.Should().ThrowAsync<InvalidOperationException>();
+        }
+
+        var throwingStore = NSubstitute.Substitute.For<IStoragePort<byte[]>>();
+        NSubstitute.SubstituteExtensions.Returns(
+            throwingStore.PutObjectAsync(
+                NSubstitute.Arg.Any<string>(),
+                NSubstitute.Arg.Any<byte[]>(),
+                NSubstitute.Arg.Any<string?>(),
+                NSubstitute.Arg.Any<IReadOnlyDictionary<string, string>?>(),
+                NSubstitute.Arg.Any<string?>(),
+                NSubstitute.Arg.Any<CancellationToken>()),
+            _ => Task.FromException<string>(new IOException("Simulated object storage outage.")));
+
+        var services = new ServiceCollection();
+        services.AddSingleton(dbContext);
+        services.AddSingleton<IClock>(_clock);
+        services.AddSingleton<IStoragePort<byte[]>>(throwingStore);
+        await using var provider = services.BuildServiceProvider();
+
+        var worker = new EtmfExportWorker(provider, new EtmfExportQueue(), NullLogger<EtmfExportWorker>.Instance);
+        await worker.ProcessJobAsync("JOB-CANARY-1", ct);
+
+        var failedJob = await dbContext.TmfExportJobs.FirstAsync(j => j.Id == "JOB-CANARY-1", ct);
+        failedJob.Status.Should().Be("FAILED");
+        Directory.Exists(Path.Combine(Path.GetTempPath(), "etmf_exports")).Should().BeFalse();
     }
 }

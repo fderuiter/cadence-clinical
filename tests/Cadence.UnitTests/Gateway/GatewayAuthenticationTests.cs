@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
+using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
 using FluentAssertions;
@@ -461,6 +462,7 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
                 .UseSetting("OIDC_AUTHORITY", Issuer)
                 .UseSetting("EXECUTION_SERVICE_URL", downstreamUrl)
                 .UseSetting("KERNEL_SERVICE_URL", downstreamUrl)
+                .UseTestLocalhostFallbacks()
                 .UseTestGatewaySecret()
                 .ConfigureTestServices(services =>
                     services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>

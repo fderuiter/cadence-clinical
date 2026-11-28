@@ -26,4 +26,12 @@ public static class TestHostSettings
         builder
             .UseSetting("Storage:Provider", "filesystem")
             .UseSetting("Storage:RootPath", Path.Combine(Path.GetTempPath(), $"cadence-test-storage-{Guid.NewGuid():N}"));
+
+    /// <summary>Supplies an isolated owner-only <c>Scratch:RootPath</c> directory so <c>AddCadenceScratchWorkspace</c> startup validation passes in every environment.</summary>
+    public static IWebHostBuilder UseTestScratchWorkspace(this IWebHostBuilder builder) =>
+        builder.UseSetting("Scratch:RootPath", Path.Combine(Path.GetTempPath(), $"cadence-test-scratch-{Guid.NewGuid():N}"));
+
+    /// <summary>Explicitly opts a <c>Development</c> test host into <c>ServiceTopology</c> localhost fallbacks when downstream <c>*_SERVICE_URL</c> settings are omitted.</summary>
+    public static IWebHostBuilder UseTestLocalhostFallbacks(this IWebHostBuilder builder) =>
+        builder.UseSetting("Cadence:AllowLocalhostFallbacks", "true");
 }

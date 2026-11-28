@@ -67,9 +67,9 @@ public sealed class AppHostModelTests
         (await EnvironmentNamesAsync(projects["econsent"])).Should().Contain(["FIELD_ENCRYPTION_KEY", "CADENCE_BIOMETRIC_LIVENESS_KEY"]);
         (await EnvironmentNamesAsync(projects["kernel"])).Should().Contain("CADENCE_BIOMETRIC_LIVENESS_KEY");
         (await EnvironmentNamesAsync(projects["payments"])).Should().Contain("FIELD_ENCRYPTION_KEY");
-        (await EnvironmentNamesAsync(projects["interop"])).Should().Contain(["FIELD_LOOKUP_HASH_KEY", "CADENCE_SCE_SIGNING_KEY"]);
+        (await EnvironmentNamesAsync(projects["interop"])).Should().Contain(["FIELD_LOOKUP_HASH_KEY", "CADENCE_SCE_SIGNING_KEY", "Scratch__RootPath"]);
         (await EnvironmentNamesAsync(projects["imaging"]))
-            .Should().Contain(["CADENCE_IMAGING_DEID_SIGNING_KEY", "CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY"]);
+            .Should().Contain(["CADENCE_IMAGING_DEID_SIGNING_KEY", "CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY", "Scratch__RootPath"]);
     }
 
     [Fact]
@@ -124,8 +124,8 @@ public sealed class AppHostModelTests
             project.Annotations.OfType<EndpointAnnotation>().Single(e => e.Name == "http").Port.Should().Be(ServicePorts[name], name);
         }
 
-        // The gateway refuses to start outside Development without every service URL; a service left out points
-        // at its usual host port, where nothing listens.
+        // The gateway refuses to start outside Development without every service URL; a service left out is marked
+        // 'disabled' so the gateway answers 503 Service Unavailable without polling localhost.
         var gateway = await EnvironmentAsync(projects["gateway"]);
         gateway["EXECUTION_SERVICE_URL"].Should().BeOfType<EndpointReference>();
         gateway["ETMF_SERVICE_URL"].Should().BeOfType<EndpointReference>();
@@ -134,7 +134,7 @@ public sealed class AppHostModelTests
         gateway["KERNEL_SERVICE_URL"].Should().BeOfType<EndpointReference>();
         foreach (var service in ServiceTopology.Services.Where(s => !s.Core))
         {
-            gateway[service.UrlVariable].Should().Be($"http://localhost:{service.Port}", service.Name);
+            gateway[service.UrlVariable].Should().Be(ServiceTopology.DisabledServiceUrl, service.Name);
         }
         (await EnvironmentAsync(projects["execution"])).Keys
             .Should().Contain(["GATEWAY_SECRET", "AUDIT_LOG_SECRET_KEY", "ConnectionStrings__cadence", "DemographicsEncryption__KeyBase64", "RANDOMIZATION_ALLOCATION_KEY", "CGT_BARCODE_HMAC_KEY"]);
@@ -210,6 +210,34 @@ public sealed class AppHostModelTests
         var build = () => ResourcesAsync(setting);
 
         await build.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task ProductionCoreProfile_RequiresExplicitStorageRoot_AndEmitsDisabledForOmittedServices()
+    {
+        var missingStorage = () => ResourcesAsync("--AppHost:Profile=core", "--environment=Production");
+        await missingStorage.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*Storage:RootPath*");
+
+        var relativeStorage = () => ResourcesAsync("--AppHost:Profile=core", "--environment=Production", "--Storage:RootPath=relative/etmf");
+        await relativeStorage.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*Storage:RootPath*");
+
+        string explicitRoot = System.IO.Path.GetFullPath(System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"cadence-apphost-prod-{Guid.NewGuid():N}"));
+        var resources = await ResourcesAsync(
+            "--AppHost:Profile=core",
+            "--environment=Production",
+            "--AppHost:OidcAuthority=https://id.example.test/realms/trial",
+            $"--Storage:RootPath={explicitRoot}");
+
+        var etmf = await EnvironmentAsync(resources["etmf"]);
+        etmf["Storage__RootPath"].Should().Be(explicitRoot);
+
+        var gateway = await EnvironmentAsync(resources["gateway"]);
+        foreach (var service in ServiceTopology.Services.Where(s => !s.Core))
+        {
+            gateway[service.UrlVariable].Should().Be(ServiceTopology.DisabledServiceUrl, service.Name);
+        }
     }
 
     private static async Task<Dictionary<string, ProjectResource>> ProjectsAsync() =>

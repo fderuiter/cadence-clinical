@@ -88,6 +88,7 @@ public sealed class GatewayRouteCoverageTests
     {
         await using var gateway = new WebApplicationFactory<Cadence.Apps.Gateway.Program>().WithWebHostBuilder(host => host
             .UseSetting("OIDC_AUTHORITY", "https://keycloak.test/realms/cadence")
+            .UseTestLocalhostFallbacks()
             .UseTestGatewaySecret());
 
         return gateway.Services.GetRequiredService<IProxyConfigProvider>().GetConfig().Routes
@@ -107,6 +108,8 @@ public sealed class GatewayRouteCoverageTests
             .UseTestGatewaySecret()
             .UseTestPostgresConnectionString()
             .UseTestStorage()
+            .UseTestScratchWorkspace()
+            .UseTestLocalhostFallbacks()
             .UseTestDemographicsKey().UseTestRandomizationKey().UseTestCgtBarcodeKey()
             .UseTestFieldProtectionKeys()
             .UseTestSceSigningKey()

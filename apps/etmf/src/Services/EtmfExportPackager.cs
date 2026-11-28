@@ -36,9 +36,6 @@ public static class EtmfExportPackager
         List<ExportManifestItem> documents
     );
 
-    private static readonly string BinderVerificationRoot = Path.GetFullPath(
-        Path.Combine(Path.GetTempPath(), "cadence_etmf_binder_root"));
-
     public static string SanitizeKeySegment(string? raw, string fallback) =>
         TmfDocument.SanitizePathSegment(raw, fallback);
 
@@ -222,40 +219,64 @@ public static class EtmfExportPackager
         return TmfDocument.SanitizePathSegment(combined, "document.bin");
     }
 
-    private static void EnsureConfinedEntryPath(string sectionRelativeDir, string relativePath)
+    internal static void EnsureConfinedEntryPath(string sectionRelativeDir, string relativePath)
     {
+        if (string.IsNullOrWhiteSpace(sectionRelativeDir) || string.IsNullOrWhiteSpace(relativePath))
+        {
+            throw new InvalidOperationException("Export entry path segments must not be empty.");
+        }
+
         if (string.Equals(relativePath, "manifest.json", StringComparison.OrdinalIgnoreCase)
             || string.Equals(relativePath, "manifest.csv", StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException($"Export entry '{relativePath}' collides with a reserved root manifest.");
         }
 
-        string rootWithSep = BinderVerificationRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-            + Path.DirectorySeparatorChar;
-        string sectionFullDir = Path.GetFullPath(Path.Combine(BinderVerificationRoot, sectionRelativeDir));
-        if (!sectionFullDir.StartsWith(rootWithSep, StringComparison.Ordinal))
+        if (Path.IsPathRooted(sectionRelativeDir)
+            || Path.IsPathRooted(relativePath)
+            || ContainsInvalidArchiveCharacters(sectionRelativeDir)
+            || ContainsInvalidArchiveCharacters(relativePath))
+        {
+            throw new InvalidOperationException($"Export entry '{relativePath}' contains rooted or platform-specific separator characters.");
+        }
+
+        string[] sectionSegments = sectionRelativeDir.Split('/');
+        if (sectionSegments.Length != 2
+            || !IsSafeRelativeSegment(sectionSegments[0])
+            || !IsSafeRelativeSegment(sectionSegments[1])
+            || !sectionSegments[0].StartsWith("Zone_", StringComparison.Ordinal)
+            || !sectionSegments[1].StartsWith("Section_", StringComparison.Ordinal))
         {
             throw new InvalidOperationException($"Export section directory '{sectionRelativeDir}' escapes binder root.");
         }
 
-        string sectionWithSep = sectionFullDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-            + Path.DirectorySeparatorChar;
-        string entryFullPath = Path.GetFullPath(Path.Combine(BinderVerificationRoot, relativePath));
-        string manifestJsonFullPath = Path.GetFullPath(Path.Combine(BinderVerificationRoot, "manifest.json"));
-        string manifestCsvFullPath = Path.GetFullPath(Path.Combine(BinderVerificationRoot, "manifest.csv"));
-
-        if (string.Equals(entryFullPath, manifestJsonFullPath, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(entryFullPath, manifestCsvFullPath, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException($"Export entry '{relativePath}' resolves to a reserved root manifest.");
-        }
-
-        if (!entryFullPath.StartsWith(sectionWithSep, StringComparison.Ordinal)
-            || !string.Equals(Path.GetDirectoryName(entryFullPath), sectionFullDir, StringComparison.Ordinal))
+        string[] entrySegments = relativePath.Split('/');
+        if (entrySegments.Length != 3
+            || !string.Equals(entrySegments[0], sectionSegments[0], StringComparison.Ordinal)
+            || !string.Equals(entrySegments[1], sectionSegments[1], StringComparison.Ordinal)
+            || !IsSafeRelativeSegment(entrySegments[2]))
         {
             throw new InvalidOperationException($"Export entry '{relativePath}' escapes section directory '{sectionRelativeDir}'.");
         }
     }
+
+    private static bool ContainsInvalidArchiveCharacters(string value)
+    {
+        foreach (char c in value)
+        {
+            if (char.IsControl(c) || c is '\\' or ':')
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsSafeRelativeSegment(string segment) =>
+        segment.Length > 0
+        && segment is not "." and not ".."
+        && !ContainsInvalidArchiveCharacters(segment);
 
     private static void AddManifestJsonToZip(ZipArchive zipArchive, ExportManifestRoot manifestRoot)
     {

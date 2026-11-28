@@ -7,10 +7,12 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Imaging.Services;
 using Cadence.Security.Rbac;
+using Cadence.Storage;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Net.Http.Headers;
 
 namespace Cadence.Apps.Imaging.Infrastructure.Streaming;
@@ -36,6 +38,7 @@ public static class DicomBatchIngestionStreamCoordinator
         HttpRequest request,
         long maxBatchSizeBytes,
         IDicomIngestionService ingestionService,
+        IScratchWorkspaceProvider? scratchWorkspace,
         CancellationToken cancellationToken)
     {
         if (request.ContentLength.HasValue && request.ContentLength.Value > maxBatchSizeBytes)
@@ -48,13 +51,7 @@ public static class DicomBatchIngestionStreamCoordinator
             bodySizeFeature.MaxRequestBodySize = null;
         }
 
-        var metadata = new BatchRequestMetadata
-        {
-            SubjectValue = request.Query["subjectId"].ToString().Trim(),
-            SiteValue = request.Query["siteId"].ToString().Trim(),
-            StudyValue = request.Query["studyId"].ToString().Trim(),
-            TimepointName = request.Query["timepointName"].ToString().Trim()
-        };
+        var metadata = DicomMultipartHeaderHelpers.CreateInitialMetadata(request);
 
         try
         {
@@ -81,6 +78,7 @@ public static class DicomBatchIngestionStreamCoordinator
                     maxBatchSizeBytes,
                     metadata,
                     ingestionService,
+                    scratchWorkspace,
                     cancellationToken).ConfigureAwait(false);
             }
 
@@ -161,7 +159,7 @@ public static class DicomBatchIngestionStreamCoordinator
             }
         }
 
-        if (!metadata.HasCompleteUploadScope)
+        if (!metadata.HasAuthorizableStudyAndSiteScope)
         {
             if (!request.ContentLength.HasValue)
             {
@@ -191,6 +189,23 @@ public static class DicomBatchIngestionStreamCoordinator
             return ClinicalScopeGuard.OutsideStudy();
         }
 
+        if (!metadata.HasCompleteUploadScope)
+        {
+            if (!request.ContentLength.HasValue)
+            {
+                foreach (var file in form.Files)
+                {
+                    await using var rawStream = file.OpenReadStream();
+                    await using var guarded = new BudgetedReadStream(rawStream, budget);
+                    await BatchStreamHelpers.DrainAsync(guarded, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            return MissingUploadScopeResult();
+        }
+
+        metadata.LockAuthorizableScope();
+
         var state = new FormEnumerationState();
         var batchRequest = DicomMultipartHeaderHelpers.CreateStreamingBatchRequest(
             request.HttpContext,
@@ -216,6 +231,7 @@ public static class DicomBatchIngestionStreamCoordinator
         long maxBatchSizeBytes,
         BatchRequestMetadata metadata,
         IDicomIngestionService ingestionService,
+        IScratchWorkspaceProvider? scratchWorkspace,
         CancellationToken cancellationToken)
     {
         var reader = new MultipartReader(boundary, countingBody)
@@ -278,20 +294,34 @@ public static class DicomBatchIngestionStreamCoordinator
             return EmptyBatchPayloadResult();
         }
 
-        if (metadata.HasCompleteUploadScope)
+        if (!metadata.HasAuthorizableStudyAndSiteScope)
         {
-            if (ClinicalScopeGuard.RequireStudyAndSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
+            if (!request.ContentLength.HasValue)
             {
-                if (!request.ContentLength.HasValue)
-                {
-                    await BatchStreamHelpers.DrainAsync(firstFileSection.Body, cancellationToken).ConfigureAwait(false);
-                    await DicomMultipartHeaderHelpers.DrainMultipartSectionsAsync(reader, cancellationToken).ConfigureAwait(false);
-                    await BatchStreamHelpers.DrainAsync(countingBody, cancellationToken).ConfigureAwait(false);
-                }
-
-                return ClinicalScopeGuard.OutsideStudy();
+                await BatchStreamHelpers.DrainAsync(firstFileSection.Body, cancellationToken).ConfigureAwait(false);
+                await DicomMultipartHeaderHelpers.DrainMultipartSectionsAsync(reader, cancellationToken).ConfigureAwait(false);
+                await BatchStreamHelpers.DrainAsync(countingBody, cancellationToken).ConfigureAwait(false);
             }
 
+            return MissingUploadScopeResult();
+        }
+
+        if (ClinicalScopeGuard.RequireStudyAndSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
+        {
+            if (!request.ContentLength.HasValue)
+            {
+                await BatchStreamHelpers.DrainAsync(firstFileSection.Body, cancellationToken).ConfigureAwait(false);
+                await DicomMultipartHeaderHelpers.DrainMultipartSectionsAsync(reader, cancellationToken).ConfigureAwait(false);
+                await BatchStreamHelpers.DrainAsync(countingBody, cancellationToken).ConfigureAwait(false);
+            }
+
+            return ClinicalScopeGuard.OutsideStudy();
+        }
+
+        metadata.LockAuthorizableScope();
+
+        if (metadata.HasCompleteUploadScope)
+        {
             var batchRequest = DicomMultipartHeaderHelpers.CreateStreamingBatchRequest(
                 request.HttpContext,
                 metadata,
@@ -305,6 +335,12 @@ public static class DicomBatchIngestionStreamCoordinator
             return TypedResults.Created($"/api/v1/imaging/studies/{result.AnonymizedStudyUid}", result);
         }
 
+        var effectiveScratchWorkspace = scratchWorkspace
+            ?? request.HttpContext.RequestServices?.GetService<IScratchWorkspaceProvider>()
+            ?? (ingestionService as DicomIngestionService)?.ScratchWorkspace
+            ?? throw new InvalidOperationException(
+                "An IScratchWorkspaceProvider must be configured before spooling multipart imaging uploads.");
+
         return await ProcessDeferredMetadataMultipartBatchAsync(
             request,
             countingBody,
@@ -313,6 +349,7 @@ public static class DicomBatchIngestionStreamCoordinator
             firstFileName,
             metadata,
             ingestionService,
+            effectiveScratchWorkspace,
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -324,12 +361,18 @@ public static class DicomBatchIngestionStreamCoordinator
         string firstFileName,
         BatchRequestMetadata metadata,
         IDicomIngestionService ingestionService,
+        IScratchWorkspaceProvider scratchWorkspace,
         CancellationToken cancellationToken)
     {
         var spooledFiles = new List<(string FileName, string TempPath)>();
         try
         {
-            spooledFiles.Add((firstFileName, await DicomMultipartHeaderHelpers.SpoolSectionToTempFileAsync(firstFileSection.Body, cancellationToken).ConfigureAwait(false)));
+            spooledFiles.Add((
+                firstFileName,
+                await DicomMultipartHeaderHelpers.SpoolSectionToTempFileAsync(
+                    firstFileSection.Body,
+                    scratchWorkspace,
+                    cancellationToken).ConfigureAwait(false)));
 
             MultipartSection? section;
             while ((section = await reader.ReadNextSectionAsync(cancellationToken).ConfigureAwait(false)) is not null)
@@ -342,7 +385,12 @@ public static class DicomBatchIngestionStreamCoordinator
 
                 if (DicomMultipartHeaderHelpers.TryGetSectionFileName(contentDisposition, out string? fileName))
                 {
-                    spooledFiles.Add((fileName!, await DicomMultipartHeaderHelpers.SpoolSectionToTempFileAsync(section.Body, cancellationToken).ConfigureAwait(false)));
+                    spooledFiles.Add((
+                        fileName!,
+                        await DicomMultipartHeaderHelpers.SpoolSectionToTempFileAsync(
+                            section.Body,
+                            scratchWorkspace,
+                            cancellationToken).ConfigureAwait(false)));
                 }
                 else if (DicomMultipartHeaderHelpers.TryGetFormFieldName(contentDisposition, out string? fieldName))
                 {
@@ -398,7 +446,7 @@ public static class DicomBatchIngestionStreamCoordinator
             return EmptyBatchPayloadResult();
         }
 
-        if (!metadata.HasCompleteUploadScope)
+        if (!metadata.HasAuthorizableStudyAndSiteScope)
         {
             if (!request.ContentLength.HasValue)
             {
@@ -416,6 +464,16 @@ public static class DicomBatchIngestionStreamCoordinator
             }
 
             return ClinicalScopeGuard.OutsideStudy();
+        }
+
+        if (!metadata.HasCompleteUploadScope)
+        {
+            if (!request.ContentLength.HasValue)
+            {
+                await BatchStreamHelpers.DrainAsync(countingBody, cancellationToken).ConfigureAwait(false);
+            }
+
+            return MissingUploadScopeResult();
         }
 
         bool isZipContent = request.ContentType?.Contains("zip", StringComparison.OrdinalIgnoreCase) ?? false;

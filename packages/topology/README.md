@@ -6,16 +6,22 @@ address variable, gateway route prefixes, and whether it needs the database and 
 ## Project
 
 - Project: `packages/topology/src/Cadence.Topology.csproj` (assembly `Cadence.Topology`, namespace `Cadence.Topology`).
-- `ServiceTopology.Services` lists every service as a `CadenceService`; `ServiceTopology.Get(name)` finds one, and
-  `ServiceTopology.GatewayPort` is the gateway's port (8000).
+- `ServiceTopology.Services` lists every service as a `CadenceService`; `ServiceTopology.Get(name)` finds one,
+  `ServiceTopology.GatewayPort` is the gateway's port (8000), and `ServiceTopology.ResolveServiceUrl` /
+  `ServiceTopology.ResolveServiceUrlOrDisabled` validate absolute `http`/`https` service URLs, enforce explicit
+  `Cadence:AllowLocalhostFallbacks` (`AllowLocalhostFallbacksKey`) opt-in for `LocalUrl` in Development, and recognize
+  the `"disabled"` sentinel (`DisabledServiceUrl`).
 - No dependencies. Every public member has an XML comment (`CadenceRequireXmlDocs`).
 
 ## Referenced by
 
 - `apps/gateway`: builds its YARP routes (`<service>-<prefix>-route`) and clusters (`<service>-cluster`) from the
-  manifest, and in Development falls back to each service's local port.
+  manifest, answers `503` for `"disabled"` services, and in Development falls back to each service's local port only
+  when `Cadence:AllowLocalhostFallbacks=true`.
 - `apps/apphost`: runs each service on its port, gives the database to those that need it, and tells the gateway
-  where each service is (a service the `core` profile leaves out points at its usual port).
+  where each service is (a service the `core` profile leaves out is set to `"disabled"`).
+- `apps/etmf`: validates `EXECUTION_SERVICE_URL` at startup via `ServiceTopology.ResolveServiceUrl` before delivering
+  signed completeness webhooks.
 - `packages/tooling_core`: `PortCheckerService` checks the gateway's and services' ports.
 
 ## Changing the topology

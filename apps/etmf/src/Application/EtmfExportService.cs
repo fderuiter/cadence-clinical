@@ -47,8 +47,9 @@ public sealed class EtmfExportService(
     IEtmfUnitOfWork unitOfWork,
     EtmfExportQueue exportQueue,
     IClock clock,
-    IStoragePort<byte[]>? storage = null) : IEtmfExportService
+    IStoragePort<byte[]> storage) : IEtmfExportService
 {
+    private readonly IStoragePort<byte[]> _storage = storage ?? throw new ArgumentNullException(nameof(storage));
     public async Task<IResult> ExportDocumentsAsync(
         ExportDocumentsRequest request,
         HttpContext httpContext,
@@ -125,7 +126,7 @@ public sealed class EtmfExportService(
                     exportId,
                     studyId,
                     matchingDocs,
-                    storage,
+                    _storage,
                     syncNow,
                     ct: ct);
 
@@ -234,25 +235,15 @@ public sealed class EtmfExportService(
 
         if (!ClinicalScopeGuard.IsSiteBound(principal))
         {
-            if (storage is not null)
+            var exportKey = EtmfExportPackager.BuildExportObjectKey(job.StudyId, job.Id);
+            try
             {
-                var exportKey = EtmfExportPackager.BuildExportObjectKey(job.StudyId, job.Id);
-                try
-                {
-                    var (storedZipBytes, _) = await storage.GetObjectAsync(exportKey, ct);
-                    return TypedResults.File(storedZipBytes, "application/zip", downloadFilename);
-                }
-                catch (StorageObjectNotFoundException)
-                {
-                    // Fall through to repackaging if archive was not persisted in object storage
-                }
+                var (storedZipBytes, _) = await _storage.GetObjectAsync(exportKey, ct);
+                return TypedResults.File(storedZipBytes, "application/zip", downloadFilename);
             }
-
-            var filePath = Path.Combine(Path.GetTempPath(), "etmf_exports", $"{jobId}.zip");
-            if (storage is null && File.Exists(filePath))
+            catch (StorageObjectNotFoundException)
             {
-                var fileStream = File.OpenRead(filePath);
-                return TypedResults.File(fileStream, "application/zip", downloadFilename);
+                // Fall through to repackaging if archive was not persisted in object storage
             }
         }
 
@@ -267,7 +258,7 @@ public sealed class EtmfExportService(
             .Where(d => string.IsNullOrWhiteSpace(d.SiteId) || ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteId))
             .ToList();
 
-        var zipBytes = await EtmfExportPackager.CreateZipArchiveAsync(job.Id, job.StudyId, docs, storage, clock.UtcNow, ct: ct);
+        var zipBytes = await EtmfExportPackager.CreateZipArchiveAsync(job.Id, job.StudyId, docs, _storage, clock.UtcNow, ct: ct);
         return TypedResults.File(zipBytes, "application/zip", downloadFilename);
     }
 

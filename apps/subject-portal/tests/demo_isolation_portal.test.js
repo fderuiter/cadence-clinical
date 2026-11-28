@@ -49,7 +49,7 @@ describe("Subject Portal Demo Isolation & Stateful MSW Handlers", () => {
     expect(keycloakCalls).toEqual([]);
   });
 
-  it("resolves same-origin API base URL in demo builds and localhost:8000 in standard builds", () => {
+  it("resolves same-origin API base URL in demo builds, localhost:8000 in development/test, and fails closed in production when unconfigured", () => {
     vi.stubEnv("VITE_API_BASE_URL", "");
     vi.stubEnv("VITE_DEMO_MODE", "false");
     expect(getApiBaseUrl()).toBe("http://localhost:8000");
@@ -57,6 +57,18 @@ describe("Subject Portal Demo Isolation & Stateful MSW Handlers", () => {
     vi.stubEnv("VITE_DEMO_MODE", "true");
     expect(getApiBaseUrl()).toBe(window.location.origin);
     expect(getApiBaseUrl()).not.toContain("localhost:8000");
+
+    vi.stubEnv("MODE", "production");
+    vi.stubEnv("PROD", true);
+    vi.stubEnv("VITE_DEMO_MODE", "false");
+    vi.stubEnv("VITE_API_BASE_URL", "");
+    expect(() => getApiBaseUrl()).toThrow(/VITE_API_BASE_URL/);
+
+    vi.stubEnv("VITE_API_BASE_URL", "/");
+    expect(getApiBaseUrl()).toBe(window.location.origin);
+
+    vi.stubEnv("VITE_API_BASE_URL", "https://gateway.cadence.example/");
+    expect(getApiBaseUrl()).toBe("https://gateway.cadence.example");
   });
 
   it("resolves single-scope unified service worker options (/subject-portal/sw.js?msw=1)", async () => {

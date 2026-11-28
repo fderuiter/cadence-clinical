@@ -838,6 +838,8 @@ public sealed class StandaloneScopePostgresFixture : IAsyncLifetime
         {
             host.UseTestGatewaySecret()
                 .UseTestStorage()
+                .UseTestScratchWorkspace()
+                .UseTestLocalhostFallbacks()
                 .UseTestDemographicsKey()
                 .UseTestRandomizationKey()
                 .UseTestCgtBarcodeKey()

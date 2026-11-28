@@ -12,11 +12,13 @@ using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Storage;
 using Cadence.Telemetry;
+using Cadence.Topology;
 
 using MassTransit;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -33,17 +35,17 @@ builder.Services.AddScoped<IEtmfDocumentService, EtmfDocumentService>();
 builder.Services.AddScoped<IEtmfExportService, EtmfExportService>();
 builder.Services.AddSingleton<EtmfExportQueue>();
 builder.Services.AddHostedService<EtmfExportWorker>();
+
+bool allowLocalhostFallbacks = builder.Configuration.GetValue<bool>(ServiceTopology.AllowLocalhostFallbacksKey);
+Uri executionServiceUri = ServiceTopology.ResolveServiceUrl(
+    ServiceTopology.Get("execution"),
+    builder.Configuration["EXECUTION_SERVICE_URL"],
+    builder.Environment.IsDevelopment(),
+    allowLocalhostFallbacks);
+
 builder.Services.AddHttpClient<IEtmfCompletenessWebhookPublisher, HttpEtmfCompletenessWebhookPublisher>(client =>
 {
-    string? executionUrl = builder.Configuration["EXECUTION_SERVICE_URL"];
-    if (!string.IsNullOrWhiteSpace(executionUrl) && Uri.TryCreate(executionUrl, UriKind.Absolute, out var configuredUri))
-    {
-        client.BaseAddress = configuredUri;
-    }
-    else if (builder.Environment.IsDevelopment())
-    {
-        client.BaseAddress = new UriBuilder(Uri.UriSchemeHttp, "localhost", 8002).Uri;
-    }
+    client.BaseAddress = executionServiceUri;
 });
 
 builder.Services.AddMassTransit(x =>

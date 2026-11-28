@@ -17,6 +17,7 @@ using Cadence.Apps.Imaging.Domain;
 using Cadence.Apps.Imaging.Infrastructure.Persistence;
 using Cadence.Deid;
 using Cadence.Kernel.Time;
+using Cadence.Storage;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -100,26 +101,35 @@ public sealed class DicomIngestionService : IDicomIngestionService
     private readonly ImagingDbContext _dbContext;
     private readonly IClock _clock;
     private readonly DicomDeidentifier _deidentifier;
+    private readonly IScratchWorkspaceProvider _scratchWorkspace;
     private readonly BatchArchiveQuotas _quotas;
+
+    internal IScratchWorkspaceProvider ScratchWorkspace => _scratchWorkspace;
 
     /// <summary>
     /// Creates the service. <paramref name="deidentifier"/> carries the configured signing and pseudonymization keys
     /// (<c>AddImagingDeidentification</c>, #5399); certificates and batch manifests are signed with it.
     /// </summary>
     [ActivatorUtilitiesConstructor]
-    public DicomIngestionService(ImagingDbContext dbContext, DicomDeidentifier deidentifier, IClock? clock = null)
-        : this(dbContext, deidentifier, clock, quotas: null)
+    public DicomIngestionService(
+        ImagingDbContext dbContext,
+        DicomDeidentifier deidentifier,
+        IScratchWorkspaceProvider scratchWorkspace,
+        IClock? clock = null)
+        : this(dbContext, deidentifier, scratchWorkspace, clock, quotas: null)
     {
     }
 
     public DicomIngestionService(
         ImagingDbContext dbContext,
         DicomDeidentifier deidentifier,
+        IScratchWorkspaceProvider scratchWorkspace,
         IClock? clock,
         BatchArchiveQuotas? quotas)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _deidentifier = deidentifier ?? throw new ArgumentNullException(nameof(deidentifier));
+        _scratchWorkspace = scratchWorkspace ?? throw new ArgumentNullException(nameof(scratchWorkspace));
         _clock = clock ?? SystemClock.Instance;
         _quotas = quotas ?? BatchArchiveQuotas.Default;
     }
@@ -733,6 +743,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
                 skippedNonDicomFiles,
                 count => Interlocked.Add(ref totalFilesProcessed, count),
                 new BatchQuotaTracker(_quotas),
+                _scratchWorkspace,
                 workerCt).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !workerCt.IsCancellationRequested || cancellationToken.IsCancellationRequested)
@@ -770,6 +781,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
         ConcurrentBag<string> skippedNonDicomFiles,
         Action<int> incrementTotalFiles,
         BatchQuotaTracker quotaTracker,
+        IScratchWorkspaceProvider scratchWorkspace,
         CancellationToken cancellationToken)
     {
         await foreach (var item in EnumerateUnifiedBatchStreamsAsync(request, skippedNonDicomFiles, incrementTotalFiles, quotaTracker, cancellationToken).ConfigureAwait(false))
@@ -813,6 +825,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
                 skippedNonDicomFiles,
                 incrementTotalFiles,
                 quotaTracker,
+                scratchWorkspace,
                 cancellationToken).ConfigureAwait(false);
         }
     }
@@ -825,6 +838,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
         ConcurrentBag<string> skippedNonDicomFiles,
         Action<int> incrementTotalFiles,
         BatchQuotaTracker quotaTracker,
+        IScratchWorkspaceProvider scratchWorkspace,
         CancellationToken cancellationToken)
     {
         string? tempZipPath = null;
@@ -843,12 +857,10 @@ public sealed class DicomIngestionService : IDicomIngestionService
             }
             else
             {
-                tempZipPath = Path.Combine(Path.GetTempPath(), $"cadence-dicom-batch-{Guid.NewGuid():N}.zip");
-                tempZipStream = new FileStream(
-                    tempZipPath,
-                    FileMode.CreateNew,
+                (tempZipPath, tempZipStream) = scratchWorkspace.CreateFile(
+                    "cadence-dicom-batch",
+                    ".zip",
                     FileAccess.ReadWrite,
-                    FileShare.None,
                     bufferSize: BatchStreamHelpers.PooledBufferSize,
                     FileOptions.Asynchronous);
 

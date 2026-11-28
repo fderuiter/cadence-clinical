@@ -55,7 +55,8 @@ public sealed class EtmfStorageAndEndpointsTests : IDisposable
         {
             host.UseTestGatewaySecret()
                 .UseTestPostgresConnectionString()
-                .UseTestStorage();
+                .UseTestStorage()
+                .UseTestLocalhostFallbacks();
 
             host.ConfigureTestServices(services =>
             {

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Imaging.Services;
 using Cadence.Security.Rbac;
+using Cadence.Storage;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
@@ -19,13 +20,23 @@ namespace Cadence.Apps.Imaging.Infrastructure.Streaming;
 
 public sealed class BatchRequestMetadata
 {
+    private bool _authorizableScopeLocked;
+
     public string SubjectValue { get; set; } = string.Empty;
     public string SiteValue { get; set; } = string.Empty;
     public string StudyValue { get; set; } = string.Empty;
     public string TimepointName { get; set; } = string.Empty;
 
+    public bool HasAuthorizableStudyAndSiteScope =>
+        !string.IsNullOrWhiteSpace(StudyValue)
+        && !string.IsNullOrWhiteSpace(SiteValue);
+
     public bool HasCompleteUploadScope =>
         !IsMissingUploadScope(StudyValue, SiteValue, SubjectValue);
+
+    public bool IsAuthorizableScopeLocked => _authorizableScopeLocked;
+
+    public void LockAuthorizableScope() => _authorizableScopeLocked = true;
 
     public static bool IsMissingUploadScope(string? studyValue, string? siteValue, string? subjectValue) =>
         string.IsNullOrWhiteSpace(studyValue)
@@ -40,6 +51,79 @@ public sealed class FormEnumerationState
 
 public static class DicomMultipartHeaderHelpers
 {
+    public const string UploadStudyIdHeader = "X-Upload-Study-Id";
+    public const string ImagingStudyIdHeader = "X-Imaging-Study-Id";
+    public const string StudyIdHeader = "X-Study-Id";
+
+    public const string UploadSiteIdHeader = "X-Upload-Site-Id";
+    public const string ImagingSiteIdHeader = "X-Imaging-Site-Id";
+
+    public const string UploadSubjectIdHeader = "X-Upload-Subject-Id";
+    public const string ImagingSubjectIdHeader = "X-Imaging-Subject-Id";
+    public const string SubjectIdHeader = "X-Subject-Id";
+
+    public const string UploadTimepointHeader = "X-Upload-Timepoint-Name";
+    public const string ImagingTimepointHeader = "X-Imaging-Timepoint-Name";
+    public const string TimepointHeader = "X-Timepoint-Name";
+
+    public static BatchRequestMetadata CreateInitialMetadata(HttpRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        return new BatchRequestMetadata
+        {
+            StudyValue = ResolveQueryOrHeader(
+                request,
+                "studyId",
+                UploadStudyIdHeader,
+                ImagingStudyIdHeader,
+                StudyIdHeader),
+            SiteValue = ResolveQueryOrHeader(
+                request,
+                "siteId",
+                UploadSiteIdHeader,
+                ImagingSiteIdHeader),
+            SubjectValue = ResolveQueryOrHeader(
+                request,
+                "subjectId",
+                UploadSubjectIdHeader,
+                ImagingSubjectIdHeader,
+                SubjectIdHeader),
+            TimepointName = ResolveQueryOrHeader(
+                request,
+                "timepointName",
+                UploadTimepointHeader,
+                ImagingTimepointHeader,
+                TimepointHeader),
+        };
+    }
+
+    private static string ResolveQueryOrHeader(
+        HttpRequest request,
+        string queryKey,
+        params string[] headerNames)
+    {
+        string fromQuery = request.Query[queryKey].ToString().Trim();
+        if (!string.IsNullOrWhiteSpace(fromQuery))
+        {
+            return fromQuery;
+        }
+
+        foreach (string headerName in headerNames)
+        {
+            if (request.Headers.TryGetValue(headerName, out StringValues headerValues))
+            {
+                string candidate = headerValues.ToString().Trim();
+                if (!string.IsNullOrWhiteSpace(candidate))
+                {
+                    return candidate;
+                }
+            }
+        }
+
+        return string.Empty;
+    }
+
     public static BatchIngestionRequest CreateStreamingBatchRequest(
         HttpContext httpContext,
         BatchRequestMetadata metadata,
@@ -138,11 +222,15 @@ public static class DicomMultipartHeaderHelpers
         {
             metadata.SubjectValue = trimmed;
         }
-        else if (fieldName.Equals("siteId", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(metadata.SiteValue))
+        else if (fieldName.Equals("siteId", StringComparison.OrdinalIgnoreCase)
+            && !metadata.IsAuthorizableScopeLocked
+            && string.IsNullOrWhiteSpace(metadata.SiteValue))
         {
             metadata.SiteValue = trimmed;
         }
-        else if (fieldName.Equals("studyId", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(metadata.StudyValue))
+        else if (fieldName.Equals("studyId", StringComparison.OrdinalIgnoreCase)
+            && !metadata.IsAuthorizableScopeLocked
+            && string.IsNullOrWhiteSpace(metadata.StudyValue))
         {
             metadata.StudyValue = trimmed;
         }
@@ -178,20 +266,28 @@ public static class DicomMultipartHeaderHelpers
         }
     }
 
-    public static async Task<string> SpoolSectionToTempFileAsync(Stream source, CancellationToken cancellationToken)
+    public static async Task<string> SpoolSectionToTempFileAsync(
+        Stream source,
+        IScratchWorkspaceProvider scratchWorkspace,
+        CancellationToken cancellationToken)
     {
-        string tempPath = Path.Combine(Path.GetTempPath(), $"cadence-multipart-{Guid.NewGuid():N}.tmp");
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(scratchWorkspace);
+
+        var (tempPath, fs) = scratchWorkspace.CreateFile(
+            "cadence-multipart",
+            ".tmp",
+            FileAccess.Write,
+            bufferSize: BatchStreamHelpers.PooledBufferSize,
+            FileOptions.Asynchronous);
+
         try
         {
-            await using var fs = new FileStream(
-                tempPath,
-                FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                bufferSize: BatchStreamHelpers.PooledBufferSize,
-                FileOptions.Asynchronous);
+            await using (fs.ConfigureAwait(false))
+            {
+                await BatchStreamHelpers.CopyPooledAsync(source, fs, cancellationToken).ConfigureAwait(false);
+            }
 
-            await BatchStreamHelpers.CopyPooledAsync(source, fs, cancellationToken).ConfigureAwait(false);
             return tempPath;
         }
         catch

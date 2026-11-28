@@ -7,6 +7,7 @@ using Cadence.Database;
 using Cadence.Database.Signatures;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
+using Cadence.Storage;
 using Cadence.Telemetry;
 
 using Microsoft.AspNetCore.Builder;
@@ -15,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
+builder.Services.AddCadenceScratchWorkspace(builder.Configuration);
 // Certificates and manifests are signed, and UIDs pseudonymized, with CADENCE_IMAGING_DEID_SIGNING_KEY and
 // CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY, both required and validated at startup (#5399).
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);

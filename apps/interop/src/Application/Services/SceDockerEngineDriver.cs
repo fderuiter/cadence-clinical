@@ -8,6 +8,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Storage;
+
 namespace Cadence.Apps.Interop.Application.Services;
 
 public record SandboxExecutionRequest(
@@ -52,6 +54,14 @@ public interface ISceDockerEngineDriver
 
 public class SceDockerEngineDriver : ISceDockerEngineDriver
 {
+    private readonly IScratchWorkspaceProvider _scratchWorkspace;
+
+    public SceDockerEngineDriver(IScratchWorkspaceProvider scratchWorkspace)
+    {
+        ArgumentNullException.ThrowIfNull(scratchWorkspace);
+        _scratchWorkspace = scratchWorkspace;
+    }
+
     public const string DefaultPlaceholderImageDigest = "sha256:cadence-sce-r4.4-py3.14-validated-base-2026";
     public const string DefaultPythonImage = "cadence-sce-py:latest";
     public const string DefaultRImage = "cadence-sce-r:latest";
@@ -186,8 +196,7 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
         }
 
         var stopwatch = Stopwatch.StartNew();
-        string tempDir = Path.Combine(Path.GetTempPath(), "cadence_sce_" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
+        string tempDir = _scratchWorkspace.CreateDirectory("cadence_sce");
 
         try
         {

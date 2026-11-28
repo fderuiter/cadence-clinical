@@ -12,6 +12,7 @@ using Cadence.Apps.Interop.Application.Services;
 using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Endpoints;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
+using Cadence.Storage;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
@@ -27,6 +28,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 using NSubstitute;
 
@@ -40,10 +42,15 @@ public sealed class StatisticalComputingEnvironmentTests : IDisposable
     private readonly InteropDbContext _db;
     private readonly FakeClock _clock = new(new DateTimeOffset(2026, 10, 6, 12, 0, 0, TimeSpan.Zero));
     private readonly LockfileValidatorService _lockfileValidator = new();
-    private readonly SceDockerEngineDriver _dockerDriver = new();
+    private readonly string _scratchRoot = Path.Combine(Path.GetTempPath(), $"cadence-sce-scratch-{Guid.NewGuid():N}");
+    private readonly SceDockerEngineDriver _dockerDriver;
 
     public StatisticalComputingEnvironmentTests()
     {
+        var scratchProvider = new FileSystemScratchWorkspaceProvider(
+            new ScratchWorkspaceOptions { RootPath = _scratchRoot });
+        _dockerDriver = new SceDockerEngineDriver(scratchProvider);
+
         _connection.Open();
         var options = new DbContextOptionsBuilder<InteropDbContext>()
             .UseSqlite(_connection)
@@ -57,6 +64,10 @@ public sealed class StatisticalComputingEnvironmentTests : IDisposable
     {
         _db.Dispose();
         _connection.Dispose();
+        if (Directory.Exists(_scratchRoot))
+        {
+            Directory.Delete(_scratchRoot, recursive: true);
+        }
     }
 
     [Fact(DisplayName = "ValidateLockfile_ValidUvLock_ReturnsValidStatusAndParsedPackages")]
@@ -532,6 +543,7 @@ version = ""1.0.0""
         {
             host.UseTestGatewaySecret()
                 .UseTestPostgresConnectionString()
+                .UseTestScratchWorkspace()
                 .UseTestFieldProtectionKeys()
                 .UseTestSceSigningKey();
 
@@ -708,6 +720,75 @@ version = ""1.0.0""
                 Directory.Delete(workspaceDir, recursive: true);
             }
         }
+    }
+
+    [Fact]
+    public async Task ExecuteInSandboxAsync_AllocatesInsideConfiguredScratchRoot_AndCleansUpRunDir()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        string dedicatedScratch = Path.Combine(Path.GetTempPath(), $"cadence-sce-dedicated-{Guid.NewGuid():N}");
+        string? priorPath = Environment.GetEnvironmentVariable("PATH");
+        string fakeBinDir = Path.Combine(Path.GetTempPath(), $"cadence-sce-fakebin-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(fakeBinDir);
+
+        try
+        {
+            string recordedMountFile = Path.Combine(fakeBinDir, "mounted-arg.txt");
+            if (!OperatingSystem.IsWindows())
+            {
+                string dockerStub = Path.Combine(fakeBinDir, "docker");
+                await File.WriteAllTextAsync(
+                    dockerStub,
+                    $"#!/bin/sh\nprintf '%s\\n' \"$@\" > \"{recordedMountFile}\"\nexit 0\n",
+                    ct);
+                File.SetUnixFileMode(
+                    dockerStub,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                Environment.SetEnvironmentVariable("PATH", $"{fakeBinDir}:{priorPath}");
+            }
+
+            var scratchProvider = new FileSystemScratchWorkspaceProvider(
+                new ScratchWorkspaceOptions { RootPath = dedicatedScratch });
+            var driver = new SceDockerEngineDriver(scratchProvider);
+
+            var result = await driver.ExecuteInSandboxAsync(
+                new SandboxExecutionRequest(
+                    Language: "PYTHON",
+                    SourceCode: "print('hello')",
+                    LockfileContent: "[[package]]\nname = \"numpy\"\nversion = \"1.26.0\"\n",
+                    LockType: "UV_LOCK"),
+                ct);
+
+            Directory.GetDirectories(Path.GetTempPath(), "sce_run_*").Should().BeEmpty();
+            Directory.GetFileSystemEntries(dedicatedScratch).Should().BeEmpty("per-run scratch directory must be cleaned up in finally");
+
+            if (!OperatingSystem.IsWindows())
+            {
+                result.ExitCode.Should().Be(0);
+                string recordedArgs = await File.ReadAllTextAsync(recordedMountFile, ct);
+                recordedArgs.Should().Contain(dedicatedScratch);
+            }
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", priorPath);
+            if (Directory.Exists(dedicatedScratch)) Directory.Delete(dedicatedScratch, recursive: true);
+            if (Directory.Exists(fakeBinDir)) Directory.Delete(fakeBinDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void InteropHost_WithoutScratchRootPath_FailsStartupValidation()
+    {
+        using var host = new StartupValidationFactory<Cadence.Apps.Interop.Program>(builder => builder
+            .UseTestGatewaySecret()
+            .UseTestPostgresConnectionString()
+            .UseTestFieldProtectionKeys()
+            .UseTestSceSigningKey()
+            .UseSetting("Scratch:RootPath", null));
+
+        host.ValidateStartup().Should().BeOfType<OptionsValidationException>()
+            .Which.Message.Should().Contain("Scratch:RootPath");
     }
 }
 
